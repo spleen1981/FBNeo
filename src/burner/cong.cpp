@@ -9,7 +9,11 @@ static TCHAR* GameConfigName()
 {
 	// Return the path of the config file for this game
 	static TCHAR szName[32];
+#if defined (_XBOX)
 	_stprintf(szName, _T("config/games/%s.ini"), BurnDrvGetText(DRV_NAME));
+#else
+	_stprintf(szName, _T("GAME:\\config\\games\\%s.ini"), BurnDrvGetText(DRV_NAME));
+#endif
 	return szName;
 }
 

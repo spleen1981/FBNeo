@@ -5,7 +5,11 @@
 #define SSHOT_LIBPNG_ERROR 2
 #define SSHOT_OTHER_ERROR 3
 
+#if defined (_XBOX)
+#define SSHOT_DIRECTORY "GAME:\\screenshots\\"
+#else
 #define SSHOT_DIRECTORY "screenshots/"
+#endif
 
 static UINT8* pSShot = NULL;
 static UINT8* pConvertedImage = NULL;

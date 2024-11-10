@@ -934,15 +934,33 @@ static struct { INT32 nCode; TCHAR* szName; } KeyNames[] = {
 #define FBK_DEFNAME(k) k, _T(#k)
 
 	{ FBK_ESCAPE,				_T("ESCAPE") },
+#if defined (_XBOX)
+	{ FBK_1,					_T("Start Button") },
+	{ FBK_2,					_T("Start Button") },
+	{ FBK_3,					_T("Start Button") },
+	{ FBK_4,					_T("Start Button") },
+#else
 	{ FBK_1,					_T("1") },
 	{ FBK_2,					_T("2") },
 	{ FBK_3,					_T("3") },
 	{ FBK_4,					_T("4") },
+#endif
+#if defined (_XBOX)
+	{ FBK_5,					_T("Back Button") },
+	{ FBK_6,					_T("Back Button") },
+	{ FBK_7,					_T("Back Button") },
+	{ FBK_8,					_T("Back Button") },
+#else
 	{ FBK_5,					_T("5") },
 	{ FBK_6,					_T("6") },
 	{ FBK_7,					_T("7") },
 	{ FBK_8,					_T("8") },
+#endif
+#if defined (_XBOX)
+	{ FBK_9,					_T("Left Thumb") },
+#else
 	{ FBK_9,					_T("9") },
+#endif
 	{ FBK_0,					_T("0") },
 	{ FBK_MINUS,				_T("MINUS") },
 	{ FBK_EQUALS,				_T("EQUALS") },
@@ -963,8 +981,13 @@ static struct { INT32 nCode; TCHAR* szName; } KeyNames[] = {
 	{ FBK_RETURN,				_T("ENTER") },
 	{ FBK_LCONTROL,				_T("LEFT CONTROL") },
 	{ FBK_A,					_T("A") },
+#if defined (_XBOX)
+	{ FBK_S,					_T("Left Shoulder") },
+	{ FBK_D,					_T("Right Shoulder") },
+#else
 	{ FBK_S,					_T("S") },
 	{ FBK_D,					_T("D") },
+#endif
 	{ FBK_F,					_T("F") },
 	{ FBK_G,					_T("G") },
 	{ FBK_H,					_T("H") },
@@ -976,10 +999,17 @@ static struct { INT32 nCode; TCHAR* szName; } KeyNames[] = {
 	{ FBK_GRAVE,				_T("ACCENT GRAVE") },
 	{ FBK_LSHIFT,				_T("LEFT SHIFT") },
 	{ FBK_BACKSLASH,			_T("BACKSLASH") },
+#if defined (_XBOX)
+	{ FBK_Z,					_T("A Button") },
+	{ FBK_X,					_T("B Button") },
+	{ FBK_C,					_T("X Button") },
+	{ FBK_V,					_T("Y Button") },
+#else
 	{ FBK_Z,					_T("Z") },
 	{ FBK_X,					_T("X") },
 	{ FBK_C,					_T("C") },
 	{ FBK_V,					_T("V") },
+#endif
 	{ FBK_B,					_T("B") },
 	{ FBK_N,					_T("N") },
 	{ FBK_M,					_T("M") },
@@ -991,9 +1021,15 @@ static struct { INT32 nCode; TCHAR* szName; } KeyNames[] = {
 	{ FBK_LALT,					_T("LEFT MENU") },
 	{ FBK_SPACE,				_T("SPACE") },
 	{ FBK_CAPITAL,				_T("CAPSLOCK") },
+#if defined (_XBOX)
+	{ FBK_F1,					_T("Left Thumb") },
+	{ FBK_F2,					_T("Right Thumb") },
+	{ FBK_F3,					_T("Right Thumb") },
+#else
 	{ FBK_F1,					_T("F1") },
 	{ FBK_F2,					_T("F2") },
 	{ FBK_F3,					_T("F3") },
+#endif
 	{ FBK_F4,					_T("F4") },
 	{ FBK_F5,					_T("F5") },
 	{ FBK_F6,					_T("F6") },
@@ -1077,7 +1113,10 @@ static struct { INT32 nCode; TCHAR* szName; } KeyNames[] = {
 	{ FBK_DEFNAME(FBK_MYCOMPUTER) },
 	{ FBK_DEFNAME(FBK_MAIL) },
 	{ FBK_DEFNAME(FBK_MEDIASELECT) },
-
+#if defined (_XBOX)
+    { 0x88,                     _T("Left Trigger") },
+    { 0x8A,                     _T("Right Trigger") },
+#endif
 #undef FBK_DEFNAME
 
 	{ 0,				NULL }
@@ -1113,7 +1152,65 @@ TCHAR* InputCodeDesc(INT32 c)
 		INT32 nJoy = (c >> 8) & 0x3F;
 		INT32 nCode = c & 0xFF;
 		if (nCode >= 0x80) {
+#if defined (_XBOX)
+            switch(c)
+            {
+            case 0x4080:
+            case 0x4180:
+            case 0x4280:
+                    _stprintf(szString, _T("A Button"));
+                    break;
+            case 0x4081:
+            case 0x4181:
+            case 0x4281:
+                    _stprintf(szString, _T("B Button"));
+                    break;
+            case 0x4082:
+            case 0x4182:
+            case 0x4282:
+                    _stprintf(szString, _T("X Button"));
+                    break;
+            case 0x4083:
+            case 0x4183:
+            case 0x4283:
+                    _stprintf(szString, _T("Y Button"));
+                    break;
+            case 0x4084:
+            case 0x4184:
+            case 0x4284:
+                    _stprintf(szString, _T("Left Shoulder"));
+                    break;
+            case 0x4085:
+            case 0x4185:
+            case 0x4285:
+                    _stprintf(szString, _T("Right Shoulder"));
+                    break;
+            case 0x403B:
+            case 0x413B:
+            case 0x423B:
+				    _stprintf(szString, _T("Left Thumb"));
+                    break;
+            case 0x403C:
+            case 0x413C:
+            case 0x423C:
+				    _stprintf(szString, _T("Right Thumb"));
+                    break;
+            case 0x4088:
+            case 0x4188:
+            case 0x4288:
+				    _stprintf(szString, _T("Left Trigger"));
+                    break;
+            case 0x408A:
+            case 0x418A:
+            case 0x428A:
+				    _stprintf(szString, _T("Right Trigger"));
+                    break;
+
+                         
+            }
+#else
 			_stprintf(szString, _T("Joy %d Button %d"), nJoy, nCode & 0x7F);
+#endif
 			return szString;
 		}
 		if (nCode < 0x10) {
@@ -1531,9 +1628,15 @@ INT32 GameInputAutoIni(INT32 nPlayer, TCHAR* lpszFile, bool bOverWrite)
 
 INT32 ConfigGameLoadHardwareDefaults()
 {
+#if defined (_XBOX)
 	TCHAR *szDefaultCpsFile = _T("config/presets/cps.ini");
 	TCHAR *szDefaultNeogeoFile = _T("config/presets/neogeo.ini");
 	TCHAR *szDefaultPgmFile = _T("config/presets/pgm.ini");
+#else
+	TCHAR *szDefaultCpsFile = _T("GAME:\\config\\presets\\cps.ini");
+	TCHAR *szDefaultNeogeoFile = _T("GAME:\\config\\presets\\neogeo.ini");
+	TCHAR *szDefaultPgmFile = _T("GAME:\\config\\presets\\pgm.ini");
+#endif
 	TCHAR *szFileName = _T("");
 	INT32 nApplyHardwareDefaults = 0;
 	

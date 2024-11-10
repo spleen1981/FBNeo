@@ -90,7 +90,11 @@ void EEPROMInit(const eeprom_interface *interface)
 	else locked = 0;
 
 	char output[128];
+#if defined (_XBOX)
+	sprintf (output, "game:\\config\\games\\%s.nv", BurnDrvGetTextA(DRV_NAME));
+#else
 	sprintf (output, "config/games/%s.nv", BurnDrvGetTextA(DRV_NAME));
+#endif
 
 	neeprom_available = 0;
 
@@ -111,7 +115,11 @@ void EEPROMExit()
 #endif
 
 	char output[128];
+#if defined (_XBOX)
+	sprintf (output, "game:\\config\\games\\%s.nv", BurnDrvGetTextA(DRV_NAME));
+#else
 	sprintf (output, "config/games/%s.nv", BurnDrvGetTextA(DRV_NAME));
+#endif
 
 	neeprom_available = 0;
 
