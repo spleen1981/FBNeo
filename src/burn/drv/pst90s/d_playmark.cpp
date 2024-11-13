@@ -406,8 +406,8 @@ STD_ROM_PICK(Excelsr)
 STD_ROM_FN(Excelsr)
 
 static struct BurnRomInfo ExcelsraRomDesc[] = {
-	{ "22(__excelsra).u301",      0x80000, 0x55dca2da, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
-	{ "19(__excelsra).u302",      0x80000, 0xd13990a8, BRF_ESS | BRF_PRG }, //  1	68000 Program Code
+	{ "22.u301",          0x80000, 0x55dca2da, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
+	{ "19.u302",          0x80000, 0xd13990a8, BRF_ESS | BRF_PRG }, //  1	68000 Program Code
 	{ "21.u303",          0x80000, 0xfdf9bd64, BRF_ESS | BRF_PRG }, //  2	68000 Program Code
 	{ "18.u304",          0x80000, 0xfe517e0e, BRF_ESS | BRF_PRG }, //  3	68000 Program Code
 	{ "20.u305",          0x80000, 0x8692afe9, BRF_ESS | BRF_PRG }, //  4	68000 Program Code
@@ -450,12 +450,12 @@ static struct BurnRomInfo HotmindRomDesc[] = {
 	{ "20.io13",          0x40000, 0x0bf3a3e5, BRF_SND },			//  11	Samples
 	
 	{ "hotmind_pic16c57-hs_io15.hex", 0x02d4c, 0xf3300d13, BRF_OPT },
-	{ "palce16v8h-25-pc4_u58.jed", 0x00b89, 0xba88c1da, BRF_OPT },
-	{ "palce16v8h-25-pc4_u182.jed", 0x00b89, 0xba88c1da, BRF_OPT },
-	{ "palce16v8h-25-pc4_jamma.jed", 0x00b89, 0xba88c1da, BRF_OPT },
-	{ "tibpal22v10acnt_u113.jed", 0x01e84, 0x94106c63, BRF_OPT },
-	{ "tibpal22v10acnt_u183.jed", 0x01e84, 0x95a446b6, BRF_OPT },
-	{ "tibpal22v10acnt_u211.jed", 0x01e84, 0x94106c63, BRF_OPT },
+	{ "palce16v8h-25-pc4_u58.jed",    0x00b89, 0xba88c1da, BRF_OPT },
+	{ "palce16v8h-25-pc4_u182.jed",   0x00b89, 0xba88c1da, BRF_OPT },
+	{ "palce16v8h-25-pc4_jamma.jed",  0x00b89, 0xba88c1da, BRF_OPT },
+	{ "tibpal22v10acnt_u113.jed",     0x01e84, 0x94106c63, BRF_OPT },
+	{ "tibpal22v10acnt_u183.jed",     0x01e84, 0x95a446b6, BRF_OPT },
+	{ "tibpal22v10acnt_u211.jed",     0x01e84, 0x94106c63, BRF_OPT },
 };
 
 STD_ROM_PICK(Hotmind)
@@ -1060,9 +1060,9 @@ static INT32 DrvInit()
 	SekSetWriteWordHandler(0, DrvWriteWord);
 	SekClose();
 	
-	pic16c5xInit(0x16C57, DrvPicRom);
-	pPic16c5xReadPort = PlaymarkSoundReadPort;
-	pPic16c5xWritePort = PlaymarkSoundWritePort;
+	pic16c5xInit(0, 0x16C57, DrvPicRom);
+	pic16c5xSetReadPortHandler(PlaymarkSoundReadPort);
+	pic16c5xSetWritePortHandler(PlaymarkSoundWritePort);
 	
 	MSM6295Init(0, 1000000 / 132, 0);
 	MSM6295SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
@@ -1151,9 +1151,9 @@ static INT32 ExcelsrInit()
 	SekSetWriteWordHandler(0, ExcelsrWriteWord);
 	SekClose();
 	
-	pic16c5xInit(0x16C57, DrvPicRom);
-	pPic16c5xReadPort = PlaymarkSoundReadPort;
-	pPic16c5xWritePort = PlaymarkSoundWritePort;
+	pic16c5xInit(0, 0x16C57, DrvPicRom);
+	pic16c5xSetReadPortHandler(PlaymarkSoundReadPort);
+	pic16c5xSetWritePortHandler(PlaymarkSoundWritePort);
 	
 	MSM6295Init(0, 1000000 / 132, 0);
 	MSM6295SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
@@ -1253,9 +1253,9 @@ static INT32 HotmindInit()
 	SekSetWriteWordHandler(0, HotmindWriteWord);
 	SekClose();
 	
-	pic16c5xInit(0x16C57, DrvPicRom);
-	pPic16c5xReadPort = PlaymarkSoundReadPort;
-	pPic16c5xWritePort = PlaymarkSoundWritePort;
+	pic16c5xInit(0, 0x16C57, DrvPicRom);
+	pic16c5xSetReadPortHandler(PlaymarkSoundReadPort);
+	pic16c5xSetWritePortHandler(PlaymarkSoundWritePort);
 	
 	MSM6295Init(0, 1000000 / 132, 0);
 	MSM6295SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);

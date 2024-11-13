@@ -139,7 +139,7 @@ static struct BurnDIPInfo CadashDIPList[]=
 	{0x14, 0x01, 0x0c, 0x0c, "7:00"			},
 	{0x14, 0x01, 0x0c, 0x08, "8:00"			},
 
-	{0   , 0xfe, 0   ,    4, "Add Time"		},
+	{0   , 0xfe, 0   ,    4, "Add Time (after round clear)"		},
 	{0x14, 0x01, 0x30, 0x00, "Default - 2:00"	},
 	{0x14, 0x01, 0x30, 0x10, "Default - 1:00"	},
 	{0x14, 0x01, 0x30, 0x30, "Default"		},
@@ -194,7 +194,7 @@ static struct BurnDIPInfo CadashjDIPList[]=
 	{0x14, 0x01, 0x0c, 0x0c, "7:00"			},
 	{0x14, 0x01, 0x0c, 0x08, "8:00"			},
 
-	{0   , 0xfe, 0   ,    4, "Add Time"		},
+	{0   , 0xfe, 0   ,    4, "Add Time (after round clear)"		},
 	{0x14, 0x01, 0x30, 0x00, "Default - 2:00"	},
 	{0x14, 0x01, 0x30, 0x10, "Default - 1:00"	},
 	{0x14, 0x01, 0x30, 0x30, "Default"		},
@@ -249,7 +249,7 @@ static struct BurnDIPInfo CadashuDIPList[]=
 	{0x14, 0x01, 0x0c, 0x0c, "7:00"			},
 	{0x14, 0x01, 0x0c, 0x08, "8:00"			},
 
-	{0   , 0xfe, 0   ,    4, "Add Time (after clear)"},
+	{0   , 0xfe, 0   ,    4, "Add Time (after round clear)"},
 	{0x14, 0x01, 0x30, 0x00, "Default - 2:00"	},
 	{0x14, 0x01, 0x30, 0x10, "Default - 1:00"	},
 	{0x14, 0x01, 0x30, 0x30, "Default"		},
@@ -516,7 +516,7 @@ static struct BurnDIPInfo EarthjkrDIPList[]=
 
 	{0   , 0xfe, 0   ,    2, "Copyright"		},
 	{0x14, 0x01, 0x40, 0x40, "Visco"		},
-	{0x14, 0x01, 0x40, 0x00, "Visco (Romstar)"	},
+	{0x14, 0x01, 0x40, 0x00, "Visco (distributed by Romstar)"	},
 };
 
 STDDIPINFO(Earthjkr)
@@ -1895,6 +1895,9 @@ static struct BurnRomInfo asukaRomDesc[] = {
 	{ "b68-06.bin",			0x10000, 0xf517e64d, BRF_GRA | TAITO_SPRITESA_BYTESWAP },		//  7
 
 	{ "b68-10.bin",			0x10000, 0x387aaf40, BRF_SND | TAITO_MSM5205 },				//  8 MSM5205 Samples
+	
+	{ "b68-04.bin",			0x00144, 0x9be618d1, BRF_OPT },						//  8 plds
+	{ "b68-05.bin",			0x00104, 0xd6524ccc, BRF_OPT },						//  9
 };
 
 STD_ROM_PICK(asuka)
@@ -1940,6 +1943,9 @@ static struct BurnRomInfo asukajRomDesc[] = {
 	{ "b68-06.bin",			0x10000, 0xf517e64d, BRF_GRA | TAITO_SPRITESA_BYTESWAP },		//  7
 
 	{ "b68-10.bin",			0x10000, 0x387aaf40, BRF_SND | TAITO_MSM5205 },				//  8 MSM5205 Samples
+	
+	{ "b68-04.bin",			0x00144, 0x9be618d1, BRF_OPT },						//  8 plds
+	{ "b68-05.bin",			0x00104, 0xd6524ccc, BRF_OPT },						//  9
 };
 
 STD_ROM_PICK(asukaj)
@@ -2000,6 +2006,9 @@ static struct BurnRomInfo galmedesRomDesc[] = {
 	{ "gm-scn.bin",			0x80000, 0x3bab0581, BRF_GRA | TAITO_CHARS },				//  4 Characters
 
 	{ "gm-obj.bin",			0x80000, 0x7a4a1315, BRF_GRA | TAITO_SPRITESA },			//  5 Sprites
+	
+	{ "b68-04.bin",			0x00144, 0x9be618d1, BRF_OPT },						//  6 plds
+	{ "b68-05.bin",			0x00104, 0xd6524ccc, BRF_OPT },						//  7
 };
 
 STD_ROM_PICK(galmedes)
@@ -2027,7 +2036,7 @@ struct BurnDriver BurnDrvGalmedes = {
 };
 
 
-// U.N. Defense Force: Earth Joker
+// U.N. Defense Force: Earth Joker (Japan)
 
 static struct BurnRomInfo earthjkrRomDesc[] = {
 	{ "ej_3b.rom",			0x20000, 0xbdd86fc2, BRF_PRG | BRF_ESS | TAITO_68KROM1_BYTESWAP },	//  0 68K Code
@@ -2041,6 +2050,9 @@ static struct BurnRomInfo earthjkrRomDesc[] = {
 	{ "ej_obj.rom",			0x80000, 0x5f21ac47, BRF_GRA | TAITO_SPRITESA },			//  5 Sprites
 	{ "ej_1.rom",			0x10000, 0xcb4891db, BRF_GRA | TAITO_SPRITESA_BYTESWAP },		//  6
 	{ "ej_0.rom",			0x10000, 0xb612086f, BRF_GRA | TAITO_SPRITESA_BYTESWAP },		//  7
+	
+	{ "b68-04.bin",			0x00144, 0x9be618d1, BRF_OPT },						//  8 plds
+	{ "b68-05.bin",			0x00104, 0xd6524ccc, BRF_OPT },						//  9
 };
 
 STD_ROM_PICK(earthjkr)
@@ -2048,10 +2060,44 @@ STD_ROM_FN(earthjkr)
 
 struct BurnDriver BurnDrvEarthjkr = {
 	"earthjkr", NULL, NULL, NULL, "1993",
-	"U.N. Defense Force: Earth Joker\0", NULL, "Visco", "Taito Misc",
+	"U.N. Defense Force: Earth Joker (Japan)\0", NULL, "Visco", "Taito Misc",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, earthjkrRomInfo, earthjkrRomName, NULL, NULL, AsukaInputInfo, EarthjkrDIPInfo,
+	GalmedesInit, TaitoExit, EtoFrame, DrvDraw, DrvScan, NULL, 0x1000,
+	240, 320, 3, 4
+};
+
+
+// U.N. Defense Force: Earth Joker (Japan, prototype?)
+// was production PCB complete with MASK rom, could just be an early revision, not proto
+
+static struct BurnRomInfo earthjkrpRomDesc[] = {
+	{ "4.bin",			0x20000, 0xe9b1ef0c, BRF_PRG | BRF_ESS | TAITO_68KROM1_BYTESWAP },	//  0 68K Code
+	{ "3.bin",			0x20000, 0x26c33225, BRF_PRG | BRF_ESS | TAITO_68KROM1_BYTESWAP },	//  1
+	{ "5.bin",			0x80000, 0xbf760b2d, BRF_PRG | BRF_ESS | TAITO_68KROM1 },		//  2
+
+	{ "ej_2.rom",			0x10000, 0x42ba2566, BRF_PRG | BRF_ESS | TAITO_Z80ROM1 },		//  3 Z80 Code
+
+	{ "ej_chr.rom",			0x80000, 0xac675297, BRF_GRA | TAITO_CHARS },				//  4 Characters
+
+	{ "ej_obj.rom",			0x80000, 0x5f21ac47, BRF_GRA | TAITO_SPRITESA },			//  5 Sprites
+	{ "ej_1.rom",			0x10000, 0xcb4891db, BRF_GRA | TAITO_SPRITESA_BYTESWAP },		//  6
+	{ "ej_0.rom",			0x10000, 0xb612086f, BRF_GRA | TAITO_SPRITESA_BYTESWAP },		//  7
+	
+	{ "b68-04.bin",			0x00144, 0x9be618d1, BRF_OPT },						//  8 plds
+	{ "b68-05.bin",			0x00104, 0xd6524ccc, BRF_OPT },						//  9
+};
+
+STD_ROM_PICK(earthjkrp)
+STD_ROM_FN(earthjkrp)
+
+struct BurnDriver BurnDrvEarthjkrp = {
+	"earthjkrp", "earthjkr", NULL, NULL, "1993",
+	"U.N. Defense Force: Earth Joker (Japan, prototype?)\0", NULL, "Visco", "Taito Misc",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	NULL, earthjkrpRomInfo, earthjkrpRomName, NULL, NULL, AsukaInputInfo, EarthjkrDIPInfo,
 	GalmedesInit, TaitoExit, EtoFrame, DrvDraw, DrvScan, NULL, 0x1000,
 	240, 320, 3, 4
 };
@@ -2156,7 +2202,51 @@ struct BurnDriver BurnDrvBonzeadvu = {
 	BonzeInit, TaitoExit, BonzeFrame, DrvDraw, DrvScan, NULL, 0x1000,
 	320, 224, 4, 3
 };
-   
+
+
+// Bonze Adventure (World, prototype)
+
+static struct BurnRomInfo bonzeadvpRomDesc[] = {
+	{ "0l.ic17",			0x10000, 0x9e046e6f, BRF_PRG | BRF_ESS | TAITO_68KROM1_BYTESWAP }, 	//  0 68K Code
+	{ "0h.ic26",			0x10000, 0x3e2b2628, BRF_PRG | BRF_ESS | TAITO_68KROM1_BYTESWAP }, 	//  1
+	{ "1h.ic16",			0x10000, 0x52f31b98, BRF_PRG | BRF_ESS | TAITO_68KROM1_BYTESWAP }, 	//  2
+	{ "1l.ic25",			0x10000, 0xc7e79b98, BRF_PRG | BRF_ESS | TAITO_68KROM1_BYTESWAP }, 	//  3
+	{ "49eb.ic26",			0x20000, 0xc747650b, BRF_PRG | BRF_ESS | TAITO_68KROM1_BYTESWAP }, 	//  4
+	{ "fd65.ic20",			0x20000, 0xc32f3bd5, BRF_PRG | BRF_ESS | TAITO_68KROM1_BYTESWAP }, 	//  5
+	{ "0e7e.ic28",			0x20000, 0xdc1f9fd0, BRF_PRG | BRF_ESS | TAITO_68KROM1_BYTESWAP }, 	//  6
+	{ "a418.ic23",			0x20000, 0x51b02be6, BRF_PRG | BRF_ESS | TAITO_68KROM1_BYTESWAP }, 	//  7
+
+	{ "b41-13.20",			0x10000, 0x9e464254, BRF_PRG | BRF_ESS | TAITO_Z80ROM1 },		//  8 Z80 Code
+
+	{ "abbe.ic9",			0x20000, 0x50e6581c, BRF_GRA | TAITO_CHARS_BYTESWAP }, 			//  9 Characters
+	{ "0ac8.ic15",			0x20000, 0x29002fc4, BRF_GRA | TAITO_CHARS_BYTESWAP }, 			// 10
+	{ "5ebf.ic5",			0x20000, 0xdac6f11f, BRF_GRA | TAITO_CHARS_BYTESWAP }, 			// 11
+	{ "77c8.ic12",			0x20000, 0xd8aaae12, BRF_GRA | TAITO_CHARS_BYTESWAP }, 			// 12
+
+	{ "9369.ic19",			0x20000, 0xa9dd7f90, BRF_GRA | TAITO_SPRITESA_BYTESWAP },               // 13 Sprites
+	{ "e3ed.ic25",			0x20000, 0x7cc66ee2, BRF_GRA | TAITO_SPRITESA_BYTESWAP },               // 14
+	{ "03eb.ic16",			0x20000, 0x39f32715, BRF_GRA | TAITO_SPRITESA_BYTESWAP },               // 15
+	{ "b8e1.ic22",			0x20000, 0x15b836cf, BRF_GRA | TAITO_SPRITESA_BYTESWAP },               // 16
+
+	{ "6089.ic17",			0x20000, 0xb092783c, BRF_SND | TAITO_YM2610A },				// 17 YM2610 Samples
+	{ "2e1f.ic14",			0x20000, 0xdf1f87c0, BRF_SND | TAITO_YM2610A },				// 18
+	{ "f66e.ic11",			0x20000, 0xc6df1b3e, BRF_SND | TAITO_YM2610A },				// 19
+	{ "49d7.ic7",			0x20000, 0x5584c02c, BRF_SND | TAITO_YM2610A },				// 20
+};
+
+STD_ROM_PICK(bonzeadvp)
+STD_ROM_FN(bonzeadvp)
+
+struct BurnDriver BurnDrvBonzeadvp = {
+	"bonzeadvp", "bonzeadv", NULL, NULL, "1988",
+	"Bonze Adventure (World, prototype)\0", NULL, "Taito Corporation Japan", "Taito Misc",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	NULL, bonzeadvpRomInfo, bonzeadvpRomName, NULL, NULL, BonzeadvInputInfo, JigkmgriDIPInfo,
+	BonzeInit, TaitoExit, BonzeFrame, DrvDraw, DrvScan, NULL, 0x1000,
+	320, 224, 4, 3
+};
+
 
 // Jigoku Meguri (Japan)
 

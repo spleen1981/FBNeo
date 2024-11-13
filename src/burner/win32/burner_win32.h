@@ -101,6 +101,7 @@ extern TCHAR szAppBurnVer[16];
 
 extern bool bCmdOptUsed;
 extern bool bAlwaysProcessKeyboardInput;
+extern bool bAlwaysCreateSupportFolders;
 
 extern bool bNoChangeNumLock;
 extern bool bMonitorAutoCheck;
@@ -373,7 +374,7 @@ int InpcCreate();
 extern int bDrvSaveAll;
 int StatedAuto(int bSave);
 int StatedLoad(int nSlot);
-void StatedUNDO(int nSlot);
+int StatedUNDO(int nSlot);
 int StatedSave(int nSlot);
 
 // numdial.cpp

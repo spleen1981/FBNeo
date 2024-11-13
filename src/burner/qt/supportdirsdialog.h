@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QButtonGroup>
 #include <QLineEdit>
+#include <QSettings>
 #include "qutil.h"
 
 namespace Ui {
@@ -21,8 +22,11 @@ public:
 public slots:
     void editPath(int no);
     int exec();
+    bool load();
+    bool save();
 
 private:
+    void loadPath(QSettings &settings, QString name, int i);
     Ui::SupportDirsDialog *ui;
     QButtonGroup *m_group;
     enum {

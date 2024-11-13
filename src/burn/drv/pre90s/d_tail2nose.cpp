@@ -286,7 +286,7 @@ static void __fastcall tail2nose_sound_out(UINT16 port, UINT8 data)
 	}
 }
 
-static UINT8 _fastcall tail2nose_sound_in(UINT16 port)
+static UINT8 __fastcall tail2nose_sound_in(UINT16 port)
 {
 	switch (port & 0xff)
 	{
@@ -577,7 +577,7 @@ static INT32 DrvDraw()
 			redraw_zoom_tiles = 0;
 		}
 
-		K051316_zoom_draw(0, 0);
+		K051316_zoom_draw(0, 0 | K051316_16BIT);
 		draw_sprites();
 		draw_layer();
 	} else {

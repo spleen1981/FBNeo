@@ -26,7 +26,7 @@ static UINT8 *DrvPMCRAM;
 static UINT8 *DrvM6809RAM;
 static UINT8 *DrvZ80RAM;
 
-static UINT32  *DrvPalette;
+static UINT32 *DrvPalette;
 static UINT8  DrvRecalc;
 
 static UINT8 *soundlatch;
@@ -411,8 +411,8 @@ static void K052109Callback(INT32 layer, INT32 bank, INT32 *code, INT32 *color, 
 static void K051960Callback(INT32 *code, INT32 *color, INT32 *priority, INT32 *)
 {
 	*priority = 0x00;
-	if ( *color & 0x10) *priority = 1;
-	if (~*color & 0x20) *priority = 2;
+	if ( *color & 0x10) *priority = 0x0a;
+	if (~*color & 0x20) *priority = 0x0c;
 
 	*color = 0x20 | (*color & 0x0f);
 
@@ -511,9 +511,6 @@ static INT32 DrvGfxDecode()
 	INT32 YOffs[16] = { 0x000, 0x020, 0x040, 0x060, 0x080, 0x0a0, 0x0c0, 0x0e0,
 			  0x200, 0x220, 0x240, 0x260, 0x280, 0x2a0, 0x2c0, 0x2e0 };
 
-	konami_rom_deinterleave_2(DrvGfxROM0, 0x080000);
-	konami_rom_deinterleave_2(DrvGfxROM1, 0x100000);
-
 	GfxDecode(0x04000, 4,  8,  8, Plane0, XOffs, YOffs, 0x100, DrvGfxROM0, DrvGfxROMExp0);
 	GfxDecode(0x02000, 4, 16, 16, Plane1, XOffs, YOffs, 0x400, DrvGfxROM1, DrvGfxROMExp1);
 
@@ -522,6 +519,8 @@ static INT32 DrvGfxDecode()
 
 static INT32 DrvInit()
 {
+	GenericTilesInit();
+
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
@@ -536,11 +535,11 @@ static INT32 DrvInit()
 
 		if (BurnLoadRom(DrvZ80ROM  + 0x000000,  2, 1)) return 1;
 
-		if (BurnLoadRom(DrvGfxROM0 + 0x000000,  3, 1)) return 1;
-		if (BurnLoadRom(DrvGfxROM0 + 0x040000,  4, 1)) return 1;
+		if (BurnLoadRomExt(DrvGfxROM0 + 0x000000,  3, 4, 2)) return 1;
+		if (BurnLoadRomExt(DrvGfxROM0 + 0x040000,  4, 4, 2)) return 1;
 
-		if (BurnLoadRom(DrvGfxROM1 + 0x000000,  5, 1)) return 1;
-		if (BurnLoadRom(DrvGfxROM1 + 0x080000,  6, 1)) return 1;
+		if (BurnLoadRomExt(DrvGfxROM1 + 0x000000,  5, 4, 2)) return 1;
+		if (BurnLoadRomExt(DrvGfxROM1 + 0x080000,  6, 4, 2)) return 1;
 
 		if (BurnLoadRom(DrvSndROM0 + 0x000000,  7, 1)) return 1;
 
@@ -569,11 +568,11 @@ static INT32 DrvInit()
 	ZetSetReadHandler(spy_sound_read);
 	ZetClose();
 
-	K052109Init(DrvGfxROM0, 0x07ffff);
+	K052109Init(DrvGfxROM0, DrvGfxROMExp0, 0x07ffff);
 	K052109SetCallback(K052109Callback);
 	K052109AdjustScroll(-2, 0);
 
-	K051960Init(DrvGfxROM1, 0x0fffff);
+	K051960Init(DrvGfxROM1, DrvGfxROMExp1, 0x0fffff);
 	K051960SetCallback(K051960Callback);
 	K051960SetSpriteOffset(0, 0);
 
@@ -588,8 +587,6 @@ static INT32 DrvInit()
 	K007232Init(1, 3579545, DrvSndROM1, 0x40000);
 	K007232SetPortWriteHandler(1, DrvK007232VolCallback1);
 	K007232PCMSetAllRoutes(1, 0.20, BURN_SND_ROUTE_BOTH);
-
-	GenericTilesInit();
 
 	DrvDoReset();
 
@@ -616,26 +613,20 @@ static INT32 DrvExit()
 
 static INT32 DrvDraw()
 {
-	if (DrvRecalc) {
-		KonamiRecalcPal(DrvPalRAM, DrvPalette, 0x800);
-	}
+	KonamiRecalcPalette(DrvPalRAM, DrvPalette, 0x800);
 
 	K052109UpdateScroll();
 
 	if (spy_video_enable) {
-		K052109RenderLayer(1, 1, DrvGfxROMExp0);
-		K051960SpritesRender(DrvGfxROMExp1, 2); 
-		K052109RenderLayer(2, 0, DrvGfxROMExp0);
-		K051960SpritesRender(DrvGfxROMExp1, 1); 
-		K051960SpritesRender(DrvGfxROMExp1, 0); 
-		K052109RenderLayer(0, 0, DrvGfxROMExp0);
+		K052109RenderLayer(1, K052109_OPAQUE, 1);
+		K052109RenderLayer(2, 0, 2);
+		K051960SpritesRender(-1, -1); 
+		K052109RenderLayer(0, 0, 0);
 	} else {
-		for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++) {
-			pTransDraw[i] = 0x0300;
-		}
+		KonamiClearBitmaps(DrvPalette[0x300]);
 	}
 
-	BurnTransferCopy(DrvPalette);
+	KonamiBlendCopy(DrvPalette);
 
 	return 0;
 }

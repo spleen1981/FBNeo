@@ -5,6 +5,7 @@
 #include "ui_selectdialog.h"
 #include "burner.h"
 #include "rominfodialog.h"
+#include "qutil.h"
 
 SelectDialog::SelectDialog(QWidget *parent) :
     QDialog(parent),
@@ -38,11 +39,14 @@ SelectDialog::SelectDialog(QWidget *parent) :
     connect(ui->ckbShowAvaliable, SIGNAL(toggled(bool)), this, SLOT(itemShowAvaliable(bool)));
     connect(ui->ckbShowUnavaliable, SIGNAL(toggled(bool)), this, SLOT(itemShowUnavaliable(bool)));
     connect(ui->ckbShowClones, SIGNAL(toggled(bool)), this, SLOT(itemShowClones(bool)));
+    connect(ui->ckbUseZipnames, SIGNAL(toggled(bool)), this, SLOT(itemShowZipNames(bool)));
+
     m_selectedDriver = 0;
 
     m_showAvailable = true;
     m_showUnavailable = true;
     m_showClones = true;
+    m_showZipNames = false;
     m_showCount = 0;
 
     QMenu *contextMenu = new QMenu(ui->tvDrivers);
@@ -50,6 +54,12 @@ SelectDialog::SelectDialog(QWidget *parent) :
     ui->tvDrivers->setContextMenuPolicy(Qt::ActionsContextMenu);
     ui->tvDrivers->addAction(m_actionScanThis);
     connect(m_actionScanThis, SIGNAL(triggered()), this, SLOT(rescanRomset()));
+
+    connect(ui->btnSearch, SIGNAL(clicked()), this, SLOT(doSearch()));
+
+    // hide zip name column
+    ui->tvDrivers->setColumnHidden(1, true);
+    filterDrivers();
 }
 
 SelectDialog::~SelectDialog()
@@ -69,6 +79,7 @@ void SelectDialog::driverChange(QTreeWidgetItem *item, QTreeWidgetItem *prev)
     nBurnDrvActive = driver->driverNo();
     ui->leGameInfo->setText(BurnDrvGetText(flags | DRV_FULLNAME));
     updateTitleScreen();
+    updatePreview();
     {
         QString manufacturer = BurnDrvGetTextA(DRV_MANUFACTURER) ?
                     BurnDrvGetText(flags | DRV_MANUFACTURER) : tr("Unknown");
@@ -83,6 +94,16 @@ void SelectDialog::driverChange(QTreeWidgetItem *item, QTreeWidgetItem *prev)
         ui->leReleasedBy->setText(releaseInfo);
     }
     ui->leRomName->setText(driver->romName());
+    ui->leGenre->setText(util::decorateGenre());
+    ui->leRomInfo->setText(util::decorateRomInfo());
+
+
+    QString comments(BurnDrvGetText(flags | DRV_COMMENT));
+    if (BurnDrvGetFlags() & BDF_HISCORE_SUPPORTED)
+        comments += tr(", hiscores supported");
+    ui->leNotes->setText(comments);
+
+
     nBurnDrvActive = tmp;
 }
 
@@ -128,15 +149,71 @@ void SelectDialog::itemShowClones(bool state)
     filterDrivers();
 }
 
+void SelectDialog::itemShowZipNames(bool state)
+{
+    if (state == m_showZipNames)
+        return;
+    m_showZipNames = state;
+
+    if (m_showZipNames)
+        ui->tvDrivers->setColumnHidden(1, false);
+    else
+        ui->tvDrivers->setColumnHidden(1, true);
+}
+
+void SelectDialog::doSearch()
+{
+    const QString criteria(ui->leSearch->text());
+    if (criteria.isEmpty()) {
+        filterDrivers();
+        return;
+    }
+
+    QList<QTreeWidgetItem *> found =
+            ui->tvDrivers->findItems(criteria, Qt::MatchContains | Qt::MatchRecursive);
+
+    // hide all drivers
+    foreach (TreeDriverItem *driver, m_parents.values()) {
+        if (driver == nullptr)
+            continue;
+        driver->setHidden(true);
+        for (int idx = 0; idx < driver->childCount(); idx++) {
+            driver->child(idx)->setHidden(true);
+        }
+    }
+
+    foreach (QTreeWidgetItem *item, found) {
+        TreeDriverItem *driver = static_cast<TreeDriverItem *>(item);
+        if (!driver->isParent()) {
+            driver->parent()->setHidden(false);
+        }
+        driver->setHidden(false);
+    }
+}
+
 void SelectDialog::updateTitleScreen()
 {
     QString drv = BurnDrvGetTextA(DRV_NAME);
-    QString path = (QString(tr("support/titles/%0.png").arg(drv)));
+    QString path = QString(szAppTitlesPath);
+    path += QString("%0.png").arg(drv);
     if (QFile(path).exists()) {
         QPixmap p(path);
         ui->imgTitleScreen->setPixmap(p);
     } else {
         ui->imgTitleScreen->setPixmap(m_defaultImage);
+    }
+}
+
+void SelectDialog::updatePreview()
+{
+    QString drv = BurnDrvGetTextA(DRV_NAME);
+    QString path = QString(szAppPreviewsPath);
+    path += QString("%0.png").arg(drv);
+    if (QFile(path).exists()) {
+        QPixmap p(path);
+        ui->imgPreview->setPixmap(p);
+    } else {
+        ui->imgPreview->setPixmap(m_defaultImage);
     }
 }
 
@@ -208,8 +285,10 @@ void SelectDialog::buildDriverTree()
 
         TreeDriverItem *ditem = new TreeDriverItem();
         ditem->setIcon(0, m_icoNotFound);
-        ditem->setText(0, BurnDrvGetText(DRV_ASCIIONLY | DRV_FULLNAME));
+        ditem->setFullName(BurnDrvGetText(DRV_ASCIIONLY | DRV_FULLNAME));
+        ditem->setText(0, ditem->fullName());
         ditem->setRomName(BurnDrvGetTextA(DRV_NAME));
+        ditem->setText(1, ditem->romName());
         ditem->setDriverNo(i);
         ditem->setIsParent(true);
         ui->tvDrivers->addTopLevelItem(ditem);
@@ -231,11 +310,14 @@ void SelectDialog::buildDriverTree()
         if (itemParent) {
             TreeDriverItem *ditem = new TreeDriverItem();
             ditem->setIcon(0, m_icoNotFound);
-            ditem->setText(0, BurnDrvGetText(DRV_ASCIIONLY | DRV_FULLNAME));
+            ditem->setFullName(BurnDrvGetText(DRV_ASCIIONLY | DRV_FULLNAME));
+            ditem->setText(0, ditem->fullName());
             ditem->setRomName(BurnDrvGetTextA(DRV_NAME));
+            ditem->setText(1, ditem->romName());
             ditem->setDriverNo(i);
             ditem->setIsParent(false);
-            ditem->setBackgroundColor(0, QColor(230, 230, 230));
+            ditem->setBackgroundColor(0, QColor(200, 230, 255));
+            ditem->setBackgroundColor(1, QColor(210, 240, 255));
             itemParent->addChild(ditem);
         }
     }
@@ -292,6 +374,7 @@ void SelectDialog::filterDrivers()
                 if (!isFiltered(clone))
                     continue;
                 clone->setHidden(false);
+                m_showCount++;
             }
         }
         m_showCount++;
@@ -322,6 +405,16 @@ const char *TreeDriverItem::romName() const
 void TreeDriverItem::setRomName(const char *romName)
 {
     m_romName = romName;
+}
+
+const char *TreeDriverItem::fullName() const
+{
+    return m_fullName;
+}
+
+void TreeDriverItem::setFullName(const char *fullName)
+{
+    m_fullName = fullName;
 }
 
 bool TreeDriverItem::isParent() const

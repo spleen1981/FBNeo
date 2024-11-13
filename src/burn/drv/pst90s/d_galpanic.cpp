@@ -458,6 +458,28 @@ STD_ROM_PICK(Fantasiab)
 STD_ROM_FN(Fantasiab)
 
 // Rom information
+static struct BurnRomInfo FantasianRomDesc[] = {
+	{ "prog2_12.ue17",   	0x080000, 0x8bb70be1, BRF_ESS | BRF_PRG }, // 68000 code
+	{ "prog1_7.ud17",   	0x080000, 0xd1616a3e, BRF_ESS | BRF_PRG },
+	{ "i-scr2_10.ue16b",  	0x080000, 0x2a588393, BRF_ESS | BRF_PRG },
+	{ "i-scr1_5.ue16a",	 	0x080000, 0x6160e0f0, BRF_ESS | BRF_PRG },
+	{ "i-scr4_9.ue15b",  	0x080000, 0xf776b743, BRF_ESS | BRF_PRG },
+	{ "i-scr3_4.ue15a",	  	0x080000, 0x5df0dff2, BRF_ESS | BRF_PRG },
+	{ "i-scr6_8.ue14b", 	0x080000, 0x5707d861, BRF_ESS | BRF_PRG },
+	{ "i-scr5_3.ue14a",	  	0x080000, 0x36cb811a, BRF_ESS | BRF_PRG },
+	{ "i-scr8_11.ue20b", 	0x080000, 0x1f14a395, BRF_ESS | BRF_PRG },
+	{ "i-scr7_6.ue20a",	  	0x080000, 0xfaf870e4, BRF_ESS | BRF_PRG },
+
+	{ "obj1_13.u5",    		0x080000, 0xf99751f5, BRF_GRA },			  // graphics
+
+	{ "music1_1.ub6",   	0x080000, 0x22955efb, BRF_SND },			  // PCM
+	{ "music2_2.uc6",   	0x080000, 0x4cd4d6c3, BRF_SND },
+};
+
+STD_ROM_PICK(Fantasian)
+STD_ROM_FN(Fantasian)
+
+// Rom information
 static struct BurnRomInfo SupmodelRomDesc[] = {
 	{ "prog2.12",   		0x080000, 0x714b7e74, BRF_ESS | BRF_PRG }, // 68000 code
 	{ "prog1.7",    		0x080000, 0x0bb858de, BRF_ESS | BRF_PRG },
@@ -470,7 +492,7 @@ static struct BurnRomInfo SupmodelRomDesc[] = {
 	{ "i-scr8.11", 			0x080000, 0x7c1813c8, BRF_ESS | BRF_PRG },
 	{ "i-scr7.6",	  		0x080000, 0x19c73268, BRF_ESS | BRF_PRG },
 
-	{ "(__1994)obj1.13",    0x080000, 0x832cd451, BRF_GRA },			  // graphics
+	{ "obj1.13",    		0x080000, 0x832cd451, BRF_GRA },			  // graphics
 
 	{ "music1.1",   		0x080000, 0x2b1f6655, BRF_SND },			  // PCM
 	{ "music2.2",   		0x080000, 0xcccae65a, BRF_SND },
@@ -492,7 +514,7 @@ static struct BurnRomInfo NewfantRomDesc[] = {
 	{ "iscr8.11", 			0x080000, 0xf4148528, BRF_ESS | BRF_PRG },
 	{ "iscr7.06",			0x080000, 0x2dee0c31, BRF_ESS | BRF_PRG },
 
-	{ "(__1995)nf95obj1.13",    	0x080000, 0xe6d1bc71, BRF_GRA },			  // graphics
+	{ "nf95obj1.13",    	0x080000, 0xe6d1bc71, BRF_GRA },			  // graphics
 
 	{ "musc1.01",   		0x080000, 0x10347fce, BRF_SND },			  // PCM
 	{ "musc2.02",   		0x080000, 0xb9646a8c, BRF_SND },
@@ -514,7 +536,7 @@ static struct BurnRomInfo NewfantaRomDesc[] = {
 	{ "iscr8.11", 			0x080000, 0xf4148528, BRF_ESS | BRF_PRG },
 	{ "iscr7.06",			0x080000, 0x2dee0c31, BRF_ESS | BRF_PRG },
 
-	{ "(__1994)obj1.13",    0x080000, 0x832cd451, BRF_GRA },			  // graphics
+	{ "obj1.13",    		0x080000, 0x832cd451, BRF_GRA },			  // graphics
 
 	{ "musc1.01",   		0x080000, 0x10347fce, BRF_SND },			  // PCM
 	{ "musc2.02",   		0x080000, 0xb9646a8c, BRF_SND },
@@ -525,7 +547,7 @@ STD_ROM_FN(Newfanta)
 
 // Rom information
 static struct BurnRomInfo Fantsy95RomDesc[] = {
-	{ "prog2(__fantsy95).12", 0x080000, 0x1e684da7, BRF_ESS | BRF_PRG }, // 68000 code
+	{ "prog2.12", 			0x080000, 0x1e684da7, BRF_ESS | BRF_PRG }, // 68000 code
 	{ "prog1.7",    		0x080000, 0xdc4e4f6b, BRF_ESS | BRF_PRG },
 	{ "i-scr2.10",  		0x080000, 0xab8756ff, BRF_ESS | BRF_PRG },
 	{ "i-scr1.5",	  		0x080000, 0xd8e2ef77, BRF_ESS | BRF_PRG },
@@ -536,7 +558,7 @@ static struct BurnRomInfo Fantsy95RomDesc[] = {
 	{ "i-scr8.11", 			0x080000, 0x33db8177, BRF_ESS | BRF_PRG },
 	{ "i-scr7.6",	  		0x080000, 0x8662dd01, BRF_ESS | BRF_PRG },
 
-	{ "(__1994)obj1.13",    0x080000, 0x832cd451, BRF_GRA },			  // graphics
+	{ "obj1.13",    		0x080000, 0x832cd451, BRF_GRA },			  // graphics
 
 	{ "music1.1",   		0x080000, 0x3117e2ef, BRF_SND },			  // PCM
 	{ "music2.2",   		0x080000, 0x0c1109f9, BRF_SND },
@@ -2099,6 +2121,16 @@ struct BurnDriver BurnDrvFantasiab = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, FantasiabRomInfo, FantasiabRomName, NULL, NULL, GalpanicInputInfo, FantasiaDIPInfo,
+	FantasiaInit, GalpanicExit, ComadFrame, ComadDraw, GalpanicScan, &RecalcBgPalette, 0x400,
+	224, 256, 3, 4
+};
+
+struct BurnDriver BurnDrvFantasian = {
+	"fantasian", "fantasia", NULL, NULL, "1994",
+	"Fantasia (940803 PCB)\0", NULL, "Comad / New Japan System", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	NULL, FantasianRomInfo, FantasianRomName, NULL, NULL, GalpanicInputInfo, FantasiaDIPInfo,
 	FantasiaInit, GalpanicExit, ComadFrame, ComadDraw, GalpanicScan, &RecalcBgPalette, 0x400,
 	224, 256, 3, 4
 };

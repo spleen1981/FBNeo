@@ -38,7 +38,7 @@ extern INT32 nHD6309CyclesTotal;
 
 void HD6309Reset();
 void HD6309NewFrame();
-INT32 HD6309Init(INT32 num);
+INT32 HD6309Init(INT32 nCPU);
 void HD6309Exit();
 void HD6309Open(INT32 num);
 void HD6309Close();
@@ -46,7 +46,7 @@ INT32 HD6309GetActive();
 void HD6309SetIRQLine(INT32 vector, INT32 status);
 INT32 HD6309Run(INT32 cycles);
 void HD6309RunEnd();
-INT32 HD6309GetPC();
+UINT32 HD6309GetPC(INT32);
 INT32 HD6309MapMemory(UINT8* pMemory, UINT16 nStart, UINT16 nEnd, INT32 nType);
 INT32 HD6309MemCallback(UINT16 nStart, UINT16 nEnd, INT32 nType);
 void HD6309SetReadHandler(UINT8 (*pHandler)(UINT16));

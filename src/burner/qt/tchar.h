@@ -36,7 +36,7 @@ typedef struct { int x, y, width, height; } RECT;
 #undef __cdecl
 #define __cdecl
 
-#define bprintf(...) {}
+//#define bprintf(...) {}
 #endif
 
 #undef __fastcall
@@ -57,7 +57,9 @@ typedef int HWND;
 
 extern int bDrvOkay;
 extern int bRunPause;
+#ifdef __cplusplus
 extern bool bAlwaysProcessKeyboardInput;
+#endif
 extern HWND hScrnWnd;		// Handle to the screen window
 
 extern void InpDIPSWResetDIPs (void);

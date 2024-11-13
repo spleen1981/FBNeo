@@ -94,7 +94,7 @@ static UINT8 mole_protection_r(UINT8 offset)
 			return 0xb0;
 
 		case 0x26:
-			if (M6502GetPC() == 0x53d7)
+			if (M6502GetPC(0) == 0x53d7)
 			{
 				return 0x06;	// bonus round
 			}
@@ -376,7 +376,7 @@ static INT32 DrvDraw()
 				else
 					pos = y * 320 + x;
 
-				PutPix(pBurnDraw + pos * nBurnBpp, BurnHighCol(pxl >> 16, pxl >> 8, pxl, 0));
+				PutPix(pBurnDraw + pos * nBurnBpp, BurnHighCol((pxl >> 16)&0xff, (pxl >> 8)&0xff, pxl&0xff, 0));
 			}
 		}
 	}

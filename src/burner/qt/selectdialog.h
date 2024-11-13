@@ -24,6 +24,8 @@ public:
 
     const char *romName() const;
     void setRomName(const char *romName);
+    const char *fullName() const;
+    void setFullName(const char *fullName);
 
     bool isParent() const;
     void setIsParent(bool isParent);
@@ -31,6 +33,7 @@ public:
 private:
     int m_driverNo;
     const char *m_romName;
+    const char *m_fullName;
     bool m_isParent;
 };
 
@@ -55,11 +58,16 @@ public slots:
     void itemShowAvaliable(bool state);
     void itemShowUnavaliable(bool state);
     void itemShowClones(bool state);
+    void itemShowZipNames(bool state);
+    void doSearch();
+
 signals:
     void driverSelected(int no);
 private:
     int m_selectedDriver;
     void updateTitleScreen();
+    void updatePreview();
+
     void updateLabelCounter();
     void buildDriverTree();
     bool isFiltered(TreeDriverItem *driver);
@@ -77,6 +85,7 @@ private:
     bool m_showAvailable;
     bool m_showUnavailable;
     bool m_showClones;
+    bool m_showZipNames;
     int m_showCount;
 
     QPixmap m_defaultImage;

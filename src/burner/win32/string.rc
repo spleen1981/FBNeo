@@ -111,6 +111,7 @@ BEGIN
 	IDS_SPATH_IPS				"IPS"
 	IDS_SPATH_NGCD_ISOS			"Neo Geo CDZ Games"
 	IDS_SPATH_NGCD_COVERS		"Neo Geo CDZ Covers"
+	IDS_SPATH_BLEND				"Blend Files"
 	
 	IDS_ROMPATH_1				"Path #1"
 	IDS_ROMPATH_2				"Path #2"
@@ -182,6 +183,8 @@ BEGIN
 	IDS_SEL_TECHNOS				"Technos"
 	IDS_SEL_PCE					"PC-Engine"
 	IDS_SEL_SMS					"Master System"
+	IDS_SEL_SG1000				"SG-1000"
+	IDS_SEL_COLECO				"ColecoVision"
 	
 	IDS_GENRE					"Genre"
 	IDS_GENRE_HORSHOOT			"Shooter - Horizontal"

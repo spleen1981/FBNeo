@@ -20,6 +20,7 @@ int nWindowPosX = -1, nWindowPosY = -1;					// Window position
 int bAutoPause = 1;
 
 bool bMenuEnabled = true;
+bool bHasFocus = false;
 
 int nSavestateSlot = 1;
 
@@ -295,7 +296,9 @@ int CreateDatfileWindows(int bType)
 	if (bType == DAT_PCENGINE_ONLY) _sntprintf(szConsoleString, 64, _T(", PC-Engine only"));
 	if (bType == DAT_TG16_ONLY) _sntprintf(szConsoleString, 64, _T(", TurboGrafx16 only"));
 	if (bType == DAT_SGX_ONLY) _sntprintf(szConsoleString, 64, _T(", SuprGrafx only"));
-	
+	if (bType == DAT_SG1000_ONLY) _sntprintf(szConsoleString, 64, _T(", Sega SG-1000 only"));
+	if (bType == DAT_COLECO_ONLY) _sntprintf(szConsoleString, 64, _T(", ColecoVision only"));
+
 	TCHAR szProgramString[25];	
 	_sntprintf(szProgramString, 25, _T("ClrMame Pro XML"));
 	
@@ -555,6 +558,7 @@ static int OnCreate(HWND hWnd, LPCREATESTRUCT /*lpCreateStruct*/)	// HWND hwnd, 
 
 static void OnActivateApp(HWND hwnd, BOOL fActivate, DWORD /* dwThreadId */)
 {
+	bHasFocus = fActivate;
 	if (!kNetGame && bAutoPause && !bAltPause && hInpdDlg == NULL && hInpCheatDlg == NULL && hInpDIPSWDlg == NULL) {
 		bRunPause = fActivate? 0 : 1;
 	}
@@ -770,6 +774,20 @@ int BurnerLoadDriver(TCHAR *szDriverName)
 	return 0;
 }
 
+void scrnSSUndo() // called from the menu (shift+F8) and CheckSystemMacros() in run.cpp
+{
+	if (bDrvOkay) {
+		TCHAR szString[256] = _T("state undo");
+		TCHAR szStringFailed[256] = _T("state: nothing to undo");
+		if (!StatedUNDO(nSavestateSlot)) {
+			VidSNewShortMsg(szString);
+		} else {
+			VidSNewShortMsg(szStringFailed);
+		}
+		PausedRedraw();
+	}
+}
+
 static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 {
 	//if(id >= ID_MDI_START_CHILD) {
@@ -889,6 +907,11 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 		case MENU_STARTNET:
 			if (Init_Network()) {
 				MessageBox(hScrnWnd, FBALoadStringEx(hAppInst, IDS_ERR_NO_NETPLAYDLL, true), FBALoadStringEx(hAppInst, IDS_ERR_ERROR, true), MB_OK);
+				break;
+			}
+			if (bBurnUseASMCPUEmulation) {
+				FBAPopupAddText(PUF_TEXT_DEFAULT, _T("Please uncheck \"Misc -> Options -> Use Assembly MC68000 Core\" before starting a netgame!"));
+				FBAPopupDisplay(PUF_TYPE_ERROR);
 				break;
 			}
 			if (!kNetGame) {
@@ -1080,16 +1103,9 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 			PausedRedraw();
 			break;
 		}
-		case MENU_STATE_UNDO: {
-			if (bDrvOkay) {
-				TCHAR szString[256] = _T("state undo");
-
-				StatedUNDO(nSavestateSlot);
-				VidSNewShortMsg(szString);
-				PausedRedraw();
-				}
+		case MENU_STATE_UNDO:
+			scrnSSUndo();
 			break;
-			}
 		case MENU_STATE_LOAD_SLOT:
 			if (bDrvOkay && !kNetGame) {
 				if (StatedLoad(nSavestateSlot) == 0) {
@@ -1782,8 +1798,16 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 			bNoChangeNumLock = !bNoChangeNumLock;
 			break;
 			
+		case MENU_CREATEDIRS:
+			bAlwaysCreateSupportFolders = !bAlwaysCreateSupportFolders;
+			break;
+			
 		case MENU_SAVEHISCORES:
 			EnableHiscores = !EnableHiscores;
+			break;
+			
+		case MENU_USEBLEND:
+			bBurnUseBlend = !bBurnUseBlend;
 			break;
 			
 		case MENU_ROMDIRS:
@@ -1894,7 +1918,12 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 			}
 			break;
 		}
-			
+
+		case MENU_INPUT_AUTOFIRE_RATE_1: nAutoFireRate = 22; break;
+		case MENU_INPUT_AUTOFIRE_RATE_2: nAutoFireRate = 12; break;
+		case MENU_INPUT_AUTOFIRE_RATE_3: nAutoFireRate =  8; break;
+		case MENU_INPUT_AUTOFIRE_RATE_4: nAutoFireRate =  4; break;
+
 		case MENU_PRIORITY_REALTIME:
 			nAppThreadPriority = THREAD_PRIORITY_TIME_CRITICAL;
 			SetThreadPriority(GetCurrentThread(), nAppThreadPriority);
@@ -1947,6 +1976,18 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 		case MENU_CLRMAME_PRO_XML_SGX_ONLY:
 			if (UseDialogs()) {
 				CreateDatfileWindows(DAT_SGX_ONLY);
+			}
+                        break;
+
+		case MENU_CLRMAME_PRO_XML_SG1000_ONLY:
+			if (UseDialogs()) {
+				CreateDatfileWindows(DAT_SG1000_ONLY);
+			}
+                        break;
+
+		case MENU_CLRMAME_PRO_XML_COLECO_ONLY:
+			if (UseDialogs()) {
+				CreateDatfileWindows(DAT_COLECO_ONLY);
 			}
 			break;
 

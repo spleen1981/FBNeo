@@ -35,6 +35,7 @@ void deco16Scan();
 
 void deco16_pf12_update();
 void deco16_pf34_update();
+void deco16_pf3_update();
 
 #define DECO16_LAYER_OPAQUE		0x010000
 #define DECO16_LAYER_PRIORITY(x)	((x) & 0xff)
@@ -45,6 +46,7 @@ void deco16_pf34_update();
 #define DECO16_LAYER_TRANSMASK1		0x000000
 
 void deco16_draw_layer(INT32 tmap, UINT16 *dest, INT32 flags);
+void deco16_draw_layer_by_line(INT32 start, INT32 end, INT32 tmap, UINT16 *dest, INT32 flags);
 
 void deco16_tile_decode(UINT8 *src, UINT8 *dst, INT32 len, INT32 type);
 void deco16_sprite_decode(UINT8 *gfx, INT32 len);

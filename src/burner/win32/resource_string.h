@@ -111,6 +111,7 @@
 #define IDS_SPATH_IPS					(IDS_STRING +  462)
 #define IDS_SPATH_NGCD_ISOS				(IDS_STRING +  464)
 #define IDS_SPATH_NGCD_COVERS			(IDS_STRING +  466)
+#define IDS_SPATH_BLEND					(IDS_STRING +  467)
 
 #define IDS_ROMPATH_1					(IDS_STRING +  480)
 #define IDS_ROMPATH_2					(IDS_STRING +  482)
@@ -182,6 +183,8 @@
 #define IDS_SEL_TECHNOS					(IDS_STRING +  624)
 #define IDS_SEL_PCE						(IDS_STRING +  626)
 #define IDS_SEL_SMS						(IDS_STRING +  628)
+#define IDS_SEL_SG1000					(IDS_STRING +  629)
+#define IDS_SEL_COLECO					(IDS_STRING +  630)
 
 #define IDS_GENRE						(IDS_STRING +  650)
 #define IDS_GENRE_HORSHOOT				(IDS_STRING +  652)

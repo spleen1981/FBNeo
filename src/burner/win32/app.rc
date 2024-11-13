@@ -86,8 +86,10 @@ CAPTION "Select control"
 FONT 8, "MS Shell Dlg"
 BEGIN
     CONTROL         "Grab mouse",IDC_INPS_GRABMOUSE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,5,50,10
-    PUSHBUTTON      "Activate",IDC_INPS_PUSH,5,17,50,15
-    PUSHBUTTON      "Cancel",IDCANCEL,5,35,50,15
+    PUSHBUTTON      "Activate",IDC_INPS_PUSH,5,15,50,11
+//    PUSHBUTTON      "Cancel",IDCANCEL,5,35,50,15
+    PUSHBUTTON      "Clear Input",IDCANCEL+1,5,26,50,11
+    CONTROL         "Clear Lock",IDC_INPS_CLEARLOCK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,38,50,10
     CONTROL         "",IDC_INPS_CONTROL,"Static",SS_SUNKEN | SS_CENTER | SS_CENTERIMAGE,60,5,130,45, WS_EX_STATICEDGE
     CONTROL         "",IDC_INPS_CONTROL_NAME,"Edit",ES_CENTER | ES_AUTOHSCROLL | ES_READONLY,5,53,185,8
 END
@@ -210,7 +212,7 @@ BEGIN
     CONTROL         BMP_ABOUT,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE | SS_SUNKEN,3,3,100,50
     CONTROL         "version",IDC_FBA_VER,"Static",SS_OWNERDRAW | WS_GROUP,78,63,264,10
     CONTROL         "specialbuild",IDC_SPECIALSTRING,"Static",SS_OWNERDRAW | WS_GROUP,78,71,264,10
-    LTEXT           "FB Alpha contains parts of MAME && Final Burn.\n© 2004-2013, Team FB Alpha.",IDC_STATIC,6,86,230,16,WS_DISABLED
+    LTEXT           "FB Alpha contains parts of MAME && Final Burn.\n© 2004-2014, Team FB Alpha.",IDC_STATIC,6,86,230,16,WS_DISABLED
     DEFPUSHBUTTON   "OK",IDOK,294,88,50,14
     PUSHBUTTON      "License",IDC_SHOWLICENSE,240,88,50,14
     CONTROL         "",IDC_LICENSE,"RICHEDIT20A",ES_MULTILINE | ES_READONLY | WS_VSCROLL | ES_NOIME,3,107,342,77, WS_EX_STATICEDGE | ES_EX_NOCALLOLEINIT
@@ -518,6 +520,8 @@ BEGIN
     PUSHBUTTON      "Browse...",IDC_SUPPORTDIR_BR8,177,30,50,14
 	EDITTEXT        IDC_SUPPORTDIR_EDIT9,14,31,154,12,ES_AUTOHSCROLL
     PUSHBUTTON      "Browse...",IDC_SUPPORTDIR_BR9,177,30,50,14
+	EDITTEXT        IDC_SUPPORTDIR_EDIT10,14,31,154,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse...",IDC_SUPPORTDIR_BR10,177,30,50,14
 END
 
 IDD_PALETTEVIEWER DIALOGEX 0, 0, 320, 240
@@ -890,6 +894,14 @@ BEGIN
     	MENUITEM SEPARATOR
         MENUITEM "Map game inputs...\tF5",				MENU_INPUT, GRAYED
         MENUITEM "Set dipswitches...\tCtrl+F5",				MENU_DIPSW, GRAYED
+    	MENUITEM SEPARATOR
+    	POPUP "&Auto-Fire Rate"
+    	BEGIN
+    	    MENUITEM "Slow",						MENU_INPUT_AUTOFIRE_RATE_1
+    	    MENUITEM "Medium",						MENU_INPUT_AUTOFIRE_RATE_2
+    	    MENUITEM "Fast",						MENU_INPUT_AUTOFIRE_RATE_3
+    	    MENUITEM "Very Fast",					MENU_INPUT_AUTOFIRE_RATE_4
+    	END
     END
     POPUP "Misc"
     BEGIN
@@ -900,6 +912,7 @@ BEGIN
            MENUITEM "Display mode indicator",				MENU_DISPLAYINDICATOR
            MENUITEM "Modeless menu",					MENU_MODELESS
            MENUITEM "Don't change Num Lock status",			MENU_NOCHANGENUMLOCK
+		   MENUITEM "Create support folders at runtime",	MENU_CREATEDIRS
            MENUITEM SEPARATOR
            POPUP "Set application thread priority"
            BEGIN
@@ -914,7 +927,8 @@ BEGIN
            MENUITEM "Use assembly MC68000 core",				MENU_ASSEMBLYCORE
            MENUITEM SEPARATOR
            MENUITEM "Save High Scores when supported",				MENU_SAVEHISCORES
-        END
+		   MENUITEM "Use alpha blend effects when supported",		MENU_USEBLEND
+		END
         MENUITEM SEPARATOR
         POPUP    "Generate dat file"
         BEGIN
@@ -923,6 +937,8 @@ BEGIN
 			MENUITEM "Generate dat (PC-Engine only)...",		MENU_CLRMAME_PRO_XML_PCE_ONLY
 			MENUITEM "Generate dat (TurboGrafx16 only)...",		MENU_CLRMAME_PRO_XML_TG16_ONLY
 			MENUITEM "Generate dat (SuprGrafx only)...",		MENU_CLRMAME_PRO_XML_SGX_ONLY
+			MENUITEM "Generate dat (Sega SG-1000 only)...",		MENU_CLRMAME_PRO_XML_SG1000_ONLY
+			MENUITEM "Generate dat (ColecoVision only)...",		MENU_CLRMAME_PRO_XML_COLECO_ONLY
 	END
         MENUITEM SEPARATOR
         MENUITEM "Configure ROM paths...",				MENU_ROMDIRS

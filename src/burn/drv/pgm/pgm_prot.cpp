@@ -28,7 +28,7 @@ static void __fastcall asic27a_write_byte(UINT32 address, UINT8 data)
 	if ((address & 0xfffffe) == 0xd10000) {	// ddp2
 		pgm_cpu_sync();
 		asic27a_to_arm = data;
-		Arm7SetIRQLine(ARM7_FIRQ_LINE, ARM7_ASSERT_LINE);
+		Arm7SetIRQLine(ARM7_FIRQ_LINE, ARM7_IRQSTATUS_ACK);
 		return;
 	}
 }
@@ -38,7 +38,7 @@ static void __fastcall asic27a_write_word(UINT32 address, UINT16 data)
 	if ((address & 0xfffffe) == 0xd10000) {
 		pgm_cpu_sync();
 		asic27a_to_arm = data & 0xff;
-		Arm7SetIRQLine(ARM7_FIRQ_LINE, ARM7_ASSERT_LINE);
+		Arm7SetIRQLine(ARM7_FIRQ_LINE, ARM7_IRQSTATUS_ACK);
 		return;
 	}
 }
@@ -78,7 +78,7 @@ static UINT8 asic27a_arm7_read_byte(UINT32 address)
 	switch (address)
 	{
 		case 0x38000000:
-			Arm7SetIRQLine(ARM7_FIRQ_LINE, ARM7_CLEAR_LINE);
+			Arm7SetIRQLine(ARM7_FIRQ_LINE, ARM7_IRQSTATUS_NONE);
 			return asic27a_to_arm;
 	}
 
@@ -141,7 +141,7 @@ void install_protection_asic27a_martmast()
 	SekSetWriteByteHandler(4, asic27a_write_byte);
 	SekClose();
 
-	Arm7Init(1);
+	Arm7Init(0);
 	Arm7Open(0);
 	Arm7MapMemory(PGMARMROM,	0x00000000, 0x00003fff, ARM7_ROM);
 	Arm7MapMemory(PGMUSER0,		0x08000000, 0x08000000+(nPGMExternalARMLen-1), ARM7_ROM);
@@ -301,7 +301,7 @@ void install_protection_asic27a_kovsh()
 	SekSetWriteWordHandler(4, 	kovsh_asic27a_write_word);
 	SekClose();
 
-	Arm7Init(1);
+	Arm7Init(0);
 	Arm7Open(0);
 	Arm7MapMemory(PGMARMROM,	0x00000000, 0x00003fff, ARM7_ROM);
 	Arm7MapMemory(PGMARMRAM0,	0x10000000, 0x100003ff, ARM7_RAM);
@@ -385,7 +385,7 @@ void install_protection_asic27a_kovshp()
 	SekSetWriteWordHandler(4, 	kovshp_asic27a_write_word);
 	SekClose();
 
-	Arm7Init(1);
+	Arm7Init(0);
 	Arm7Open(0);
 	Arm7MapMemory(PGMARMROM,	0x00000000, 0x00003fff, ARM7_ROM);
 	Arm7MapMemory(PGMARMRAM0,	0x10000000, 0x100003ff, ARM7_RAM);
@@ -422,7 +422,7 @@ static void __fastcall svg_write_byte(UINT32 address, UINT8 data)
 	{
 		case 0x5c0000:
 		case 0x5c0001:
-			Arm7SetIRQLine(ARM7_FIRQ_LINE, ARM7_HOLD_LINE);
+			Arm7SetIRQLine(ARM7_FIRQ_LINE, ARM7_IRQSTATUS_AUTO);
 		return;
 	}
 }
@@ -440,7 +440,7 @@ static void __fastcall svg_write_word(UINT32 address, UINT16 data)
 	switch (address)
 	{
 		case 0x5c0000:
-			Arm7SetIRQLine(ARM7_FIRQ_LINE, ARM7_HOLD_LINE);
+			Arm7SetIRQLine(ARM7_FIRQ_LINE, ARM7_IRQSTATUS_AUTO);
 		return;
 
 		case 0x5c0300:
@@ -626,7 +626,7 @@ void install_protection_asic27a_svg()
 	SekSetWriteByteHandler(5, 	svg_write_byte);
 	SekClose();
 
-	Arm7Init(1);
+	Arm7Init(0);
 	Arm7Open(0);
 	Arm7MapMemory(PGMARMROM,	0x00000000, 0x00003fff, ARM7_ROM);
 	Arm7MapMemory(PGMUSER0,		0x08000000, 0x08000000 | (nPGMExternalARMLen-1), ARM7_ROM);
@@ -669,8 +669,8 @@ static UINT32 bt(UINT32 v, INT32 bit)
 static void asic3_compute_hold()
 {
 	// The mode is dependant on the region
-	static INT32 modes[4] = { 1, 1, 3, 2 };
-	INT32 mode = modes[PgmInput[7] & 3];
+	static INT32 modes[8] = { 1, 1, 3, 2, 4, 4, 4, 4 };
+	INT32 mode = modes[PgmInput[7] & 7];
 
 	switch(mode) {
 	case 1:
@@ -696,6 +696,15 @@ static void asic3_compute_hold()
 			^bt(asic3_hold, 15)^bt(asic3_hold, 10)^bt(asic3_hold, 8)^bt(asic3_hold, 5)
 			^bt(asic3_z, asic3_y)
 			^(bt(asic3_x, 0) << 4)^(bt(asic3_x, 1) << 6)^(bt(asic3_x, 2) << 10)^(bt(asic3_x, 3) << 12);
+		break;
+
+	case 4:		// orlegend111t
+		asic3_hold =
+			(asic3_hold << 1)
+			^0x2bad
+			^bt(asic3_hold, 15)^bt(asic3_hold,  7)^bt(asic3_hold, 6)^bt(asic3_hold, 5)
+			^bt(asic3_z, asic3_y)
+			^(bt(asic3_x, 0) << 3)^(bt(asic3_x, 1) << 8)^(bt(asic3_x, 2) << 10)^(bt(asic3_x, 3) << 14);
 		break;
 	}
 }
@@ -2647,13 +2656,26 @@ static void py2k2_asic27a_sim_command(UINT8 command)
 {
 	switch (command)
 	{
+		case 0x30: // Sprite sequence, advance to next sprite
+		break;
+
+		case 0x32: // Sprite sequence, decode offset
+		break;
+
+	//	case 0x33:
+	//	case 0x34:
+	//	case 0x35: // table?
+	//	case 0x38: // ?
+	//	break;
+
+		// "CCHANGE.C 285 ( TIME >= VALUE1 ) && TIME <= ALL_LEV_TIME )
+		case 0xba: // ??
+			asic27a_sim_response = asic27a_sim_value + 1; // gets us in-game
+		break;
+
 		case 0x99: // Reset?
 			asic27a_sim_key = 0x100;
 			asic27a_sim_response = 0x880000 | (PgmInput[7] << 8);
-		break;
-
-		case 0x38: // ?
-			asic27a_sim_response = 0x880000;
 		break;
 
 		case 0xc0:
@@ -2688,15 +2710,9 @@ static void py2k2_asic27a_sim_command(UINT8 command)
 		}
 		break;
 
-	//	case 0x32: // ?
-	//	break;
-
-	//	case 0xba: // almost definitely a table...
-	//	break;
-
 		default:
 			asic27a_sim_response = 0x880000;
-			bprintf (0, _T("Uknown ASIC Command %2.2x Value: %4.4x\n"), command, asic27a_sim_value);
+			bprintf (0, _T("Unknown ASIC Command %2.2x Value: %4.4x\n"), command, asic27a_sim_value);
 		break;
 	}
 }

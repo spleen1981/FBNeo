@@ -42,6 +42,7 @@ GEN = $$SRC/dep/generated
 
 # We need ld
 FBA_LD = ld
+DEFINES += FBA_DEBUG
 
 #-------------------------------------------------------------------------------
 # Additional include paths
@@ -86,15 +87,24 @@ DEFINES += BUILD_QT \
     WITH_QTCREATOR \
     INCLUDE_LIB_PNGH
 
+linux: DEFINES += BUILD_QT_LINUX
+macx: DEFINES += BUILD_QT_MACX
+
 # no warnings...
 QMAKE_CXXFLAGS += -w
 QMAKE_CFLAGS += -w
 
 
 #-------------------------------------------------------------------------------
-# C++11
+# C++11, OpenMP (software image flip/rotation)
 #-------------------------------------------------------------------------------
 CONFIG += c++11
+
+ENABLE_OPENMP = false
+$${ENABLE_OPENMP} {
+    QMAKE_CXXFLAGS += -fopenmp
+    QMAKE_LFLAGS += -fopenmp
+}
 
 #-------------------------------------------------------------------------------
 # src/dep/generated
@@ -352,6 +362,7 @@ PRE_TARGETDEPS +=                               \
     $$M68K_LIB.target                           \
 
 LIBS += -lSDL
+linux:LIBS += -lpulse-simple
 
 QMAKE_CLEAN += $$GEN/*
 #===============================================================================
@@ -754,7 +765,12 @@ SOURCES += \
     ../../src/dep/libs/zlib/zutil.c \
     ../../src/burn/devices/nmk004.cpp \
     ../../src/cpu/tlcs90/tlcs90.cpp \
-    ../../src/cpu/tlcs90_intf.cpp
+    ../../src/cpu/tlcs90_intf.cpp \
+    ../../src/burn/devices/kaneko_tmap.cpp \
+    ../../src/burner/qt/inputdialog.cpp \
+    ../../src/burner/qt/widgets/hexspinbox.cpp \
+    ../../src/burner/qt/logdialog.cpp
+
 
 HEADERS += \
     ../../src/burn/devices/8255ppi.h \
@@ -923,7 +939,17 @@ HEADERS += \
     ../../src/dep/libs/zlib/zconf.h.in \
     ../../src/dep/libs/zlib/zlib.h \
     ../../src/dep/libs/zlib/zutil.h \
-    ../../src/burn/devices/nmk004.h
+    ../../src/burn/devices/nmk004.h \
+    ../../src/burn/devices/kaneko_tmap.h \
+    ../../src/burner/qt/inputdialog.h \
+    ../../src/burner/qt/widgets/hexspinbox.h \
+    ../../src/burner/qt/logdialog.h
+
+#-------------------------------------------------------------------------------
+# Linux only drivers
+#-------------------------------------------------------------------------------
+linux: HEADERS += ../../src/intf/audio/linux/ringbuffer.h
+linux: SOURCES += ../../src/intf/audio/linux/aud_pulse_simple.cpp
 
 OTHER_FILES +=
 
@@ -937,4 +963,6 @@ FORMS += \
     ../../src/burner/qt/rominfodialog.ui \
     ../../src/burner/qt/romscandialog.ui \
     ../../src/burner/qt/selectdialog.ui \
-    ../../src/burner/qt/supportdirsdialog.ui
+    ../../src/burner/qt/supportdirsdialog.ui \
+    ../../src/burner/qt/inputdialog.ui \
+    ../../src/burner/qt/logdialog.ui

@@ -8,7 +8,7 @@
 #include "burner.h"
 #include "selectdialog.h"
 #include "ruby/ruby.hpp"
-
+#include "version.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent)
@@ -21,22 +21,22 @@ MainWindow::MainWindow(QWidget *parent) :
     createMenus();
     createControls();
 
-    setWindowTitle("FB Alpha Q");
+    setWindowTitle(QString("FBAlpha %1.%2.%3.%4")
+                   .arg(VER_MAJOR)
+                   .arg(VER_MINOR)
+                   .arg(VER_BETA)
+                   .arg(VER_ALPHA));
 
     connectActions();
+
+    m_logo = QImage(":/resource/splash.bmp");
 
     m_isRunning = false;
     InputInit();
 
     show();
 
-    ruby::video.driver("X-Video");
-    ruby::video.set(ruby::Video::Handle, m_viewport->id());
-    ruby::video.set(ruby::Video::Depth, 24u);
-
-    if (ruby::video.init()) {
-        qDebug() << "Ruby Succefully initialized";
-    }
+    setupRubyViewport();
 }
 
 MainWindow::~MainWindow()
@@ -51,8 +51,13 @@ int MainWindow::main(QApplication &app)
 {
     m_closeApp = false;
     while (!m_closeApp) {
-        app.processEvents();
-        m_emulation->run();
+        if (m_isRunning) {
+            app.processEvents();
+            m_emulation->run();
+        } else {
+            app.processEvents();
+            QThread::msleep(10);
+        }
     }
     return 0;
 }
@@ -89,8 +94,8 @@ void MainWindow::closeGame()
     if (bDrvOkay) {
         m_emulation->close();
         disableInGame();
-        ruby::video.clear();
-        ruby::video.refresh();
+        m_isRunning = false;
+        drawLogo();
     }
 }
 
@@ -107,6 +112,7 @@ void MainWindow::toogleMenu()
         menuBar()->show();
     }
     else menuBar()->hide();
+    drawLogo();
 }
 
 void MainWindow::toogleFullscreen()
@@ -120,6 +126,11 @@ void MainWindow::closeEvent(QCloseEvent *event)
 {
     m_closeApp = true;
     event->accept();
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event)
+{
+    drawLogo();
 }
 
 void MainWindow::createDefaultDirs()
@@ -150,12 +161,14 @@ void MainWindow::createMenus()
     setupInputInterfaces();
 
     m_menuInput->addAction(m_actionDipswitch);
+    m_menuInput->addAction(m_actionMapGameInputs);
 
     m_menuMisc = menuBar()->addMenu(tr("Misc"));
     m_menuMisc->addAction(m_actionConfigureRomPaths);
     m_menuMisc->addAction(m_actionConfigureSupportPaths);
     m_menuMisc->addSeparator();
     m_menuMisc->addAction(m_actionToogleMenu);
+    m_menuMisc->addAction(m_actionLogWindow);
 
     m_menuHelp = menuBar()->addMenu(tr("Help"));
     m_menuHelp->addAction(m_actionAbout);
@@ -173,6 +186,11 @@ void MainWindow::createControls()
     m_supportPathDlg = new SupportDirsDialog(this);
     m_aboutDlg = new AboutDialog(this);
     m_dipSwitchDlg = new DipswitchDialog(this);
+    m_inputDlg = new InputDialog(this);
+    m_logDlg = LogDialog::get(this);
+
+    extern void ProgressSetParent(QWidget *);
+    ProgressSetParent(this);
 }
 
 void MainWindow::createActions()
@@ -191,6 +209,9 @@ void MainWindow::createActions()
     m_actionAbout = new QAction(tr("About FBA"), this);
     m_actionDipswitch = new QAction(tr("Configure DIPs"), this);
     m_actionDipswitch->setEnabled(false);
+    m_actionMapGameInputs = new QAction(tr("Map game inputs"), this);
+    m_actionMapGameInputs->setEnabled(false);
+    m_actionLogWindow = new QAction(tr("Log window"), this);
 }
 
 void MainWindow::connectActions()
@@ -205,18 +226,43 @@ void MainWindow::connectActions()
     connect(m_scutToogleMenu, SIGNAL(activated()), this, SLOT(toogleMenu()));
     connect(m_scutToogleFullscreen, SIGNAL(activated()), this, SLOT(toogleFullscreen()));
     connect(m_actionDipswitch, SIGNAL(triggered()), m_dipSwitchDlg, SLOT(exec()));
+    connect(m_actionMapGameInputs, SIGNAL(triggered()), m_inputDlg, SLOT(exec()));
+    connect(m_actionLogWindow, SIGNAL(triggered()), m_logDlg, SLOT(show()));
 }
 
 void MainWindow::enableInGame()
 {
     m_actionCloseGame->setEnabled(true);
     m_actionDipswitch->setEnabled(true);
+    m_actionMapGameInputs->setEnabled(true);
 }
 
 void MainWindow::disableInGame()
 {
     m_actionCloseGame->setEnabled(false);
     m_actionDipswitch->setEnabled(false);
+    m_actionMapGameInputs->setEnabled(false);
+
+}
+
+void MainWindow::drawLogo()
+{
+    extern void rubyBlitImage(QImage &image);
+    if (!m_isRunning) {
+        QApplication::processEvents();
+        rubyBlitImage(m_logo);
+    }
+}
+
+void MainWindow::setupRubyViewport()
+{
+    ruby::video.driver("OpenGL");
+    ruby::video.set(ruby::Video::Handle, m_viewport->id());
+    ruby::video.set(ruby::Video::Depth, 24u);
+
+    if (ruby::video.init()) {
+        qDebug() << "Ruby Succefully initialized";
+    }
 }
 
 void MainWindow::setupInputInterfaces()

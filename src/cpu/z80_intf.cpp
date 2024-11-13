@@ -554,7 +554,7 @@ void ZetReset()
 	Z80Reset();
 }
 
-INT32 ZetGetPC(INT32 n)
+UINT32 ZetGetPC(INT32 n)
 {
 #if defined FBA_DEBUG
 	if (!DebugCPU_ZetInitted) bprintf(PRINT_ERROR, _T("ZetGetPC called without init\n"));
@@ -565,6 +565,20 @@ INT32 ZetGetPC(INT32 n)
 		return ActiveZ80GetPC();
 	} else {
 		return ZetCPUContext[n]->reg.pc.w.l;
+	}
+}
+
+INT32 ZetGetPrevPC(INT32 n)
+{
+#if defined FBA_DEBUG
+	if (!DebugCPU_ZetInitted) bprintf(PRINT_ERROR, _T("ZetGetPrvPC called without init\n"));
+	if (nOpenedCPU == -1 && n < 0) bprintf(PRINT_ERROR, _T("ZetGetPrevPC called when no CPU open\n"));
+#endif
+
+	if (n < 0) {
+		return ActiveZ80GetPrevPC();
+	} else {
+		return ZetCPUContext[n]->reg.prvpc.d;
 	}
 }
 

@@ -28,7 +28,7 @@ static UINT8 *soundlatch;
 static UINT8 *RamEnd;
 static UINT8 *MemEnd;
 
-static UINT32  *DrvPalette;
+static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
 static INT32 bank0;
@@ -369,6 +369,7 @@ static INT32 MemIndex()
 	MSM6295ROM	= Next;
 	DrvSndROM	= Next; Next += 0x040000;
 
+	konami_palette32= (UINT32*)Next;
 	DrvPalette	= (UINT32*)Next; Next += 0x2000 * sizeof(UINT32);
 
 	AllRam		= Next;
@@ -399,8 +400,6 @@ static INT32 DrvGfxDecode()
 	INT32 YOffs1[16] = { 0x000, 0x040, 0x080, 0x0c0, 0x100, 0x140, 0x180, 0x1c0,
 			   0x200, 0x240, 0x280, 0x2c0, 0x300, 0x340, 0x380, 0x3c0 };
 
-	konami_rom_deinterleave_2(DrvGfxROM0, 0x100000);
-
 	GfxDecode(0x02000, 4, 16, 16, Plane0, XOffs0, YOffs0, 0x400, DrvGfxROM0, DrvGfxROMExp0);
 	GfxDecode(0x01000, 4, 16, 16, Plane1, XOffs1, YOffs1, 0x400, DrvGfxROM1, DrvGfxROMExp1);
 	GfxDecode(0x01000, 4, 16, 16, Plane1, XOffs1, YOffs1, 0x400, DrvGfxROM2, DrvGfxROMExp2);
@@ -411,6 +410,8 @@ static INT32 DrvGfxDecode()
 
 static INT32 DrvInit()
 {
+	GenericTilesInit();
+
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
@@ -424,8 +425,8 @@ static INT32 DrvInit()
 
 		if (BurnLoadRom(DrvZ80ROM  + 0x000000,  2, 1)) return 1;
 
-		if (BurnLoadRom(DrvGfxROM0 + 0x000000,  3, 1)) return 1;
-		if (BurnLoadRom(DrvGfxROM0 + 0x080000,  4, 1)) return 1;
+		if (BurnLoadRomExt(DrvGfxROM0 + 0x000000,  3, 4, 2)) return 1;
+		if (BurnLoadRomExt(DrvGfxROM0 + 0x000002,  4, 4, 2)) return 1;
 
 		if (BurnLoadRom(DrvGfxROM1 + 0x000000,  5, 1)) return 1;
 		if (BurnLoadRom(DrvGfxROM1 + 0x020000,  6, 1)) return 1;
@@ -467,7 +468,7 @@ static INT32 DrvInit()
 	ZetSetReadHandler(ultraman_sound_read);
 	ZetClose();
 
-	K051960Init(DrvGfxROM0, 0xfffff);
+	K051960Init(DrvGfxROM0, DrvGfxROMExp0, 0xfffff);
 	K051960SetCallback(K051960Callback);
 	K051960SetSpriteOffset(9, 0);
 
@@ -486,8 +487,6 @@ static INT32 DrvInit()
 
 	MSM6295Init(0, 1056000 / 132, 1);
 	MSM6295SetRoute(0, 0.50, BURN_SND_ROUTE_BOTH);
-
-	GenericTilesInit();
 
 	DrvDoReset();
 
@@ -524,7 +523,7 @@ static inline void DrvRecalcPalette()
 		g = (g << 3) | (g >> 2);
 		b = (b << 3) | (b >> 2);
 
-		DrvPalette[i] = BurnHighCol(r, g, b, 0);
+		DrvPalette[i] = (r << 16) + (g << 8) + b;
 	}
 }
 
@@ -534,15 +533,15 @@ static INT32 DrvDraw()
 		DrvRecalcPalette();
 	}
 
-	BurnTransferClear();
+	KonamiClearBitmaps(0);
 
 	K051316_zoom_draw(2, 0);
 	K051316_zoom_draw(1, 0);
-	K051960SpritesRender(DrvGfxROMExp0, 0);
+	K051960SpritesRender(0, 0);
 	K051316_zoom_draw(0, 0);
-	K051960SpritesRender(DrvGfxROMExp0, 1);
+	K051960SpritesRender(1, 1);
 
-	BurnTransferCopy(DrvPalette);
+	KonamiBlendCopy(DrvPalette);
 
 	return 0;
 }

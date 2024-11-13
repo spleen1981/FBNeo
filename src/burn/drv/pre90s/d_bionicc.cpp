@@ -31,7 +31,6 @@ static UINT8 *DrvZ80RAM;
 static UINT8 *DrvSprBuf;
 
 static UINT32 *DrvPalette;
-static UINT32 *Palette;
 static UINT8 DrvRecalc;
 
 
@@ -156,7 +155,6 @@ static void bionicc_palette_write(INT32 offset)
 		b = b * (0x07 + bright) / 0x0e;
 	}
 
-	Palette[offset] = (r << 16) | (g << 8) | b;
 	DrvPalette[offset] = BurnHighCol(r, g, b, 0);
 }
 
@@ -164,11 +162,8 @@ void __fastcall bionicc_write_byte(UINT32 address, UINT8 data)
 {
 	if ((address & 0xfffff800) == 0xff8000) {
 		address &= 0x7ff;
-
 		DrvPalRAM[address ^ 1] = data;
-
 		bionicc_palette_write(address);
-
 		return;
 	}
 
@@ -310,8 +305,6 @@ static INT32 MemIndex()
 	DrvSprBuf	= Next; Next += 0x0000500;
 
 	DrvZ80RAM	= Next; Next += 0x0000800;
-
-	Palette		= (UINT32*)Next; Next += 0x00400 * sizeof(UINT32);
 
 	RamEnd		= Next;
 
@@ -522,10 +515,10 @@ static void draw_foreground(INT32 priority)
 static INT32 DrvDraw()
 {
 	if (DrvRecalc) {
-		for (INT32 i = 0; i < 0x400; i++) {
-			INT32 rgb = Palette[i];
-			DrvPalette[i] = BurnHighCol(rgb >> 16, rgb >> 8, rgb, 0);
+		for (INT32 i = 0; i < 0x800; i+=2) {
+			bionicc_palette_write(i);
 		}
+		DrvRecalc = 0;
 	}
 
 	memset (pTransDraw, 0, nScreenHeight * nScreenWidth * 2);
@@ -930,7 +923,8 @@ static struct BurnRomInfo topsecrtRomDesc[] = {
 
 	{ "63s141.18f",		0x00100, 0xb58d0023, 0 | BRF_OPT },		// 24 Priority (not used)
 	
-	{ "c8751h-88",          0x01000, 0x00000000, 0 | BRF_OPT | BRF_NODUMP },
+//	{ "c8751h-88",          0x01000, 0x00000000, 0 | BRF_OPT | BRF_NODUMP },
+	{ "d8751h.bin",         0x01000, 0x3ed7f0be, 0 | BRF_OPT },
 };
 
 STD_ROM_PICK(topsecrt)

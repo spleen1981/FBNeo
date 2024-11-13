@@ -73,6 +73,7 @@
 #define IDC_INPD_USE						20005
 #define IDC_INPD_DEFAULT                	20006
 #define IDC_INPS_GRABMOUSE              	20007
+#define IDC_INPS_CLEARLOCK                	20021
 #define IDC_INPS_CONTROL                	20008
 #define IDC_INPS_CONTROL_NAME           	20009
 #define IDC_INPC_VALUE                  	20010
@@ -86,6 +87,7 @@
 #define IDC_WAIT_LABEL_B2              		20018
 #define ID_VALUE_CLOSE                  	20019
 #define IDC_VALUE_EDIT                  	20020
+                                       // 	20021 is used by IDC_INPS_CLEARLOCK.
 
 #define IDC_FBA_VER                     	20050
 #define IDC_SPECIALSTRING               	20051
@@ -185,6 +187,7 @@
 #define IDC_SUPPORTDIR_EDIT7				20156
 #define IDC_SUPPORTDIR_EDIT8				20157
 #define IDC_SUPPORTDIR_EDIT9				20158
+#define IDC_SUPPORTDIR_EDIT10				20159
 
 #define IDC_SUPPORTDIR_BR1					20170
 #define IDC_SUPPORTDIR_BR2					20171
@@ -195,6 +198,7 @@
 #define IDC_SUPPORTDIR_BR7					20176
 #define IDC_SUPPORTDIR_BR8					20177
 #define IDC_SUPPORTDIR_BR9					20178
+#define IDC_SUPPORTDIR_BR10					20179
 
 #define IDC_DRVCOUNT						20200
 #define IDC_TREE2							20201
@@ -469,6 +473,12 @@
 #define MENU_INTERPOLATE_FM_1				10241
 #define MENU_INTERPOLATE_FM_3				10243
 #define MENU_INTERPOLATE_FM_5				10245
+
+#define MENU_INPUT_AUTOFIRE_RATE_1			10260
+#define MENU_INPUT_AUTOFIRE_RATE_2			10261
+#define MENU_INPUT_AUTOFIRE_RATE_3			10262
+#define MENU_INPUT_AUTOFIRE_RATE_4			10263
+
 #define MENU_AUTOPAUSE                 	 	10300
 #define MENU_PROCESSINPUT					10301
 #define MENU_DISPLAYINDICATOR				10302
@@ -573,6 +583,10 @@
 #define MENU_CLRMAME_PRO_XML_PCE_ONLY		10714
 #define MENU_CLRMAME_PRO_XML_TG16_ONLY		10715
 #define MENU_CLRMAME_PRO_XML_SGX_ONLY		10716
+#define MENU_CLRMAME_PRO_XML_SG1000_ONLY	10717
+#define MENU_CLRMAME_PRO_XML_COLECO_ONLY	10718
+#define MENU_CREATEDIRS						10719
+#define MENU_USEBLEND						10720
 
 #define MENU_BASIC_NORMAL          	    	11001
 #define MENU_BASIC_SCAN                	    11002

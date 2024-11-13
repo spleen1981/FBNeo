@@ -147,6 +147,10 @@ static struct BurnDIPInfo orld111cDIPList[] = {
 	{0x2E,	0x01, 0x03,	0x02, "China"				},
 };
 
+static struct BurnDIPInfo orld111tDIPList[] = {
+	{0x2E,	0xFF, 0xFF,	0x04, NULL				},
+};
+
 static struct BurnDIPInfo orld105kDIPList[] = {
 	{0x2E,	0xFF, 0xFF,	0x02, NULL				},
 };
@@ -337,8 +341,23 @@ static struct BurnDIPInfo svgDIPList[] = {
 	{0x2E,  0x01, 0x07, 0x06, "World"				},
 };
 
+static struct BurnDIPInfo svgtwDIPList[] = {
+	{0x2E,	0xFF, 0xFF,	0x01, NULL				},
+
+	{0,	0xFE, 0,	8,    "Region (Fake)"			},
+	{0x2E,	0x01, 0x07,	0x00, "China"				},
+	{0x2E,	0x01, 0x07,	0x01, "Taiwan"				},
+	{0x2E,	0x01, 0x07,	0x02, "Japan"				},
+	{0x2E,	0x01, 0x07,	0x03, "Korea"				},
+	{0x2E,	0x01, 0x07,	0x04, "Hong Kong"			},
+	{0x2E,	0x01, 0x07,	0x05, "Spanish Territories"	},
+	{0x2E,  0x01, 0x07, 0x06, "World"				},
+	{0x2E,  0x01, 0x07, 0xff, "Don't Change"		},
+};
+
 STDDIPINFOEXT(orlegend,		pgm,	orlegend		)
 STDDIPINFOEXT(orld111c, 	pgm,	orld111c		)
+STDDIPINFOEXT(orld111t, 	pgm,	orld111t		)
 STDDIPINFOEXT(orld105k, 	pgm,	orld105k		)
 STDDIPINFOEXT(kov,       	pgm,	kov		    	)
 STDDIPINFOEXT(kovshxas,    	pgm,	kovshxas		)
@@ -358,6 +377,7 @@ STDDIPINFOEXT(theglad,	 	pgm,	theglad 		)
 STDDIPINFOEXT(theglad100,	pgm,	theglad100 		)
 STDDIPINFOEXT(happy6,		pgm,	happy6	 		)
 STDDIPINFOEXT(svg,			pgm,	svg	 			)
+STDDIPINFOEXT(svgtw,		pgm,	svgtw	 		)
 STDDIPINFOEXT(dmnfrntpcb,   jamma,	kov		    	)
 STDDIPINFOEXT(thegladpcb,   jamma,	thegladpcb		)
 
@@ -628,6 +648,44 @@ struct BurnDriver BurnDrvOrlegend111c = {
 	L"Oriental Legend\0\u897F\u6E38\u91CA\u5384\u4F20 (V111, China)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_IGS_PGM, GBF_SCRFIGHT, 0,
 	NULL, orlegend111cRomInfo, orlegend111cRomName, NULL, NULL, pgmInputInfo, orld111cDIPInfo,
+	orlegendInit, pgmExit, pgmFrame, pgmDraw, pgmScan, &nPgmPalRecalc, 0x900,
+	448, 224, 4, 3
+};
+
+
+// Oriental Legend / Xi Yo Gi Shi Re Zuang (V111, Taiwan)
+
+static struct BurnRomInfo orlegend111tRomDesc[] = {
+	{ "olv111tw.u6",		0x080000, 0xb205a733, 1 | BRF_PRG | BRF_ESS },	//  0 68K Code
+	{ "olv111tw.u8",		0x080000, 0x6d9d29b4, 1 | BRF_PRG | BRF_ESS },	//  1
+	{ "olv111tw.u7",		0x080000, 0x27628e87, 1 | BRF_PRG | BRF_ESS },	//  2
+	{ "olv111tw.u9",		0x080000, 0x23f33bc9, 1 | BRF_PRG | BRF_ESS },	//  3
+
+	{ "t0100.rom",			0x400000, 0x61425e1e, 2 | BRF_GRA },			//  1 Tile data
+
+	{ "a0100.rom",			0x400000, 0x8b3bd88a, 3 | BRF_GRA },			//  2 Sprite Color Data
+	{ "a0101.rom",			0x400000, 0x3b9e9644, 3 | BRF_GRA },			//  3	  
+	{ "a0102.rom",			0x400000, 0x069e2c38, 3 | BRF_GRA },			//  4
+	{ "a0103.rom",			0x400000, 0x4460a3fd, 3 | BRF_GRA },			//  5
+	{ "a0104.rom",			0x400000, 0x5f8abb56, 3 | BRF_GRA },			//  6
+	{ "a0105.rom",			0x400000, 0xa17a7147, 3 | BRF_GRA },			//  7
+
+	{ "b0100.rom",			0x400000, 0x69d2e48c, 4 | BRF_GRA },			//  8 Sprite Masks & Color Indexes
+	{ "b0101.rom",			0x400000, 0x0d587bf3, 4 | BRF_GRA },			//  9
+	{ "b0102.rom",			0x400000, 0x43823c1e, 4 | BRF_GRA },			// 10
+
+	{ "m0100.rom",			0x200000, 0xe5c36c83, 5 | BRF_SND },			// 11 Samples
+};
+
+STDROMPICKEXT(orlegend111t, orlegend111t, pgm)
+STD_ROM_FN(orlegend111t)
+
+struct BurnDriver BurnDrvOrlegend111t = {
+	"orlegend111t", "orlegend", "pgm", NULL, "1997",
+	"Oriental Legend - Xi Yo Gi Shi Re Zuang (V111, Taiwan)\0", NULL, "IGS", "PolyGameMaster",
+	L"Oriental Legend\0\u897F\u6E38\u91CA\u5384\u4F20 (V111, Taiwan)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_IGS_PGM, GBF_SCRFIGHT, 0,
+	NULL, orlegend111tRomInfo, orlegend111tRomName, NULL, NULL, pgmInputInfo, orld111tDIPInfo,
 	orlegendInit, pgmExit, pgmFrame, pgmDraw, pgmScan, &nPgmPalRecalc, 0x900,
 	448, 224, 4, 3
 };
@@ -3775,6 +3833,66 @@ struct BurnDriver BurnDrvSvg = {
 	BDF_GAME_WORKING, 4, HARDWARE_IGS_PGM | HARDWARE_IGS_USE_ARM_CPU, GBF_SCRFIGHT, 0,
 	NULL, svgRomInfo, svgRomName, NULL, NULL, pgmInputInfo, svgDIPInfo,
 	svgInit, pgmExit, pgmFrame, pgmDraw, pgmScan, &nPgmPalRecalc, 0x900,
+	448, 224, 4, 3
+};
+
+
+// S.V.G. - Spectral vs Generation (V100, Taiwan)
+
+static struct BurnRomInfo svgtwRomDesc[] = {
+	{ "v101tw.u30",			0x080000, 0x8d0405e4, 1 | BRF_PRG | BRF_ESS },	//  0 68K Code
+
+	{ "t05601w016.bin",		0x200000, 0x03e110dc, 2 | BRF_GRA },		//  1 Tile data
+
+	{ "a05601w064.bin",		0x800000, 0xea6453e4, 3 | BRF_GRA },		//  2 Sprite Color Data
+	{ "a05602w064.bin",		0x800000, 0x6d00621b, 3 | BRF_GRA },		//  3
+	{ "a05603w064.bin",		0x800000, 0x7b71c64f, 3 | BRF_GRA },		//  4
+	{ "a05604w032.bin",		0x400000, 0x9452a567, 3 | BRF_GRA },		//  5
+
+	{ "b05601w064.bin",		0x800000, 0x35c0a489, 4 | BRF_GRA },		//  6 Sprite Masks & Color Indexes
+	{ "b05602w064.bin",		0x800000, 0x8aad3f85, 4 | BRF_GRA },		//  7
+
+	{ "w05601b064.bin",		0x800000, 0xbfe61a71, 5 | BRF_SND },		//  8 Samples
+	{ "w05602b032.bin",		0x400000, 0x0685166d, 5 | BRF_SND },		//  9
+
+//	{ "svg_igs027a.bin",			    0x004000, 0x00000000, 7 | BRF_PRG | BRF_ESS | BRF_NODUMP },	// 10 Internal ARM7 Rom
+	{ "svg_igs027a_execute_only_area", 	0x000188, 0x00000000, 0 | BRF_OPT | BRF_NODUMP },	// 10 Internal ARM7 Rom
+	{ "svgpcb_igs027a_v100_japan.bin", 	0x003e78, 0x7a59da5d, 7 | BRF_PRG | BRF_ESS },		// 11 Internal ARM7 Rom
+
+	{ "v101tw.u26",			0x400000, 0xcc24f542, 8 | BRF_PRG | BRF_ESS },	// 12 External ARM7 Rom
+	{ "v101tw.u36",			0x400000, 0xf18283e2, 8 | BRF_PRG | BRF_ESS },	// 13
+};
+
+STDROMPICKEXT(svgtw, svgtw, pgm)
+STD_ROM_FN(svgtw)
+
+static void svgtwPatch()
+{
+	pgm_decrypt_svgpcb();
+	pgm_create_theglad_EO_data();
+}
+
+static INT32 svgtwInit()
+{
+	pPgmInitCallback = svgtwPatch;
+	pPgmProtCallback = install_protection_asic27a_svg;
+
+	nPgmAsicRegionHackAddress = 0x3a8e;
+
+	INT32 nRet = pgmInit();
+	
+	Arm7SetIdleLoopAddress(0x00009e0);
+
+	return nRet;
+}
+
+struct BurnDriverD BurnDrvSvgtw = {
+	"svgtw", "svg", "pgm", NULL, "2005",
+	"S.V.G. - Spectral vs Generation (V100, Taiwan)\0", "Incomplete Dump", "IGS", "PolyGameMaster",
+	L"S.V.G. - Spectral vs Generation\0\u5723\u9B54\u4E16\u7EAA (V100, Taiwan)\0", NULL, NULL, NULL,
+	BDF_CLONE, 4, HARDWARE_IGS_PGM | HARDWARE_IGS_USE_ARM_CPU, GBF_SCRFIGHT, 0,
+	NULL, svgtwRomInfo, svgtwRomName, NULL, NULL, pgmInputInfo, svgtwDIPInfo,
+	svgtwInit, pgmExit, pgmFrame, pgmDraw, pgmScan, &nPgmPalRecalc, 0x900,
 	448, 224, 4, 3
 };
 

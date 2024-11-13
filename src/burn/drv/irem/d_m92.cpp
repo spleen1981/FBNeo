@@ -1,13 +1,7 @@
 // FB Alpha Irem M92 system driver
 // Based on MAME driver by Bryan McPhail
 // Original port from MAME by OopsWare
-
-/*
-	save state
-	ssoldier graphics
-	ym sound is slow...
-	background alignment (bmasters, inthunt)
-*/
+// Overhauled and tuned up by dink in August 2014
 
 #include "tiles_generic.h"
 #include "burn_ym2151.h"
@@ -43,7 +37,7 @@ static UINT8 *RamPrioBitmap;
 static UINT32 *DrvPalette;
 static UINT8 bRecalcPalette = 0;
 
-static UINT32  PalBank;
+static UINT32 PalBank;
 
 static INT32 sprite_extent = 0;
 static UINT8 m92_sprite_buffer_busy;
@@ -1325,6 +1319,14 @@ UINT8 __fastcall m92ReadPort(UINT32 port)
 	return 0;
 }
 
+static void clear_pf_scroll(INT32 layer)
+{
+	pf_control[layer][0] = 0; // scrolly
+	pf_control[layer][1] = 0; // "
+	pf_control[layer][4] = 0; // scrollx
+	pf_control[layer][5] = 0; // "
+}
+
 static void set_pf_info(INT32 layer, INT32 data)
 {
 	struct _m92_layer *ptr = m92_layers[layer];
@@ -1336,7 +1338,10 @@ static void set_pf_info(INT32 layer, INT32 data)
 		ptr->wide = (data & 0x04) ? 128 : 64;
 	}
 
+	int oldrowscroll = ptr->enable_rowscroll;
 	ptr->enable_rowscroll = data & 0x40;
+	if (ptr->enable_rowscroll != oldrowscroll)
+		clear_pf_scroll(layer); //clear scrollx/scrolly on change, fixes skewed background problems (f. ex. inthunt)
 
 	ptr->vram = (UINT16*)(DrvVidRAM + ((data & 0x03) * 0x4000));
 }
@@ -1644,7 +1649,7 @@ static INT32 RomLoad(INT32 v33off, INT32 gfxlen0, INT32 gfxlen1, INT32 gfxtype1,
 	if (BurnLoadRom(DrvV30ROM + 0x000001, 4, 2)) return 1;
 	if (BurnLoadRom(DrvV30ROM + 0x000000, 5, 2)) return 1;
 
-	UINT8 *tmp = (UINT8 *)BurnMalloc(0x200000);
+	UINT8 *tmp = (UINT8 *)BurnMalloc(0x800000);
 	if (tmp == NULL) {
 		return 1;
 	}
@@ -1979,6 +1984,16 @@ static INT32 DrvReDraw()
 	return 0;
 }
 
+static inline void DrvClearOpposites(UINT8* nJoystickInputs)
+{
+	if ((*nJoystickInputs & 0x03) == 0x03) {
+		*nJoystickInputs &= ~0x03;
+	}
+	if ((*nJoystickInputs & 0x0c) == 0x0c) {
+		*nJoystickInputs &= ~0x0c;
+	}
+}
+
 static void compile_inputs()
 {
 	memset (DrvInput, 0, 5);
@@ -1990,18 +2005,22 @@ static void compile_inputs()
 		DrvInput[3] |= (DrvJoy4[i] & 1) << i;
 		DrvInput[4] |= (DrvButton[i] & 1) << i;
 	}
+
+	// Clear Opposites
+	DrvClearOpposites(&DrvInput[0]);
+	DrvClearOpposites(&DrvInput[1]);
 }
 
 static void scanline_interrupts(INT32 prev, INT32 segment, INT32 scanline)
 {
 	if (m92_sprite_buffer_timer) {
 		memcpy (DrvSprBuf, DrvSprRAM, 0x800);
-		nCyclesDone[0] += VezRun(347);
+		if (m92_kludge != 4) nCyclesDone[0] += VezRun(347); // nbbatman: fix for random lockups during gameplay
 		m92_sprite_buffer_busy = 0x80;
 		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 4)/4, VEZ_IRQSTATUS_ACK);
-		VezRun(10);
+		nCyclesDone[0] += VezRun(10);
 		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 4)/4, VEZ_IRQSTATUS_NONE);
-		nCyclesDone[0] += VezRun(segment - (VezTotalCycles() - prev));
+		if (m92_kludge != 4) nCyclesDone[0] += VezRun(segment - (VezTotalCycles() - prev));
 
 		m92_sprite_buffer_timer = 0;
 	}
@@ -2015,7 +2034,7 @@ static void scanline_interrupts(INT32 prev, INT32 segment, INT32 scanline)
 		}
 
 		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 8)/4, VEZ_IRQSTATUS_ACK);
-		VezRun(10);
+		nCyclesDone[0] += VezRun((m92_kludge == 4) ? 20 : 10); // nbbatman: gets rid of flashes in intro sequence
 		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 8)/4, VEZ_IRQSTATUS_NONE);
 
 	}
@@ -2030,8 +2049,9 @@ static void scanline_interrupts(INT32 prev, INT32 segment, INT32 scanline)
 			DrvDraw();
 		}
 
+		if (m92_kludge == 4) nCyclesDone[0] += VezRun(1200); // nbbatman: gets rid of flash after IREM logo fades out
 		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 0)/4, VEZ_IRQSTATUS_ACK);
-		VezRun(10);
+		nCyclesDone[0] += VezRun(10);
 		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 0)/4, VEZ_IRQSTATUS_NONE);
 
 	}
@@ -2046,6 +2066,9 @@ static INT32 DrvFrame()
 	VezNewFrame();
 
 	compile_inputs();
+
+	INT32 multiplier=3;
+	nInterleave = 256*multiplier;
 
 	// overclocking...
 	INT32 nSoundBufferPos = 0;
@@ -2064,7 +2087,8 @@ static INT32 DrvFrame()
 		INT32 prev = VezTotalCycles();
 
 		nCyclesDone[0] += VezRun(segment);
-		scanline_interrupts(prev, segment, i); // update at hblank?
+		if ((i%multiplier)==(multiplier-1))
+			scanline_interrupts(prev, segment, i/multiplier); // update at hblank?
 		VezClose();
 
 		VezOpen(1);
@@ -2073,15 +2097,19 @@ static INT32 DrvFrame()
 		while (VezTotalCycles() < segment) {
 			nCyclesDone[1] += VezRun(segment - VezTotalCycles());
 		}
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			iremga20_update(0, pSoundBuf, nSegmentLength);
-			
-			nSoundBufferPos += nSegmentLength;
+
+		if ((i%multiplier)==(multiplier-1)) {
+			if (pBurnSoundOut) {
+				INT32 nSegmentLength = nBurnSoundLen / (nInterleave / multiplier);
+				INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
+				
+				BurnYM2151Render(pSoundBuf, nSegmentLength);
+				iremga20_update(0, pSoundBuf, nSegmentLength);
+				
+				nSoundBufferPos += nSegmentLength;
+			}
 		}
+
 		VezClose();
 	}
 
@@ -2241,7 +2269,7 @@ static INT32 hookInit()
 
 struct BurnDriver BurnDrvHook = {
 	"hook", NULL, NULL, NULL, "1992",
-	"Hook (World)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Hook (World)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 4, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
 	NULL, hookRomInfo, hookRomName, NULL, NULL, p4CommonInputInfo, HookDIPInfo,
@@ -2279,7 +2307,7 @@ STD_ROM_FN(hooku)
 
 struct BurnDriver BurnDrvHooku = {
 	"hooku", "hook", NULL, NULL, "1992",
-	"Hook (US)\0", "Imperfect sound and graphics", "Irem America", "M92",
+	"Hook (US)\0", NULL, "Irem America", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
 	NULL, hookuRomInfo, hookuRomName, NULL, NULL, p4CommonInputInfo, HookDIPInfo,
@@ -2317,7 +2345,7 @@ STD_ROM_FN(hookj)
 
 struct BurnDriver BurnDrvHookj = {
 	"hookj", "hook", NULL, NULL, "1992",
-	"Hook (Japan)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Hook (Japan)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
 	NULL, hookjRomInfo, hookjRomName, NULL, NULL, p4CommonInputInfo, HookDIPInfo,
@@ -2400,7 +2428,7 @@ static INT32 PpanInit()
 
 struct BurnDriver BurnDrvPpan = {
 	"ppan", "hook", NULL, NULL, "1992",
-	"Peter Pan (bootleg of Hook)\0", "Imperfect graphics", "bootleg", "M92",
+	"Peter Pan (bootleg of Hook)\0", NULL, "bootleg", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
 	NULL, ppanRomInfo, ppanRomName, NULL, NULL, p4CommonInputInfo, HookDIPInfo,
@@ -2448,7 +2476,7 @@ static INT32 inthuntInit()
 
 struct BurnDriver BurnDrvInthunt = {
 	"inthunt", NULL, NULL, NULL, "1993",
-	"In The Hunt (World)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"In The Hunt (World)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_IREM_M92, GBF_HORSHOOT, 0,
 	NULL, inthuntRomInfo, inthuntRomName, NULL, NULL, p2CommonInputInfo, InthuntDIPInfo,
@@ -2486,7 +2514,7 @@ STD_ROM_FN(inthuntu)
 
 struct BurnDriver BurnDrvInthuntu = {
 	"inthuntu", "inthunt", NULL, NULL, "1993",
-	"In The Hunt (US)\0", "Imperfect sound and graphics", "Irem America", "M92",
+	"In The Hunt (US)\0", NULL, "Irem America", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_HORSHOOT, 0,
 	NULL, inthuntuRomInfo, inthuntuRomName, NULL, NULL, p2CommonInputInfo, InthuntDIPInfo,
@@ -2524,7 +2552,7 @@ STD_ROM_FN(kaiteids)
 
 struct BurnDriver BurnDrvKaiteids = {
 	"kaiteids", "inthunt", NULL, NULL, "1993",
-	"Kaitei Daisensou (Japan)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Kaitei Daisensou (Japan)\0", NULL, "Irem", "M92",
 	L"Kaitei Daisensou (Japan)\0\u776D\u955E\u2759\u2662\u894E\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_HORSHOOT, 0,
 	NULL, kaiteidsRomInfo, kaiteidsRomName, NULL, NULL, p2CommonInputInfo, InthuntDIPInfo,
@@ -2572,7 +2600,7 @@ static INT32 rtypeleoInit()
 
 struct BurnDriver BurnDrvRtypeleo = {
 	"rtypeleo", NULL, NULL, NULL, "1992",
-	"R-Type Leo (World)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"R-Type Leo (World)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_IREM_M92, GBF_HORSHOOT, 0,
 	NULL, rtypeleoRomInfo, rtypeleoRomName, NULL, NULL, p2CommonInputInfo, RtypeleoDIPInfo,
@@ -2610,7 +2638,7 @@ STD_ROM_FN(rtypelej)
 
 struct BurnDriver BurnDrvRtypelej = {
 	"rtypeleoj", "rtypeleo", NULL, NULL, "1992",
-	"R-Type Leo (Japan)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"R-Type Leo (Japan)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_HORSHOOT, 0,
 	NULL, rtypelejRomInfo, rtypelejRomName, NULL, NULL, p2CommonInputInfo, RtypeleoDIPInfo,
@@ -2658,7 +2686,7 @@ static INT32 bmasterInit()
 
 struct BurnDriver BurnDrvBmaster = {
 	"bmaster", NULL, NULL, NULL, "1991",
-	"Blade Master (World)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Blade Master (World)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
 	NULL, bmasterRomInfo, bmasterRomName, NULL, NULL, p2CommonInputInfo, BmasterDIPInfo,
@@ -2696,7 +2724,7 @@ STD_ROM_FN(crossbld)
 
 struct BurnDriver BurnDrvCrossbld = {
 	"crossbld", "bmaster", NULL, NULL, "1991",
-	"Cross Blades! (Japan)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Cross Blades! (Japan)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
 	NULL, crossbldRomInfo, crossbldRomName, NULL, NULL, p2CommonInputInfo, BmasterDIPInfo,
@@ -2739,7 +2767,7 @@ static INT32 mysticriInit()
 
 struct BurnDriver BurnDrvMysticri = {
 	"mysticri", NULL, NULL, NULL, "1992",
-	"Mystic Riders (World)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Mystic Riders (World)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_IREM_M92, GBF_HORSHOOT, 0,
 	NULL, mysticriRomInfo, mysticriRomName, NULL, NULL, p2CommonInputInfo, MysticriDIPInfo,
@@ -2777,7 +2805,7 @@ STD_ROM_FN(gunhohki)
 
 struct BurnDriver BurnDrvGunhohki = {
 	"gunhohki", "mysticri", NULL, NULL, "1992",
-	"Gun Hohki (Japan)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Gun Hohki (Japan)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_HORSHOOT, 0,
 	NULL, gunhohkiRomInfo, gunhohkiRomName, NULL, NULL, p2CommonInputInfo, MysticriDIPInfo,
@@ -2815,7 +2843,7 @@ STD_ROM_FN(mysticrib)
 
 struct BurnDriver BurnDrvMysticrib = {
 	"mysticrib", "mysticri", NULL, NULL, "1992",
-	"Mystic Riders (bootleg?)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Mystic Riders (bootleg?)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_HORSHOOT, 0,
 	NULL, mysticribRomInfo, mysticribRomName, NULL, NULL, p2CommonInputInfo, MysticriDIPInfo,
@@ -2863,7 +2891,7 @@ static INT32 gunforceInit()
 
 struct BurnDriver BurnDrvGunforce = {
 	"gunforce", NULL, NULL, NULL, "1991",
-	"Gunforce - Battle Fire Engulfed Terror Island (World)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Gunforce - Battle Fire Engulfed Terror Island (World)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_IREM_M92, GBF_PLATFORM, 0,
 	NULL, gunforceRomInfo, gunforceRomName, NULL, NULL, p2CommonInputInfo, GunforceDIPInfo,
@@ -2901,7 +2929,7 @@ STD_ROM_FN(gunforcej)
 
 struct BurnDriver BurnDrvGunforcej = {
 	"gunforcej", "gunforce", NULL, NULL, "1991",
-	"Gunforce - Battle Fire Engulfed Terror Island (Japan)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Gunforce - Battle Fire Engulfed Terror Island (Japan)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_PLATFORM, 0,
 	NULL, gunforcejRomInfo, gunforcejRomName, NULL, NULL, p2CommonInputInfo, GunforceDIPInfo,
@@ -2939,7 +2967,7 @@ STD_ROM_FN(gunforceu)
 
 struct BurnDriver BurnDrvGunforceu = {
 	"gunforceu", "gunforce", NULL, NULL, "1991",
-	"Gunforce - Battle Fire Engulfed Terror Island (US)\0", "Imperfect sound and graphics", "Irem America", "M92",
+	"Gunforce - Battle Fire Engulfed Terror Island (US)\0", NULL, "Irem America", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_PLATFORM, 0,
 	NULL, gunforceuRomInfo, gunforceuRomName, NULL, NULL, p2CommonInputInfo, GunforceDIPInfo,
@@ -2987,7 +3015,7 @@ static INT32 uccopsInit()
 
 struct BurnDriver BurnDrvUccops = {
 	"uccops", NULL, NULL, NULL, "1992",
-	"Undercover Cops (World)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Undercover Cops (World)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 3, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
 	NULL, uccopsRomInfo, uccopsRomName, NULL, NULL, p3CommonInputInfo, UccopsDIPInfo,
@@ -3025,7 +3053,7 @@ STD_ROM_FN(uccopsu)
 
 struct BurnDriver BurnDrvUccopsu = {
 	"uccopsu", "uccops", NULL, NULL, "1992",
-	"Undercover Cops (US)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Undercover Cops (US)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 3, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
 	NULL, uccopsuRomInfo, uccopsuRomName, NULL, NULL, p3CommonInputInfo, UccopsDIPInfo,
@@ -3063,7 +3091,7 @@ STD_ROM_FN(uccopsar)
 
 struct BurnDriver BurnDrvUccopsar = {
 	"uccopsar", "uccops", NULL, NULL, "1992",
-	"Undercover Cops (Alpha Renewal Version)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Undercover Cops (Alpha Renewal Version)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 3, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
 	NULL, uccopsarRomInfo, uccopsarRomName, NULL, NULL, p3CommonInputInfo, UccopsDIPInfo,
@@ -3101,7 +3129,7 @@ STD_ROM_FN(uccopsj)
 
 struct BurnDriver BurnDrvUccopsj = {
 	"uccopsj", "uccops", NULL, NULL, "1992",
-	"Undercover Cops (Japan)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Undercover Cops (Japan)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 3, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
 	NULL, uccopsjRomInfo, uccopsjRomName, NULL, NULL, p3CommonInputInfo, UccopsDIPInfo,
@@ -3157,7 +3185,7 @@ static INT32 gunforc2Init()
 
 struct BurnDriver BurnDrvGunforc2 = {
 	"gunforc2", NULL, NULL, NULL, "1994",
-	"Gunforce 2 (US)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Gunforce 2 (US)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_IREM_M92, GBF_PLATFORM, 0,
 	NULL, gunforc2RomInfo, gunforc2RomName, NULL, NULL, p2CommonInputInfo, Gunforc2DIPInfo,
@@ -3195,7 +3223,7 @@ STD_ROM_FN(geostorm)
 
 struct BurnDriver BurnDrvGeostorm = {
 	"geostorm", "gunforc2", NULL, NULL, "1994",
-	"Geostorm (Japan)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Geostorm (Japan)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_PLATFORM, 0,
 	NULL, geostormRomInfo, geostormRomName, NULL, NULL, p2CommonInputInfo, Gunforc2DIPInfo,
@@ -3235,6 +3263,7 @@ static INT32 nbbatmanInit()
 {
 	INT32 nRet;
 
+	m92_kludge = 4;
 	nRet = DrvInit(gunforc2RomLoad, leagueman_decryption_table, 1, 0x80, 0x200000, 0x400000);
 
 	if (nRet == 0) {
@@ -3244,11 +3273,11 @@ static INT32 nbbatmanInit()
 	return nRet;
 }
 
-struct BurnDriverD BurnDrvNbbatman = {
+struct BurnDriver BurnDrvNbbatman = {
 	"nbbatman", NULL, NULL, NULL, "1993",
-	"Ninja Baseball Batman (World)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Ninja Baseball Batman (World)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
-	0, 4, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING, 4, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
 	NULL, nbbatmanRomInfo, nbbatmanRomName, NULL, NULL, p4CommonInputInfo, NbbatmanDIPInfo,
 	nbbatmanInit, DrvExit, DrvFrame, DrvReDraw, DrvScan, &bRecalcPalette, 0x800,
 	320, 240, 4, 3
@@ -3282,11 +3311,11 @@ static struct BurnRomInfo nbbatmanuRomDesc[] = {
 STD_ROM_PICK(nbbatmanu)
 STD_ROM_FN(nbbatmanu)
 
-struct BurnDriverD BurnDrvNbbatmanu = {
+struct BurnDriver BurnDrvNbbatmanu = {
 	"nbbatmanu", "nbbatman", NULL, NULL, "1993",
-	"Ninja Baseball Batman (US)\0", "Imperfect sound and graphics", "Irem America", "M92",
+	"Ninja Baseball Batman (US)\0", NULL, "Irem America", "M92",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE, 4, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
 	NULL, nbbatmanuRomInfo, nbbatmanuRomName, NULL, NULL, p4CommonInputInfo, NbbatmanDIPInfo,
 	nbbatmanInit, DrvExit, DrvFrame, DrvReDraw, DrvScan, &bRecalcPalette, 0x800,
 	320, 240, 4, 3
@@ -3320,11 +3349,11 @@ static struct BurnRomInfo leaguemnRomDesc[] = {
 STD_ROM_PICK(leaguemn)
 STD_ROM_FN(leaguemn)
 
-struct BurnDriverD BurnDrvLeaguemn = {
+struct BurnDriver BurnDrvLeaguemn = {
 	"leaguemn", "nbbatman", NULL, NULL, "1993",
-	"Yakyuu Kakutou League-Man (Japan)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Yakyuu Kakutou League-Man (Japan)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE, 4, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_IREM_M92, GBF_SCRFIGHT, 0,
 	NULL, leaguemnRomInfo, leaguemnRomName, NULL, NULL, p4CommonInputInfo, NbbatmanDIPInfo,
 	nbbatmanInit, DrvExit, DrvFrame, DrvReDraw, DrvScan, &bRecalcPalette, 0x800,
 	320, 240, 4, 3
@@ -3371,7 +3400,7 @@ static INT32 lethalthInit()
 
 struct BurnDriver BurnDrvLethalth = {
 	"lethalth", NULL, NULL, NULL, "1991",
-	"Lethal Thunder (World)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Lethal Thunder (World)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_IREM_M92, GBF_VERSHOOT, 0,
 	NULL, lethalthRomInfo, lethalthRomName, NULL, NULL, p2CommonInputInfo, LethalthDIPInfo,
@@ -3409,7 +3438,7 @@ STD_ROM_FN(thndblst)
 
 struct BurnDriver BurnDrvThndblst = {
 	"thndblst", "lethalth", NULL, NULL, "1991",
-	"Thunder Blaster (Japan)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Thunder Blaster (Japan)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_IREM_M92, GBF_VERSHOOT, 0,
 	NULL, thndblstRomInfo, thndblstRomName, NULL, NULL, p2CommonInputInfo, LethalthDIPInfo,
@@ -3461,7 +3490,7 @@ static INT32 dsoccr94jInit()
 
 struct BurnDriver BurnDrvDsoccr94j = {
 	"dsoccr94j", "dsoccr94", NULL, NULL, "1994",
-	"Dream Soccer '94 (Japan)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Dream Soccer '94 (Japan)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_IREM_M92, GBF_SPORTSFOOTBALL, 0,
 	NULL, dsoccr94jRomInfo, dsoccr94jRomName, NULL, NULL, p4CommonInputInfo, Dsoccr94jDIPInfo,
@@ -3515,7 +3544,7 @@ static INT32 ssoldierInit()
 
 struct BurnDriver BurnDrvSsoldier = {
 	"ssoldier", NULL, NULL, NULL, "1993",
-	"Superior Soldiers (US)\0", "Imperfect sound and graphics", "Irem America", "M92",
+	"Superior Soldiers (US)\0", NULL, "Irem America", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_IREM_M92, GBF_VSFIGHT, 0,
 	NULL, ssoldierRomInfo, ssoldierRomName, NULL, NULL, PsoldierInputInfo, PsoldierDIPInfo,
@@ -3557,7 +3586,7 @@ STD_ROM_FN(psoldier)
 
 struct BurnDriver BurnDrvPsoldier = {
 	"psoldier", "ssoldier", NULL, NULL, "1993",
-	"Perfect Soldiers (Japan)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Perfect Soldiers (Japan)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_VSFIGHT, 0,
 	NULL, psoldierRomInfo, psoldierRomName, NULL, NULL, PsoldierInputInfo, PsoldierDIPInfo,
@@ -3614,7 +3643,7 @@ static INT32 majtitl2Init()
 
 struct BurnDriver BurnDrvMajtitl2 = {
 	"majtitl2", NULL, NULL, NULL, "1992",
-	"Major Title 2 (World)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Major Title 2 (World)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_IREM_M92, GBF_SPORTSMISC, 0,
 	NULL, majtitl2RomInfo, majtitl2RomName, NULL, NULL, p4CommonInputInfo, Majtitl2DIPInfo,
@@ -3660,7 +3689,7 @@ STD_ROM_FN(majtitl2j)
 
 struct BurnDriver BurnDrvMajtitl2j = {
 	"majtitl2j", "majtitl2", NULL, NULL, "1992",
-	"Major Title 2 (Japan)\0", "Imperfect sound and graphics", "Irem", "M92",
+	"Major Title 2 (Japan)\0", NULL, "Irem", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_SPORTSMISC, 0,
 	NULL, majtitl2jRomInfo, majtitl2jRomName, NULL, NULL, p4CommonInputInfo, Majtitl2DIPInfo,
@@ -3706,7 +3735,7 @@ STD_ROM_FN(skingame)
 
 struct BurnDriver BurnDrvSkingame = {
 	"skingame", "majtitl2", NULL, NULL, "1992",
-	"The Irem Skins Game (US set 1)\0", "Imperfect sound and graphics", "Irem America", "M92",
+	"The Irem Skins Game (US set 1)\0", NULL, "Irem America", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_SPORTSMISC, 0,
 	NULL, skingameRomInfo, skingameRomName, NULL, NULL, p4CommonInputInfo, Majtitl2DIPInfo,
@@ -3752,7 +3781,7 @@ STD_ROM_FN(skingame2)
 
 struct BurnDriver BurnDrvSkingame2 = {
 	"skingame2", "majtitl2", NULL, NULL, "1992",
-	"The Irem Skins Game (US set 2)\0", "Imperfect sound and graphics", "Irem America", "M92",
+	"The Irem Skins Game (US set 2)\0", NULL, "Irem America", "M92",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_SPORTSMISC, 0,
 	NULL, skingame2RomInfo, skingame2RomName, NULL, NULL, p4CommonInputInfo, Majtitl2DIPInfo,

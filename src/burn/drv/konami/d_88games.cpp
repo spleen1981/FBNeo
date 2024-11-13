@@ -400,6 +400,8 @@ static INT32 DrvGfxDecode()
 
 static INT32 DrvInit()
 {
+	GenericTilesInit();
+
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
@@ -454,7 +456,7 @@ static INT32 DrvInit()
 		DrvGfxDecode();
 	}
 
-	konamiInit(1);
+	konamiInit(0);
 	konamiOpen(0);
 	konamiMapMemory(DrvPalRAM + 0x0000,	0x1000, 0x1fff, KON_RAM);
 	konamiMapMemory(DrvKonRAM,		0x2000, 0x2fff, KON_RAM); 
@@ -484,18 +486,16 @@ static INT32 DrvInit()
 	UPD7759SetRoute(0, 0.30, BURN_SND_ROUTE_BOTH);
 	UPD7759SetRoute(1, 0.30, BURN_SND_ROUTE_BOTH);
 
-	K052109Init(DrvGfxROM0, 0x7ffff);
+	K052109Init(DrvGfxROM0, DrvGfxROMExp0, 0x7ffff);
 	K052109SetCallback(K052109Callback);
 	K052109AdjustScroll(0, 0);
 
-	K051960Init(DrvGfxROM1, 0xfffff);
+	K051960Init(DrvGfxROM1, DrvGfxROMExp1, 0xfffff);
 	K051960SetCallback(K051960Callback);
 	K051960SetSpriteOffset(0, 0);
 
 	K051316Init(0, DrvGfxROM2, DrvGfxROMExp2, 0x3ffff, K051316Callback, 4, 0);
 	K051316SetOffset(0, -104, -16);
-
-	GenericTilesInit();
 
 	DrvDoReset();
 
@@ -521,32 +521,30 @@ static INT32 DrvExit()
 
 static INT32 DrvDraw()
 {
-	if (DrvRecalc) {
-		KonamiRecalcPal(DrvPalRAM, DrvPalette, 0x1000);
-	}
+	KonamiRecalcPalette(DrvPalRAM, DrvPalette, 0x1000);
 
 	K052109UpdateScroll();
 
 	if (k88games_priority)
 	{
-		K052109RenderLayer(0, 1, DrvGfxROMExp0);
-		K051960SpritesRender(DrvGfxROMExp1, 1);
-		K052109RenderLayer(2, 0, DrvGfxROMExp0);
-		K052109RenderLayer(1, 0, DrvGfxROMExp0);
-		K051960SpritesRender(DrvGfxROMExp1, 0);
-		K051316_zoom_draw(0, 4);
+		if (nBurnLayer & 1) K052109RenderLayer(0, K052109_OPAQUE, 0);
+		if (nSpriteEnable & 1) K051960SpritesRender(1, 1);
+		if (nBurnLayer & 2) K052109RenderLayer(2, 0, 0);
+		if (nBurnLayer & 4) K052109RenderLayer(1, 0, 0);
+		if (nSpriteEnable & 2) K051960SpritesRender(0, 0);
+		if (nBurnLayer & 8) K051316_zoom_draw(0, 0);
 	}
 	else
 	{
-		K052109RenderLayer(2, 1, DrvGfxROMExp0);
-		K051316_zoom_draw(0, 4);
-		K051960SpritesRender(DrvGfxROMExp1, 0);
-		K052109RenderLayer(1, 0, DrvGfxROMExp0);
-		K051960SpritesRender(DrvGfxROMExp1, 1);
-		K052109RenderLayer(0, 0, DrvGfxROMExp0);
+		if (nBurnLayer & 1) K052109RenderLayer(2, K052109_OPAQUE, 0);
+		if (nBurnLayer & 2) K051316_zoom_draw(0, 4);
+		if (nSpriteEnable & 1) K051960SpritesRender(0, 0);
+		if (nBurnLayer & 4) K052109RenderLayer(1, 0, 0);
+		if (nSpriteEnable & 2) K051960SpritesRender(1, 1);
+		if (nBurnLayer & 8) K052109RenderLayer(0, 0, 0);
 	}
 
-	BurnTransferCopy(DrvPalette);
+	KonamiBlendCopy(DrvPalette);
 
 	return 0;
 }
@@ -597,7 +595,7 @@ static INT32 DrvFrame()
 		}
 	}
 
-	if (K052109_irq_enabled) konamiSetIrqLine(KONAMI_IRQ_LINE, KONAMI_HOLD_LINE);
+	if (K052109_irq_enabled) konamiSetIrqLine(KONAMI_IRQ_LINE, KONAMI_IRQSTATUS_AUTO);
 
 	if (pBurnSoundOut) {
 		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
@@ -635,7 +633,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		ba.szName = "All Ram";
 		BurnAcb(&ba);
 
-		konamiCpuScan(nAction, pnMin);
+		konamiCpuScan(nAction);
 		ZetScan(nAction);
 
 		BurnYM2151Scan(nAction);

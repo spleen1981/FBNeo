@@ -1068,7 +1068,7 @@ void __fastcall m72_main_write_port(UINT32 port, UINT8 data)
 			if (enable_z80_reset) {
 				if (data & 0x10) {
 					z80_reset = 0;
-				} else {
+				} else if (!z80_reset) { // don't reset it if its already resetting - fixes BGM in airduel -dink
 					ZetReset();
 					setvector_callback(VECTOR_INIT);
 					z80_reset = 1;
@@ -2761,7 +2761,7 @@ static struct BurnRomInfo nspiritRomDesc[] = {
 
 	{ "nin-v0.7a",		0x10000, 0xa32e8caf, 0x05 | BRF_SND },           // 20 DAC Samples
 
-	{ "nin_c-pr(__nodump).1c",	0x01000, 0x00000000, 0x00 | BRF_OPT | BRF_NODUMP }, // 21 i8751 Code
+	{ "nin_c-pr.1c",	0x01000, 0x00000000, 0x00 | BRF_OPT | BRF_NODUMP }, // 21 i8751 Code
 	
 	{ "m72_a-8l.8l",	0x00100, 0xb460c438, 0x00 | BRF_OPT },           // 22 Proms
 	{ "m72_a-9l.9l",	0x00100, 0xa4f2c4bc, 0x00 | BRF_OPT },           // 23

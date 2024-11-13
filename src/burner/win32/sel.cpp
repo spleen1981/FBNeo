@@ -3,7 +3,7 @@
 #include "burner.h"
 
 UINT_PTR nTimer					= 0;
-UINT_PTR nInitPreviewTimer			= 0;
+UINT_PTR nInitPreviewTimer		= 0;
 int nDialogSelect				= -1;										// The driver which this dialog selected
 int nOldDlgSelected				= -1;
 bool bDialogCancel				= false;
@@ -115,6 +115,8 @@ HTREEITEM hFilterMegadrive			= NULL;
 HTREEITEM hFilterPce				= NULL;
 HTREEITEM hFilterSnes				= NULL;
 HTREEITEM hFilterSms				= NULL;
+HTREEITEM hFilterSg1000				= NULL;
+HTREEITEM hFilterColeco				= NULL;
 HTREEITEM hFilterBootleg			= NULL;
 HTREEITEM hFilterDemo				= NULL;
 HTREEITEM hFilterHack				= NULL;
@@ -226,7 +228,12 @@ static int SnesValue			= HARDWARE_PREFIX_NINTENDO_SNES >> 24;
 static int MASKSNES				= 1 << SnesValue;
 static int SmsValue				= HARDWARE_PREFIX_SEGA_MASTER_SYSTEM >> 24;
 static int MASKSMS				= 1 << SmsValue;
-static int MASKALL				= MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 | MASKCPS3 | MASKDATAEAST | MASKGALAXIAN | MASKIREM | MASKKANEKO | MASKKONAMI | MASKNEOGEO | MASKPACMAN | MASKPGM | MASKPSIKYO | MASKSEGA | MASKSETA | MASKTAITO | MASKTECHNOS | MASKTOAPLAN | MASKMISCPRE90S | MASKMISCPOST90S | MASKMEGADRIVE | MASKPCENGINE | MASKSNES | MASKSMS;
+static int Sg1000Value			= HARDWARE_PREFIX_SEGA_SG1000 >> 24;
+static int MASKSG1000			= 1 << Sg1000Value;
+static int ColecoValue			= HARDWARE_PREFIX_COLECO >> 24;
+static int MASKCOLECO			= 1 << ColecoValue;
+
+static int MASKALL				= MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 | MASKCPS3 | MASKDATAEAST | MASKGALAXIAN | MASKIREM | MASKKANEKO | MASKKONAMI | MASKNEOGEO | MASKPACMAN | MASKPGM | MASKPSIKYO | MASKSEGA | MASKSETA | MASKTAITO | MASKTECHNOS | MASKTOAPLAN | MASKMISCPRE90S | MASKMISCPOST90S | MASKMEGADRIVE | MASKPCENGINE | MASKSNES | MASKSMS | MASKSG1000 | MASKCOLECO;
 
 #define UNAVAILABLE				(1 << 27)
 #define AVAILABLE				(1 << 28)
@@ -502,15 +509,26 @@ static int SelListMake()
 		if (szSearchString[0]) {
 			TCHAR *StringFound = NULL;
 			TCHAR *StringFound2 = NULL;
+			TCHAR *StringFound3 = NULL;
+			TCHAR *StringFound4 = NULL;
 			TCHAR szDriverName[256] = { _T("") };
+			TCHAR szManufacturerName[256] = { _T("") };
+			TCHAR szSystemName[256] = { _T("") };
 			wcscpy(szDriverName, BurnDrvGetText(DRV_FULLNAME));
+			wcscpy(szManufacturerName, BurnDrvGetText(DRV_MANUFACTURER));
+			wcscpy(szSystemName, BurnDrvGetText(DRV_SYSTEM));
 			for (int k =0; k < 256; k++) {
 				szSearchString[k] = _totlower(szSearchString[k]);
 				szDriverName[k] = _totlower(szDriverName[k]);
+				szManufacturerName[k] = _totlower(szManufacturerName[k]);
+				szSystemName[k] = _totlower(szSystemName[k]);
 			}
 			StringFound = wcsstr(szDriverName, szSearchString);
 			StringFound2 = wcsstr(BurnDrvGetText(DRV_NAME), szSearchString);
-			if (!StringFound && !StringFound2) continue;
+			StringFound3 = wcsstr(szManufacturerName, szSearchString);
+			StringFound4 = wcsstr(szSystemName, szSearchString);
+
+			if (!StringFound && !StringFound2 && !StringFound3 && !StringFound4) continue;
 		}
 
 		if (avOk && (!(nLoadMenuShowX & UNAVAILABLE)) && !gameAv[i])	{						// Skip non-available games if needed
@@ -561,15 +579,26 @@ static int SelListMake()
 		if (szSearchString[0]) {
 			TCHAR *StringFound = NULL;
 			TCHAR *StringFound2 = NULL;
+			TCHAR *StringFound3 = NULL;
+			TCHAR *StringFound4 = NULL;
 			TCHAR szDriverName[256];
+			TCHAR szManufacturerName[256] = { _T("") };
+			TCHAR szSystemName[256] = { _T("") };
 			wcscpy(szDriverName, BurnDrvGetText(DRV_FULLNAME));
+			wcscpy(szManufacturerName, BurnDrvGetText(DRV_MANUFACTURER));
+			wcscpy(szSystemName, BurnDrvGetText(DRV_SYSTEM));
 			for (int k =0; k < 256; k++) {
 				szSearchString[k] = _totlower(szSearchString[k]);
 				szDriverName[k] = _totlower(szDriverName[k]);
+				szManufacturerName[k] = _totlower(szManufacturerName[k]);
+				szSystemName[k] = _totlower(szSystemName[k]);
 			}
 			StringFound = wcsstr(szDriverName, szSearchString);
 			StringFound2 = wcsstr(BurnDrvGetText(DRV_NAME), szSearchString);
-			if (!StringFound && !StringFound2) continue;
+			StringFound3 = wcsstr(szManufacturerName, szSearchString);
+			StringFound4 = wcsstr(szSystemName, szSearchString);
+
+			if (!StringFound && !StringFound2 && !StringFound3 && !StringFound4) continue;
 		}
 
 		if (avOk && (!(nLoadMenuShowX & UNAVAILABLE)) && !gameAv[i])	{						// Skip non-available games if needed
@@ -1095,6 +1124,8 @@ static void CreateFilters()
 	_TVCreateFiltersA(hHardware		, IDS_SEL_MEGADRIVE		, hFilterMegadrive		, nLoadMenuShowX & MASKMEGADRIVE					);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_PCE			, hFilterPce			, nLoadMenuShowX & MASKPCENGINE						);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_SNES			, hFilterSnes			, nLoadMenuShowX & MASKSNES							);
+	_TVCreateFiltersA(hHardware		, IDS_SEL_SG1000		, hFilterSg1000			, nLoadMenuShowX & MASKSG1000						);
+	_TVCreateFiltersA(hHardware		, IDS_SEL_COLECO		, hFilterColeco			, nLoadMenuShowX & MASKCOLECO						);
 	
 	SendMessage(hFilterList	, TVM_EXPAND,TVE_EXPAND, (LPARAM)hRoot);
 	SendMessage(hFilterList	, TVM_EXPAND,TVE_EXPAND, (LPARAM)hHardware);
@@ -1269,7 +1300,7 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 	if(Msg == UM_CHECKSTATECHANGE) {
 
 		HTREEITEM   hItemChanged = (HTREEITEM)lParam;
-		
+
 		if (hItemChanged == hHardware) {
 			if ((nLoadMenuShowX & MASKALL) == 0) {
 				_TreeView_SetCheckState(hFilterList, hItemChanged, FALSE);
@@ -1299,6 +1330,8 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				_TreeView_SetCheckState(hFilterList, hFilterPce, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterSnes, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterSms, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterSg1000, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterColeco, FALSE);
 				
 				nLoadMenuShowX |= MASKALL;
 			} else {
@@ -1329,8 +1362,10 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				_TreeView_SetCheckState(hFilterList, hFilterPce, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterSnes, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterSms, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterSg1000, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterColeco, TRUE);
 				
-				nLoadMenuShowX &= 0xfe000000;
+				nLoadMenuShowX &= (0xFFFFFFFF - MASKALL); //0xf8000000; make this dynamic for future hardware additions -dink
 			}
 		}
 		
@@ -1473,6 +1508,8 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 		if (hItemChanged == hFilterPce)				_ToggleGameListing(nLoadMenuShowX, MASKPCENGINE);
 		if (hItemChanged == hFilterSnes)			_ToggleGameListing(nLoadMenuShowX, MASKSNES);
 		if (hItemChanged == hFilterSms)				_ToggleGameListing(nLoadMenuShowX, MASKSMS);
+		if (hItemChanged == hFilterSg1000)			_ToggleGameListing(nLoadMenuShowX, MASKSG1000);
+		if (hItemChanged == hFilterColeco)			_ToggleGameListing(nLoadMenuShowX, MASKCOLECO);
 		
 		if (hItemChanged == hFilterBootleg)			_ToggleGameListing(nLoadMenuBoardTypeFilter, BDF_BOOTLEG);
 		if (hItemChanged == hFilterDemo)			_ToggleGameListing(nLoadMenuBoardTypeFilter, BDF_DEMO);

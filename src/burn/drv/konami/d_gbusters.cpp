@@ -23,7 +23,7 @@ static UINT8 *DrvBankRAM;
 static UINT8 *DrvKonRAM;
 static UINT8 *DrvPalRAM;
 static UINT8 *DrvZ80RAM;
-static UINT32  *DrvPalette;
+static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
 static UINT8 *soundlatch;
@@ -362,9 +362,6 @@ static INT32 DrvGfxDecode()
 	INT32 YOffs[16] = { 0x000, 0x020, 0x040, 0x060, 0x080, 0x0a0, 0x0c0, 0x0e0,
 			  0x200, 0x220, 0x240, 0x260, 0x280, 0x2a0, 0x2c0, 0x2e0 };
 
-	konami_rom_deinterleave_2(DrvGfxROM0, 0x80000);
-	konami_rom_deinterleave_2(DrvGfxROM1, 0x80000);
-
 	GfxDecode(0x04000, 4,  8,  8, Plane0, XOffs, YOffs, 0x100, DrvGfxROM0, DrvGfxROMExp0);
 	GfxDecode(0x01000, 4, 16, 16, Plane1, XOffs, YOffs, 0x400, DrvGfxROM1, DrvGfxROMExp1);
 
@@ -373,6 +370,8 @@ static INT32 DrvGfxDecode()
 
 static INT32 DrvInit()
 {
+	GenericTilesInit();
+
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
@@ -388,18 +387,18 @@ static INT32 DrvInit()
 
 		if (BurnLoadRom(DrvZ80ROM  + 0x000000,  2, 1)) return 1;
 
-		if (BurnLoadRom(DrvGfxROM0 + 0x000000,  3, 1)) return 1;
-		if (BurnLoadRom(DrvGfxROM0 + 0x040000,  4, 1)) return 1;
+		if (BurnLoadRomExt(DrvGfxROM0 + 0x000000,  3, 4, 2)) return 1;
+		if (BurnLoadRomExt(DrvGfxROM0 + 0x000002,  4, 4, 2)) return 1;
 
-		if (BurnLoadRom(DrvGfxROM1 + 0x000000,  5, 1)) return 1;
-		if (BurnLoadRom(DrvGfxROM1 + 0x040000,  6, 1)) return 1;
+		if (BurnLoadRomExt(DrvGfxROM1 + 0x000000,  5, 4, 2)) return 1;
+		if (BurnLoadRomExt(DrvGfxROM1 + 0x000002,  6, 4, 2)) return 1;
 
 		if (BurnLoadRom(DrvSndROM  + 0x000000,  7, 1)) return 1;
 
 		DrvGfxDecode();
 	}
 
-	konamiInit(1);
+	konamiInit(0);
 	konamiOpen(0);
 	konamiMapMemory(DrvKonRAM,           0x4000, 0x57ff, KON_RAM);
 	konamiMapMemory(DrvBankRAM,          0x5800, 0x5fff, KON_RAM);
@@ -428,15 +427,13 @@ static INT32 DrvInit()
 	K007232SetPortWriteHandler(0, DrvK007232VolCallback);
 	K007232PCMSetAllRoutes(0, 0.30, BURN_SND_ROUTE_BOTH);
 
-	K052109Init(DrvGfxROM0, 0x7ffff);
+	K052109Init(DrvGfxROM0, DrvGfxROMExp0, 0x7ffff);
 	K052109SetCallback(K052109Callback);
 	K052109AdjustScroll(8, 0);
 
-	K051960Init(DrvGfxROM1, 0x7ffff);
+	K051960Init(DrvGfxROM1, DrvGfxROMExp1, 0x7ffff);
 	K051960SetCallback(K051960Callback);
 	K051960SetSpriteOffset(8, 0);
-
-	GenericTilesInit();
 
 	DrvDoReset();
 
@@ -462,30 +459,30 @@ static INT32 DrvExit()
 
 static INT32 DrvDraw()
 {
-	if (DrvRecalc) {
-		KonamiRecalcPal(DrvPalRAM, DrvPalette, 0x800);
-	}
+	KonamiRecalcPalette(DrvPalRAM, DrvPalette, 0x800);
 
 	K052109UpdateScroll();
 
 	if (nDrvRamBank[0] & 0x08)
 	{
 
-		if (nBurnLayer & 1) K052109RenderLayer(2, 1, DrvGfxROMExp0);
-		K051960SpritesRender(DrvGfxROMExp1, 2);
-		if (nBurnLayer & 2) K052109RenderLayer(1, 0, DrvGfxROMExp0);
+		if (nBurnLayer & 1) K052109RenderLayer(2, K052109_OPAQUE, 0);
+		if (nSpriteEnable & 1) K051960SpritesRender(2, 2);
+		if (nBurnLayer & 2) K052109RenderLayer(1, 0, 0);
+		if (nSpriteEnable & 2) K051960SpritesRender(0, 0);
+		if (nBurnLayer & 4) K052109RenderLayer(0, 0, 0);
+
 	}
 	else
 	{
-		if (nBurnLayer & 4) K052109RenderLayer(1, 1, DrvGfxROMExp0);
-		K051960SpritesRender(DrvGfxROMExp1, 2);
-		if (nBurnLayer & 8) K052109RenderLayer(2, 0, DrvGfxROMExp0);
+		if (nBurnLayer & 1) K052109RenderLayer(1, K052109_OPAQUE, 0);
+		if (nSpriteEnable & 1) K051960SpritesRender(2, 2);
+		if (nBurnLayer & 2) K052109RenderLayer(2, 0, 0);
+		if (nSpriteEnable & 2) K051960SpritesRender(0, 0);
+		if (nBurnLayer & 4) K052109RenderLayer(0, 0, 0);
 	}
 
-	K051960SpritesRender(DrvGfxROMExp1, 1);
-	K052109RenderLayer(0, 0, DrvGfxROMExp0);
-
-	BurnTransferCopy(DrvPalette);
+	KonamiBlendCopy(DrvPalette);
 
 	return 0;
 }
@@ -541,7 +538,7 @@ static INT32 DrvFrame()
 		}
 	}
 
-	if (K052109_irq_enabled) konamiSetIrqLine(KONAMI_IRQ_LINE, KONAMI_HOLD_LINE);
+	if (K052109_irq_enabled) konamiSetIrqLine(KONAMI_IRQ_LINE, KONAMI_IRQSTATUS_AUTO);
 
 	if (pBurnSoundOut) {
 		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
@@ -578,7 +575,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		ba.szName = "All Ram";
 		BurnAcb(&ba);
 
-		konamiCpuScan(nAction, pnMin);
+		konamiCpuScan(nAction);
 		ZetScan(nAction);
 
 		BurnYM2151Scan(nAction);

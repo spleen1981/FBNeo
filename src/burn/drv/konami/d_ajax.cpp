@@ -27,7 +27,7 @@ static UINT8 *DrvShareRAM;
 static UINT8 *DrvKonRAM;
 static UINT8 *DrvPalRAM;
 static UINT8 *DrvZ80RAM;
-static UINT32  *DrvPalette;
+static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
 static UINT8 *soundlatch;
@@ -372,10 +372,10 @@ static void K052109Callback(INT32 layer, INT32 bank, INT32 *code, INT32 *color, 
 
 static void K051960Callback(INT32 *code, INT32 *color,INT32 *priority, INT32 *)
 {
-	*priority = 0;
-	if ( *color & 0x10) *priority = 1;
-	if (~*color & 0x40) *priority = 2;
-	if ( *color & 0x20) *priority = 3;
+	*priority = 0xff00;
+	if ( *color & 0x10) *priority |= 0xf0f0;
+	if (~*color & 0x40) *priority |= 0xcccc;
+	if ( *color & 0x20) *priority |= 0xaaaa;
 	*color = 16 + (*color & 0x0f);
 	*code &= 0x1fff;
 }
@@ -443,7 +443,7 @@ static INT32 MemIndex()
 	DrvSndROM0		= Next; Next += 0x040000;
 	DrvSndROM1		= Next; Next += 0x080000;
 
-	DrvPalette		= (UINT32*)Next; Next += 0x800 * sizeof(UINT32);
+	DrvPalette		= (UINT32*)Next; Next += 0x801 * sizeof(UINT32);
 
 	AllRam			= Next;
 
@@ -482,6 +482,8 @@ static INT32 DrvGfxDecode()
 
 static INT32 DrvInit()
 {
+	GenericTilesInit();
+
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
@@ -560,7 +562,7 @@ static INT32 DrvInit()
 		DrvGfxDecode();
 	}
 
-	konamiInit(1);
+	konamiInit(0);
 	konamiOpen(0);
 	konamiMapMemory(DrvPalRAM,		0x1000, 0x1fff, KON_RAM);
 	konamiMapMemory(DrvShareRAM,		0x2000, 0x3fff, KON_RAM);
@@ -604,18 +606,16 @@ static INT32 DrvInit()
 	K007232SetRoute(1, BURN_SND_K007232_ROUTE_1, 0.40, BURN_SND_ROUTE_BOTH);
 	K007232SetRoute(1, BURN_SND_K007232_ROUTE_2, 0.30, BURN_SND_ROUTE_BOTH);
 
-	K052109Init(DrvGfxROM0, 0x7ffff);
+	K052109Init(DrvGfxROM0, DrvGfxROMExp0, 0x7ffff);
 	K052109SetCallback(K052109Callback);
 	K052109AdjustScroll(8, 0);
 
-	K051960Init(DrvGfxROM1, 0xfffff);
+	K051960Init(DrvGfxROM1, DrvGfxROMExp1, 0xfffff);
 	K051960SetCallback(K051960Callback);
 	K051960SetSpriteOffset(8, 0);
 
 	K051316Init(0, DrvGfxROM2, DrvGfxROM2, 0x7ffff, K051316Callback, 7, 0);
 	K051316SetOffset(0, -112, -16);
-
-	GenericTilesInit();
 
 	DrvDoReset();
 
@@ -642,36 +642,30 @@ static INT32 DrvExit()
 
 static INT32 DrvDraw()
 {
-	if (DrvRecalc) {
-		KonamiRecalcPal(DrvPalRAM, DrvPalette, 0x1000);
-	}
+	KonamiRecalcPalette(DrvPalRAM, DrvPalette, 0x1000);
 
 	K052109UpdateScroll();
 
-	BurnTransferClear();
+	KonamiClearBitmaps(0);
 
-	if (nBurnLayer & 1) K052109RenderLayer(2, 0, DrvGfxROMExp0);
-	
-	if (nSpriteEnable & 1) K051960SpritesRender(DrvGfxROMExp1, 3);
-	if (nSpriteEnable & 2) K051960SpritesRender(DrvGfxROMExp1, 2); 
+	if (nBurnLayer & 1) K052109RenderLayer(2, 0, 1);
 
 	if (ajax_priority)
 	{
 		if (nBurnLayer & 2) K051316_zoom_draw(0, 4);
-		if (nBurnLayer & 4) K052109RenderLayer(1, 0, DrvGfxROMExp0);
+		if (nBurnLayer & 4) K052109RenderLayer(1, 0, 2);
 	}
 	else
 	{
-		if (nBurnLayer & 4) K052109RenderLayer(1, 0, DrvGfxROMExp0);
+		if (nBurnLayer & 4) K052109RenderLayer(1, 0, 2);
 		if (nBurnLayer & 2) K051316_zoom_draw(0, 4);
 	}
 
-	if (nSpriteEnable & 4) K051960SpritesRender(DrvGfxROMExp1, 1);
-	if (nSpriteEnable & 8) K051960SpritesRender(DrvGfxROMExp1, 0);
+	if (nBurnLayer & 8) K052109RenderLayer(0, 0, 8);
 
-	if (nBurnLayer & 8) K052109RenderLayer(0, 0, DrvGfxROMExp0);
+	if (nSpriteEnable & 8) K051960SpritesRender(-1, -1);
 
-	BurnTransferCopy(DrvPalette);
+	KonamiBlendCopy(DrvPalette);
 
 	return 0;
 }
@@ -726,7 +720,7 @@ static INT32 DrvFrame()
 		}
 	}
 
-	if (K051960_irq_enabled) konamiSetIrqLine(KONAMI_IRQ_LINE, KONAMI_HOLD_LINE);
+	if (K051960_irq_enabled) konamiSetIrqLine(KONAMI_IRQ_LINE, KONAMI_IRQSTATUS_AUTO);
 
 	if (pBurnSoundOut) {
 		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
@@ -765,7 +759,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		ba.szName = "All Ram";
 		BurnAcb(&ba);
 
-		konamiCpuScan(nAction, pnMin);
+		konamiCpuScan(nAction);
 		M6809Scan(nAction);
 		ZetScan(nAction);
 
@@ -826,8 +820,8 @@ static struct BurnRomInfo ajaxRomDesc[] = {
 	{ "770c08-d.c10",	0x10000, 0x91591777, 5 | BRF_GRA },           // 27
 	{ "770c08-h.c11",	0x10000, 0xd97d4b15, 5 | BRF_GRA },           // 28
 
-	{ "770c06.f4",		0x40000, 0xd0c592ee, 6 | BRF_GRA },           // 29 K051960 Tiles
-	{ "770c07.h4",		0x40000, 0x0b399fb1, 6 | BRF_GRA },           // 30
+	{ "770c06",		0x40000, 0xd0c592ee, 6 | BRF_GRA },           // 29 K051960 Tiles
+	{ "770c07",		0x40000, 0x0b399fb1, 6 | BRF_GRA },           // 30
 
 	{ "770c10-a.a7",	0x10000, 0xe45ec094, 7 | BRF_SND },           // 31 K007232 #0 Samples
 	{ "770c10-b.a6",	0x10000, 0x349db7d3, 7 | BRF_SND },           // 32
@@ -871,14 +865,14 @@ static struct BurnRomInfo typhoonRomDesc[] = {
 
 	{ "770_h03.f16",	0x08000, 0x2ffd2afc, 3 | BRF_PRG | BRF_ESS }, //  4 Z80 Code
 
-	{ "770c13.n22",		0x40000, 0xb859ca4e, 4 | BRF_GRA },           //  5 K052109 Tiles
-	{ "770c12.k22",		0x40000, 0x50d14b72, 4 | BRF_GRA },           //  6
+	{ "770c13",		0x40000, 0xb859ca4e, 4 | BRF_GRA },           //  5 K052109 Tiles
+	{ "770c12",		0x40000, 0x50d14b72, 4 | BRF_GRA },           //  6
 
-	{ "770c09.n4",		0x80000, 0x1ab4a7ff, 5 | BRF_GRA },           //  7 K051960 Tiles
-	{ "770c08.k4",		0x80000, 0xa8e80586, 5 | BRF_GRA },           //  8
+	{ "770c09",		0x80000, 0x1ab4a7ff, 5 | BRF_GRA },           //  7 K051960 Tiles
+	{ "770c08",		0x80000, 0xa8e80586, 5 | BRF_GRA },           //  8
 
-	{ "770c06.f4",		0x40000, 0xd0c592ee, 6 | BRF_GRA },           //  9 K051960 Tiles
-	{ "770c07.h4",	0x40000, 0x0b399fb1, 6 | BRF_GRA },           // 10
+	{ "770c06",		0x40000, 0xd0c592ee, 6 | BRF_GRA },           //  9 K051960 Tiles
+	{ "770c07",		0x40000, 0x0b399fb1, 6 | BRF_GRA },           // 10
 
 	{ "770c10",		0x40000, 0x7fac825f, 7 | BRF_SND },           // 11 K007232 #0 Samples
 
@@ -912,14 +906,14 @@ static struct BurnRomInfo ajaxjRomDesc[] = {
 
 	{ "770_f03.f16",	0x08000, 0x3fe914fd, 3 | BRF_PRG | BRF_ESS }, //  4 Z80 Code
 
-	{ "770c13.n22",		0x40000, 0xb859ca4e, 4 | BRF_GRA },           //  5 K052109 Tiles
-	{ "770c12.k22",		0x40000, 0x50d14b72, 4 | BRF_GRA },           //  6
+	{ "770c13",		0x40000, 0xb859ca4e, 4 | BRF_GRA },           //  5 K052109 Tiles
+	{ "770c12",		0x40000, 0x50d14b72, 4 | BRF_GRA },           //  6
 
-	{ "770c09.n4",		0x80000, 0x1ab4a7ff, 5 | BRF_GRA },           //  7 K051960 Tiles
-	{ "770c08.k4",		0x80000, 0xa8e80586, 5 | BRF_GRA },           //  8
+	{ "770c09",		0x80000, 0x1ab4a7ff, 5 | BRF_GRA },           //  7 K051960 Tiles
+	{ "770c08",		0x80000, 0xa8e80586, 5 | BRF_GRA },           //  8
 
-	{ "770c06.f4",		0x40000, 0xd0c592ee, 6 | BRF_GRA },           //  9 K051960 Tiles
-	{ "770c07.h4",		0x40000, 0x0b399fb1, 6 | BRF_GRA },           // 10
+	{ "770c06",		0x40000, 0xd0c592ee, 6 | BRF_GRA },           //  9 K051960 Tiles
+	{ "770c07",		0x40000, 0x0b399fb1, 6 | BRF_GRA },           // 10
 
 	{ "770c10",		0x40000, 0x7fac825f, 7 | BRF_SND },           // 11 K007232 #0 Samples
 

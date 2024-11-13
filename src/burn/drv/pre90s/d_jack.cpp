@@ -1033,6 +1033,9 @@ static INT32 DrvInit()
 
 	AY8910Init(0, 1500000, nBurnSoundRate, &soundlatch_r, &timer_r, NULL, NULL);
 	AY8910SetAllRoutes(0, 1.00, BURN_SND_ROUTE_BOTH);
+	if (loverb) {
+		AY8910SetAllRoutes(0, 0.20, BURN_SND_ROUTE_BOTH);
+	}
 
 	GenericTilesInit();
 
@@ -1070,7 +1073,7 @@ static INT32 DrvDraw()
 	{
 		for (INT32 i = 0; i < 0x100; i++) {
 			UINT32 col = Palette[i];
-			DrvPal[i] = BurnHighCol(col >> 16, col >> 8, col, 0);
+			DrvPal[i] = BurnHighCol((col >> 16) & 0xff, (col >> 8) & 0xff, col & 0xff, 0);
 		}
 		DrvCalcPal = 0;
 	}
@@ -1816,7 +1819,7 @@ static INT32 loverboyInit()
 
 struct BurnDriver BurnDrvloverboy = {
 	"loverboy", NULL, NULL, NULL, "1983",
-	"Lover Boy\0", "No sound", "G.T Enterprise Inc", "Jack the Giantkiller",
+	"Lover Boy\0", NULL, "G.T Enterprise Inc", "Jack the Giantkiller",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, loverboyRomInfo, loverboyRomName, NULL, NULL, LoverboyInputInfo, LoverboyDIPInfo,
@@ -1897,6 +1900,9 @@ struct BurnDriver BurnDrvstriv = {
 	strivInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvCalcPal, 0x100,
 	224, 256, 3, 4
 };
+
+
+// Super Triv (set 2)
 
 static struct BurnRomInfo striv2RomDesc[] = {
 	{ "s.triv_p1.2f",     0x1000, 0xdcf5da6e, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code

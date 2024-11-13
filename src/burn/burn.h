@@ -19,6 +19,7 @@
 
 extern TCHAR szAppHiscorePath[MAX_PATH];
 extern TCHAR szAppSamplesPath[MAX_PATH];
+extern TCHAR szAppBlendPath[MAX_PATH];
 
 // Enable the MAME logerror() function in debug builds
 // #define MAME_USE_LOGERROR
@@ -178,6 +179,7 @@ extern UINT32 nFramesRendered;
 extern clock_t starttime;					// system time when emulation started and after roms loaded
 
 extern bool bForce60Hz;
+extern bool bBurnUseBlend;
 
 extern INT32 nBurnFPS;
 extern INT32 nBurnCPUSpeedAdjust;
@@ -326,6 +328,8 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define HARDWARE_PREFIX_TECHNOS							(0x16000000)
 #define HARDWARE_PREFIX_PCENGINE						(0x17000000)
 #define HARDWARE_PREFIX_SEGA_MASTER_SYSTEM				(0x18000000)
+#define HARDWARE_PREFIX_SEGA_SG1000						(0x19000000)
+#define HARDWARE_PREFIX_COLECO							(0x1A000000)
 
 #define HARDWARE_MISC_PRE90S							(HARDWARE_PREFIX_MISC_PRE90S)
 #define HARDWARE_MISC_POST90S							(HARDWARE_PREFIX_MISC_POST90S)
@@ -425,6 +429,9 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define HARDWARE_SEGA_MASTER_SYSTEM						(HARDWARE_PREFIX_SEGA_MASTER_SYSTEM)
 
 #define HARDWARE_SEGA_MEGADRIVE							(HARDWARE_PREFIX_SEGA_MEGADRIVE)
+
+#define HARDWARE_SEGA_SG1000                            (HARDWARE_PREFIX_SEGA_SG1000)
+#define HARDWARE_COLECO                                 (HARDWARE_PREFIX_COLECO)
 
 #define HARDWARE_SEGA_MEGADRIVE_PCB_SEGA_EEPROM			(1)
 #define HARDWARE_SEGA_MEGADRIVE_PCB_SEGA_SRAM			(2)

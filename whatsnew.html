@@ -1,10 +1,10 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<html>
 
 <head>
 <title>FB Alpha - What's New</title>
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<meta charset="UTF-8" />
 <style type="text/css">
 	body {
 		font-family: verdana, lucida, sans-serif;
@@ -104,9 +104,119 @@
 <p><a href="http://www.barryharris.me.uk">http://www.barryharris.me.uk</a><br />
 <a href="http://neosource.1emu.net/forums">http://neosource.1emu.net/forums</a></p>
 
+<h3>v0.2.97.32</h3>
+<ul>
+<li>Added proper saving of cpu registers/variables to M6800/6801/6803/HD63701 core [dink]</li>
+<li>Added support for NMK004. Special thanks to Trap15! [Trap15, Haze, iq_132]</li>
+<li>Standardized CPU related functions [iq_132]</li>
+<li>Fixed delta calculation and proper sample size checking in the MSM6295 core, fixes missing samples in some NMK004 games (and possibly others) [dink]</li>
+<li>Fixed mixing distortion/crackles in K054539 sound core [dink]</li>
+<li>Improved the quality of the voice samples in the K053260 sound core (The Simpsons and possibly other Konami games) [AWJ]</li>
+<li>Added driver for DJ Boy [iq_132]</li>
+<li>Added driver for Konami's Asterix [iq_132]</li>
+<li>Added driver for Konami's Bishi Bashi and Super Bishi Bashi Championship Minigames[iq_132]</li>
+<li>Added driver for Konami's Dragonball Z and Dragonball Z 2 - Super Battle hardware [iq_132]</li>
+<li>Added driver for Konami's G.I. Joe [iq_132]</li>
+<li>Added driver for Konami's Lethal Enforcers [iq_132]</li>
+<li>Added driver for Konami's Mystic Warriors (and other games on the hardware) [iq_132]</li>
+<li>Added driver for Konami's Shaolins Road [iq_132]</li>
+<li>Added driver for Konami's Wild West C.O.W.-Boys of Moo Mesa and Bucky O'Hare [iq_132]</li>
+<li>Added driver for Konami's Yie-Ar Kung Fu [iq_132]</li>
+<li>Added driver for Konami's Xexex [iq_132]</li>
+<li>Added driver for Raiden II, Raiden DX, X Se Dae Quiz and Zero Team [iq_132]</li>
+<li>Added driver for Colecovision games [iq_132, dink]</li>
+<li>Added driver for Sega SG-1000 games [iq_132, dink]</li>
+<li>Added Shogun Warriors and B.Rap Boys to Kaneko16 driver [iq_132]</li>
+<li>Added Candory (James Greenhalgh) to the Pacman driver [iq_132]</li>
+<li>Added bootleg of Street Fighter II - The World Warrior to the Capcom CPS-1 driver [barry, any, JacKc]</li>
+<li>Added bootleg of Varth to the CPS-1 driver [Barry, Caius]</li>
+<li>Added clone of 19XX: The War Against Destiny to the Capcom CPS-2 driver [system11, The Dumping Union, JacKc]</li>
+<li>Added clone of Mega Man: The Power Battle to the Capcom CPS-2 driver [Asure, JacKc]</li>
+<li>Added clone of Super Street Fighter II: The New Challengers to the Capcom CPS-2 driver [palindrome, JacKc]</li>
+<li>Added clone of Secret Agent to the DataEast driver [ShouTime, The Dumping Union, JacKc]</li>
+<li>Added hack of Donkey Kong to the Donkey Kong driver [Clay Cowgill, JacKc]</li>
+<li>Added clone of Fantasia to the Gals Panic [system11, JacKc]</li>
+<li>Added clone of The Simpsons to the Konami Simpsons driver [Ben76, JacKc]</li>
+<li>Added clone of Vendetta to the Konami Vendetta driver [caius, JacKc]</li>
+<li>Added hack of The King Of Fighters '98 to the Neo Geo driver [JacKc]</li>
+<li>Added hack of The King of Fighters '99 to the Neo Geo driver [JacKc]</li>
+<li>Added hack of The King Of Fighters 2000 to the Neo Geo driver [JacKc]</li>
+<li>Added clone of Robo Army to the Neo Geo driver [JacKc]</li>
+<li>Added clone of Search Eye to the NMG5 driver [system11, The Dumping Union, JacKc]</li>
+<li>Added clone of Ms. Pac-Man to the Pacman driver [elnaib (AUMAP), JacKc]</li>
+<li>Added clone of Oriental Legend / Xi You Shi E Zhuan to the PGM driver [bytestorm, JacKc]</li>
+<li>Added clone of Bonze Adventure (World, Prototype) to the Taito Asuka driver [Silvio Grazini, iq_132]</li>
+<li>Added clone of Growl to the Taito F2 driver [barry]</li>
+<li>Added clone of Jumping to the Taito Misc driver [barry]</li>
+<li>Added clone of F-1 Dream to the Tiger Road driver [JacKc]</li>
+<li>Added clone of Dr. Toppel's Adventure to the TNZS driver [caius, f205v, JacKc]</li>
+<li>Added The Mojon Twins': UWOL Quest for Money to the Megadrive driver [dink]</li>
+<li>Added SMB4MD 1.4.2 aka Super Mario Bros. port to the Megadrive driver [dink]</li>
+<li>Added Atherbyte's Reflectron to the PCEngine driver [dink]</li>
+<li>Added proper protection simulation to 1943 [iq_132]</li>
+<li>Fixed The Irritating Maze [iq_132, JacKc]</li>
+<li>Fixed boblbobl2 [Darq, iq_132]</li>
+<li>Fixed Tail2Nose [iq_132]</li>
+<li>Fixed and tweaked IREM M92 driver to get Ninja Baseball Batman running perfectly [iq_132, dink]</li>
+<li>Fixed IRQ timing in Mustache Boy, now he runs at the right speed [dink]</li>
+<li>Fixed skewed backgrounds in In the Hunt on IREM M92 [dink]</li>
+<li>Fixed Kero Kero Keroppi's Let's Play Together (USA) [csmart, iq_132]</li>
+<li>Fixed Robocop 2 Driving level and sprite offset [iq_132, dink]</li>
+<li>Improvements to Data East's BackFire in single-screen mode [iq_132]</li>
+<li>Konami driver-update - fixed sprite-priority problems and clipping. Added shadows. Affects Vendetta, Escape Kids, TMNT2 and more [iq_132]</li>
+<li>Fix sprite flipping in the Konami K053247 core [iq_132]</li>
+<li>Fixed text layer in Kotetsu Yousai Strahl [iq_132]</li>
+<li>Fixed flickering score and player status in Sunset Riders [dink]</li>
+<li>Fix statusbar and power-up message clipping in Bioship Paladin [dink]</li>
+<li>NMK16 driver fixups: missing score line in tdragon, hachamfb and VanDyke, clipped text in Strahl [dink]</li>
+<li>Tweaked the IRQ timing in the NMK16 driver to fix the Life-bar in VanDyke [dink]</li>
+<li>Fixed missing top line in the game statusbar for Acrobat Mission, Air Attack, S.S. Mission (NMK16) [dink]</li>
+<li>Fix and hook-up the seibusound device to the NMK16 bootlegs Thunder Dragon (tdragonb) and US AAF Mustang (mustangb) [iq_132]</li>
+<li>Fixed missing sound in Galaga and Rally-X [barry]</li>
+<li>Fixed music tempo in Raiden [iq_132, dink]</li>
+<li>Fixed music in Air Duel on IREM M72 Hardware [dink]</li>
+<li>Fixed sound in Dragon Master [iq_132]</li>
+<li>Fixed clicks when firing and slow music tempo in S.S. Mission [dink]</li>
+<li>Fixed Dolmen and Twin Action: sound banking issues (music disappears on level2+) [dink]</li>
+<li>Fixed occasional hung sound in Green Beret [dink]</li>
+<li>Added proper Seibu Sound device to Toki [iq_132]</li>
+<li>Fixed sound panning in Cyber Tank [dink]</li>
+<li>Updated kof99ae driver to 20140801 version [JacKc]</li>
+<li>Megadrive timing and other improvements [barry, dink]</li>
+<li>Megadrive window drawning fix (missing line in Streets of Rage) [barry]</li>
+<li>Fixed Psy-O-Blade on Megadrive [iq_132]</li>
+<li>Added protection patch for Puggsy on Megadrive [dink]</li>
+<li>Fixed Megadrive Ghouls`n Ghosts (Euro, USA, Kor, Rev. A) (md_ghouls) and Ghouls`n Ghosts (Euro, USA) (md_ghouls1) [dink]</li>
+<li>Fixed X-Men 2 and Moonwalker on Megadrive [dink, Freddy]</li>
+<li>Fixed Alien Soldier (PAL) on Megadrive won't boot, is wrongly detected as NTSC [dink]</li>
+<li>Fixed broken reset with some Megadrive games, get rid of the garbage line at the bottom of the screen [dink]</li>
+<li>PCEngine sound-core and timing improvements [dink, barry]</li>
+<li>Increased screen size by 2 pixels for PCEngine Side-Arms Hyperdyne [dink]</li>
+<li>Fixed savestates for IREM M62 Hardware - Kung-Fu Master, The Battle Road, Lode Runner I - IV, LotLot, Kid Niki, Spelunker, Youjyuden and Horizon [dink]</li>
+<li>Fixed savestates for Pac-Land, Sky Kid, Dragon Buster [dink]</li>
+<li>Fixed savestates and Music for Baraduke, Alien Sector and Metro-Cross [dink]</li>
+<li>Added more powerful BurnLoad function for loading roms [iq_132]</li>
+<li>Added Alpha Blending/Transparency support to Neo Geo, CPS-1 and CPS-2 - supports Nebula/Kawaks-style blend (.bld) files [iq_132]</li>
+<li>Added user configurable path for blend files and global enable/disable option [barry]</li>
+<li>Added a shiny new Auto-Fire feature! [dink]</li>
+<li>Input editor feature: clear input and clear-lock checkbox [dink]</li>
+<li>Added option to disable support folder creation on creation [barry]</li>
+<li>Added default rom paths for consoles to the folder creation startup routine [JacKc, barry]</li>
+<li>Savestate Undo improvement: display an error message if there is nothing to be undone, don't undo the last savestate [dink]</li>
+<li>Added ability to input-map Pause, FFWD, Save/Load/Undo States [dink]</li>
+<li>Game selection dialog search box can now search hardware/system text (eg, NMK) [dink]</li>
+<li>Tidy-up source code fixing compile warnings and portability issues [barry]</li>
+<li>Updated the libpng library to v1.6.13 [Barry]</li>
+<li>Synced sets with MAME 0.155 [barry, JacKc]</li>
+</ul>
+
+
 <h3>v0.2.97.31</h3>
 <ul>
-<li></li>
+<li>Added driver for Psychic 5 [Barry, iq_132]</li>
+<li>Added clone of Toki to the driver [JacKc]</li>
+<li>Preliminary savestate support for the Megadrive driver [dink]</li>
+<li>Fixed an issue with the Enhanced D3D blitter [dink]</li>
 </ul>
 
 
@@ -127,7 +237,7 @@
 <li>Fixed savestates with multiple chips and fix for setting singular channel volume in K007232 core [dink, iq_132]</li>
 <li>Fixed savestates in Irem GA20 sound core [iq_132]</li>
 <li>Fixed bug in generic sprite zoom drawing routines [iq_132]</li>
-<li>Fixed idle skip (timers) &amp crash with FAST_OP_FETCH in SH-2 CPU core [dink]</li>
+<li>Fixed idle skip (timers) &amp; crash with FAST_OP_FETCH in SH-2 CPU core [dink]</li>
 <li>Added driver for Choplifter (unprotected, working) and Choplifter (bootleg, working) to Sega System1 (Parent ROM NW) [vbt]</li>
 <li>Added driver for Mighty Warrior, Steel Force &amp; Twin Brats on Elettronica Video-Games S.R.L hardware [iq_132]</li>
 <li>Added driver for Capcom Bowling [iq_132]</li>
@@ -471,7 +581,7 @@
 
 <h3>v0.2.97.27</h3>
 <ul>
-<li>Sound Improvements</li>
+<li>Sound Improvements
 <ul>
 <li>Tidied sound chip interfaces, adding support for volume and left/right selection for individual routes. Updated all drivers to support. Many drivers sound much better with these updates [Barry]</li>
 <li>Fixed an issue with multiple YM2203 chips that resulted in static noise in the sound output [Barry]</li>
@@ -485,7 +595,7 @@
 <li>Added support for the MSM6585 chip to the MSM5205 core [iq_132]</li>
 <li>Added multiple chip support to the Y8950 interface, and hooked up in the Cybertank driver [Barry]</li>
 <li>Small speedup in the DAC core [iq_132]</li>
-</ul>
+</ul></li>
 <li>Standardised some CPU interfaces [iq_132]</li>
 <li>Improved Atari slapstic emulation, and updated the Gauntlet driver to support it [iq_132]</li>
 <li>Added driver for Atari Tetris [iq_132]</li>
@@ -574,7 +684,7 @@
 
 <h3>v0.2.97.25</h3>
 <ul>
-<li>CPS-1 Updates, most of the bootlegs now work well and without patches to hack them to work like the originals (brief, incomplete summary below) [Barry, JacKc, bonky_0013, f205v]</li>
+<li>CPS-1 Updates, most of the bootlegs now work well and without patches to hack them to work like the originals (brief, incomplete summary below) [Barry, JacKc, bonky_0013, f205v]
 <ul>
 <li>Added some Street Fighter II M bootlegs</li>
 <li>Street Fighter II - Champion Edition (Turbo Hack) now works</li>
@@ -600,7 +710,7 @@
 <li>All the PIC sets now work, without sound obviously due to no good dump of the PIC data being available</li>
 <li>Tidied the driver</li>
 <li>Removed the CPS Changer region hacks</li>
-</ul>
+</ul></li>
 <li>Updated the ARM7 core to avoid out of page range accesses [iq_132]</li>
 <li>Added driver for Silver Millenium [iq_132]</li>
 <li>Added bootleg of Dragon Ninja to the DEC-0 driver [Barry]</li>
@@ -1099,7 +1209,7 @@
 <p>The game shortnames are prepended by <i>md_</i> to differentiate them from the arcade games where conflicts occur. FB Alpha will look for your roms in the normal zip names, you do <b>not</b> need to create a new copy of the games and prepend <i>md_</i>. It is advisable to have the Megadrive roms in the seventh or eighth rom paths to avoid conflicts with arcade games. Support files will need to retain the <i>md_</i> in order to avoid conflicts, however.</p>
 <p>All Megadrive games are now enabled (except for Virtua Racing because the SVP isn't emulated), most should work, however, some may not.</p>
 <ul>
-<li>Megadrive Changes</li>
+<li>Megadrive Changes
 <ul>
 <li>Updated Megadrive driver based on MESS 0.143u7 software list [Barry]</li>
 <li>Made the seventh rom path special like the eighth one so that Megadrive roms can be stored in one of the last two paths and still allow supplementary FB Alpha roms to be in a seperate path [Barry]</li>
@@ -1108,7 +1218,7 @@
 <li>Added better SRAM support and support for custom mappers as per MESS [Barry]</li>
 <li>Removed menu option for making a datfile with both arcade games and Megadrive games, the two would conflict, and arcade and Megadrive dats need to be handled seperately [Barry]</li>
 <li>Updated the dat file creation module to remove the <i>md_</i> from the Megadrive shortnames [Barry]</li>
-</ul>
+</ul></li>
 <li>Added clone of Aquajack to the Taito-Z driver [Barry]</li>
 <li>Added clone of Vigilante to the Vigilante driver [Barry]</li>
 <li>Fixed music tempo and continuity in Item M90 and M92 drivers [iq_132]</li>
@@ -2599,7 +2709,7 @@ is from memory and some stuff is sure to be missing. Here's what's new anyway;</
 <div class="note">From this point forward, all releases are handled by Barry and each external contribution is labelled.<br /><br />The releases below were available on the old FBA site.</div>
 
 <h3>v0.2.95.23</h3>
-<p>Time for another FinalBurn Alpha release, bringing with it an assortment of fixes and additions. Grab it while it’s hot, from our files page. Any bugs / issues should be reported to the FBA official forums.</p>
+<p>Time for another FinalBurn Alpha release, bringing with it an assortment of fixes and additions. Grab it while it's hot, from our files page. Any bugs / issues should be reported to the FBA official forums.</p>
 <ul>
 <li>This is still an alpha release!</li>
 <li>Note that, if compiled with GCC, you will need to use version 3.3.x, and the experimental DirectX 9 blitter is not built</li>
@@ -2627,7 +2737,7 @@ is from memory and some stuff is sure to be missing. Here's what's new anyway;</
 </ul>
 
 <h3>v0.2.95.21</h3>
-<p>At long last it’s time for a new version of FBA! On offer are the standard build, the source code and an optimised binary for use on Win9x / Pentium machines. You can download the latest version, from our Files page.</p>
+<p>At long last its time for a new version of FBA! On offer are the standard build, the source code and an optimised binary for use on Win9x / Pentium machines. You can download the latest version, from our Files page.</p>
 <p>This is still an alpha release!</p>
 <p>Note that this version CANNOT be compiled with GCC!</p>
 <ul>
@@ -2645,25 +2755,25 @@ is from memory and some stuff is sure to be missing. Here's what's new anyway;</
 <ul>
 <li>Fixed all the new bugs introduced in the previous version</li>
 <li>Fixed the raster effects in Samurai Shodown 3</li>
-<li>Preview images can be any png file upto 1024×0124 pixels</li>
+<li>Preview images can be any png file upto 1024Ã—0124 pixels</li>
 <li>Added descriptive text to screenshot png files</li>
-<li>Added a system information dialog that’s used when FB Alpha crashes</li>
+<li>Added a system information dialog that's used when FB Alpha crashes</li>
 <li>Added the english language versions of mahoudai and shippumd</li>
 </ul>
 
 <h3>v0.2.94.97</h3>
 <p>There is a new version of FBA available from our downloads page. At present an upgrade .msi is unavailable. Any users wishing to upgrade, should download the standard fba_029497.exe and extract the contents to their installation directory.</p>
-<p>This is an alpha release! Again, although we expect very few problems, there still might be some we’ve not seen.</p>
+<p>This is an alpha release! Again, although we expect very few problems, there still might be some we've not seen.</p>
 <ul>
 <li>Fixed most of the remaining problems in v0.2.94.96</li>
 <li>Shortcut keys have changed</li>
 <li>Directories used by FB Alpha have changed</li>
-<li>Readme updated (read it completely even if you’ve read the earlier versions)</li>
+<li>Readme updated (read it completely even if you've read the earlier versions)</li>
 <li>The Neo Geo driver now always uses a real AES BIOS in AES mode, more differences between AES and MVS are emulated now as well</li>
 </ul>
 
 <h3>v0.2.94.96</h3>
-<p>All the files are now back online. If you downloaded the previous installer, then you only have to download the smaller upgrade installer this time around. There is also an optimised build for K6 users; as after all, they are people too… Please remember to delete the contents of you cfg/ folder before you start FBA, as the old cfg files will not be fully compatible with the new release.</p>
+<p>All the files are now back online. If you downloaded the previous installer, then you only have to download the smaller upgrade installer this time around. There is also an optimised build for K6 users; as after all, they are people too; Please remember to delete the contents of you cfg/ folder before you start FBA, as the old cfg files will not be fully compatible with the new release.</p>
 
 <h3>v0.2.94.95</h3>
 <p>A new version of FBA has been released. This version fixes most of the problems in v0.2.94.56. If you downloaded the fba.msi last time, we recommend that you wait for the fba_029495_update.msi that should be released later this evening. For all the K6 people out there, an optimized K6 version will be available shortly as well. Please note that certain CPS1 games still lack sound. Downloads are currently available from the torrents page. Direct downloads will be available in a little while. If you are using FB Alpha v0.2.94.56, please upgrade. Delete all files in the FB Alpha cfg directory.</p>
@@ -2698,6 +2808,14 @@ is from memory and some stuff is sure to be missing. Here's what's new anyway;</
 <li>Many, many UI enhancements</li>
 <li>New blitters - including RGB effects, etc</li>
 <li>Demo recording and playback</li>
+</ul>
+
+<h3>v0.2.6</h3>
+<ul>
+<li>Added drivers for sgemf, sgemfa, pfghtj, ssf2a, ssf2ar1 & spf2t.</li>
+<li>Added Dynasty Wars (World) and Knights of the Round (Hack).</li>
+<li>Fixed the off-set of the sprites in the mvsc ending.</li>
+<li>Fixed the sound in some CPS-1 games (all work fine now).</li>
 </ul>
 
 <h3>v0.2.5</h3>
@@ -2748,6 +2866,47 @@ is from memory and some stuff is sure to be missing. Here's what's new anyway;</
 <h3>v0.2.1</h3>
 <ul>
 <li>Added drivers for ddtod, sfz3a, vsava, xmvsf &amp; xmcota</li>
+</ul>
+
+<h3>v0.200</h3>
+<ul>
+<li>Re-added T key.</li>
+<li>Fixed sound stop when you select menu.</li>
+<li>Fixed slammast input players 3/4.</li>
+<li>Fixed captcomm input player 4.</li>
+<li>Fixed forgottn analogic input.</li>
+<li>FBA version in About dialog is dynamically updated.</li>
+<li>Show volume value.</li>
+<li>Added Pang! 3 working driver.</li>
+<li>Fixed the menu to disable a few options during netplay.</li>
+<li>Added sprite masking.</li>
+<li>Added small sprite fix.</li>
+<li>Added BgHi. (thanks ElSemi)</li>
+<li>Added scroll limits.</li>
+<li>Added new load dialog.</li>
+<li>Ported FBA to Cygwin/MinGW.</li>
+<li>Added new stretch options.</li>
+<li>Added switch to use arcade resolution for full-screen mode.</li>
+<li>Added support for beam-synchronized interrupts.</li>
+<li>Optimized sprite masking.</li>
+<li>Numerous small fixes.</li>
+<li>Added (and fixed) new sound interpolation routines by ComaC.</li>
+<li>Added command line parsing.</li>
+<li>Added automatic generation of the driver list & gamelist.txt.</li>
+<li>Fixed the dip switch engine so it works with the sega games.</li>
+<li>Fixed CpsFsStopOpposite so it won't stop 3kick and 3punch.</li>
+<li>Added fix to cpst.cpp by TRAC of the SNEeSe Emulator to fix a sprite clipping bug on CPS games.</li>
+<li>Redid most of the VC++ project files to allow the emulator to build.</li>
+<li>Added Jan_Klaassen to the about box.</li>
+<li>Alphabetically listed the drivers (so the Kaillera game list doesn't screw up).</li>
+<li>Fixed batcir 4 player fix, so it actually works.</li>
+<li>Added a huge amount of new cheats in the fbcheat.dat file.</li>
+<li>Updated some of the docs and stuff.</li>
+<li>Fixed the default controllers so they are set to different devices.</li>
+<li>Removed the 'flip monitor as standard for XMvSF in netplay' fix as it's no longer needed.</li>
+<li>Re-arranged the panel in netplay a little so it's a little more compact.</li>
+<li>Updated the CpsFsStopOpposite function with lots of new input ports and updated a few CPS-2 drivers to use it.</li>
+<li>Updated most CPS drivers so that the correct sound codes are blocked when the user selects that option.</li>
 </ul>
 
 <h3>v0.138a</h3>

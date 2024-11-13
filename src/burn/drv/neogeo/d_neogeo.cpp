@@ -1355,11 +1355,11 @@ static void PCM2DecryptP()
 	UINT8* pTemp = (UINT8*)BurnMalloc(0x400000);
 
 	if (pTemp) {
-		memcpy(pTemp, Neo68KROMActive + 0x100000, 0x400000);
+		memmove(pTemp, Neo68KROMActive + 0x100000, 0x400000);
 
 		for (INT32 i = 0; i < 4; i++) {
-			memcpy(Neo68KROMActive + 0x100000 + i * 0x100000, pTemp + 0x000000 + (((((i + 2) & 1) << 2) | ((i + 2) & 2)) << 19), 0x80000);
-			memcpy(Neo68KROMActive + 0x180000 + i * 0x100000, pTemp + 0x080000 + (((((i + 1) & 1) << 2) | ((i + 1) & 2)) << 19), 0x80000);
+			memmove(Neo68KROMActive + 0x100000 + i * 0x100000, pTemp + 0x000000 + (((((i + 2) & 1) << 2) | ((i + 2) & 2)) << 19), 0x80000);
+			memmove(Neo68KROMActive + 0x180000 + i * 0x100000, pTemp + 0x080000 + (((((i + 1) & 1) << 2) | ((i + 1) & 2)) << 19), 0x80000);
 		}
 
 		BurnFree(pTemp);
@@ -1370,7 +1370,7 @@ static void PCM2DecryptV(INT32 size, INT32 bit)
 {
 	for (INT32 i = 0; i < size / 2; i += (2 << bit)) {
 		UINT16 buffer[8];
-		memcpy(buffer, ((UINT16*)(YM2610ADPCMAROM[nNeoActiveSlot])) + i, 16);
+		memmove(buffer, ((UINT16*)(YM2610ADPCMAROM[nNeoActiveSlot])) + i, 16);
 		for (INT32 j = (2 << bit) - 1; j >= 0; j--) {
 			((UINT16*)(YM2610ADPCMAROM[nNeoActiveSlot]))[i + j] = buffer[j ^ (1 << bit)];
 		}
@@ -1384,7 +1384,7 @@ static void PCM2DecryptV2(const PCM2DecryptV2Info* const pInfo)
 	UINT8* pTemp = (UINT8*)BurnMalloc(0x01000000);
 
 	if (pTemp) {
-		memcpy(pTemp, YM2610ADPCMAROM[nNeoActiveSlot], 0x01000000);
+		memmove(pTemp, YM2610ADPCMAROM[nNeoActiveSlot], 0x01000000);
 
 		for (INT32 i = 0; i < 0x01000000; i++) {
 			INT32 nAddress = ((i & 0x00FEFFFE) | ((i & 0x00010000) >> 16) | ((i & 0x00000001) << 16)) ^ pInfo->nAddressOffset;
@@ -1403,10 +1403,10 @@ static void PCM2DecryptP2(const PCM2DecryptP2Info* const pInfo)
 	UINT8* pTemp = (UINT8*)BurnMalloc(0x800000);
 
 	if (pTemp) {
-		memcpy(pTemp, Neo68KROMActive, 0x800000);
+		memmove(pTemp, Neo68KROMActive, 0x800000);
 
 		for (INT32 i = 0; i < 16; i++) {
-			memcpy(Neo68KROMActive + i * 0x80000, pTemp + pInfo->nAddressOffset[i], 0x80000);
+			memmove(Neo68KROMActive + i * 0x80000, pTemp + pInfo->nAddressOffset[i], 0x80000);
 		}
 
 		BurnFree(pTemp);
@@ -1579,10 +1579,10 @@ static void DoPerm(INT32 g) // 0 - cthd2003, 1 - svcboot
 			b = tbl[idx[g][(i >> (5 ^ g)) & 0x0f]];
 			k = BITSWAP08(j, 7, 6, 5, 4, b[3], b[2], b[1], b[0]);
 
-			memcpy (dst + (j << 7), NeoSpriteROM[nNeoActiveSlot] + (i << 11) + (k << 7), 0x80);
+			memmove (dst + (j << 7), NeoSpriteROM[nNeoActiveSlot] + (i << 11) + (k << 7), 0x80);
 		}
 
-		memcpy (NeoSpriteROM[nNeoActiveSlot] + (i << 11), dst, 0x800);
+		memmove (NeoSpriteROM[nNeoActiveSlot] + (i << 11), dst, 0x800);
 	}
 }
 
@@ -2732,7 +2732,7 @@ struct BurnDriver BurnDrvFatFury1 = {
 	0x1000, 320, 224, 4, 3
 };
 
-// Robo Army
+// Robo Army (set 1)
 
 static struct BurnRomInfo roboarmyRomDesc[] = {
 	{ "032-p1.p1",    0x080000, 0xcd11cbd4, 1 | BRF_ESS | BRF_PRG }, //  0 68K code
@@ -2755,7 +2755,7 @@ STD_ROM_FN(roboarmy)
 
 struct BurnDriver BurnDrvRoboarmy = {
 	"roboarmy", NULL, "neogeo", NULL, "1991",
-	"Robo Army\0", NULL, "SNK", "Neo Geo MVS",
+	"Robo Army (set 1)\0", NULL, "SNK", "Neo Geo MVS",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_CARTRIDGE | HARDWARE_SNK_NEOGEO, GBF_SCRFIGHT, 0,
 	NULL, roboarmyRomInfo, roboarmyRomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
@@ -2977,8 +2977,10 @@ struct BurnDriver BurnDrvQuizdai2 = {
 
 static struct BurnRomInfo countb3RomDesc[] = {
 	{ "043-p1.p1",    0x100000, 0xffbdd928, 1 | BRF_ESS | BRF_PRG }, //  0 68K code
-	/* The original p1 is 8mbit; also found sets with p1 / p2 4mbit on eprom. */
-
+	/* The original p1 is 8mbit; also found sets with p1 / p2 4mbit on eprom. 
+	{ "043-epr.ep1",  0x080000, 0xeb2714c4, 1 | BRF_ESS | BRF_PRG }, //  0 68K code
+	{ "043-epr.ep2",  0x080000, 0x5e764567, 1 | BRF_ESS | BRF_PRG }, //  1 */
+	
 	{ "043-s1.s1",    0x020000, 0xc362d484, 2 | BRF_GRA },           //  1 Text layer tiles
 
 	{ "043-c1.c1",    0x200000, 0xbad2d67f, 3 | BRF_GRA },           //  2 Sprite data
@@ -3184,7 +3186,9 @@ struct BurnDriver BurnDrvtophntrh = {
 
 static struct BurnRomInfo fatfury2RomDesc[] = {
 	{ "047-p1.p1",    0x100000, 0xecfdbb69, 1 | BRF_ESS | BRF_PRG }, //  0 68K code
-	/* The original p1 is 8mbit; also found sets with p1 / p2 4mbit on eprom. */
+	/* The original p1 is 8mbit; also found sets with p1 / p2 4mbit on eprom. 
+	{ "047-p1.ep1",   0x080000, 0xbe40ea92, 1 | BRF_ESS | BRF_PRG }, //  0 68K code
+	{ "047-p2.ep2",   0x080000, 0x2a9beac5, 1 | BRF_ESS | BRF_PRG }, //  1 */
 	
 	{ "047-s1.s1",    0x020000, 0xd7dbbf39, 2 | BRF_GRA },           //  2 Text layer tiles
 
@@ -3451,7 +3455,11 @@ static struct BurnRomInfo aof2RomDesc[] = {
 
 	{ "056-s1.s1",    0x020000, 0x8b02638e, 2 | BRF_GRA },           //  1 Text layer tiles
 
-	/* Different layout with 4xC (32mbit) also exists; chip labels are 056-C13, 056-C24, 056-C57 and 056-C68 */
+	/* Different layout with 4xC (32mbit) also exists; chip labels are 056-C13, 056-C24, 056-C57 and 056-C68 
+	{ "056-c13.c1",   0x400000, 0xbd3aa959, 3 | BRF_GRA },           //  2 Sprite data
+	{ "056-c24.c2",   0x400000, 0xe58297c2, 3 | BRF_GRA },           //  3 
+	{ "056-c57.c3",   0x400000, 0xb4ad87e5, 3 | BRF_GRA },           //  4 
+	{ "056-c68.c4",   0x400000, 0x9d3982c8, 3 | BRF_GRA },           //  5 */
 	{ "056-c1.c1",    0x200000, 0x17b9cbd2, 3 | BRF_GRA },           //  2 Sprite data
 	{ "056-c2.c2",    0x200000, 0x5fd76b67, 3 | BRF_GRA },           //  3 
 	{ "056-c3.c3",    0x200000, 0xd2c88768, 3 | BRF_GRA },           //  4 
@@ -4708,10 +4716,10 @@ static void kogCallback()
 		static const INT32 sec[] = { 0x3, 0x8, 0x7, 0xc, 0x1, 0xa, 0x6, 0xd };
 	
 		for (i = 0; i < 0x100000 / 0x020000; i++) 
-			memcpy (dst + i * 0x020000, Neo68KROMActive + sec[i] * 0x020000, 0x020000);
+			memmove (dst + i * 0x020000, Neo68KROMActive + sec[i] * 0x020000, 0x020000);
 
-		memcpy (dst + 0x090000, Neo68KROMActive + 0x040000, 0x004000);
-		memcpy (Neo68KROMActive, dst, 0x100000);
+		memmove (dst + 0x090000, Neo68KROMActive + 0x040000, 0x004000);
+		memmove (Neo68KROMActive, dst, 0x100000);
 		BurnFree (dst);
 	}
 
@@ -4725,10 +4733,10 @@ static void kogCallback()
 		}
 	}
 
-	memcpy (Neo68KROMActive + 0x0007a6, Neo68KROMActive + 0x0907a6, 0x000006);
-	memcpy (Neo68KROMActive + 0x0007c6, Neo68KROMActive + 0x0907c6, 0x000006);
-	memcpy (Neo68KROMActive + 0x0007e6, Neo68KROMActive + 0x0907e6, 0x000006);
-	memcpy (Neo68KROMActive + 0x100000, Neo68KROMActive + 0x200000, 0x400000);
+	memmove (Neo68KROMActive + 0x0007a6, Neo68KROMActive + 0x0907a6, 0x000006);
+	memmove (Neo68KROMActive + 0x0007c6, Neo68KROMActive + 0x0907c6, 0x000006);
+	memmove (Neo68KROMActive + 0x0007e6, Neo68KROMActive + 0x0907e6, 0x000006);
+	memmove (Neo68KROMActive + 0x100000, Neo68KROMActive + 0x200000, 0x400000);
 
 	*((UINT16 *)(Neo68KROMActive + 0x924ac)) = BURN_ENDIAN_SWAP_INT16(0x0009);
 	*((UINT16 *)(Neo68KROMActive + 0x9251c)) = BURN_ENDIAN_SWAP_INT16(0x0009);
@@ -5156,35 +5164,35 @@ static void kof98Decrypt()
 		return;
 	}
 
-	memcpy(pTemp, Neo68KROMActive, 0x200000);
+	memmove(pTemp, Neo68KROMActive, 0x200000);
 
 	for (INT32 i = 0x0800; i < 0x100000; i += 0x0200) {
 		for (INT32 j = 0; j < 0x0100; j += 0x10) {
 			for (INT32 k = 0; k < 8; k++) {
-				memcpy(&Neo68KROMActive[i + j + k * 2 +      0], &pTemp[i + j + sec[k] + 0x0100], 2);
-				memcpy(&Neo68KROMActive[i + j + k * 2 + 0x0100], &pTemp[i + j + sec[k] +      0], 2);
+				memmove(&Neo68KROMActive[i + j + k * 2 +      0], &pTemp[i + j + sec[k] + 0x0100], 2);
+				memmove(&Neo68KROMActive[i + j + k * 2 + 0x0100], &pTemp[i + j + sec[k] +      0], 2);
 			}
 			if (i >= 0x080000 && i < 0x0c0000) {
 				for (INT32 k = 0; k < 4; k++) {
-					memcpy(&Neo68KROMActive[i + j + pos[k] +      0], &pTemp[i + j + pos[k] +      0], 2);
-					memcpy(&Neo68KROMActive[i + j + pos[k] + 0x0100], &pTemp[i + j + pos[k] + 0x0100], 2);
+					memmove(&Neo68KROMActive[i + j + pos[k] +      0], &pTemp[i + j + pos[k] +      0], 2);
+					memmove(&Neo68KROMActive[i + j + pos[k] + 0x0100], &pTemp[i + j + pos[k] + 0x0100], 2);
 				}
 			}
 			if (i >= 0x0c0000) {
 				for (INT32 k = 0; k < 4; k++) {
-					memcpy(&Neo68KROMActive[i + j + pos[k] +      0], &pTemp[i + j + pos[k] + 0x0100], 2);
-					memcpy(&Neo68KROMActive[i + j + pos[k] + 0x0100], &pTemp[i + j + pos[k] +      0], 2);
+					memmove(&Neo68KROMActive[i + j + pos[k] +      0], &pTemp[i + j + pos[k] + 0x0100], 2);
+					memmove(&Neo68KROMActive[i + j + pos[k] + 0x0100], &pTemp[i + j + pos[k] +      0], 2);
 				}
 			}
 		}
 
-		memcpy(&Neo68KROMActive[i + 0x000000], &pTemp[i + 0x000000], 2);
-		memcpy(&Neo68KROMActive[i + 0x000002], &pTemp[i + 0x100000], 2);
-		memcpy(&Neo68KROMActive[i + 0x000100], &pTemp[i + 0x000100], 2);
-		memcpy(&Neo68KROMActive[i + 0x000102], &pTemp[i + 0x100100], 2);
+		memmove(&Neo68KROMActive[i + 0x000000], &pTemp[i + 0x000000], 2);
+		memmove(&Neo68KROMActive[i + 0x000002], &pTemp[i + 0x100000], 2);
+		memmove(&Neo68KROMActive[i + 0x000100], &pTemp[i + 0x000100], 2);
+		memmove(&Neo68KROMActive[i + 0x000102], &pTemp[i + 0x100100], 2);
 	}
 
-	memcpy(&Neo68KROMActive[0x100000], &Neo68KROMActive[0x200000], 0x400000);
+	memmove(&Neo68KROMActive[0x100000], &Neo68KROMActive[0x200000], 0x400000);
 
 	BurnFree(pTemp);
 }
@@ -5683,7 +5691,7 @@ static void kof99SMADecrypt()
 
 	for (INT32 i = 0; i < 0x600000 / 2; i += 0x0800 / 2) {
 		UINT16 nBuffer[0x0800 / 2];
-		memcpy(nBuffer, &((UINT16*)(Neo68KROMActive + 0x100000))[i], 0x0800);
+		memmove(nBuffer, &((UINT16*)(Neo68KROMActive + 0x100000))[i], 0x0800);
 		for (INT32 j = 0; j < 0x0800 / 2; j++) {
 			((UINT16*)(Neo68KROMActive + 0x100000))[i + j] = BURN_ENDIAN_SWAP_INT16(nBuffer[BITSWAP24(j, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 6, 2, 4, 9, 8, 3, 1, 7, 0, 5)]);
 		}
@@ -5939,7 +5947,7 @@ static void garouSMADecrypt()
 
 	for (INT32 i = 0; i < 0x800000 / 2; i += 0x8000 / 2) {
 		UINT16 nBuffer[0x8000 / 2];
-		memcpy(nBuffer, &((UINT16*)(Neo68KROMActive + 0x100000))[i], 0x8000);
+		memmove(nBuffer, &((UINT16*)(Neo68KROMActive + 0x100000))[i], 0x8000);
 		for (INT32 j = 0; j < 0x8000 / 2; j++) {
 			((UINT16*)(Neo68KROMActive + 0x100000))[i + j] = BURN_ENDIAN_SWAP_INT16(nBuffer[BITSWAP24(j, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 9, 4, 8, 3, 13, 6, 2, 7, 0, 12, 1, 11, 10, 5)]);
 		}
@@ -6039,7 +6047,7 @@ static void garouhSMADecrypt()
 
 	for (INT32 i = 0; i < 0x800000 / 2; i += 0x8000 / 2) {
 		UINT16 nBuffer[0x8000 / 2];
-		memcpy(nBuffer, &((UINT16*)(Neo68KROMActive + 0x100000))[i], 0x8000);
+		memmove(nBuffer, &((UINT16*)(Neo68KROMActive + 0x100000))[i], 0x8000);
 		for (INT32 j = 0; j < 0x8000 / 2; j++) {
 			((UINT16*)(Neo68KROMActive + 0x100000))[i + j] = BURN_ENDIAN_SWAP_INT16(nBuffer[BITSWAP24(j, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 12, 8, 1, 7, 11, 3, 13, 10, 6, 9, 5, 4, 0, 2)]);
 		}
@@ -6233,7 +6241,7 @@ static void mslug3SMADecrypt()
 
 	for (INT32 i = 0; i < 0x800000 / 2; i += 0x010000 / 2) {
 		UINT16 nBuffer[0x010000 / 2];
-		memcpy(nBuffer, &((UINT16*)(Neo68KROMActive + 0x100000))[i], 0x010000);
+		memmove(nBuffer, &((UINT16*)(Neo68KROMActive + 0x100000))[i], 0x010000);
 		for (INT32 j = 0; j < 0x010000 / 2; j++) {
 			((UINT16*)(Neo68KROMActive + 0x100000))[i + j] = BURN_ENDIAN_SWAP_INT16(nBuffer[BITSWAP24(j, 23, 22, 21, 20, 19, 18, 17, 16, 15, 2, 11, 0, 14, 6, 4, 13, 8, 9, 3, 10, 7, 5, 12, 1)]);
 		}
@@ -6369,7 +6377,7 @@ STD_ROM_FN(mslug3b6)
 
 static void mslug3b6Callback()
 {
-	memcpy(Neo68KROMActive, Neo68KROMActive + 0x100000, 0x500000);
+	memmove(Neo68KROMActive, Neo68KROMActive + 0x100000, 0x500000);
 
 	garoubl_sx_decode();
 }
@@ -6431,7 +6439,7 @@ static void kof2000SMADecrypt()
 
 	for (INT32 i = 0; i < 0x63A000 / 2; i += 0x0800 / 2) {
 		UINT16 nBuffer[0x0800 / 2];
-		memcpy(nBuffer, &((UINT16*)(Neo68KROMActive + 0x100000))[i], 0x0800);
+		memmove(nBuffer, &((UINT16*)(Neo68KROMActive + 0x100000))[i], 0x0800);
 		for (INT32 j = 0; j < 0x0800 / 2; j++) {
 			((UINT16*)(Neo68KROMActive + 0x100000))[i + j] = BURN_ENDIAN_SWAP_INT16(nBuffer[BITSWAP24(j, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 4, 1, 3, 8, 6, 2, 7, 0, 9, 5)]);
 		}
@@ -6857,7 +6865,7 @@ static void ct2k3spCallback()
 			dst[i] = NeoTextROM[nNeoActiveSlot][j];
 		}
 		
-		memcpy (NeoTextROM[nNeoActiveSlot], dst, 0x040000 );
+		memmove (NeoTextROM[nNeoActiveSlot], dst, 0x040000 );
 
 		BurnFree (dst);
 	}
@@ -7037,13 +7045,13 @@ void kof2002b_gfx_decrypt(UINT8 *src, INT32 nLen)
 
 	for (i = 0; i < nLen; i+= 0x10000)
 	{
-		memcpy (dst, src + i, 0x10000);
+		memmove (dst, src + i, 0x10000);
 
 		for (j = 0; j < 0x10000 / 0x80; j++)
 		{
 			m = tbl[(j >> 3) & 7];
 			k = BITSWAP16(j, 15, 14, 13, 12, 11, 10, 9, m[5], m[4], m[3], 5, 4, 3, m[2], m[1], m[0]);
-			memcpy (src + i + k * 0x80, dst + j * 0x80, 0x80);
+			memmove (src + i + k * 0x80, dst + j * 0x80, 0x80);
 		}
 	}
 }
@@ -7250,9 +7258,9 @@ STD_ROM_FN(kf2k2mp2)
 
 static void kf2k2mp2Callback()
 {
-	memcpy (Neo68KROMActive + 0x000000, Neo68KROMActive + 0x1c0000, 0x040000);
-	memcpy (Neo68KROMActive + 0x0c0000, Neo68KROMActive + 0x100000, 0x040000);
-	memcpy (Neo68KROMActive + 0x100000, Neo68KROMActive + 0x200000, 0x400000);
+	memmove (Neo68KROMActive + 0x000000, Neo68KROMActive + 0x1c0000, 0x040000);
+	memmove (Neo68KROMActive + 0x0c0000, Neo68KROMActive + 0x100000, 0x040000);
+	memmove (Neo68KROMActive + 0x100000, Neo68KROMActive + 0x200000, 0x400000);
 
 	lans2004_sx_decode();
 }
@@ -7374,11 +7382,11 @@ static void kof10thCallback()
 				k = BITSWAP24(j,23,22,21,20,19,18,17,16,15,14,13,12,11,2,9,8,7,1,5,4,3,10,6,0);
 				dst[k] = Neo68KROMActive[i + j];
 			}
-			memcpy (Neo68KROMActive + i, dst, 0x100000);
+			memmove (Neo68KROMActive + i, dst, 0x100000);
 		}
 
-		memcpy (Neo68KROMActive + 0x100000, Neo68KROMActive, 0x700000);
-		memcpy (Neo68KROMActive, dst, 0x100000);
+		memmove (Neo68KROMActive + 0x100000, Neo68KROMActive, 0x700000);
+		memmove (Neo68KROMActive, dst, 0x100000);
 		BurnFree (dst);
 	}
 
@@ -7516,15 +7524,15 @@ static void kf10thepCallback()
 		UINT32 sec[8] = { 0x3, 0x8, 0x7, 0xC, 0x1, 0xA, 0x6, 0xD };
 
 		for (i = 0; i < 8; i++)
-			memcpy (dst + i * 0x20000, Neo68KROMActive + sec[i] * 0x20000, 0x20000);
+			memmove (dst + i * 0x20000, Neo68KROMActive + sec[i] * 0x20000, 0x20000);
 
-		memcpy (dst + 0x0002e0, Neo68KROMActive + 0x0402e0, 0x06a);
-		memcpy (dst + 0x0f92bc, Neo68KROMActive + 0x0492bc, 0xb9e);
-		memcpy (Neo68KROMActive, dst, 0x100000);
+		memmove (dst + 0x0002e0, Neo68KROMActive + 0x0402e0, 0x06a);
+		memmove (dst + 0x0f92bc, Neo68KROMActive + 0x0492bc, 0xb9e);
+		memmove (Neo68KROMActive, dst, 0x100000);
 		BurnFree (dst);
 	}
 
-	memcpy (Neo68KROMActive + 0x100000, Neo68KROMActive + 0x200000, 0x600000);
+	memmove (Neo68KROMActive + 0x100000, Neo68KROMActive + 0x200000, 0x600000);
 
 	for (i = 0xf92bc; i < 0xf9e58; i += 2)
 	{
@@ -7602,10 +7610,10 @@ static void kf2k5uniCallback()
 			k = BITSWAP08(j, 7, 3, 4, 5, 6, 1, 2, 0);
 			dst[j] = Neo68KROMActive[i + k];
 		}
-		memcpy (Neo68KROMActive + i, dst, 0x80);
+		memmove (Neo68KROMActive + i, dst, 0x80);
 	}
 
-	memcpy(Neo68KROMActive, Neo68KROMActive + 0x600000, 0x100000);
+	memmove(Neo68KROMActive, Neo68KROMActive + 0x600000, 0x100000);
 
 	for (i = 0; i < 0x30000; i++)
 		NeoZ80ROMActive[i] = BITSWAP08(NeoZ80ROMActive[i], 4, 5, 6, 7, 0, 1, 2, 3);
@@ -7664,12 +7672,12 @@ static void kof2k4seCallback()
 
 	if (dst)
 	{
-		memcpy (dst,                        Neo68KROMActive + 0x000000, 0x100000);
-		memcpy (Neo68KROMActive + 0x000000, Neo68KROMActive + 0x400000, 0x100000);
-		memcpy (Neo68KROMActive + 0x400000, dst,                        0x100000);
-		memcpy (dst,                        Neo68KROMActive + 0x100000, 0x100000);
-		memcpy (Neo68KROMActive + 0x100000, Neo68KROMActive + 0x300000, 0x100000);
-		memcpy (Neo68KROMActive + 0x300000, dst,                        0x100000);
+		memmove (dst,                        Neo68KROMActive + 0x000000, 0x100000);
+		memmove (Neo68KROMActive + 0x000000, Neo68KROMActive + 0x400000, 0x100000);
+		memmove (Neo68KROMActive + 0x400000, dst,                        0x100000);
+		memmove (dst,                        Neo68KROMActive + 0x100000, 0x100000);
+		memmove (Neo68KROMActive + 0x100000, Neo68KROMActive + 0x300000, 0x100000);
+		memmove (Neo68KROMActive + 0x300000, dst,                        0x100000);
 
 		BurnFree (dst);
 	}
@@ -7732,12 +7740,12 @@ static void mslug5Callback()
 		*((UINT16 *)(Neo68KROMActive + i + 1)) = BURN_ENDIAN_SWAP_INT16(rom16);
 	}
 
-	memcpy (Neo68KROMActive + 0x700000, Neo68KROMActive, 0x100000);
+	memmove (Neo68KROMActive + 0x700000, Neo68KROMActive, 0x100000);
 
 	for (i = 0; i < 0x100000 / 0x010000; i++)
 	{
 		j = BITSWAP08(i, 7, 6, 5, 4, 1, 0, 3, 2) * 0x010000;
-		memcpy (Neo68KROMActive + i * 0x010000, Neo68KROMActive + 0x700000 + j, 0x010000);
+		memmove (Neo68KROMActive + i * 0x010000, Neo68KROMActive + 0x700000 + j, 0x010000);
 	}
 
 	for (i = 0x100000; i < 0x700000; i += 0x100000)
@@ -7745,10 +7753,10 @@ static void mslug5Callback()
 		for (j = 0; j < 0x100000; j+=0x100)
 		{
 			k = ((j & 0xf00) ^ 0x700) + (BITSWAP08((j >> 12), 5, 4, 7, 6, 1, 0, 3, 2 ) << 12);
-			memcpy (Neo68KROMActive + 0x700000 + j, Neo68KROMActive + i + k, 0x100);
+			memmove (Neo68KROMActive + 0x700000 + j, Neo68KROMActive + i + k, 0x100);
 		}
 
-		memcpy (Neo68KROMActive + i, Neo68KROMActive + 0x700000, 0x100000);
+		memmove (Neo68KROMActive + i, Neo68KROMActive + 0x700000, 0x100000);
 	}
 }
 
@@ -7953,12 +7961,12 @@ static void svcCallback()
 		*((UINT16 *)(Neo68KROMActive + i + 1)) = BURN_ENDIAN_SWAP_INT16(rom16);
 	}
 
-	memcpy (Neo68KROMActive + 0x700000, Neo68KROMActive, 0x100000);
+	memmove (Neo68KROMActive + 0x700000, Neo68KROMActive, 0x100000);
 
 	for (i = 0; i < 0x0100000 / 0x10000; i++)
 	{
 		j = BITSWAP08(i, 7, 6, 5, 4, 2, 3, 0, 1);
-		memcpy (Neo68KROMActive + i * 0x010000, Neo68KROMActive + 0x700000 + j * 0x010000, 0x010000);
+		memmove (Neo68KROMActive + i * 0x010000, Neo68KROMActive + 0x700000 + j * 0x010000, 0x010000);
 	}
 
 	for (i = 0x100000; i < 0x700000; i += 0x100000)
@@ -7968,10 +7976,10 @@ static void svcCallback()
 			k  = BITSWAP08(j >> 12, 4, 5, 6, 7, 1, 0, 3, 2 ) << 12;
 			k |= (j & 0x00f00) ^ 0x00a00;
 
-			memcpy (Neo68KROMActive + 0x700000 + j, Neo68KROMActive + i + k, 0x100);
+			memmove (Neo68KROMActive + 0x700000 + j, Neo68KROMActive + i + k, 0x100);
 		}
 
-		memcpy (Neo68KROMActive + i, Neo68KROMActive + 0x700000, 0x100000);
+		memmove (Neo68KROMActive + i, Neo68KROMActive + 0x700000, 0x100000);
 	}
 }
 
@@ -8119,7 +8127,7 @@ static void svcbootCallback()
 	INT32 i, j, k;
 	for (i = 0x100000; i < 0x800000; i+=0x100000)
 	{
-		memcpy (Neo68KROMActive, Neo68KROMActive + i, 0x100000);
+		memmove (Neo68KROMActive, Neo68KROMActive + i, 0x100000);
 
 		for (j = 0; j < 0x100000; j++)
 		{
@@ -8128,7 +8136,7 @@ static void svcbootCallback()
 		}
 	}
 
-	memcpy (Neo68KROMActive, Neo68KROMActive + 0x700000, 0x100000);
+	memmove (Neo68KROMActive, Neo68KROMActive + 0x700000, 0x100000);
 
 	svcboot_sx_decode();
 	svcboot_decode();
@@ -8206,11 +8214,11 @@ static void svcplusCallback()
 				dst[j] = Neo68KROMActive[i + k];
 			}
 
-			memcpy (Neo68KROMActive + i, dst, 0x100000);
+			memmove (Neo68KROMActive + i, dst, 0x100000);
 		}
 
-		memcpy (Neo68KROMActive + 0x100000, Neo68KROMActive, 0x500000);
-		memcpy (Neo68KROMActive, dst, 0x100000);
+		memmove (Neo68KROMActive + 0x100000, Neo68KROMActive, 0x500000);
+		memmove (Neo68KROMActive, dst, 0x100000);
 
 		BurnFree (dst);
 	}
@@ -8279,9 +8287,9 @@ static void svcplusaCallback()
 	UINT8 *dst = (UINT8*)BurnMalloc(0x100000);
 	if (dst)
 	{
-		memcpy (dst, Neo68KROMActive + 0x500000, 0x100000);
-		memcpy (Neo68KROMActive + 0x100000, Neo68KROMActive, 0x500000);
-		memcpy (Neo68KROMActive, dst, 0x100000);
+		memmove (dst, Neo68KROMActive + 0x500000, 0x100000);
+		memmove (Neo68KROMActive + 0x100000, Neo68KROMActive, 0x500000);
+		memmove (Neo68KROMActive, dst, 0x100000);
 		BurnFree (dst);
 		dst = NULL;
 	}
@@ -8356,7 +8364,7 @@ static void svcsplusCallback()
 	INT32 i, j, k;
 	for (i = 0x100000; i < 0x800000; i+=0x10000)
 	{
-		memcpy (Neo68KROMActive, Neo68KROMActive + i, 0x10000);
+		memmove (Neo68KROMActive, Neo68KROMActive + i, 0x10000);
 
 		for (j = 0; j < 0x10000; j++)
 		{
@@ -8365,7 +8373,7 @@ static void svcsplusCallback()
 		}
 	}
 
-	memcpy (Neo68KROMActive, Neo68KROMActive + 0x600000, 0x100000);
+	memmove (Neo68KROMActive, Neo68KROMActive + 0x600000, 0x100000);
 
 	*((UINT16*)(Neo68KROMActive + 0x9e90)) = BURN_ENDIAN_SWAP_INT16(0x000f); // Enable S. Plus
 	*((UINT16*)(Neo68KROMActive + 0x9e92)) = BURN_ENDIAN_SWAP_INT16(0xc9c0);
@@ -8522,11 +8530,11 @@ static void samsho5b_sx_decode()
 {
 	UINT8 *Buf = (UINT8*)BurnMalloc(0x20000);
 	if (Buf) {
-		memcpy(Buf, NeoTextROM[nNeoActiveSlot], 0x20000);
+		memmove(Buf, NeoTextROM[nNeoActiveSlot], 0x20000);
 		
 		for (INT32 i = 0; i < 0x20000; i += 0x10) {
-			memcpy(&NeoTextROM[nNeoActiveSlot][i + 0], &Buf[i + 8], 8);
-			memcpy(&NeoTextROM[nNeoActiveSlot][i + 8], &Buf[i + 0], 8);
+			memmove(&NeoTextROM[nNeoActiveSlot][i + 0], &Buf[i + 8], 8);
+			memmove(&NeoTextROM[nNeoActiveSlot][i + 8], &Buf[i + 0], 8);
 		}
 		
 		BurnFree(Buf);
@@ -8557,11 +8565,11 @@ static void samsho5bCallback()
 				dst[j] = Neo68KROMActive[i + k];
 			}
 	
-			memcpy (Neo68KROMActive + i, dst, 0x100000);
+			memmove (Neo68KROMActive + i, dst, 0x100000);
 		}
 	
-		memcpy (Neo68KROMActive + 0x100000, Neo68KROMActive, 0x700000);
-		memcpy (Neo68KROMActive, dst, 0x100000);
+		memmove (Neo68KROMActive + 0x100000, Neo68KROMActive, 0x700000);
+		memmove (Neo68KROMActive, dst, 0x100000);
 	
 		BurnFree (dst);
 	}
@@ -8596,7 +8604,7 @@ struct BurnDriver BurnDrvsamsho5b = {
 	0x1000,	304, 224, 4, 3
 };
 
-// The King of Fighters 2003 (dedicated PCB version)
+// The King of Fighters 2003 (Japan, JAMMA PCB)
 
 static struct BurnRomInfo kf2k3pcbRomDesc[] = {
 	{ "271-p1.p1",    0x0400000, 0xb9da070c, 1 | BRF_ESS | BRF_PRG }, //  0 68K code
@@ -8654,7 +8662,7 @@ void kf2k3pcb_bios_decode()
 		if (BURN_ENDIAN_SWAP_INT16(dst[i]) & 0x0020) dst[i] ^= BURN_ENDIAN_SWAP_INT16(0x0008);
 	}
 
-	memcpy (src, dst, 0x80000);
+	memmove (src, dst, 0x80000);
 
 	BurnFree (dst);
 }
@@ -8674,14 +8682,14 @@ static void kf2k3pcbCallback()
 		*((UINT16 *)(Neo68KROMActive + i + 1)) = BURN_ENDIAN_SWAP_INT16(rom16);
 	}
 
-	memcpy (Neo68KROMActive + 0x700000, Neo68KROMActive, 0x100000);
+	memmove (Neo68KROMActive + 0x700000, Neo68KROMActive, 0x100000);
 
 	for (i = 0; i < 0x0100000 / 0x10000; i++) {
 		j = BITSWAP08(i, 7, 6, 5, 4, 1, 0, 3, 2);
-		memcpy (Neo68KROMActive + i * 0x010000, Neo68KROMActive + 0x700000 + j * 0x010000, 0x010000);
+		memmove (Neo68KROMActive + i * 0x010000, Neo68KROMActive + 0x700000 + j * 0x010000, 0x010000);
 	}
 
-	memcpy (Neo68KROMActive + 0x200000, Neo68KROMActive + 0x100000, 0x600000);
+	memmove (Neo68KROMActive + 0x200000, Neo68KROMActive + 0x100000, 0x600000);
 
 	for (i = 0x200000; i < 0x900000; i += 0x100000)
 	{
@@ -8690,10 +8698,10 @@ static void kf2k3pcbCallback()
 			k  = (j & 0xf00) ^ 0x00300;
 			k |= BITSWAP08(j >> 12, 4, 5, 6, 7, 1, 0, 3, 2 ) << 12;
 
-			memcpy (Neo68KROMActive + 0x100000 + j, Neo68KROMActive + i + k, 0x100);
+			memmove (Neo68KROMActive + 0x100000 + j, Neo68KROMActive + i + k, 0x100);
 		}
 
-		memcpy (Neo68KROMActive + i, Neo68KROMActive + 0x100000, 0x100000);
+		memmove (Neo68KROMActive + i, Neo68KROMActive + 0x100000, 0x100000);
 	}
 }
 
@@ -8724,7 +8732,7 @@ static INT32 kf2k3pcbInit()
 
 struct BurnDriver BurnDrvkf2k3pcb = {
 	"kf2k3pcb", NULL, NULL, NULL, "2003",
-	"The King of Fighters 2003\0", "dedicated PCB version, Japan region", "Playmore / Capcom", "dedicated Neo Geo PCB",
+	"The King of Fighters 2003 (Japan, JAMMA PCB)\0", NULL, "Playmore / Capcom", "dedicated Neo Geo PCB",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_SNK_DEDICATED_PCB | HARDWARE_SNK_CMC50 | HARDWARE_SNK_KOF2K3 | HARDWARE_SNK_ALTERNATE_TEXT | HARDWARE_SNK_P32 | HARDWARE_SNK_ENCRYPTED_M1, GBF_VSFIGHT, FBF_KOF,
 	NULL, kf2k3pcbRomInfo, kf2k3pcbRomName, NULL, NULL, neogeoInputInfo, kf2k3pcbDIPInfo,
@@ -8775,14 +8783,14 @@ static void kof2003Callback()
 		*((UINT16 *)(Neo68KROMActive + i + 1)) = BURN_ENDIAN_SWAP_INT16(rom16);
 	}
 
-	memcpy (Neo68KROMActive + 0x700000, Neo68KROMActive, 0x100000);
+	memmove (Neo68KROMActive + 0x700000, Neo68KROMActive, 0x100000);
 
 	for (i = 0; i < 0x0100000 / 0x10000; i++) {
 		j = BITSWAP08(i, 7, 6, 5, 4, 0, 1, 2, 3);
-		memcpy (Neo68KROMActive + i * 0x010000, Neo68KROMActive + 0x700000 + j * 0x010000, 0x010000);
+		memmove (Neo68KROMActive + i * 0x010000, Neo68KROMActive + 0x700000 + j * 0x010000, 0x010000);
 	}
 
-	memcpy (Neo68KROMActive + 0x200000, Neo68KROMActive + 0x100000, 0x600000);
+	memmove (Neo68KROMActive + 0x200000, Neo68KROMActive + 0x100000, 0x600000);
 
 	for (i = 0x200000; i < 0x900000; i += 0x100000)
 	{
@@ -8791,10 +8799,10 @@ static void kof2003Callback()
 			k  = (j & 0xf00) ^ 0x00800;
 			k |= BITSWAP08(j >> 12, 4, 5, 6, 7, 1, 0, 3, 2 ) << 12;
 
-			memcpy (Neo68KROMActive + 0x100000 + j, Neo68KROMActive + i + k, 0x100);
+			memmove (Neo68KROMActive + 0x100000 + j, Neo68KROMActive + i + k, 0x100);
 		}
 
-		memcpy (Neo68KROMActive + i, Neo68KROMActive + 0x100000, 0x100000);
+		memmove (Neo68KROMActive + i, Neo68KROMActive + 0x100000, 0x100000);
 	}
 }
 
@@ -8869,14 +8877,14 @@ static void kof2003hCallback()
 		*((UINT16 *)(Neo68KROMActive + i + 1)) = BURN_ENDIAN_SWAP_INT16(rom16);
 	}
 
-	memcpy (Neo68KROMActive + 0x700000, Neo68KROMActive, 0x100000);
+	memmove (Neo68KROMActive + 0x700000, Neo68KROMActive, 0x100000);
 
 	for (i = 0; i < 0x0100000 / 0x10000; i++) {
 		j = BITSWAP08(i, 7, 6, 5, 4, 1, 0, 3, 2);
-		memcpy (Neo68KROMActive + i * 0x010000, Neo68KROMActive + 0x700000 + j * 0x010000, 0x010000);
+		memmove (Neo68KROMActive + i * 0x010000, Neo68KROMActive + 0x700000 + j * 0x010000, 0x010000);
 	}
 
-	memcpy (Neo68KROMActive + 0x200000, Neo68KROMActive + 0x100000, 0x600000);
+	memmove (Neo68KROMActive + 0x200000, Neo68KROMActive + 0x100000, 0x600000);
 
 	for (i = 0x200000; i < 0x900000; i += 0x100000)
 	{
@@ -8885,10 +8893,10 @@ static void kof2003hCallback()
 			k  = (j & 0xf00) ^ 0x00400;
 			k |= BITSWAP08(j >> 12, 6, 7, 4, 5, 0, 1, 2, 3) << 12;
 
-			memcpy (Neo68KROMActive + 0x100000 + j, Neo68KROMActive + i + k, 0x100);
+			memmove (Neo68KROMActive + 0x100000 + j, Neo68KROMActive + i + k, 0x100);
 		}
 
-		memcpy (Neo68KROMActive + i, Neo68KROMActive + 0x100000, 0x100000);
+		memmove (Neo68KROMActive + i, Neo68KROMActive + 0x100000, 0x100000);
 	}
 }
 
@@ -8958,8 +8966,8 @@ UINT16 __fastcall kf2k3blReadWordProtection(UINT32)
 
 static void kf2k3blCallback()
 {
-	memcpy (Neo68KROMActive + 0x100000, Neo68KROMActive, 0x700000);
-	memcpy (Neo68KROMActive, Neo68KROMActive + 0x700000, 0x100000);
+	memmove (Neo68KROMActive + 0x100000, Neo68KROMActive, 0x700000);
+	memmove (Neo68KROMActive, Neo68KROMActive + 0x700000, 0x100000);
 
 	lans2004_sx_decode();
 }
@@ -9037,7 +9045,7 @@ static void kf2k3blaCallback()
 	{
 		for (i = 0; i < 0x700000; i += 0x100000)
 		{
-			memcpy(dst, Neo68KROMActive + i, 0x100000);
+			memmove(dst, Neo68KROMActive + i, 0x100000);
 
 			for (j = 0; j < 0x100000; j++)
 			{
@@ -9176,8 +9184,8 @@ STD_ROM_FN(kf2k3upl)
 static void kf2k3uplCallback()
 {
 	INT32 i, j;
-	memcpy (Neo68KROMActive + 0x100000, Neo68KROMActive, 0x600000);
-	memcpy (Neo68KROMActive, Neo68KROMActive + 0x700000, 0x100000);
+	memmove (Neo68KROMActive + 0x100000, Neo68KROMActive, 0x600000);
+	memmove (Neo68KROMActive, Neo68KROMActive + 0x700000, 0x100000);
 
 	for(i = 0; i < 0x2000; i++) {
 		j = (i & 0x1f00) | BITSWAP08(i & 0xff, 7, 1, 5, 4, 3, 2, 6, 0) ;
@@ -9644,7 +9652,7 @@ struct BurnDriver BurnDrvwh1 = {
 };
 
 
-// World Heroes (ALH-005
+// World Heroes (ALH-005)
 
 static struct BurnRomInfo wh1hRomDesc[] = {
 	{ "053-p1.p1",    0x080000, 0x95b574cb, 1 | BRF_ESS | BRF_PRG }, //  0 68K code
@@ -9668,7 +9676,7 @@ STD_ROM_FN(wh1h)
 
 struct BurnDriver BurnDrvwh1h = {
 	"wh1h", "wh1", "neogeo", NULL, "1992",
-	"World Heroes (ALH-005\0", NULL, "Alpha Denshi Co.", "Neo Geo MVS",
+	"World Heroes (ALH-005)\0", NULL, "Alpha Denshi Co.", "Neo Geo MVS",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_CARTRIDGE | HARDWARE_SNK_NEOGEO | HARDWARE_SNK_SWAPC, GBF_VSFIGHT, 0,
 	NULL, wh1hRomInfo, wh1hRomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
@@ -9750,6 +9758,11 @@ static struct BurnRomInfo wh2jRomDesc[] = {
 
 	{ "064-s1.s1",    0x020000, 0x2a03998a, 2 | BRF_GRA },           //  1 Text layer tiles
 
+	/* Different layout with 4xC (32mbit) also exists; chip labels are 064-C13, 064-C24, 064-C57 and 064-C68 
+	{ "064-c13.c1",   0x400000, 0x771a6365, 3 | BRF_GRA },           //  2 Sprite data
+	{ "064-c24.c2",   0x400000, 0xe7863a05, 3 | BRF_GRA },           //  3 
+	{ "064-c57.c3",   0x400000, 0x64594ed4, 3 | BRF_GRA },           //  4 
+	{ "064-c68.c4",   0x400000, 0x6e385398, 3 | BRF_GRA },           //  5 */
 	{ "064-c1.c1",    0x200000, 0x2ec87cea, 3 | BRF_GRA },           //  2 Sprite data
 	{ "064-c2.c2",    0x200000, 0x526b81ab, 3 | BRF_GRA },           //  3 
 	{ "064-c3.c3",    0x200000, 0x436d1b31, 3 | BRF_GRA },           //  4 
@@ -10287,7 +10300,8 @@ static struct BurnRomInfo strhoopRomDesc[] = {
 
 	{ "079-v1.v1",    0x200000, 0x718a2400, 5 | BRF_SND },           //  7 Sound data
 	{ "079-v2.v2",    0x100000, 0x720774eb, 5 | BRF_SND },           //  8 
-	/* AES 079-v2 is only 4 mbit (TC534200), data is the same */
+	/* AES 079-v2 is only 4 mbit (TC534200), data is the same 
+	{ "079-v2.v2",    0x080000, 0xb19884f8, 5 | BRF_SND },           //  8 */
 };
 
 STDROMPICKEXT(strhoop, strhoop, neogeo)
@@ -11138,15 +11152,15 @@ static void lans2004Callback()
 		static const INT32 sec[] = { 0x3, 0x8, 0x7, 0xc, 0x1, 0xa, 0x6, 0xd };
 
 		for (i = 0; i < 8; i++)
-			memcpy (dst + i * 0x20000, Neo68KROMActive + sec[i] * 0x20000, 0x20000);
+			memmove (dst + i * 0x20000, Neo68KROMActive + sec[i] * 0x20000, 0x20000);
 
-		memcpy (dst + 0x0bbb00, Neo68KROMActive + 0x045b00, 0x001710);
-		memcpy (dst + 0x02fff0, Neo68KROMActive + 0x1a92be, 0x000010);
-		memcpy (Neo68KROMActive, dst, 0x100000);
+		memmove (dst + 0x0bbb00, Neo68KROMActive + 0x045b00, 0x001710);
+		memmove (dst + 0x02fff0, Neo68KROMActive + 0x1a92be, 0x000010);
+		memmove (Neo68KROMActive, dst, 0x100000);
 		BurnFree (dst);
 	}
 
-	memcpy (Neo68KROMActive + 0x100000, Neo68KROMActive + 0x200000, 0x400000);
+	memmove (Neo68KROMActive + 0x100000, Neo68KROMActive + 0x200000, 0x400000);
 
 	for (i = 0xbbb00; i < 0xbe000; i+=2) {
 		if ((BURN_ENDIAN_SWAP_INT16(*((UINT16 *)(Neo68KROMActive + i + 0))) & 0xf2bf) == BURN_ENDIAN_SWAP_INT16(0x42b9) &&
@@ -12379,7 +12393,7 @@ static void matrimblCallback()
 
 	if (dst) 
 	{
-		memcpy(dst, NeoZ80ROMActive, 0x020000);
+		memmove(dst, NeoZ80ROMActive, 0x020000);
 
 		for(i = 0; i < 0x020000; i++) {
 					 j  = i;
@@ -12694,9 +12708,9 @@ static void cthd2k3aCallback()
 	UINT8 *pTemp = (UINT8*)BurnMalloc(0x500000);
 	if (pTemp) {
 		for (i = 0; i < 0x500000 / 0x20000; i++) {
-			memcpy(pTemp + (i * 0x20000), Neo68KROMActive + (nBank[i] * 0x20000), 0x20000);
+			memmove(pTemp + (i * 0x20000), Neo68KROMActive + (nBank[i] * 0x20000), 0x20000);
 		}
-		memcpy(Neo68KROMActive, pTemp, 0x500000);
+		memmove(Neo68KROMActive, pTemp, 0x500000);
 		BurnFree(pTemp);
 	}
 	
@@ -12886,6 +12900,42 @@ struct BurnDriver BurnDrvtotcarib = {
 	NULL, totcaribRomInfo, totcaribRomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
 	NeoInit, NeoExit, NeoFrame, NeoRender, NeoScan, &NeoRecalcPalette,
 	0x1000, 304, 224, 4, 3
+};
+
+// The King of Fighters 2000 (Playstation 2 ver. , EGHT hack)
+
+static struct BurnRomInfo kof2000ps2RomDesc[] = {
+	{ "257ps2-p1.bin", 0x100000, 0x56941018, 1 | BRF_ESS | BRF_PRG }, //  0 68K code
+	{ "257ps2-p2.bin", 0x400000, 0x1669a5ad, 1 | BRF_ESS | BRF_PRG }, //  1 
+
+	{ "257-c1_decrypted.bin",    0x800000, 0xabcdd424, 3 | BRF_GRA },           //  2 Sprite data
+	{ "257-c2_decrypted.bin",    0x800000, 0xcda33778, 3 | BRF_GRA },           //  3 
+	{ "257-c3_decrypted.bin",    0x800000, 0x087fb15b, 3 | BRF_GRA },           //  4 
+	{ "257-c4_decrypted.bin",    0x800000, 0xfe9dfde4, 3 | BRF_GRA },           //  5 
+	{ "257-c5_decrypted.bin",    0x800000, 0x03ee4bf4, 3 | BRF_GRA },           //  6 
+	{ "257-c6_decrypted.bin",    0x800000, 0x8599cc5b, 3 | BRF_GRA },           //  7 
+	{ "257-c7_decrypted.bin",    0x800000, 0x93c343ec, 3 | BRF_GRA },           //  8 
+	{ "257-c8_decrypted.bin",    0x800000, 0xba92f698, 3 | BRF_GRA },           //  9 
+
+	{ "257-m1.m1",    0x040000, 0x4b749113, 4 | BRF_ESS | BRF_PRG }, // 10 Z80 code
+	
+	{ "257-v1.v1",    0x400000, 0x17cde847, 5 | BRF_SND },           // 11 Sound data
+	{ "257-v2.v2",    0x400000, 0x1afb20ff, 5 | BRF_SND },           // 12 
+	{ "257-v3.v3",    0x400000, 0x4605036a, 5 | BRF_SND },           // 13 
+	{ "257-v4.v4",    0x400000, 0x764bbd6b, 5 | BRF_SND },           // 14 
+};
+
+STDROMPICKEXT(kof2000ps2, kof2000ps2, neogeo)
+STD_ROM_FN(kof2000ps2)
+
+struct BurnDriver BurnDrvkof2000ps2 = {
+	"kof2000ps2", "kof2000", "neogeo", NULL, "2000",
+	"The King of Fighters 2000 (Playstation 2 ver. , EGHT hack)\0", "hack only enable in AES mode", "SNK", "Neo Geo MVS",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_CARTRIDGE | HARDWARE_SNK_NEOGEO | HARDWARE_SNK_ALTERNATE_TEXT | HARDWARE_SNK_ENCRYPTED_M1, GBF_VSFIGHT, FBF_KOF,
+	NULL, kof2000ps2RomInfo, kof2000ps2RomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
+	NeoInit, NeoExit, NeoFrame, NeoRender, NeoScan, &NeoRecalcPalette,
+	0x1000,	304, 224, 4, 3
 };
 
 // The King of Fighters 2001 Plus (set 2, bootleg / hack)
@@ -13167,25 +13217,25 @@ static void kf2k4plsCallback()
 	UINT8 *pTemp = (UINT8*)BurnMalloc(0x600000);
 	
 	if (pTemp) {
-		memcpy(pTemp, Neo68KROMActive, 0x600000);
-		memcpy(Neo68KROMActive + 0x000000, pTemp + 0x000000, 0x100000);
-		memcpy(Neo68KROMActive + 0x500000, pTemp + 0x100000, 0x100000);
-		memcpy(Neo68KROMActive + 0x400000, pTemp + 0x200000, 0x100000);
-		memcpy(Neo68KROMActive + 0x300000, pTemp + 0x300000, 0x100000);
-		memcpy(Neo68KROMActive + 0x200000, pTemp + 0x400000, 0x100000);
-		memcpy(Neo68KROMActive + 0x100000, pTemp + 0x500000, 0x100000);
+		memmove(pTemp, Neo68KROMActive, 0x600000);
+		memmove(Neo68KROMActive + 0x000000, pTemp + 0x000000, 0x100000);
+		memmove(Neo68KROMActive + 0x500000, pTemp + 0x100000, 0x100000);
+		memmove(Neo68KROMActive + 0x400000, pTemp + 0x200000, 0x100000);
+		memmove(Neo68KROMActive + 0x300000, pTemp + 0x300000, 0x100000);
+		memmove(Neo68KROMActive + 0x200000, pTemp + 0x400000, 0x100000);
+		memmove(Neo68KROMActive + 0x100000, pTemp + 0x500000, 0x100000);
 		
 		memset(pTemp, 0, 0x600000);
-		memcpy(pTemp + 0x000000, Neo68KROMActive + 0x000000, 0x100000);
-		memcpy(pTemp + 0x100000, Neo68KROMActive + 0x500000, 0x100000);
-		memcpy(Neo68KROMActive + 0x000000, pTemp + 0x1a0000, 0x020000);
-		memcpy(Neo68KROMActive + 0x020000, pTemp + 0x080000, 0x020000);
-		memcpy(Neo68KROMActive + 0x040000, pTemp + 0x140000, 0x020000);
-		memcpy(Neo68KROMActive + 0x060000, pTemp + 0x000000, 0x020000);
-		memcpy(Neo68KROMActive + 0x080000, pTemp + 0x180000, 0x020000);
-		memcpy(Neo68KROMActive + 0x0a0000, pTemp + 0x0a0000, 0x020000);
-		memcpy(Neo68KROMActive + 0x0c0000, pTemp + 0x100000, 0x020000);
-		memcpy(Neo68KROMActive + 0x0e0000, pTemp + 0x040000, 0x020000);
+		memmove(pTemp + 0x000000, Neo68KROMActive + 0x000000, 0x100000);
+		memmove(pTemp + 0x100000, Neo68KROMActive + 0x500000, 0x100000);
+		memmove(Neo68KROMActive + 0x000000, pTemp + 0x1a0000, 0x020000);
+		memmove(Neo68KROMActive + 0x020000, pTemp + 0x080000, 0x020000);
+		memmove(Neo68KROMActive + 0x040000, pTemp + 0x140000, 0x020000);
+		memmove(Neo68KROMActive + 0x060000, pTemp + 0x000000, 0x020000);
+		memmove(Neo68KROMActive + 0x080000, pTemp + 0x180000, 0x020000);
+		memmove(Neo68KROMActive + 0x0a0000, pTemp + 0x0a0000, 0x020000);
+		memmove(Neo68KROMActive + 0x0c0000, pTemp + 0x100000, 0x020000);
+		memmove(Neo68KROMActive + 0x0e0000, pTemp + 0x040000, 0x020000);
 		
 		BurnFree(pTemp);
 	}
@@ -13251,7 +13301,7 @@ struct BurnDriver BurnDrvkof96ae = {
 	0x1000,	304, 224, 4, 3
 };
 
-// The King of Fighters '96 (Anniversary Edition 2.0.0296, EGHT hack)
+// The King of Fighters '96 (Anniversary Edition 2.0.0430, EGHT hack)
 
 static struct BurnRomInfo kof96ae20RomDesc[] = {
 	{ "214ae-p1.p1",  0x100000, 0xc038e932, 1 | BRF_ESS | BRF_PRG }, //  0 68K code
@@ -13284,7 +13334,7 @@ STD_ROM_FN(kof96ae20)
 
 struct BurnDriver BurnDrvkof96ae20 = {
 	"kof96ae20", "kof96", "neogeo", NULL, "2009",
-	"The King of Fighters '96 (Anniversary Edition 2.0.0296, EGHT hack)\0", NULL, "hack", "Neo Geo MVS",
+	"The King of Fighters '96 (Anniversary Edition 2.0.0430, EGHT hack)\0", NULL, "hack", "Neo Geo MVS",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK, 2, HARDWARE_PREFIX_CARTRIDGE | HARDWARE_SNK_NEOGEO, GBF_VSFIGHT, FBF_KOF,
 	NULL, kof96ae20RomInfo, kof96ae20RomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
@@ -13370,7 +13420,7 @@ static void kof96epCallback()
 			if (pTemp[i] - Neo68KROMActive[i] == 8) pTemp[i] = Neo68KROMActive[i];
 		}
 		
-		memcpy(Neo68KROMActive, pTemp, 0x80000);
+		memmove(Neo68KROMActive, pTemp, 0x80000);
 		
 		BurnFree(pTemp);
 	}
@@ -13516,7 +13566,7 @@ static void kof97oro_px_decode()
 		tmp[i + (0x100000/2)] = src[(i ^ 0xfffef) + (0x100000/2)];
 	}
 
-	memcpy (src, tmp, 0x500000);
+	memmove (src, tmp, 0x500000);
 
 	BurnFree (tmp);
 }
@@ -13634,6 +13684,87 @@ struct BurnDriver BurnDrvkof98ae = {
 	0x1000,	304, 224, 4, 3
 };
 
+// The King of Fighters '98 (Combo, Ivex hack)
+// 2014/10/20 version 
+static struct BurnRomInfo kof98coRomDesc[] = {
+	{ "kof98c-p1.bin", 	0x100000, 0x93cae16e, 1 | BRF_ESS | BRF_PRG }, //  0 68K code 
+	{ "kof98c-p2.bin", 	0x400000, 0xe3c2e36d, 1 | BRF_ESS | BRF_PRG }, //  1 
+
+	{ "kof98c-s1.bin", 	0x020000, 0x7333d8b0, 2 | BRF_GRA },           //  2 Text layer tiles
+
+	{ "kof98c-c1.bin", 	0x800000, 0x066db0a6, 3 | BRF_GRA },           //  3 Sprite data
+	{ "kof98c-c2.bin", 	0x800000, 0x99d0b0fa, 3 | BRF_GRA },           //  4 
+	{ "kof98c-c3.bin", 	0x800000, 0xea84bdae, 3 | BRF_GRA },           //  5 
+	{ "kof98c-c4.bin",  0x800000, 0x2c17ac8e, 3 | BRF_GRA },           //  6 
+	{ "242-c5.c5", 		0x800000, 0x9d10bed3, 3 | BRF_GRA },           //  7 
+	{ "242-c6.c6", 		0x800000, 0xda07b6a2, 3 | BRF_GRA },           //  8 
+	{ "242-c7.c7", 		0x800000, 0xf6d7a38a, 3 | BRF_GRA },           //  9 
+	{ "242-c8.c8", 		0x800000, 0xc823e045, 3 | BRF_GRA },           // 10 
+	
+	{ "kof98c-m1.bin", 	0x040000, 0x4e7a6b1b, 4 | BRF_ESS | BRF_PRG }, // 11 Z80 code
+
+	{ "242-v1.v1",   	0x400000, 0xb9ea8051, 5 | BRF_SND },           // 16 Sound data
+	{ "242-v2.v2",   	0x400000, 0xcc11106e, 5 | BRF_SND },           // 17 
+	{ "242-v3.v3",   	0x400000, 0x044ea4e1, 5 | BRF_SND },           // 18 
+	{ "242-v4.v4",   	0x400000, 0x7985ea30, 5 | BRF_SND },           // 19 
+};
+
+STDROMPICKEXT(kof98co, kof98co, neogeo)
+STD_ROM_FN(kof98co)
+
+struct BurnDriver BurnDrvkof98co = {
+	"kof98co", "kof98", "neogeo", NULL, "2014",
+	"The King of Fighters '98 (Combo, Ivex hack)\0", NULL, "hack", "Neo Geo MVS",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK, 2, HARDWARE_PREFIX_CARTRIDGE | HARDWARE_SNK_NEOGEO, GBF_VSFIGHT, FBF_KOF,
+	NULL, kof98coRomInfo, kof98coRomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
+	NeoInit, NeoExit, NeoFrame, NeoRender, NeoScan, &NeoRecalcPalette,
+	0x1000,	304, 224, 4, 3
+};
+
+// The King of Fighters '99 (Anniversary Edition, Yashional hack)
+
+static struct BurnRomInfo kof99aeRomDesc[] = {
+	{ "152ae-p1.p1",   	   0x100000, 0x8cd9cbe8, 1 | BRF_ESS | BRF_PRG }, //  0 68K code
+	{ "152ae-p2.p2",   	   0x400000, 0x84086ea5, 1 | BRF_ESS | BRF_PRG }, //  1
+	{ "152ae-p3.p3",   	   0x400000, 0x2ece2c91, 1 | BRF_ESS | BRF_PRG }, //  2 	
+
+	{ "251ae-s1.s1",       0x020000, 0x18c1562d, 2 | BRF_GRA },           //  3 Text layer tiles
+
+	{ "251ae-c1.c1",   	   0x800000, 0x497c2e83, 3 | BRF_GRA },           //  3 Sprite data
+	{ "251ae-c2.c2",   	   0x800000, 0x0a13eeb7, 3 | BRF_GRA },           //  4 
+	{ "251-c3d.c3",   	   0x800000, 0xb047c9d5, 3 | BRF_GRA },           //  5 
+	{ "251-c4d.c4",   	   0x800000, 0x6bc8e4b1, 3 | BRF_GRA },           //  6 
+	{ "251-c5d.c5",   	   0x800000, 0x9746268c, 3 | BRF_GRA },           //  7 
+	{ "251-c6d.c6",   	   0x800000, 0x238b3e71, 3 | BRF_GRA },           //  8 
+	{ "251ae-c7.c7",   	   0x800000, 0xf22760ad, 3 | BRF_GRA },           //  9 
+	{ "251ae-c8.c8",   	   0x800000, 0x396c3a70, 3 | BRF_GRA },           // 10 
+	{ "251ae-c9.c9",   	   0x800000, 0x7d7b0897, 3 | BRF_GRA },           // 10 
+	{ "251ae-c10.c10",     0x800000, 0xd38065a7, 3 | BRF_GRA },           // 10 
+	{ "251ae-c11.c11",     0x800000, 0x90016920, 3 | BRF_GRA },           // 10 
+	{ "251ae-c12.c12",     0x800000, 0x49cfed23, 3 | BRF_GRA },           // 10 
+
+	{ "251ae-m1.m1",       0x020000, 0xf847e188, 4 | BRF_ESS | BRF_PRG }, // 11 Z80 code
+
+	{ "251ae-v1.v1",       0x400000, 0xceaa3bae, 5 | BRF_SND },           // 12 Sound data
+	{ "251ae-v2.v2",       0x400000, 0x07d70650, 5 | BRF_SND },           // 13 
+	{ "251-v3.v3",         0x400000, 0x821901da, 5 | BRF_SND },           // 14 
+	{ "251-v4.v4",         0x200000, 0xb49e6178, 5 | BRF_SND },           // 15 
+};
+
+STDROMPICKEXT(kof99ae, kof99ae, neogeo)
+STD_ROM_FN(kof99ae)
+
+struct BurnDriver BurnDrvkof99ae = {
+	"kof99ae", "kof99", "neogeo", NULL, "1999",
+	"The King of Fighters '99 (Anniversary Edition, Yashional hack)\0", NULL, "SNK", "Neo Geo MVS",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE, 2, HARDWARE_PREFIX_CARTRIDGE | HARDWARE_SNK_NEOGEO, GBF_VSFIGHT, FBF_KOF,
+	NULL, kof99aeRomInfo, kof99aeRomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
+	NeoInit, NeoExit, NeoFrame, NeoRender, NeoScan, &NeoRecalcPalette,
+	0x1000, 304, 224, 4, 3
+};
+
 // Last Hope (Neo CD conversion)
 
 static struct BurnRomInfo lhcdbRomDesc[] = {
@@ -13694,13 +13825,13 @@ static void mslug5bCallback()
 	UINT8 *pTemp = (UINT8*)BurnMalloc(0x500000);
 	
 	if (pTemp) {
-		memcpy(pTemp, Neo68KROMActive, 0x500000);
+		memmove(pTemp, Neo68KROMActive, 0x500000);
 		memset(Neo68KROMActive, 0, 0x500000);
-		memcpy(Neo68KROMActive + 0x000000, pTemp + 0x000000, 0x100000);
-		memcpy(Neo68KROMActive + 0x100000, pTemp + 0x100000, 0x100000);
-		memcpy(Neo68KROMActive + 0x300000, pTemp + 0x200000, 0x100000);
-		memcpy(Neo68KROMActive + 0x200000, pTemp + 0x300000, 0x100000);
-		memcpy(Neo68KROMActive + 0x400000, pTemp + 0x400000, 0x100000);
+		memmove(Neo68KROMActive + 0x000000, pTemp + 0x000000, 0x100000);
+		memmove(Neo68KROMActive + 0x100000, pTemp + 0x100000, 0x100000);
+		memmove(Neo68KROMActive + 0x300000, pTemp + 0x200000, 0x100000);
+		memmove(Neo68KROMActive + 0x200000, pTemp + 0x300000, 0x100000);
+		memmove(Neo68KROMActive + 0x400000, pTemp + 0x400000, 0x100000);
 			
 		BurnFree(pTemp);
 	}
@@ -13732,6 +13863,38 @@ struct BurnDriver BurnDrvmslug5b = {
 	NULL, mslug5bRomInfo, mslug5bRomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
 	mslug5bInit, NeoPVCExit, NeoFrame, NeoRender, NeoScan, &NeoRecalcPalette,
 	0x1000,	304, 224, 4, 3
+};
+
+// Robo Army (set 2)
+
+static struct BurnRomInfo roboarmaRomDesc[] = {
+	/* P1 on eprom, correct chip label unknown */
+	{ "032-epr.p1",   0x080000, 0x27c773cb, 1 | BRF_ESS | BRF_PRG }, //  0 68K code
+
+	{ "032-s1.s1",    0x020000, 0xac0daa1b, 2 | BRF_GRA },           //  1 Text layer tiles
+
+	{ "032-c1.c1",    0x100000, 0x97984c6c, 3 | BRF_GRA },           //  2 Sprite data
+	{ "032-c2.c2",    0x100000, 0x65773122, 3 | BRF_GRA },           //  3 
+	{ "032-c3.c3",    0x080000, 0x40adfccd, 3 | BRF_GRA },           //  4 
+	{ "032-c4.c4",    0x080000, 0x462571de, 3 | BRF_GRA },           //  5 
+
+	{ "032-m1.m1",    0x020000, 0x35ec952d, 4 | BRF_ESS | BRF_PRG }, //  6 Z80 code
+
+	{ "032-v1.v1",    0x100000, 0x63791533, 5 | BRF_SND },           //  7 Sound data
+	{ "032-v2.v2",    0x100000, 0xeb95de70, 5 | BRF_SND },           //  8 
+};
+
+STDROMPICKEXT(roboarma, roboarma, neogeo)
+STD_ROM_FN(roboarma)
+
+struct BurnDriver BurnDrvRoboarma = {
+	"roboarma", "roboarmy", "neogeo", NULL, "1991",
+	"Robo Army (set 2)\0", NULL, "SNK", "Neo Geo MVS",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_CARTRIDGE | HARDWARE_SNK_NEOGEO, GBF_SCRFIGHT, 0,
+	NULL, roboarmaRomInfo, roboarmaRomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
+	NeoInit, NeoExit, NeoFrame, NeoRender, NeoScan, &NeoRecalcPalette,
+	0x1000, 304, 224, 4, 3
 };
 
 // Saulabi Spirits / Jin Saulabi Tu Hon (Korean release of Samurai Shodown II, set 2)
@@ -13769,6 +13932,41 @@ struct BurnDriver BurnDrvsamsho2k2 = {
 	NULL, samsho2k2RomInfo, samsho2k2RomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
 	NeoInit, NeoExit, NeoFrame, NeoRender, NeoScan, &NeoRecalcPalette,
 	0x1000, 320, 224, 4, 3
+};
+
+// Samurai Shodown V / Samurai Spirits Zero (bootleg, XBOX version)
+
+static struct BurnRomInfo samsho5xRomDesc[] = {
+	{ "ssvx_p1.rom",  0x800000, 0x16983af9, 1 | BRF_ESS | BRF_PRG }, //  0 68K code
+		
+	{ "ssv_s1.rom",   0x020000, 0x2ad6048b, 2 | BRF_GRA },           //  1 Text layer tiles
+
+	{ "ssvx_c1.rom",  0x800000, 0x25272e50, 3 | BRF_GRA },           //  2 Sprite data
+	{ "ssvx_c2.rom",  0x800000, 0xba68f2e7, 3 | BRF_GRA },           //  3 
+	{ "ssvx_c3.rom",  0x800000, 0x75883cde, 3 | BRF_GRA },           //  4 
+	{ "ssvx_c4.rom",  0x800000, 0x348540e6, 3 | BRF_GRA },           //  5 
+	{ "ssvx_c5.rom",  0x800000, 0x1fee8dc8, 3 | BRF_GRA },           //  6
+	{ "ssvx_c6.rom",  0x800000, 0xc300b50d, 3 | BRF_GRA },           //  7
+	{ "ssvx_c7.rom",  0x800000, 0x5e722b0b, 3 | BRF_GRA },           //  8
+	{ "ssvx_c8.rom",  0x800000, 0xe2a2c546, 3 | BRF_GRA },           //  9
+
+	{ "ssvx_m1.rom",  0x080000, 0x5218a10a, 4 | BRF_ESS | BRF_PRG }, // 10 Z80 code
+
+	{ "ssv_v1.rom",   0x800000, 0x809c7617, 5 | BRF_SND },           // 11 Sound data
+	{ "ssv_v2.rom",   0x800000, 0x42671607, 5 | BRF_SND },           // 12 
+};
+
+STDROMPICKEXT(samsho5x, samsho5x, neogeo)
+STD_ROM_FN(samsho5x)
+
+struct BurnDriverD BurnDrvsamsho5x = {
+	"samsho5x", "samsho5", "neogeo", NULL, "2003",
+	"Samurai Shodown V / Samurai Spirits Zero (bootleg, XBOX version)\0", NULL, "bootleg", "Neo Geo MVS",
+	L"Samurai Shodown V\0\u30B5\u30E0\u30E9\u30A4\u30B9\u30D4\u30EA\u30C3\u30C4\u96F6 (bootleg, XBOX version)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_PREFIX_CARTRIDGE | HARDWARE_SNK_NEOGEO, GBF_VSFIGHT, FBF_SAMSHO,
+	NULL, samsho5xRomInfo, samsho5xRomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
+	NeoInit, NeoExit, NeoFrame, NeoRender, NeoScan, &NeoRecalcPalette,
+	0x1000,	304, 224, 4, 3
 };
 
 // Zintrick / Oshidashi Zentrix (Neo CD conversion)
@@ -14657,7 +14855,7 @@ struct BurnDriver BurnDrvneoww2 = {
 
 // Time's UP Demo
 
-static struct BurnRomInfo timesupRomDesc[] = {
+static struct BurnRomInfo timesupdRomDesc[] = {
 	{ "tup_p1.rom",   0x200000, 0xbe86adb1, 1 | BRF_ESS | BRF_PRG },	//  0 68K Code
 
 	{ "tup_s1.rom",   0x020000, 0xa545b593, 2 | BRF_GRA },		//  1 Text data
@@ -14671,15 +14869,15 @@ static struct BurnRomInfo timesupRomDesc[] = {
 	{ "tup_v2.rom",   0x400000, 0x6fdd663d, 5 | BRF_SND },		//  6 Sound data
 }; 
 
-STDROMPICKEXT(timesup, timesup, neogeo)
-STD_ROM_FN(timesup)
+STDROMPICKEXT(timesupd, timesupd, neogeo)
+STD_ROM_FN(timesupd)
 
-struct BurnDriver BurnDrvtimesup = {
-	"timesup", NULL, "neogeo", NULL, "2012",
+struct BurnDriver BurnDrvtimesupd = {
+	"timesupd", NULL, "neogeo", NULL, "2012",
 	"Time's Up Demo\0", NULL, "NGF Dev. Inc.", "Neo Geo",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HOMEBREW, 2, HARDWARE_SNK_NEOGEO, GBF_MISC, 0,
-	NULL, timesupRomInfo, timesupRomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
+	NULL, timesupdRomInfo, timesupdRomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
 	NeoInit, NeoExit, NeoFrame, NeoRender, NeoScan, &NeoRecalcPalette,
 	0x1000,	304, 224, 4, 3
 };
@@ -14830,42 +15028,6 @@ struct BurnDriver BurnDrvcphd = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HOMEBREW, 2, HARDWARE_SNK_NEOGEO, GBF_MISC, 0,
 	NULL, cphdRomInfo, cphdRomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
-	NeoInit, NeoExit, NeoFrame, NeoRender, NeoScan, &NeoRecalcPalette,
-	0x1000,	304, 224, 4, 3
-};
-
-
-// Samurai Shodown V / Samurai Spirits Zero (bootleg, XBOX version)
-
-static struct BurnRomInfo samsho5xRomDesc[] = {
-	{ "ssvx_p1.rom",  0x800000, 0x16983af9, 1 | BRF_ESS | BRF_PRG }, //  0 68K code
-		
-	{ "ssv_s1.rom",   0x020000, 0x2ad6048b, 2 | BRF_GRA },           //  1 Text layer tiles
-
-	{ "ssvx_c1.rom",  0x800000, 0x25272e50, 3 | BRF_GRA },           //  2 Sprite data
-	{ "ssvx_c2.rom",  0x800000, 0xba68f2e7, 3 | BRF_GRA },           //  3 
-	{ "ssvx_c3.rom",  0x800000, 0x75883cde, 3 | BRF_GRA },           //  4 
-	{ "ssvx_c4.rom",  0x800000, 0x348540e6, 3 | BRF_GRA },           //  5 
-	{ "ssvx_c5.rom",  0x800000, 0x1fee8dc8, 3 | BRF_GRA },           //  6
-	{ "ssvx_c6.rom",  0x800000, 0xc300b50d, 3 | BRF_GRA },           //  7
-	{ "ssvx_c7.rom",  0x800000, 0x5e722b0b, 3 | BRF_GRA },           //  8
-	{ "ssvx_c8.rom",  0x800000, 0xe2a2c546, 3 | BRF_GRA },           //  9
-
-	{ "ssvx_m1.rom",  0x080000, 0x5218a10a, 4 | BRF_ESS | BRF_PRG }, // 10 Z80 code
-
-	{ "ssv_v1.rom",   0x800000, 0x809c7617, 5 | BRF_SND },           // 11 Sound data
-	{ "ssv_v2.rom",   0x800000, 0x42671607, 5 | BRF_SND },           // 12 
-};
-
-STDROMPICKEXT(samsho5x, samsho5x, neogeo)
-STD_ROM_FN(samsho5x)
-
-struct BurnDriverD BurnDrvsamsho5x = {
-	"samsho5x", "samsho5", "neogeo", NULL, "2003",
-	"Samurai Shodown V / Samurai Spirits Zero (bootleg, XBOX version)\0", NULL, "bootleg", "Neo Geo MVS",
-	L"Samurai Shodown V\0\u30B5\u30E0\u30E9\u30A4\u30B9\u30D4\u30EA\u30C3\u30C4\u96F6 (bootleg, XBOX version)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_PREFIX_CARTRIDGE | HARDWARE_SNK_NEOGEO, GBF_VSFIGHT, FBF_SAMSHO,
-	NULL, samsho5xRomInfo, samsho5xRomName, NULL, NULL, neogeoInputInfo, neogeoDIPInfo,
 	NeoInit, NeoExit, NeoFrame, NeoRender, NeoScan, &NeoRecalcPalette,
 	0x1000,	304, 224, 4, 3
 };

@@ -106,9 +106,23 @@ INT32 GameInpRead(TCHAR* szVal, bool bOverWrite);
 INT32 GameInpMacroRead(TCHAR* szVal, bool bOverWrite);
 INT32 GameInpCustomRead(TCHAR* szVal, bool bOverWrite);
 
+// inp_interface.cpp
+extern INT32 nAutoFireRate;
+
 // Player Default Controls
 extern INT32 nPlayerDefaultControls[4];
 extern TCHAR szPlayerDefaultIni[4][MAX_PATH];
+
+// mappable System Macros for the Input Dialogue
+extern UINT8 macroSystemPause;
+extern UINT8 macroSystemFFWD;
+extern UINT8 macroSystemSaveState;
+extern UINT8 macroSystemLoadState;
+extern UINT8 macroSystemUNDOState;
+
+// scrn.cpp
+extern void scrnSSUndo();
+extern bool bHasFocus;
 
 // cong.cpp
 extern const INT32 nConfigMinVersion;					// Minimum version of application for which input files are valid
@@ -150,6 +164,9 @@ void ComputeGammaLUT();
 #define DAT_PCENGINE_ONLY	2
 #define DAT_TG16_ONLY		3
 #define DAT_SGX_ONLY		4
+#define DAT_SG1000_ONLY		5
+#define DAT_COLECO_ONLY		6
+
 INT32 write_datfile(INT32 bType, FILE* fDat);
 INT32 create_datfile(TCHAR* szFilename, INT32 bType);
 

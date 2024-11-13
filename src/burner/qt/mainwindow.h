@@ -9,12 +9,15 @@
 #include <QMenu>
 #include <QThread>
 #include <QVector>
+#include <QImage>
 #include "selectdialog.h"
 #include "qrubyviewport.h"
 #include "qaudiointerface.h"
 #include "supportdirsdialog.h"
 #include "aboutdialog.h"
 #include "dipswitchdialog.h"
+#include "inputdialog.h"
+#include "logdialog.h"
 #include "emuworker.h"
 #include "burner.h"
 
@@ -36,6 +39,7 @@ public slots:
     void toogleMenu();
     void toogleFullscreen();
     void closeEvent(QCloseEvent *event);
+    void resizeEvent(QResizeEvent *event);
 private:
     void createDefaultDirs();
     void createMenus();
@@ -44,6 +48,8 @@ private:
     void connectActions();
     void enableInGame();
     void disableInGame();
+    void drawLogo();
+    void setupRubyViewport();
     int m_game;
     bool m_isRunning;
     QRubyViewport *m_viewport;
@@ -53,6 +59,8 @@ private:
     SupportDirsDialog *m_supportPathDlg;
     AboutDialog *m_aboutDlg;
     DipswitchDialog *m_dipSwitchDlg;
+    InputDialog *m_inputDlg;
+    LogDialog *m_logDlg;
     QMenu *m_menuGame;
     QMenu *m_menuMisc;
     QMenu *m_menuHelp;
@@ -66,8 +74,11 @@ private:
     QAction *m_actionCloseGame;
     QAction *m_actionToogleMenu;
     QAction *m_actionDipswitch;
+    QAction *m_actionMapGameInputs;
+    QAction *m_actionLogWindow;
     QShortcut *m_scutToogleMenu;
     QShortcut *m_scutToogleFullscreen;
+    QImage m_logo;
 
     void setupInputInterfaces();
     QVector<const InputInOut *> m_inputInterfaces;
