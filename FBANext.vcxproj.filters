@@ -1946,6 +1946,99 @@
     <ClCompile Include="src\cpu\tlcs90_intf.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\burn\devices\kaneko_tmap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\devices\tms9928a.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\coleco\d_coleco.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\konami\d_bishi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\konami\d_dbz.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\konami\d_lethal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\konami\d_moo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\konami\d_mystwarr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\konami\d_shaolins.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\konami\d_yiear.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\konami\k054338.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\konami\k055555.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\konami\k056832.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\konami\konamigx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_djboy.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_psychic5.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_tail2nose.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pst90s\d_raiden2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pst90s\d_sandscrp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\sg1000\d_sg1000.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\taito\d_darkmist.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\taito\d_exzisus.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burner\conc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\7zFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Delta.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\LzFind.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Ppmd7Enc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Sha256.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Xz.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\XzCrc64.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\konami\k053250.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\intf\Skin\FBA.ttf">
@@ -1958,15 +2051,6 @@
   <ItemGroup>
     <ClInclude Include="src\burner\title.h">
       <Filter>Source Files\src\burner</Filter>
-    </ClInclude>
-    <ClInclude Include="src\burn\drv\sms\sms.h">
-      <Filter>Source Files\src\burn\drv\sms</Filter>
-    </ClInclude>
-    <ClInclude Include="src\cpu\pic16c5x\pic16c5x.h">
-      <Filter>Source Files\src\cpu\pic16c5x</Filter>
-    </ClInclude>
-    <ClInclude Include="src\cpu\pic16c5x_intf.h">
-      <Filter>Source Files\src\cpu</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
