@@ -284,7 +284,7 @@ INT32 BurnStateSaveEmbed(FILE* fp, INT32 nOffset, INT32 bAll)
 	return nDefLen;
 }
 
-#ifdef _WIN32
+/*#ifdef 0
 int FileExists(const TCHAR *fileName)
 {
     DWORD dwAttrib = GetFileAttributes(fileName);
@@ -292,19 +292,19 @@ int FileExists(const TCHAR *fileName)
             !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 #endif
-
+*/
 #define MAX_STATEBACKUPS 10
 // SaveState Undo - restores the last savestate backup file. Windows-only at the moment.
 INT32 BurnStateUNDO(TCHAR* szName)
 {
-#ifdef _WIN32
-         /*
+/*#ifdef 0
+        
          Savestate Undo
          derp.fs.backup0 -> derp.fs
          derp.fs.backup1 -> derp.fs.backup0
          derp.fs.backup2 -> derpfs.backup1
          derp.fs.backup3 -> derpfs.backup2
-         */
+         
     INT32 cantundo = 0;
 
     for (INT32 i = 0; i <= MAX_STATEBACKUPS; i++) {
@@ -331,9 +331,9 @@ INT32 BurnStateUNDO(TCHAR* szName)
             MoveFileW(szBackupNameFrom, szBackupNameTo);
     }
     return cantundo;
-#else
+#else*/
     return 0;
-#endif
+//#endif
 
 }
 
@@ -359,7 +359,7 @@ INT32 BurnStateSave(TCHAR* szName, INT32 bAll)
          derp.fs.backup1 -> derpfs.backup2
          derp.fs.backup3 -> derpfs.backup4
          */
-#ifdef _WIN32
+/*#ifdef _WIN32
         if (_tcsstr(szName, _T(" slot "))) {
             for (INT32 i=MAX_STATEBACKUPS;i>=0;i--) {
                 TCHAR szBackupNameTo[1024] = _T("");
@@ -377,14 +377,14 @@ INT32 BurnStateSave(TCHAR* szName, INT32 bAll)
                 }
             }
         }
-/* - old method, only 1 savestate backup -
+ - old method, only 1 savestate backup -
         TCHAR szBackupName[1024] = _T("");
         // backup last savestate just incase - dink
         _stprintf(szBackupName, _T("%s.backup"), szName);
         DeleteFileW(szBackupName);
         MoveFileW(szName, szBackupName);
-*/
-#endif
+
+#endif*/
 
 	FILE* fp = _tfopen(szName, _T("wb"));
 	if (fp == NULL) {
