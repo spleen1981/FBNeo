@@ -365,6 +365,8 @@ static INT32 DrvDoReset()
 
 	AY8910Reset(0);
 
+	HiscoreReset();
+
 	custom_cpu_reset = 0;
 	custom_cpu_busy = 0;
 
@@ -434,13 +436,13 @@ static void DrvPaletteInit()
 		INT32 planea = (az | ar | ag | ab) & ena;
 
 		INT32 rhi = planea ? ar : enb ? bz : 0;
-		INT32 rlo = planea ? ((!arhf & az) ? 0 : ar) : enb ? br : 0;
+		INT32 rlo = planea ? (((!arhf) & az) ? 0 : ar) : enb ? br : 0;
 
 		INT32 ghi = planea ? ag : enb ? bb : 0;
-		INT32 glo = planea ? ((!aghf & az) ? 0 : ag) : enb ? bg : 0;
+		INT32 glo = planea ? (((!aghf) & az) ? 0 : ag) : enb ? bg : 0;
 
 		INT32 bhi = ab;
-		INT32 bbase = (!abhf & az) ? 0 : ab;
+		INT32 bbase = ((!abhf) & az) ? 0 : ab;
 
 		INT32 t = (rhi << 5) | (rlo << 4) | (ghi << 3) | (glo << 2) | (bhi << 1) | bbase;
 
@@ -591,7 +593,7 @@ static INT32 DrvFrame()
 
 	ZetOpen(0);
 	ZetRun(3000000 / 60);
-	ZetRaiseIrq(0);
+	ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 	ZetClose();
 
 	if (pBurnSoundOut) {
@@ -655,7 +657,7 @@ struct BurnDriver BurnDrvarabian = {
 	"arabian", NULL, NULL, NULL, "1983",
 	"Arabian\0", NULL, "Sun Electronics", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, arabianRomInfo, arabianRomName, NULL, NULL, ArabianInputInfo, ArabianDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	234, 256, 3, 4
@@ -684,7 +686,7 @@ struct BurnDriver BurnDrvarabiana = {
 	"arabiana", "arabian", NULL, NULL, "1983",
 	"Arabian (Atari)\0", NULL, "[Sun Electronics] (Atari license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, arabianaRomInfo, arabianaRomName, NULL, NULL, ArabianInputInfo, ArabianaDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	234, 256, 3, 4

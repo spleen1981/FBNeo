@@ -123,7 +123,7 @@ void __fastcall mrflea_out_port(UINT16 a, UINT8 data)
 
 			ZetClose();
 			ZetOpen(1);
-			ZetRaiseIrq(0);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 			ZetClose();
 			ZetOpen(0);
 		}
@@ -263,6 +263,8 @@ static INT32 DrvDoReset()
 	for (INT32 i = 0; i < 3; i++) {
 		AY8910Reset(i);
 	}
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -477,7 +479,7 @@ static INT32 DrvFrame()
 		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
 		nCyclesDone[nCurrentCPU] += ZetRun(nCyclesSegment);
-		if (i == (nInterleave - 1)) ZetRaiseIrq(0);
+		if (i == (nInterleave - 1)) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		ZetClose();
 
 		// Run Z80 #1
@@ -487,7 +489,7 @@ static INT32 DrvFrame()
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
 		nCyclesSegment = ZetRun(nCyclesSegment);
 		nCyclesDone[nCurrentCPU] += nCyclesSegment;
-		if ((mrflea_status&0x08) || i == (nInterleave - 1)) ZetRaiseIrq(0);
+		if ((mrflea_status&0x08) || i == (nInterleave - 1)) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		ZetClose();
 
 		// Render Sound Segment
@@ -596,7 +598,7 @@ struct BurnDriver BurnDrvmrflea = {
 	"mrflea", NULL, NULL, NULL, "1982",
 	"The Amazing Adventures of Mr. F. Lea\0", NULL, "Pacific Novelty", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 1, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 1, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, mrfleaRomInfo, mrfleaRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, NULL, 0x80,
 	248, 256, 3, 4

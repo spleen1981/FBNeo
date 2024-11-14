@@ -147,10 +147,10 @@ void konamiSetIrqLine(INT32 line, INT32 state)
 	if (!DebugCPU_KonamiInitted) bprintf(PRINT_ERROR, _T("konamiSetIrqLine called without init\n"));
 #endif
 
-	if (state == KONAMI_IRQSTATUS_AUTO) {
-		konami_set_irq_line(line, KONAMI_IRQSTATUS_ACK);
+	if (state == CPU_IRQSTATUS_AUTO) {
+		konami_set_irq_line(line, CPU_IRQSTATUS_ACK);
 		konamiRun(0);
-		konami_set_irq_line(line, KONAMI_IRQSTATUS_NONE);
+		konami_set_irq_line(line, CPU_IRQSTATUS_NONE);
 	} else {
 		konami_set_irq_line(line, state);
 	}
@@ -182,7 +182,11 @@ static cpu_core_config konamiCheatCpuConfig =
 	0
 };
 
+#if defined FBA_DEBUG
 void konamiInit(INT32 nCpu) // only 1 cpu (No examples exist of multi-cpu konami games)
+#else
+void konamiInit(INT32 /*nCpu*/) // only 1 cpu (No examples exist of multi-cpu konami games)
+#endif
 {
 	DebugCPU_KonamiInitted = 1;
 

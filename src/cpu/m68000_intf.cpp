@@ -107,7 +107,7 @@ inline static void CheckBreakpoint_W(UINT32 a, const UINT32 m)
 	}
 }
 
-inline static void CheckBreakpoint_PC()
+inline static void CheckBreakpoint_PC(unsigned int /*pc*/)
 {
 	for (INT32 i = 0; BreakpointFetch[i].address; i++) {
 		if (BreakpointFetch[i].address == (UINT32)SekGetPC(-1)) {
@@ -122,7 +122,7 @@ inline static void CheckBreakpoint_PC()
 	}
 }
 
-inline static void SingleStep_PC()
+inline static void SingleStep_PC(unsigned int /*pc*/)
 {
 #ifdef EMU_A68K
 	UpdateA68KContext();
@@ -512,7 +512,7 @@ struct A68KContext* SekRegs[SEK_MAX] = { NULL, };
 #endif
 
 struct A68KInter {
-	void (__fastcall *DebugCallback) ();
+	void (__fastcall *DebugCallback) (unsigned int pc);
 	UINT8  (__fastcall *Read8) (UINT32 a);
 	UINT16 (__fastcall *Read16)(UINT32 a);
 	UINT32   (__fastcall *Read32)(UINT32 a);
@@ -556,8 +556,8 @@ void __fastcall A68KWrite16(UINT32 a,UINT16 d) { WriteWord(a,d);}
 void __fastcall A68KWrite32(UINT32 a,UINT32 d)   { WriteLong(a,d);}
 
 #if defined (FBA_DEBUG)
-void __fastcall A68KCheckBreakpoint() { CheckBreakpoint_PC(); }
-void __fastcall A68KSingleStep() { SingleStep_PC(); }
+void __fastcall A68KCheckBreakpoint(unsigned int pc) { CheckBreakpoint_PC(pc); }
+void __fastcall A68KSingleStep(unsigned int pc) { SingleStep_PC(pc); }
 #endif
 
 #ifdef EMU_A68K
@@ -592,8 +592,8 @@ void __fastcall M68KWriteByteBP(UINT32 a, UINT32 d) { WriteByteBP(a, d); }
 void __fastcall M68KWriteWordBP(UINT32 a, UINT32 d) { WriteWordBP(a, d); }
 void __fastcall M68KWriteLongBP(UINT32 a, UINT32 d) { WriteLongBP(a, d); }
 
-void M68KCheckBreakpoint() { CheckBreakpoint_PC(); }
-void M68KSingleStep() { SingleStep_PC(); }
+void M68KCheckBreakpoint(unsigned int pc) { CheckBreakpoint_PC(pc); }
+void M68KSingleStep(unsigned int pc) { SingleStep_PC(pc); }
 
 UINT32 (__fastcall *M68KReadByteDebug)(UINT32);
 UINT32 (__fastcall *M68KReadWordDebug)(UINT32);
@@ -760,6 +760,15 @@ extern "C" void M68KcmpildCallback(UINT32 val, INT32 reg)
 	if (pSekExt->CmpCallback) {
 		pSekExt->CmpCallback(val, reg);
 	}
+}
+
+extern "C" INT32 M68KTASCallback()
+{
+	if (pSekExt->TASCallback) {
+		return pSekExt->TASCallback();
+	}
+	
+	return 1; // enable by default
 }
 #endif
 
@@ -1168,13 +1177,21 @@ INT32 SekGetActive()
 	return nSekActive;
 }
 
+// For Megadrive - check if the vdp controlport should set IRQ
+INT32 SekShouldInterrupt(void)
+{
+	return m68k_check_shouldinterrupt();
+}
+
 // Set the status of an IRQ line on the active CPU
-void SekSetIRQLine(const INT32 line, const INT32 status)
+void SekSetIRQLine(const INT32 line, const INT32 nstatus)
 {
 #if defined FBA_DEBUG
 	if (!DebugCPU_SekInitted) bprintf(PRINT_ERROR, _T("SekSetIRQLine called without init\n"));
 	if (nSekActive == -1) bprintf(PRINT_ERROR, _T("SekSetIRQLine called when no CPU open\n"));
 #endif
+
+	INT32 status = nstatus << 12; // needed for compatibility
 
 //	bprintf(PRINT_NORMAL, _T("  - irq line %i -> %i\n"), line, status);
 
@@ -1502,7 +1519,7 @@ INT32 SekMapMemory(UINT8* pMemory, UINT32 nStart, UINT32 nEnd, INT32 nType)
 	UINT8** pMemMap = pSekExt->MemMap + (nStart >> SEK_SHIFT);
 
 	// Special case for ROM banks
-	if (nType == SM_ROM) {
+	if (nType == MAP_ROM) {
 		for (UINT32 i = (nStart & ~SEK_PAGEM); i <= nEnd; i += SEK_PAGE_SIZE, pMemMap++) {
 			pMemMap[0]			  = Ptr + i;
 			pMemMap[SEK_WADD * 2] = Ptr + i;
@@ -1513,13 +1530,13 @@ INT32 SekMapMemory(UINT8* pMemory, UINT32 nStart, UINT32 nEnd, INT32 nType)
 
 	for (UINT32 i = (nStart & ~SEK_PAGEM); i <= nEnd; i += SEK_PAGE_SIZE, pMemMap++) {
 
-		if (nType & SM_READ) {					// Read
+		if (nType & MAP_READ) {					// Read
 			pMemMap[0]			  = Ptr + i;
 		}
-		if (nType & SM_WRITE) {					// Write
+		if (nType & MAP_WRITE) {					// Write
 			pMemMap[SEK_WADD]	  = Ptr + i;
 		}
-		if (nType & SM_FETCH) {					// Fetch
+		if (nType & MAP_FETCH) {					// Fetch
 			pMemMap[SEK_WADD * 2] = Ptr + i;
 		}
 	}
@@ -1539,13 +1556,13 @@ INT32 SekMapHandler(uintptr_t nHandler, UINT32 nStart, UINT32 nEnd, INT32 nType)
 	// Add to memory map
 	for (UINT32 i = (nStart & ~SEK_PAGEM); i <= nEnd; i += SEK_PAGE_SIZE, pMemMap++) {
 
-		if (nType & SM_READ) {					// Read
+		if (nType & MAP_READ) {					// Read
 			pMemMap[0]			  = (UINT8*)nHandler;
 		}
-		if (nType & SM_WRITE) {					// Write
+		if (nType & MAP_WRITE) {					// Write
 			pMemMap[SEK_WADD]	  = (UINT8*)nHandler;
 		}
-		if (nType & SM_FETCH) {					// Fetch
+		if (nType & MAP_FETCH) {					// Fetch
 			pMemMap[SEK_WADD * 2] = (UINT8*)nHandler;
 		}
 	}
@@ -1598,6 +1615,18 @@ INT32 SekSetCmpCallback(pSekCmpCallback pCallback)
 #endif
 
 	pSekExt->CmpCallback = pCallback;
+
+	return 0;
+}
+
+INT32 SekSetTASCallback(pSekTASCallback pCallback)
+{
+#if defined FBA_DEBUG
+	if (!DebugCPU_SekInitted) bprintf(PRINT_ERROR, _T("SekSetTASCallback called without init\n"));
+	if (nSekActive == -1) bprintf(PRINT_ERROR, _T("SekSetTASCallback called when no CPU open\n"));
+#endif
+
+	pSekExt->TASCallback = pCallback;
 
 	return 0;
 }
@@ -1966,24 +1995,6 @@ bool SekDbgSetRegister(SekRegister nRegister, UINT32 nValue)
 // ----------------------------------------------------------------------------
 // Savestate support
 
-// The following block of pointers is actually the end part of the SekM68KContext data
-// We preserve these for savestate portability because the addresses/values can be
-// specific to a certain system.
-struct m68ki_cpu_core_pointerblock
-{
-	UINT8* cyc_instruction;
-	UINT8* cyc_exception;
-	int  (*int_ack_callback)(int int_line);           /* Interrupt Acknowledge */
-	void (*bkpt_ack_callback)(unsigned int data);     /* Breakpoint Acknowledge */
-	void (*reset_instr_callback)(void);               /* Called when a RESET instruction is encountered */
-	void (*cmpild_instr_callback)(unsigned int, int); /* Called when a CMPI.L #v, Dn instruction is encountered */
-	void (*rte_instr_callback)(void);                 /* Called when a RTE instruction is encountered */
-	void (*pc_changed_callback)(unsigned int new_pc); /* Called when the PC changes by a large amount */
-	void (*set_fc_callback)(unsigned int new_fc);     /* Called when the CPU function code changes */
-	void (*instr_hook_callback)(void);                /* Called every instruction cycle prior to execution */
-};
-
-
 INT32 SekScan(INT32 nAction)
 {
 #if defined FBA_DEBUG
@@ -1992,7 +2003,6 @@ INT32 SekScan(INT32 nAction)
 
 	// Scan the 68000 states
 	struct BurnArea ba;
-	struct m68ki_cpu_core_pointerblock m68kpointerblock;
 
 	if ((nAction & ACB_DRIVER_DATA) == 0) {
 		return 1;
@@ -2011,6 +2021,7 @@ INT32 SekScan(INT32 nAction)
 		szName[9] = '0' + i;
 
 		SCAN_VAR(nSekCPUType[i]);
+		SCAN_VAR(nSekIRQPending[i]); // fix for Gradius 2 s.states -dink feb.3.2015
 
 #if defined EMU_A68K && defined EMU_M68K
 		// Switch to another core if needed
@@ -2056,16 +2067,12 @@ INT32 SekScan(INT32 nAction)
 
 #ifdef EMU_M68K
 			if (nSekCPUType[i] != 0) {
-			// memmove notes: for savestate portability: preserve our cpu's pointers, they are set up in DrvInit() and can be specific to different systems.
-					memmove(&m68kpointerblock, SekM68KContext[i]+(nSekM68KContextSize[i]-sizeof(m68kpointerblock)), sizeof(m68kpointerblock));
-
-					ba.Data = SekM68KContext[i];
-					ba.nLen = nSekM68KContextSize[i];
-					ba.szName = szName;
-					BurnAcb(&ba);
-
-			// Put our saved pointers back :)
-					memmove(SekM68KContext[i]+(nSekM68KContextSize[i]-sizeof(m68kpointerblock)), &m68kpointerblock, sizeof(m68kpointerblock));
+				ba.Data = SekM68KContext[i];
+				// for savestate portability: preserve our cpu's pointers, they are set up in DrvInit() and can be specific to different systems.
+				// Therefore we scan the cpu context structure up until right before the pointers
+				ba.nLen = m68k_context_size_no_pointers();
+				ba.szName = szName;
+				BurnAcb(&ba);
 			}
 #endif
 

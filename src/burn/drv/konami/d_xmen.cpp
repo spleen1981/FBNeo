@@ -140,7 +140,7 @@ void __fastcall xmen_main_write_byte(UINT32 address, UINT8 data)
 
 		case 0x10804e:
 		case 0x10804f: 
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 		return;
 
 		case 0x10a001:
@@ -281,7 +281,7 @@ UINT8 __fastcall xmen_sound_read(UINT16 address)
 			return BurnYM2151ReadStatus();
 
 		case 0xf002:
-			ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 			return *soundlatch;
 	}
 
@@ -380,19 +380,6 @@ static INT32 MemIndex()
 	return 0;
 }
 
-static INT32 DrvGfxDecode()
-{
-	INT32 Plane[4] = { 0x018, 0x010, 0x008, 0x000 };
-	INT32 XOffs[8] = { 0x000, 0x001, 0x002, 0x003, 0x004, 0x005, 0x006, 0x007 };
-	INT32 YOffs[8] = { 0x000, 0x020, 0x040, 0x060, 0x080, 0x0a0, 0x0c0, 0x0e0 };
-
-	GfxDecode(0x10000, 4, 8, 8, Plane, XOffs, YOffs, 0x100, DrvGfxROM0, DrvGfxROMExp0);
-
-	K053247GfxDecode(DrvGfxROM1, DrvGfxROMExp1, 0x400000);
-
-	return 0;
-}
-
 static const eeprom_interface xmen_eeprom_intf =
 {
 	7,		 // address bits
@@ -435,15 +422,16 @@ static INT32 DrvInit()
 
 		if (BurnLoadRom(DrvSndROM  + 0x000000, 11, 1)) return 1;
 
-		DrvGfxDecode();
+		K052109GfxDecode(DrvGfxROM0, DrvGfxROMExp0, 0x200000);
+		K053247GfxDecode(DrvGfxROM1, DrvGfxROMExp1, 0x400000);
 	}
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KROM,			0x000000, 0x0fffff, SM_ROM);
-	SekMapMemory(Drv68KRAM + 0x00000,	0x101000, 0x101fff, SM_RAM);
-	SekMapMemory(DrvPalRAM,			0x104000, 0x104fff, SM_RAM);
-	SekMapMemory(Drv68KRAM + 0x01000,	0x110000, 0x113fff, SM_RAM);
+	SekMapMemory(Drv68KROM,			0x000000, 0x0fffff, MAP_ROM);
+	SekMapMemory(Drv68KRAM + 0x00000,	0x101000, 0x101fff, MAP_RAM);
+	SekMapMemory(DrvPalRAM,			0x104000, 0x104fff, MAP_RAM);
+	SekMapMemory(Drv68KRAM + 0x01000,	0x110000, 0x113fff, MAP_RAM);
 	SekSetWriteByteHandler(0,		xmen_main_write_byte);
 	SekSetWriteWordHandler(0,		xmen_main_write_word);
 	SekSetReadByteHandler(0,		xmen_main_read_byte);
@@ -603,7 +591,7 @@ static INT32 DrvFrame()
 		nCyclesDone[0] += nCyclesSegment;
 
 		if (i == (nInterleave / 2) && interrupt_enable) {
-			SekSetIRQLine(3, SEK_IRQSTATUS_AUTO);
+			SekSetIRQLine(3, CPU_IRQSTATUS_AUTO);
 		}
 
 		nNext = (i + 1) * nCyclesTotal[1] / nInterleave;
@@ -620,7 +608,7 @@ static INT32 DrvFrame()
 		}
 	}
 
-	if (interrupt_enable) SekSetIRQLine(5, SEK_IRQSTATUS_AUTO);
+	if (interrupt_enable) SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
 	
 	if (pBurnSoundOut) {
 		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
@@ -703,7 +691,7 @@ static struct BurnRomInfo xmenRomDesc[] = {
 
 	{ "065-a06.1f",		0x200000, 0x5adbcee0, 5 | BRF_SND },           // 11 K054539 Samples
 
-	{ "xmen_ubb.nv",  0x000080, 0x52f334ba, BRF_OPT },
+	{ "xmen_ubb.nv",    0x000080, 0x52f334ba, BRF_OPT },
 };
 
 STD_ROM_PICK(xmen)
@@ -740,7 +728,7 @@ static struct BurnRomInfo xmenaRomDesc[] = {
 
 	{ "065-a06.1f",		0x200000, 0x5adbcee0, 5 | BRF_SND },           // 11 K054539 Samples
 
-	{ "xmen_aea.nv",  0x000080, 0xd73d4f20, BRF_OPT },
+	{ "xmen_aea.nv",    0x000080, 0xd73d4f20, BRF_OPT },
 };
 
 STD_ROM_PICK(xmena)
@@ -777,7 +765,7 @@ static struct BurnRomInfo xmenaaRomDesc[] = {
 
 	{ "065-a06.1f",		0x200000, 0x5adbcee0, 5 | BRF_SND },           // 11 K054539 Samples
 
-	{ "xmen_ada.nv",  0x000080, 0xa77a3891, BRF_OPT },
+	{ "xmen_ada.nv",    0x000080, 0xa77a3891, BRF_OPT },
 };
 
 STD_ROM_PICK(xmenaa)
@@ -814,7 +802,7 @@ static struct BurnRomInfo xmeneRomDesc[] = {
 
 	{ "065-a06.1f",		0x200000, 0x5adbcee0, 5 | BRF_SND },           // 11 K054539 Samples
 
-	{ "xmen_eba.nv",  0x000080, 0x37f8e77a, BRF_OPT },
+	{ "xmen_eba.nv",    0x000080, 0x37f8e77a, BRF_OPT },
 };
 
 STD_ROM_PICK(xmene)
@@ -851,7 +839,7 @@ static struct BurnRomInfo xmenjRomDesc[] = {
 
 	{ "065-a06.1f",		0x200000, 0x5adbcee0, 5 | BRF_SND },           // 11 K054539 Samples
 
-	{ "xmen_jba.nv",  0x000080, 0x7439cea7, BRF_OPT },
+	{ "xmen_jba.nv",    0x000080, 0x7439cea7, BRF_OPT },
 };
 
 STD_ROM_PICK(xmenj)
@@ -888,7 +876,7 @@ static struct BurnRomInfo xmen2peRomDesc[] = {
 
 	{ "065-a06.1f",		0x200000, 0x5adbcee0, 5 | BRF_SND },           // 11 K054539 Samples
 
-	{ "xmen_eaa.nv",  0x000080, 0x1cbcb653, BRF_OPT },
+	{ "xmen_eaa.nv",    0x000080, 0x1cbcb653, BRF_OPT },
 };
 
 STD_ROM_PICK(xmen2pe)
@@ -900,6 +888,43 @@ struct BurnDriver BurnDrvXmen2pe = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, xmen2peRomInfo, xmen2peRomName, NULL, NULL, Xmen2pInputInfo, NULL,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
+	288, 224, 4, 3
+};
+
+
+// X-Men (2 Players ver UAB)
+
+static struct BurnRomInfo xmen2puRomDesc[] = {
+	{ "065-uab04.10d",	0x020000, 0xff003db1, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "065-uab05.10f",	0x020000, 0x4e99a943, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "065-a02.9d",		0x040000, 0xb31dc44c, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "065-a03.9f",		0x040000, 0x13842fe6, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "065-a01.6f",		0x020000, 0x147d3a4d, 2 | BRF_PRG | BRF_ESS }, //  4 Z80 Code
+
+	{ "065-a08.15l",	0x100000, 0x6b649aca, 3 | BRF_GRA },           //  5 Background Tiles
+	{ "065-a07.16l",	0x100000, 0xc5dc8fc4, 3 | BRF_GRA },           //  6
+
+	{ "065-a09.2h",		0x100000, 0xea05d52f, 4 | BRF_GRA },           //  7 Sprites
+	{ "065-a10.2l",		0x100000, 0x96b91802, 4 | BRF_GRA },           //  8
+	{ "065-a12.1h",		0x100000, 0x321ed07a, 4 | BRF_GRA },           //  9
+	{ "065-a11.1l",		0x100000, 0x46da948e, 4 | BRF_GRA },           // 10
+
+	{ "065-a06.1f",		0x200000, 0x5adbcee0, 5 | BRF_SND },           // 11 K054539 Samples
+
+	{ "xmen_uab.nv",    0x000080, 0x79b76593, BRF_OPT },
+};
+
+STD_ROM_PICK(xmen2pu)
+STD_ROM_FN(xmen2pu)
+
+struct BurnDriver BurnDrvXmen2pu = {
+	"xmen2pu", "xmen", NULL, NULL, "1992",
+	"X-Men (2 Players ver UAB)\0", NULL, "Konami", "GX065",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	NULL, xmen2puRomInfo, xmen2puRomName, NULL, NULL, Xmen2pInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
 };
@@ -925,7 +950,7 @@ static struct BurnRomInfo xmen2paRomDesc[] = {
 
 	{ "065-a06.1f",		0x200000, 0x5adbcee0, 5 | BRF_SND },           // 11 K054539 Samples
 
-	{ "xmen_aaa.nv",  0x000080, 0x750fd447, BRF_OPT },
+	{ "xmen_aaa.nv",    0x000080, 0x750fd447, BRF_OPT },
 };
 
 STD_ROM_PICK(xmen2pa)
@@ -962,7 +987,7 @@ static struct BurnRomInfo xmen2pjRomDesc[] = {
 
 	{ "065-a06.1f",		0x200000, 0x5adbcee0, 5 | BRF_SND },           // 11 K054539 Samples
 
-	{ "xmen_jaa.nv",  0x000080, 0x849a9e19, BRF_OPT },
+	{ "xmen_jaa.nv",    0x000080, 0x849a9e19, BRF_OPT },
 };
 
 STD_ROM_PICK(xmen2pj)
@@ -999,7 +1024,7 @@ static struct BurnRomInfo xmen6pRomDesc[] = {
 
 	{ "065-a06.1d",		0x200000, 0x5adbcee0, 5 | BRF_SND },           // 11 K054539 Samples
 
-	{ "xmen_ecb.nv",  0x000080, 0x462c6e1a, BRF_OPT },
+	{ "xmen_ecb.nv",    0x000080, 0x462c6e1a, BRF_OPT },
 };
 
 STD_ROM_PICK(xmen6p)
@@ -1036,7 +1061,7 @@ static struct BurnRomInfo xmen6puRomDesc[] = {
 
 	{ "065-a06.1d",		0x200000, 0x5adbcee0, 5 | BRF_SND },           // 11 K054539 Samples
 
-	{ "xmen_ucb.nv",  0x000080, 0xf3d0f682, BRF_OPT },
+	{ "xmen_ucb.nv",    0x000080, 0xf3d0f682, BRF_OPT },
 };
 
 STD_ROM_PICK(xmen6pu)

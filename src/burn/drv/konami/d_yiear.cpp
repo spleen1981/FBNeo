@@ -221,6 +221,8 @@ static INT32 DrvDoReset()
 
 	sn76496_latch = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -333,14 +335,14 @@ static INT32 DrvInit()
 
 	M6809Init(1);
 	M6809Open(0);
-	M6809MapMemory(DrvM6809RAM,	0x5000, 0x57ff, M6809_RAM);
-	M6809MapMemory(DrvVidRAM,	0x5800, 0x5fff, M6809_RAM);
-	M6809MapMemory(DrvM6809ROM,	0x8000, 0xffff, M6809_ROM);
+	M6809MapMemory(DrvM6809RAM,	0x5000, 0x57ff, MAP_RAM);
+	M6809MapMemory(DrvVidRAM,	0x5800, 0x5fff, MAP_RAM);
+	M6809MapMemory(DrvM6809ROM,	0x8000, 0xffff, MAP_ROM);
 	M6809SetWriteHandler(yiear_write);
 	M6809SetReadHandler(yiear_read);
 	M6809Close();
 
-	SN76496Init(0, 1536000, 0);
+	SN76489AInit(0, 1536000, 0);
 	SN76496SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
 
 	vlm5030Init(0, 3579545, vlm_sync, DrvVLMROM, 0x2000, 1);
@@ -464,6 +466,7 @@ static INT32 DrvFrame()
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[1] = { 1536000 / 60 };
 	INT32 nCyclesDone[1] = { 0 };
+	INT32 nSoundBufferPos = 0;
 
 	M6809Open(0);
 
@@ -472,13 +475,27 @@ static INT32 DrvFrame()
 		nCyclesDone[0] += M6809Run(nCyclesTotal[0] / nInterleave);
 
 		if (*nmi_enable && (i & 0x1f) == 0) // copy shao-lin's road
-			M6809SetIRQLine(0x20, M6809_IRQSTATUS_AUTO); // 480x/second (8x/frame)
+			M6809SetIRQLine(0x20, CPU_IRQSTATUS_AUTO); // 480x/second (8x/frame)
+
+		if (i == 240 && *irq_enable) M6809SetIRQLine(0, CPU_IRQSTATUS_AUTO);
+
+		// Render Sound Segment
+		if (pBurnSoundOut) {
+			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
+			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
+			SN76496Update(0, pSoundBuf, nSegmentLength);
+			nSoundBufferPos += nSegmentLength;
+		}
 	}
 
-	if (*irq_enable) M6809SetIRQLine(0, M6809_IRQSTATUS_AUTO);
-
+	// Make sure the buffer is entirely filled.
 	if (pBurnSoundOut) {
-		SN76496Update(0, pBurnSoundOut, nBurnSoundLen);
+		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
+		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
+		if (nSegmentLength) {
+			SN76496Update(0, pSoundBuf, nSegmentLength);
+		}
+		// vlm5030 won't interlace, so just run it at the end of the frame..
 		vlm5030Update(0, pBurnSoundOut, nBurnSoundLen);
 	}
 
@@ -542,9 +559,9 @@ STD_ROM_FN(yiear)
 
 struct BurnDriver BurnDrvYiear = {
 	"yiear", NULL, NULL, NULL, "1985",
-	"Yie Ar Kung-Fu (program code I)\0", NULL, "Konami", "Miscellaneous",
+	"Yie Ar Kung-Fu (program code I)\0", NULL, "Konami", "GX407",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
 	NULL, yiearRomInfo, yiearRomName, NULL, NULL, YiearInputInfo, YiearDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x20,
 	256, 224, 4, 3
@@ -575,9 +592,9 @@ STD_ROM_FN(yiear2)
 
 struct BurnDriver BurnDrvYiear2 = {
 	"yiear2", "yiear", NULL, NULL, "1985",
-	"Yie Ar Kung-Fu (program code G)\0", NULL, "Konami", "Miscellaneous",
+	"Yie Ar Kung-Fu (program code G)\0", NULL, "Konami", "GX407",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
 	NULL, yiear2RomInfo, yiear2RomName, NULL, NULL, YiearInputInfo, YiearDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x20,
 	256, 224, 4, 3

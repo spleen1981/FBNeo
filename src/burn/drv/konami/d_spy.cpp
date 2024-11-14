@@ -160,17 +160,17 @@ static void DrvSetRAMBank(UINT8 bank, UINT8 data)
 	nDrvRomBank[2] = data;
 
 	if (data & 0x10) {
-		M6809MapMemory(DrvPalRAM, 0x0000, 0x07ff, M6809_RAM);
+		M6809MapMemory(DrvPalRAM, 0x0000, 0x07ff, MAP_RAM);
 	} else if (data & 0x20) {
 		if (bank & 0x80) {
-			M6809MapMemory(DrvPMCRAM, 0x0000, 0x07ff, M6809_RAM);
+			M6809MapMemory(DrvPMCRAM, 0x0000, 0x07ff, MAP_RAM);
 		} else {
 			// unmap
-			M6809MapMemory(DrvM6809ROM + 0x800, 0x0000, 0x07ff, M6809_ROM);
-			M6809MapMemory(DrvM6809ROM + 0x000, 0x0000, 0x07ff, M6809_WRITE);
+			M6809MapMemory(DrvM6809ROM + 0x800, 0x0000, 0x07ff, MAP_ROM);
+			M6809MapMemory(DrvM6809ROM + 0x000, 0x0000, 0x07ff, MAP_WRITE);
 		}
 	} else {
-		M6809MapMemory(DrvBankRAM, 0x0000, 0x07ff, M6809_RAM);
+		M6809MapMemory(DrvBankRAM, 0x0000, 0x07ff, MAP_RAM);
 	}
 }
 
@@ -257,9 +257,9 @@ static void spy_3f90_w(INT32 data)
 	{
 		spy_collision();
 
-		M6809SetIRQLine(1 /*FIRQ*/, M6809_IRQSTATUS_ACK);
+		M6809SetIRQLine(1 /*FIRQ*/, CPU_IRQSTATUS_ACK);
 		M6809Run(105); // delay or the M6809 won't read it...
-		M6809SetIRQLine(1 /*FIRQ*/, M6809_IRQSTATUS_NONE);
+		M6809SetIRQLine(1 /*FIRQ*/, CPU_IRQSTATUS_NONE);
 	}
 
 	Drv3f90old = data;
@@ -276,7 +276,7 @@ static void bankswitch(INT32 data)
 		nBank = 0x10000 + (data & 0x0e) * 0x1000;
 	}
 
-	M6809MapMemory(DrvM6809ROM + nBank, 0x6000, 0x7fff, M6809_ROM);
+	M6809MapMemory(DrvM6809ROM + nBank, 0x6000, 0x7fff, MAP_ROM);
 }
 
 void spy_main_write(UINT16 address, UINT8 data)
@@ -300,7 +300,7 @@ void spy_main_write(UINT16 address, UINT8 data)
 		return;
 
 		case 0x3fc0:
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 		return;
 	}
 
@@ -370,7 +370,7 @@ void __fastcall spy_sound_write(UINT16 address, UINT8 data)
 
 		case 0xc000:
 		case 0xc001:
-			BurnYM3812Write(address & 1, data);
+			BurnYM3812Write(0, address & 1, data);
 		return;
 	}
 }
@@ -389,10 +389,10 @@ UINT8 __fastcall spy_sound_read(UINT16 address)
 	{
 		case 0xc000:
 		case 0xc001:
-			return BurnYM3812Read(address & 1);
+			return BurnYM3812Read(0, address & 1);
 
 		case 0xd000:
-			ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 			return *soundlatch;
 	}
 
@@ -502,21 +502,6 @@ static INT32 MemIndex()
 	return 0;
 }
 
-static INT32 DrvGfxDecode()
-{
-	INT32 Plane0[4] = { 0x018, 0x010, 0x008, 0x000 };
-	INT32 Plane1[4] = { 0x000, 0x008, 0x010, 0x018 };
-	INT32 XOffs[16] = { 0x000, 0x001, 0x002, 0x003, 0x004, 0x005, 0x006, 0x007,
-			  0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107 };
-	INT32 YOffs[16] = { 0x000, 0x020, 0x040, 0x060, 0x080, 0x0a0, 0x0c0, 0x0e0,
-			  0x200, 0x220, 0x240, 0x260, 0x280, 0x2a0, 0x2c0, 0x2e0 };
-
-	GfxDecode(0x04000, 4,  8,  8, Plane0, XOffs, YOffs, 0x100, DrvGfxROM0, DrvGfxROMExp0);
-	GfxDecode(0x02000, 4, 16, 16, Plane1, XOffs, YOffs, 0x400, DrvGfxROM1, DrvGfxROMExp1);
-
-	return 0;
-}
-
 static INT32 DrvInit()
 {
 	GenericTilesInit();
@@ -536,23 +521,24 @@ static INT32 DrvInit()
 		if (BurnLoadRom(DrvZ80ROM  + 0x000000,  2, 1)) return 1;
 
 		if (BurnLoadRomExt(DrvGfxROM0 + 0x000000,  3, 4, 2)) return 1;
-		if (BurnLoadRomExt(DrvGfxROM0 + 0x040000,  4, 4, 2)) return 1;
+		if (BurnLoadRomExt(DrvGfxROM0 + 0x000002,  4, 4, 2)) return 1;
 
 		if (BurnLoadRomExt(DrvGfxROM1 + 0x000000,  5, 4, 2)) return 1;
-		if (BurnLoadRomExt(DrvGfxROM1 + 0x080000,  6, 4, 2)) return 1;
+		if (BurnLoadRomExt(DrvGfxROM1 + 0x000002,  6, 4, 2)) return 1;
 
 		if (BurnLoadRom(DrvSndROM0 + 0x000000,  7, 1)) return 1;
 
 		if (BurnLoadRom(DrvSndROM1 + 0x000000,  8, 1)) return 1;
 
-		DrvGfxDecode();
+		K052109GfxDecode(DrvGfxROM0, DrvGfxROMExp0, 0x080000);
+		K051960GfxDecode(DrvGfxROM1, DrvGfxROMExp1, 0x100000);
 	}
 
 	M6809Init(1);
 	M6809Open(0);
-	M6809MapMemory(DrvM6809RAM,		0x0800, 0x1aff, M6809_RAM);
-	M6809MapMemory(DrvM6809ROM + 0x10000,	0x6000, 0x7fff, M6809_ROM);
-	M6809MapMemory(DrvM6809ROM + 0x08000,	0x8000, 0xffff, M6809_ROM);
+	M6809MapMemory(DrvM6809RAM,		0x0800, 0x1aff, MAP_RAM);
+	M6809MapMemory(DrvM6809ROM + 0x10000,	0x6000, 0x7fff, MAP_ROM);
+	M6809MapMemory(DrvM6809ROM + 0x08000,	0x8000, 0xffff, MAP_ROM);
 	M6809SetWriteHandler(spy_main_write);
 	M6809SetReadHandler(spy_main_read);
 	M6809Close();
@@ -576,9 +562,9 @@ static INT32 DrvInit()
 	K051960SetCallback(K051960Callback);
 	K051960SetSpriteOffset(0, 0);
 
-	BurnYM3812Init(3579545, &DrvFMIRQHandler, DrvSynchroniseStream, 0);
+	BurnYM3812Init(1, 3579545, &DrvFMIRQHandler, DrvSynchroniseStream, 0);
 	BurnTimerAttachZetYM3812(3579545);
-	BurnYM3812SetRoute(BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
+	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	K007232Init(0, 3579545, DrvSndROM0, 0x40000);
 	K007232SetPortWriteHandler(0, DrvK007232VolCallback0);
@@ -671,7 +657,7 @@ static INT32 DrvFrame()
 		nCyclesDone[1] += BurnTimerUpdateYM3812(nCyclesSegment - nCyclesDone[1]);
 	}
 
-	if (K052109_irq_enabled) M6809SetIRQLine(0, M6809_IRQSTATUS_AUTO);
+	if (K052109_irq_enabled) M6809SetIRQLine(0, CPU_IRQSTATUS_AUTO);
 	
 	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
 

@@ -83,6 +83,10 @@ static struct BurnDIPInfo SamesameDIPList[]=
 	{0x13, 0x01, 0x02, 0x00, "Off"			},
 	{0x13, 0x01, 0x02, 0x02, "On"			},
 
+	{0   , 0xfe, 0   ,    2, "Service Mode"	},
+	{0x13, 0x01, 0x04, 0x00, "Off"	},
+	{0x13, 0x01, 0x04, 0x04, "On"		},
+
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x13, 0x01, 0x08, 0x08, "Off"			},
 	{0x13, 0x01, 0x08, 0x00, "On"			},
@@ -129,6 +133,10 @@ static struct BurnDIPInfo Samesam2DIPList[]=
 	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
 	{0x13, 0x01, 0x02, 0x00, "Off"			},
 	{0x13, 0x01, 0x02, 0x02, "On"			},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"	},
+	{0x13, 0x01, 0x04, 0x00, "Off"	},
+	{0x13, 0x01, 0x04, 0x04, "On"		},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x13, 0x01, 0x08, 0x08, "Off"			},
@@ -180,6 +188,10 @@ static struct BurnDIPInfo FireshrkDIPList[]=
 	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
 	{0x13, 0x01, 0x02, 0x00, "Off"			},
 	{0x13, 0x01, 0x02, 0x02, "On"			},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"	},
+	{0x13, 0x01, 0x04, 0x00, "Off"	},
+	{0x13, 0x01, 0x04, 0x04, "On"		},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x13, 0x01, 0x08, 0x08, "Off"			},
@@ -245,6 +257,10 @@ static struct BurnDIPInfo FireshrkaDIPList[]=
 	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
 	{0x13, 0x01, 0x02, 0x00, "Off"			},
 	{0x13, 0x01, 0x02, 0x02, "On"			},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"	},
+	{0x13, 0x01, 0x04, 0x00, "Off"	},
+	{0x13, 0x01, 0x04, 0x04, "On"		},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x13, 0x01, 0x08, 0x08, "Off"			},
@@ -709,7 +725,9 @@ static INT32 DrvDoReset()
 		BurnSampleSetAllRoutes(i, 1.00, BURN_SND_ROUTE_BOTH);
 		BurnSampleSetLoop(i, 0);
 	}
-	
+
+	HiscoreReset();
+
 	FadeoutReady = 0;
 	FadeoutStop = 0;
 	Playing1 = 0xff;
@@ -787,10 +805,10 @@ static INT32 DrvInit()
 	{
 		SekInit(0, 0x68000);
 		SekOpen(0);
-		SekMapMemory(Drv68KROM,			0x000000, 0x07FFFF, SM_ROM);
-		SekMapMemory(Drv68KRAM,			0x0c0000, 0x0c3FFF, SM_RAM);
-		SekMapMemory(DrvPalRAM,			0x104000, 0x1047FF, SM_RAM);
-		SekMapMemory(DrvPalRAM2,		0x106000, 0x1067FF, SM_RAM);
+		SekMapMemory(Drv68KROM,			0x000000, 0x07FFFF, MAP_ROM);
+		SekMapMemory(Drv68KRAM,			0x0c0000, 0x0c3FFF, MAP_RAM);
+		SekMapMemory(DrvPalRAM,			0x104000, 0x1047FF, MAP_RAM);
+		SekMapMemory(DrvPalRAM2,		0x106000, 0x1067FF, MAP_RAM);
 		SekSetReadWordHandler(0, 		samesameReadWord);
 		SekSetReadByteHandler(0, 		samesameReadByte);
 		SekSetWriteWordHandler(0, 		samesameWriteWord);
@@ -920,7 +938,7 @@ static INT32 DrvFrame()
 
 			bVBlank = true;
 			if (bEnableInterrupts) {
-				SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
+				SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
 			}
 		}
 
@@ -959,7 +977,7 @@ static INT32 DrvFrame()
 
 	ToaBufferFCU2Sprites();
 
-	SekSetIRQLine(2, SEK_IRQSTATUS_AUTO); // sprite buffer finished...
+	SekSetIRQLine(2, CPU_IRQSTATUS_AUTO); // sprite buffer finished...
 
 	SekClose();
 
@@ -975,7 +993,7 @@ static INT32 DrvScan(INT32 nAction, INT32* pnMin)
 	}
 	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
-    		ba.Data		= AllRam;
+		ba.Data		= AllRam;
 		ba.nLen		= RamEnd - AllRam;
 		ba.szName	= "RAM";
 		BurnAcb(&ba);
@@ -996,11 +1014,11 @@ static INT32 DrvScan(INT32 nAction, INT32* pnMin)
 		SCAN_VAR(Start2);
 #endif
 
-                SCAN_VAR(nCyclesDone);
+		SCAN_VAR(nCyclesDone);
 		ToaScanBCU2(nAction, pnMin);
 
-                ToaRecalcPalette = 1;
-                bDrawScreen = true; // get background back ?
+		ToaRecalcPalette = 1;
+		bDrawScreen = true; // get background back ?
 	}
 
 	return 0;
@@ -1011,47 +1029,47 @@ static INT32 DrvScan(INT32 nAction, INT32* pnMin)
 static struct BurnSampleInfo samesameSampleDesc[] = {
 #ifdef TOAPLAN_SOUND_SAMPLES_HACK
 #if !defined ROM_VERIFY
-	{ "dm.wav", SAMPLE_NOLOOP },
-	{ "01.wav", SAMPLE_NOLOOP },
-	{ "02.wav", SAMPLE_NOLOOP },
-	{ "03.wav", SAMPLE_NOLOOP },
-	{ "04.wav", SAMPLE_NOLOOP },
-	{ "05.wav", SAMPLE_NOLOOP },
-	{ "06.wav", SAMPLE_NOLOOP },
-	{ "07.wav", SAMPLE_NOLOOP },
-	{ "08.wav", SAMPLE_NOLOOP },
-	{ "09.wav", SAMPLE_NOLOOP },
-	{ "0a.wav", SAMPLE_NOLOOP },
-	{ "0b.wav", SAMPLE_NOLOOP },
-	{ "0c.wav", SAMPLE_NOLOOP },
-	{ "0d.wav", SAMPLE_NOLOOP },
-	{ "0e.wav", SAMPLE_NOLOOP },
-	{ "0f.wav", SAMPLE_NOLOOP },
-	{ "10.wav", SAMPLE_NOLOOP },
-	{ "11.wav", SAMPLE_NOLOOP },
-	{ "12.wav", SAMPLE_NOLOOP },
-	{ "13.wav", SAMPLE_NOLOOP },
-	{ "14.wav", SAMPLE_NOLOOP },
-	{ "15.wav", SAMPLE_NOLOOP },
-	{ "16.wav", SAMPLE_NOLOOP },
-	{ "17.wav", SAMPLE_NOLOOP },
-	{ "18.wav", SAMPLE_NOLOOP },
-	{ "19.wav", SAMPLE_NOLOOP },
-	{ "1a.wav", SAMPLE_NOLOOP },
-	{ "1b.wav", SAMPLE_NOLOOP },
-	{ "1c.wav", SAMPLE_NOLOOP },
-	{ "1d.wav", SAMPLE_NOLOOP },
-	{ "1e.wav", SAMPLE_NOLOOP },
-	{ "1f.wav", SAMPLE_NOLOOP },
-	{ "20.wav", SAMPLE_NOLOOP },
-	{ "21.wav", SAMPLE_NOLOOP },
-	{ "22.wav", SAMPLE_NOLOOP },
-	{ "23.wav", SAMPLE_NOLOOP },
-	{ "24.wav", SAMPLE_NOLOOP },
-	{ "25.wav", SAMPLE_NOLOOP },
-	{ "26.wav", SAMPLE_NOLOOP },
-	{ "27.wav", SAMPLE_NOLOOP },
-	{ "28.wav", SAMPLE_NOLOOP },
+	{ "dm", SAMPLE_NOLOOP },
+	{ "01", SAMPLE_NOLOOP },
+	{ "02", SAMPLE_NOLOOP },
+	{ "03", SAMPLE_NOLOOP },
+	{ "04", SAMPLE_NOLOOP },
+	{ "05", SAMPLE_NOLOOP },
+	{ "06", SAMPLE_NOLOOP },
+	{ "07", SAMPLE_NOLOOP },
+	{ "08", SAMPLE_NOLOOP },
+	{ "09", SAMPLE_NOLOOP },
+	{ "0a", SAMPLE_NOLOOP },
+	{ "0b", SAMPLE_NOLOOP },
+	{ "0c", SAMPLE_NOLOOP },
+	{ "0d", SAMPLE_NOLOOP },
+	{ "0e", SAMPLE_NOLOOP },
+	{ "0f", SAMPLE_NOLOOP },
+	{ "10", SAMPLE_NOLOOP },
+	{ "11", SAMPLE_NOLOOP },
+	{ "12", SAMPLE_NOLOOP },
+	{ "13", SAMPLE_NOLOOP },
+	{ "14", SAMPLE_NOLOOP },
+	{ "15", SAMPLE_NOLOOP },
+	{ "16", SAMPLE_NOLOOP },
+	{ "17", SAMPLE_NOLOOP },
+	{ "18", SAMPLE_NOLOOP },
+	{ "19", SAMPLE_NOLOOP },
+	{ "1a", SAMPLE_NOLOOP },
+	{ "1b", SAMPLE_NOLOOP },
+	{ "1c", SAMPLE_NOLOOP },
+	{ "1d", SAMPLE_NOLOOP },
+	{ "1e", SAMPLE_NOLOOP },
+	{ "1f", SAMPLE_NOLOOP },
+	{ "20", SAMPLE_NOLOOP },
+	{ "21", SAMPLE_NOLOOP },
+	{ "22", SAMPLE_NOLOOP },
+	{ "23", SAMPLE_NOLOOP },
+	{ "24", SAMPLE_NOLOOP },
+	{ "25", SAMPLE_NOLOOP },
+	{ "26", SAMPLE_NOLOOP },
+	{ "27", SAMPLE_NOLOOP },
+	{ "28", SAMPLE_NOLOOP },
 #endif
 #endif
 	{ "", 0 }
@@ -1091,7 +1109,7 @@ struct BurnDriver BurnDrvFireshrk = {
 	"fireshrk", NULL, NULL, "fireshrk", "1990",
 	"Fire Shark\0", "No sound", "Toaplan", "Toaplan BCU-2 / FCU-2 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
 	NULL, fireshrkRomInfo, fireshrkRomName, samesameSampleInfo, samesameSampleName, SamesameInputInfo, FireshrkDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -1129,7 +1147,7 @@ struct BurnDriver BurnDrvFireshrka = {
 	"fireshrka", "fireshrk", NULL, "fireshrk", "1989",
 	"Fire Shark (Earlier)\0", "No sound", "Toaplan", "Toaplan BCU-2 / FCU-2 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
 	NULL, fireshrkaRomInfo, fireshrkaRomName, samesameSampleInfo, samesameSampleName, SamesameInputInfo, FireshrkaDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -1167,7 +1185,7 @@ struct BurnDriver BurnDrvFireshrkd = {
 	"fireshrkd", "fireshrk", NULL, "fireshrk", "1990",
 	"Fire Shark (Korea, set 1, easier)\0", "No sound", "Toaplan (Dooyong license)", "Toaplan BCU-2 / FCU-2 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
 	NULL, fireshrkdRomInfo, fireshrkdRomName, samesameSampleInfo, samesameSampleName, SamesameInputInfo, Samesam2DIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -1205,7 +1223,7 @@ struct BurnDriver BurnDrvFireshrkdh = {
 	"fireshrkdh", "fireshrk", NULL, "fireshrk", "1990",
 	"Fire Shark (Korea, set 2, harder)\0", "No sound", "Toaplan (Dooyong license)", "Toaplan BCU-2 / FCU-2 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
 	NULL, fireshrkdhRomInfo, fireshrkdhRomName, samesameSampleInfo, samesameSampleName, SamesameInputInfo, Samesam2DIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -1243,7 +1261,7 @@ struct BurnDriver BurnDrvSamesame = {
 	"samesame", "fireshrk", NULL, "fireshrk", "1989",
 	"Same! Same! Same! (2 player alternating ver.)\0", "No sound", "Toaplan", "Toaplan BCU-2 / FCU-2 based",
 	L"\u9BAB!\u9BAB!\u9BAB!\0Same! Same! Same! (2 player alternating ver.)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
 	NULL, samesameRomInfo, samesameRomName, samesameSampleInfo, samesameSampleName, SamesameInputInfo, SamesameDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -1281,8 +1299,46 @@ struct BurnDriver BurnDrvSamesame2 = {
 	"samesame2", "fireshrk", NULL, "fireshrk", "1989",
 	"Same! Same! Same!\0", "No sound", "Toaplan", "Toaplan BCU-2 / FCU-2 based",
 	L"\u9BAB!\u9BAB!\u9BAB!\0Same! Same! Same!\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
 	NULL, samesame2RomInfo, samesame2RomName, samesameSampleInfo, samesameSampleName, SamesameInputInfo, Samesam2DIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
+	240, 320, 3, 4
+};
+
+
+// Same! Same! Same! NEW VER! (v1.00, hack by Trap15)
+
+static struct BurnRomInfo samenewRomDesc[] = {
+	{ "o17_09_new.8j",	0x08000, 0xf60af2f9, BRF_PRG | BRF_ESS },    //  0 CPU #0 code
+	{ "o17_10_new.8l",	0x08000, 0x023bcb95, BRF_PRG | BRF_ESS },    //  1
+	{ "o17_11.7j",		0x20000, 0xbe07d101, BRF_PRG | BRF_ESS },    //  2
+	{ "o17_12.7l",		0x20000, 0xef698811, BRF_PRG | BRF_ESS },    //  3
+
+	{ "o17_05.12j",		0x20000, 0x565315f8, BRF_GRA },              //  4 Tile data
+	{ "o17_06.13j",		0x20000, 0x95262d4c, BRF_GRA },              //  5
+	{ "o17_07.12l",		0x20000, 0x4c4b735c, BRF_GRA },              //  6
+	{ "o17_08.13l",		0x20000, 0x95c6586c, BRF_GRA },              //  7
+
+	{ "o17_01.1d",		0x20000, 0xea12e491, BRF_GRA },              //  8
+	{ "o17_02.3d",		0x20000, 0x32a13a9f, BRF_GRA },              //  9
+	{ "o17_03.5d",		0x20000, 0x68723dc9, BRF_GRA },              // 10
+	{ "o17_04.7d",		0x20000, 0xfe0ecb13, BRF_GRA },              // 12
+
+	{ "prom14.25b",		0x00020, 0xbc88cced, BRF_GRA },              // 12 Sprite attribute PROM
+	{ "prom15.20c",		0x00020, 0xa1e17492, BRF_GRA },              // 13
+
+	{ "hd647180.017",	0x08000, 0x00000000, BRF_OPT | BRF_NODUMP }, // 14 Sound HD647180 code
+};
+
+STD_ROM_PICK(samenew)
+STD_ROM_FN(samenew)
+
+struct BurnDriver BurnDrvSamenew = {
+	"samenew", "fireshrk", NULL, "fireshrk", "1989",
+	"Same! Same! Same! NEW VER! (v1.00, hack by Trap15)\0", "No sound", "Hack / Trap15", "Toaplan BCU-2 / FCU-2 based",
+	L"\u9BAB!\u9BAB!\u9BAB!\0Same! Same! Same! NEW VER! (v1.00, hack by Trap15)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
+	NULL, samenewRomInfo, samenewRomName, samesameSampleInfo, samesameSampleName, SamesameInputInfo, SamesameDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };

@@ -77,6 +77,7 @@ __extension__ typedef long long				INT64;
 #include "state.h"
 #include "cheat.h"
 #include "hiscore.h"
+#include "joyprocess.h"
 
 extern INT32 nBurnVer;						// Version number of the library
 
@@ -168,6 +169,37 @@ struct BurnDIPInfo {
 	UINT8 nSetting;
 	char* szText;
 };
+
+
+// ---------------------------------------------------------------------------
+// Common CPU definitions 
+
+#define CPU_IRQSTATUS_NONE	0
+#define CPU_IRQSTATUS_ACK	1
+#define CPU_IRQSTATUS_AUTO	2
+#define CPU_IRQSTATUS_HOLD	4
+
+#define CPU_IRQLINE0		0
+#define CPU_IRQLINE1		1
+#define CPU_IRQLINE2		2
+#define CPU_IRQLINE3		3
+#define CPU_IRQLINE4		4
+#define CPU_IRQLINE5		5
+#define CPU_IRQLINE6		6
+#define CPU_IRQLINE7		7
+
+#define CPU_IRQLINE_IRQ		CPU_IRQLINE0
+#define CPU_IRQLINE_FIRQ	CPU_IRQLINE1
+#define CPU_IRQLINE_NMI		0x20
+
+#define MAP_READ		1
+#define MAP_WRITE		2
+#define MAP_FETCHOP		4
+#define MAP_FETCHARG		8
+#define MAP_FETCH		(MAP_FETCHOP|MAP_FETCHARG)
+#define MAP_ROM			(MAP_READ|MAP_FETCH)
+#define MAP_RAM			(MAP_ROM|MAP_WRITE)
+
 
 // ---------------------------------------------------------------------------
 
@@ -301,7 +333,7 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 
 #define HARDWARE_PUBLIC_MASK							(0xFFFF0000)
 
-#define HARDWARE_PREFIX_CARTRIDGE						(0x80000000)
+#define HARDWARE_PREFIX_CARTRIDGE						((INT32)0x80000000)
 
 #define HARDWARE_PREFIX_MISC_PRE90S						(0x00000000)
 #define HARDWARE_PREFIX_CAPCOM							(0x01000000)
@@ -321,7 +353,7 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define HARDWARE_PREFIX_PACMAN							(0x0f000000)
 #define HARDWARE_PREFIX_GALAXIAN						(0x10000000)
 #define HARDWARE_PREFIX_IREM							(0x11000000)
-#define HARDWARE_PREFIX_NINTENDO_SNES					(0x12000000)
+//#define HARDWARE_PREFIX_NINTENDO_SNES					(0x12000000)
 #define HARDWARE_PREFIX_DATAEAST						(0x13000000)
 #define HARDWARE_PREFIX_CAPCOM_MISC						(0x14000000)
 #define HARDWARE_PREFIX_SETA							(0x15000000)
@@ -330,6 +362,8 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define HARDWARE_PREFIX_SEGA_MASTER_SYSTEM				(0x18000000)
 #define HARDWARE_PREFIX_SEGA_SG1000						(0x19000000)
 #define HARDWARE_PREFIX_COLECO							(0x1A000000)
+#define HARDWARE_PREFIX_MIDWAY							(0x1B000000)
+#define HARDWARE_PREFIX_SEGA_GAME_GEAR					(0x12000000)
 
 #define HARDWARE_MISC_PRE90S							(HARDWARE_PREFIX_MISC_PRE90S)
 #define HARDWARE_MISC_POST90S							(HARDWARE_PREFIX_MISC_POST90S)
@@ -428,6 +462,22 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 
 #define HARDWARE_SEGA_MASTER_SYSTEM						(HARDWARE_PREFIX_SEGA_MASTER_SYSTEM)
 
+#define HARDWARE_SMS_MAPPER_CODIES						(0x01)
+#define HARDWARE_SMS_MAPPER_MSX							(0x02)
+#define HARDWARE_SMS_MAPPER_MSX_NEMESIS					(0x03)
+#define HARDWARE_SMS_MAPPER_KOREA    					(0x04)
+#define HARDWARE_SMS_MAPPER_KOREA8K 					(0x05)
+#define HARDWARE_SMS_MAPPER_KOREA16K 					(0x06)
+#define HARDWARE_SMS_MAPPER_4PAK     					(0x07)
+#define HARDWARE_SMS_MAPPER_XIN1     					(0x08)
+#define HARDWARE_SMS_MAPPER_NONE     					(0x0F)
+
+#define HARDWARE_SMS_GG_SMS_MODE						(0x2000)
+#define HARDWARE_SMS_DISPLAY_PAL						(0x4000)
+#define HARDWARE_SMS_JAPANESE							(0x8000)
+
+#define HARDWARE_SEGA_GAME_GEAR							(HARDWARE_PREFIX_SEGA_GAME_GEAR)
+
 #define HARDWARE_SEGA_MEGADRIVE							(HARDWARE_PREFIX_SEGA_MEGADRIVE)
 
 #define HARDWARE_SEGA_SG1000                            (HARDWARE_PREFIX_SEGA_SG1000)
@@ -493,7 +543,7 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 
 #define HARDWARE_GALAXIAN								(HARDWARE_PREFIX_GALAXIAN)
 
-#define HARDWARE_NINTENDO_SNES							(HARDWARE_PREFIX_NINTENDO_SNES)
+//#define HARDWARE_NINTENDO_SNES							(HARDWARE_PREFIX_NINTENDO_SNES)
 
 #define HARWARE_CAPCOM_MISC								(HARDWARE_PREFIX_CAPCOM_MISC)
 

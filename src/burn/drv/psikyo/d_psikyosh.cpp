@@ -290,8 +290,8 @@ static void graphics_bank()
 		if (bank < 0 || bank >= graphics_min_max[1])
 			bank = graphics_min_max[1] - graphics_min_max[0];
 
-		Sh2MapMemory(pPsikyoshTiles + bank, 0x3060000, 0x307ffff, SH2_ROM);
-		Sh2MapMemory(pPsikyoshTiles + bank, 0x4060000, 0x407ffff, SH2_ROM);
+		Sh2MapMemory(pPsikyoshTiles + bank, 0x3060000, 0x307ffff, MAP_ROM);
+		Sh2MapMemory(pPsikyoshTiles + bank, 0x4060000, 0x407ffff, MAP_ROM);
 	}
 }
 
@@ -343,7 +343,7 @@ void __fastcall ps3v1_write_byte(UINT32 address, UINT8 data)
 	{
 		case 0x305ffdc:
 		case 0x305ffdd:
-			if (!(data & 0xc0)) Sh2SetIRQLine(4, SH2_IRQSTATUS_NONE);
+			if (!(data & 0xc0)) Sh2SetIRQLine(4, CPU_IRQSTATUS_NONE);
 		return;
 
 		case 0x5000000:
@@ -435,7 +435,7 @@ void __fastcall ps5_write_byte(UINT32 address, UINT8 data)
 	switch (address)
 	{
 		case 0x405ffdd:
-			if (!(data & 0xc0)) Sh2SetIRQLine(4, SH2_IRQSTATUS_NONE);
+			if (!(data & 0xc0)) Sh2SetIRQLine(4, CPU_IRQSTATUS_NONE);
 		return;
 
 		case 0x3100000:
@@ -535,9 +535,9 @@ static INT32 DrvSynchroniseStream(INT32 nSoundRate)
 static void DrvIRQCallback(INT32, INT32 nStatus)
 {
 	if (nStatus)
-		Sh2SetIRQLine(12, SH2_IRQSTATUS_AUTO);
+		Sh2SetIRQLine(12, CPU_IRQSTATUS_AUTO);
 	else
-		Sh2SetIRQLine(12, SH2_IRQSTATUS_NONE);
+		Sh2SetIRQLine(12, CPU_IRQSTATUS_NONE);
 }
 
 static INT32 DrvDoReset()
@@ -554,6 +554,8 @@ static INT32 DrvDoReset()
 
 	sample_offs = 0;
 	previous_graphics_bank = -1;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -669,12 +671,12 @@ static INT32 DrvInit(INT32 (*LoadCallback)(), INT32 type, INT32 gfx_max, INT32 g
 	{
 		Sh2Init(1);
 		Sh2Open(0);
-		Sh2MapMemory(DrvSh2ROM,			0x00000000, 0x000fffff, SH2_ROM);
-		Sh2MapMemory(DrvSh2ROM + 0x100000,	0x02000000, 0x020fffff, SH2_ROM);
-		Sh2MapMemory(DrvSprRAM,			0x03000000, 0x0300ffff, SH2_RAM);
-		Sh2MapMemory(DrvPalRAM,			0x03040000, 0x0304ffff, SH2_RAM);
-		Sh2MapMemory(DrvZoomRAM,		0x03050000, 0x0305ffff, SH2_ROM);
-		Sh2MapMemory(DrvSh2RAM,			0x06000000, 0x060fffff, SH2_RAM);
+		Sh2MapMemory(DrvSh2ROM,			0x00000000, 0x000fffff, MAP_ROM);
+		Sh2MapMemory(DrvSh2ROM + 0x100000,	0x02000000, 0x020fffff, MAP_ROM);
+		Sh2MapMemory(DrvSprRAM,			0x03000000, 0x0300ffff, MAP_RAM);
+		Sh2MapMemory(DrvPalRAM,			0x03040000, 0x0304ffff, MAP_RAM);
+		Sh2MapMemory(DrvZoomRAM,		0x03050000, 0x0305ffff, MAP_ROM);
+		Sh2MapMemory(DrvSh2RAM,			0x06000000, 0x060fffff, MAP_RAM);
 		Sh2SetReadByteHandler (0,		ps3v1_read_byte);
 		Sh2SetWriteByteHandler(0,		ps3v1_write_byte);
 		Sh2SetWriteWordHandler(0,		ps3v1_write_word);
@@ -682,19 +684,19 @@ static INT32 DrvInit(INT32 (*LoadCallback)(), INT32 type, INT32 gfx_max, INT32 g
 	} else {
 		Sh2Init(1);
 		Sh2Open(0);
-		Sh2MapMemory(DrvSh2ROM,			0x00000000, 0x000fffff, SH2_ROM);
-		Sh2MapMemory(DrvSprRAM,			0x04000000, 0x0400ffff, SH2_RAM);
-		Sh2MapMemory(DrvPalRAM,			0x04040000, 0x0404ffff, SH2_RAM);
-		Sh2MapMemory(DrvZoomRAM,		0x04050000, 0x0405ffff, SH2_ROM);
-		Sh2MapMemory(DrvSh2ROM + 0x100000,	0x05000000, 0x0507ffff, SH2_ROM);
-		Sh2MapMemory(DrvSh2RAM,			0x06000000, 0x060fffff, SH2_RAM);
+		Sh2MapMemory(DrvSh2ROM,			0x00000000, 0x000fffff, MAP_ROM);
+		Sh2MapMemory(DrvSprRAM,			0x04000000, 0x0400ffff, MAP_RAM);
+		Sh2MapMemory(DrvPalRAM,			0x04040000, 0x0404ffff, MAP_RAM);
+		Sh2MapMemory(DrvZoomRAM,		0x04050000, 0x0405ffff, MAP_ROM);
+		Sh2MapMemory(DrvSh2ROM + 0x100000,	0x05000000, 0x0507ffff, MAP_ROM);
+		Sh2MapMemory(DrvSh2RAM,			0x06000000, 0x060fffff, MAP_RAM);
 		Sh2SetReadByteHandler (0,		ps5_read_byte);
 		Sh2SetWriteByteHandler(0,		ps5_write_byte);
 		Sh2SetWriteWordHandler(0,		ps5_write_word);
 		Sh2SetWriteLongHandler(0,		psx_write_long);
 	}
 
-	Sh2MapHandler(1, 0x06000000 | speedhack_address, 0x0600ffff | speedhack_address, SH2_ROM);
+	Sh2MapHandler(1, 0x06000000 | speedhack_address, 0x0600ffff | speedhack_address, MAP_ROM);
 	Sh2SetReadByteHandler (1,		hack_read_byte);
 	Sh2SetReadWordHandler (1,		hack_read_word);
 	Sh2SetReadLongHandler (1,		hack_read_long);
@@ -746,7 +748,7 @@ static INT32 DrvFrame()
 
 	BurnTimerEndFrame(28636350 / 60);
 
-	Sh2SetIRQLine(4, SH2_IRQSTATUS_AUTO);
+	Sh2SetIRQLine(4, CPU_IRQSTATUS_AUTO);
 
 	if (pBurnSoundOut) {
 		BurnYMF278BUpdate(nBurnSoundLen);
@@ -842,7 +844,7 @@ struct BurnDriver BurnDrvSoldivid = {
 	"soldivid", NULL, NULL, NULL, "1997",
 	"Sol Divide - The Sword Of Darkness\0", NULL, "Psikyo", "PS3-V1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_PSIKYO, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PSIKYO, GBF_HORSHOOT, 0,
 	NULL, soldividRomInfo, soldividRomName, NULL, NULL, Common3ButtonInputInfo, SoldividDIPInfo,
 	SoldividInit, DrvExit, DrvFrame, PsikyoshDraw, DrvScan, NULL, 0x1400,
 	320, 224, 4, 3
@@ -912,7 +914,7 @@ struct BurnDriver BurnDrvS1945ii = {
 	"s1945ii", NULL, NULL, NULL, "1997",
 	"Strikers 1945 II\0", NULL, "Psikyo", "PS3-V1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_PSIKYO, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PSIKYO, GBF_VERSHOOT, 0,
 	NULL, s1945iiRomInfo, s1945iiRomName, NULL, NULL, Common2ButtonInputInfo, S1945iiDIPInfo,
 	S1945iiInit, DrvExit, DrvFrame, PsikyoshDraw, DrvScan, NULL, 0x1400,
 	224, 320, 3, 4
@@ -995,7 +997,7 @@ struct BurnDriver BurnDrvDaraku = {
 	"daraku", NULL, NULL, NULL, "1998",
 	"Daraku Tenshi - The Fallen Angels\0", NULL, "Psikyo", "PS3-V1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_PSIKYO, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PSIKYO, GBF_VSFIGHT, 0,
 	NULL, darakuRomInfo, darakuRomName, NULL, NULL, Common4ButtonInputInfo, DarakuDIPInfo,
 	DarakuInit, DrvExit, DrvFrame, PsikyoshDraw, DrvScan, NULL, 0x1400,
 	320, 224, 4, 3
@@ -1087,7 +1089,7 @@ struct BurnDriver BurnDrvSbomber = {
 	"sbomber", NULL, NULL, NULL, "1998",
 	"Space Bomber (ver. B)\0", NULL, "Psikyo", "PS3-V1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_PSIKYO, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PSIKYO, GBF_SHOOT, 0,
 	NULL, sbomberRomInfo, sbomberRomName, NULL, NULL, Common2ButtonInputInfo, S1945iiDIPInfo,
 	SbomberInit, DrvExit, DrvFrame, PsikyoshDraw, DrvScan, NULL, 0x1400,
 	224, 320, 3, 4
@@ -1097,7 +1099,7 @@ struct BurnDriver BurnDrvSbombera = {
 	"sbombera", "sbomber", NULL, NULL, "1998",
 	"Space Bomber\0", NULL, "Psikyo", "PS3-V1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE, 2, HARDWARE_PSIKYO, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PSIKYO, GBF_SHOOT, 0,
 	NULL, sbomberaRomInfo, sbomberaRomName, NULL, NULL, Common2ButtonInputInfo, S1945iiDIPInfo,
 	SbomberInit, DrvExit, DrvFrame, PsikyoshDraw, DrvScan, NULL, 0x1400,
 	224, 320, 3, 4
@@ -1164,7 +1166,7 @@ struct BurnDriver BurnDrvGunbird2 = {
 	"gunbird2", NULL, NULL, NULL, "1998",
 	"Gunbird 2\0", NULL, "Psikyo", "PS5",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_PSIKYO, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PSIKYO, GBF_VERSHOOT, 0,
 	NULL, gunbird2RomInfo, gunbird2RomName, NULL, NULL, Common3ButtonInputInfo, Gunbird2DIPInfo,
 	Gunbird2Init, DrvExit, DrvFrame, PsikyoshDraw, DrvScan, NULL, 0x1400,
 	224, 320, 3, 4
@@ -1225,7 +1227,7 @@ struct BurnDriver BurnDrvS1945iii = {
 	"s1945iii", NULL, NULL, NULL, "1999",
 	"Strikers 1945 III (World) / Strikers 1999 (Japan)\0", NULL, "Psikyo", "PS5",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_PSIKYO, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PSIKYO, GBF_VERSHOOT, 0,
 	NULL, s1945iiiRomInfo, s1945iiiRomName, NULL, NULL, Common3ButtonInputInfo, S1945iiiDIPInfo,
 	S1945iiiInit, DrvExit, DrvFrame, PsikyoshDraw, DrvScan, NULL, 0x1400,
 	224, 320, 3, 4
@@ -1261,7 +1263,7 @@ static struct BurnRomInfo dragnblzRomDesc[] = {
 
 	{ "snd0.u52",		0x200000, 0x7fd1b225, 3 | BRF_SND },           // 22 Samples
 	
-	{ "eeprom-dragnblz.bin",0x000100, 0x70a8a3a6,     BRF_OPT },
+	{ "eeprom-dragnblz.u44",0x000100, 0x46e85da9,     BRF_OPT },
 };
 
 STD_ROM_PICK(dragnblz)
@@ -1321,7 +1323,7 @@ struct BurnDriver BurnDrvDragnblz = {
 	"dragnblz", NULL, NULL, NULL, "2000",
 	"Dragon Blaze\0", NULL, "Psikyo", "PS5V2",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_PSIKYO, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PSIKYO, GBF_VERSHOOT, 0,
 	NULL, dragnblzRomInfo, dragnblzRomName, NULL, NULL, Common3ButtonInputInfo, DragnblzDIPInfo,
 	DragnblzInit, DrvExit, DrvFrame, PsikyoshDraw, DrvScan, NULL, 0x1400,
 	224, 320, 3, 4
@@ -1393,7 +1395,7 @@ struct BurnDriver BurnDrvGnbarich = {
 	"gnbarich", NULL, NULL, NULL, "2001",
 	"Gunbarich\0", NULL, "Psikyo", "PS5V2",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_PSIKYO, GBF_BREAKOUT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PSIKYO, GBF_BREAKOUT, 0,
 	NULL, gnbarichRomInfo, gnbarichRomName, NULL, NULL, Common3ButtonInputInfo, S1945iiiDIPInfo,
 	GnbarichInit, DrvExit, DrvFrame, PsikyoshDraw, DrvScan, NULL, 0x1400,
 	224, 320, 3, 4
@@ -1417,7 +1419,7 @@ static struct BurnRomInfo mjgtasteRomDesc[] = {
 
 	{ "snd0.u52",		0x400000, 0x0179f018, 3 | BRF_SND },           // 10 Samples
 	
-	{ "eeprom-mjgtaste.bin",0x000100, 0xbbf7cfae,     BRF_OPT },
+	{ "eeprom-mjgtaste.u44",0x000100, 0xd35586f2,     BRF_OPT },
 };
 
 STD_ROM_PICK(mjgtaste)
@@ -1463,7 +1465,7 @@ struct BurnDriver BurnDrvMjgtaste = {
 	"mjgtaste", NULL, NULL, NULL, "2002",
 	"Mahjong G-Taste\0", NULL, "Psikyo", "PS5V2",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_PSIKYO, GBF_MAHJONG, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PSIKYO, GBF_MAHJONG, 0,
 	NULL, mjgtasteRomInfo, mjgtasteRomName, NULL, NULL, Common3ButtonInputInfo, Tgm2DIPInfo,
 	MjgtasteInit, DrvExit, DrvFrame, PsikyoshDraw, DrvScan, NULL, 0x1400,
 	320, 224, 4, 3
@@ -1545,7 +1547,7 @@ struct BurnDriver BurnDrvTgm2 = {
 	"tgm2", NULL, NULL, NULL, "2000",
 	"Tetris the Absolute The Grand Master 2\0", NULL, "Arika", "PS5V2",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_PSIKYO, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PSIKYO, GBF_PUZZLE, 0,
 	NULL, tgm2RomInfo, tgm2RomName, NULL, NULL, Common3ButtonInputInfo, Tgm2DIPInfo,
 	Tgm2Init, DrvExit, DrvFrame, PsikyoshDraw, DrvScan, NULL, 0x1400,
 	320, 240, 4, 3
@@ -1598,7 +1600,7 @@ struct BurnDriver BurnDrvTgm2p = {
 	"tgm2p", "tgm2", NULL, NULL, "2000",
 	"Tetris the Absolute The Grand Master 2 Plus\0", NULL, "Arika", "PS5V2",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PSIKYO, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PSIKYO, GBF_PUZZLE, 0,
 	NULL, tgm2pRomInfo, tgm2pRomName, NULL, NULL, Common3ButtonInputInfo, Tgm2DIPInfo,
 	Tgm2pInit, DrvExit, DrvFrame, PsikyoshDraw, DrvScan, NULL, 0x1400,
 	320, 240, 4, 3

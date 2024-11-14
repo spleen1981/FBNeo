@@ -420,6 +420,8 @@ static INT32 DrvDoReset()
 
 	BurnYM2151Reset();
 
+	HiscoreReset();
+
 	v25_reset = 1;
 
 	return 0;
@@ -472,10 +474,10 @@ static INT32 DrvInit()
 	{
 		SekInit(0, 0x68000);									// Allocate 68000
 		SekOpen(0);
-		SekMapMemory(Rom01,		0x000000, 0x07FFFF, SM_ROM);	// CPU 0 ROM
-		SekMapMemory(Ram01,		0x100000, 0x103FFF, SM_RAM);
-	//	SekMapMemory(ShareRAM,		0x210000, 0x21ffff, SM_RAM);
-		SekMapMemory(RamPal,		0x400000, 0x400FFF, SM_RAM);	// Palette RAM
+		SekMapMemory(Rom01,		0x000000, 0x07FFFF, MAP_ROM);	// CPU 0 ROM
+		SekMapMemory(Ram01,		0x100000, 0x103FFF, MAP_RAM);
+	//	SekMapMemory(ShareRAM,		0x210000, 0x21ffff, MAP_RAM);
+		SekMapMemory(RamPal,		0x400000, 0x400FFF, MAP_RAM);	// Palette RAM
 		SekSetReadWordHandler(0, vfiveReadWord);
 		SekSetReadByteHandler(0, vfiveReadByte);
 		SekSetWriteWordHandler(0, vfiveWriteWord);
@@ -610,7 +612,7 @@ static INT32 DrvFrame()
 			ToaBufferGP9001Sprites();
 
 			// Trigger VBlank interrupt
-			SekSetIRQLine(2, SEK_IRQSTATUS_AUTO);
+			SekSetIRQLine(2, CPU_IRQSTATUS_AUTO);
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
@@ -657,7 +659,7 @@ struct BurnDriver BurnDrvVFive = {
 	"vfive", "grindstm", NULL, NULL, "1993",
 	"V-Five (Japan)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
 	NULL, vfiveRomInfo, vfiveRomName, NULL, NULL, vfiveInputInfo, vfiveDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -667,7 +669,7 @@ struct BurnDriver BurnDrvGrindStormer = {
 	"grindstm", NULL, NULL, NULL, "1992",
 	"Grind Stormer\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
 	NULL, grindstmRomInfo, grindstmRomName, NULL, NULL, vfiveInputInfo, grindstmDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -677,7 +679,7 @@ struct BurnDriver BurnDrvGrindStormerA = {
 	"grindstma", "grindstm", NULL, NULL, "1992",
 	"Grind Stormer (older set)\0", NULL, "Toaplan GP9001 based", "Toaplan",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
 	NULL, grindstaRomInfo, grindstaRomName, NULL, NULL, vfiveInputInfo, grindstmDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4

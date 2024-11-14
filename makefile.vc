@@ -107,7 +107,11 @@ ifdef UNICODE
 # lib	= unicows.lib
 endif
 
-lib	+=	user32.lib gdi32.lib comdlg32.lib comctl32.lib shell32.lib winmm.lib ole32.lib shlwapi.lib advapi32.lib setupapi.lib
+lib	+=	user32.lib gdi32.lib comdlg32.lib comctl32.lib shell32.lib winmm.lib ole32.lib shlwapi.lib advapi32.lib setupapi.lib wininet.lib
+
+ifdef INCLUDE_AVI_RECORDING
+lib +=	vfw32.lib
+endif
 
 ifdef	BUILD_X86_ASM
 autobj += hq3xs.o hq_shared32.o
@@ -128,7 +132,7 @@ psikyo_tile_func.h = $(srcdir)dep/generated/psikyo_tile_func.h
 pgm_sprite.h = $(srcdir)dep/generated/pgm_sprite.h
 build_details.h = $(srcdir)dep/generated/build_details.h
 
-allobj	= $(objdir)cpu/m68k/m68kcpu.o $(objdir)cpu/m68k/m68kopnz.o $(objdir)cpu/m68k/m68kopdm.o $(objdir)cpu/m68k/m68kopac.o $(objdir)cpu/m68k/m68kops.o $(objdir)burner/win32/resource.res \
+allobj	= $(objdir)cpu/m68k/m68kcpu.o $(objdir)cpu/m68k/m68kops.o $(objdir)burner/win32/resource.res \
 	  $(foreach file,$(autobj:.o=.c), \
 		$(foreach dir,$(alldir),$(subst $(srcdir),$(objdir), \
 		$(firstword $(subst .c,.o,$(wildcard $(srcdir)$(dir)/$(file))))))) \
@@ -195,6 +199,10 @@ ifdef INCLUDE_7Z_SUPPORT
 	DEF := $(DEF) /DINCLUDE_7Z_SUPPORT
 endif
 
+ifdef INCLUDE_AVI_RECORDING
+	DEF := $(DEF) /DINCLUDE_AVI_RECORDING
+endif
+
 ifdef TOAPLAN_SOUND_SAMPLES_HACK
 	DEF := $(DEF) /DTOAPLAN_SOUND_SAMPLES_HACK
 endif
@@ -217,6 +225,9 @@ endif
 
 ifdef BUILD_X64_EXE
 	DEF := $(DEF) /DBUILD_X64_EXE
+ifdef INCLUDE_CPLUSPLUS11_FILES
+	DEF := $(DEF) /DXBYAK_NO_OP_NAMES /DMIPS3_X64_DRC
+endif
 endif
 
 ifdef BUILD_VS_XP_TARGET
@@ -236,7 +247,7 @@ else
 endif
 
 else
-	CFLAGS	 = /nologo /w /O2 /Ox /Oi /Ot /Oy /Ob2 /GF /Gs /Gy /GL /Zc:forScope /MT /EHsc
+	CFLAGS	 = /nologo /w /Oi /Ot /Oy /Ob2 /GF /Gs /Gy /GL /Zc:forScope /MT /EHsc
 	LDFLAGS += /LTCG:STATUS
 endif
 

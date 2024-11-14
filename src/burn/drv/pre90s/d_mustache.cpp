@@ -212,6 +212,8 @@ static INT32 DrvDoReset()
 	video_control = 0;
 	flipscreen = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -395,12 +397,12 @@ static INT32 DrvInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapMemory(DrvZ80ROM,		0x0000, 0xbfff, ZET_ROM);
-	ZetMapMemory(DrvZ80ROMDec,	0x0000, 0x7fff, ZET_FETCHOP);
-	ZetMapMemory(DrvVidRAM,		0xc000, 0xcfff, ZET_RAM);
-	ZetMapMemory(t5182SharedRAM,	0xd400, 0xd4ff, ZET_RAM);
-	ZetMapMemory(DrvSprRAM,		0xe800, 0xefff, ZET_RAM);
-	ZetMapMemory(DrvZ80RAM,		0xf000, 0xffff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM,		0x0000, 0xbfff, MAP_ROM);
+	ZetMapMemory(DrvZ80ROMDec,	0x0000, 0x7fff, MAP_FETCHOP);
+	ZetMapMemory(DrvVidRAM,		0xc000, 0xcfff, MAP_RAM);
+	ZetMapMemory(t5182SharedRAM,	0xd400, 0xd4ff, MAP_RAM);
+	ZetMapMemory(DrvSprRAM,		0xe800, 0xefff, MAP_RAM);
+	ZetMapMemory(DrvZ80RAM,		0xf000, 0xffff, MAP_RAM);
 	ZetSetWriteHandler(mustache_main_write);
 	ZetSetReadHandler(mustache_main_read);
 	ZetClose();
@@ -548,12 +550,12 @@ static INT32 DrvFrame()
 
 		if (i == 0) {
 			ZetSetVector(0x08);
-			ZetSetIRQLine(0, ZET_IRQSTATUS_AUTO);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		}
 
 		if (i == 12) {
 			ZetSetVector(0x10);
-			ZetSetIRQLine(0, ZET_IRQSTATUS_AUTO);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		}
 
 		ZetClose();
@@ -629,7 +631,11 @@ static struct BurnRomInfo mustacheRomDesc[] = {
 	{ "mustache.h18",	0x8000, 0x123bd9b8, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
 	{ "mustache.h16",	0x4000, 0x62552beb, 1 | BRF_PRG | BRF_ESS }, //  1
 
-	{ "t5182.rom",		0x2000, 0xd354c8fc, 2 | BRF_PRG | BRF_ESS }, //  2 t5182 (Z80) Code
+#if !defined (ROM_VERIFY)
+	{ "t5182.rom",		0x2000, 0xd354c8fc, 2 | BRF_PRG | BRF_ESS }, //  2 t5182 (Z80 #1) Code
+#else
+	{ "",				0x0000, 0x00000000, 2 | BRF_PRG | BRF_ESS }, //  2 t5182 (Z80 #1) Code
+#endif
 	{ "mustache.e5",	0x8000, 0xefbb1943, 2 | BRF_PRG | BRF_ESS }, //  3
 
 	{ "mustache.a13",	0x4000, 0x9baee4a7, 3 | BRF_GRA },           //  4 Background Tiles
@@ -655,7 +661,7 @@ struct BurnDriver BurnDrvMustache = {
 	"mustache", NULL, NULL, NULL, "1987",
 	"Mustache Boy\0", NULL, "Seibu Kaihatsu (March license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, mustacheRomInfo, mustacheRomName, NULL, NULL, MustacheInputInfo, MustacheDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	248, 240, 3, 4

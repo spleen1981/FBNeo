@@ -157,7 +157,7 @@ STDDIPINFO(Sdgndmps)
 void __fastcall dcon_main_write_word(UINT32 address, UINT16 data)
 {
 	if ((address & 0xfffff0) == 0x0a0000) {
-		seibu_main_word_write(address, data);
+		seibu_main_word_write(address & 0xf, data);
 		return;
 	}
 
@@ -180,7 +180,7 @@ void __fastcall dcon_main_write_word(UINT32 address, UINT16 data)
 UINT16 __fastcall dcon_main_read_word(UINT32 address)
 {
 	if ((address & 0xfffff0) == 0x0a0000) {
-		return seibu_main_word_read(address);
+		return seibu_main_word_read(address & 0xf);
 	}
 
 	switch (address)
@@ -352,14 +352,14 @@ static INT32 DrvInit()
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KROM,		0x000000, 0x07ffff, SM_ROM);
-	SekMapMemory(Drv68KRAM,		0x080000, 0x08bfff, SM_RAM);
-	SekMapMemory(DrvBgRAM,		0x08c000, 0x08c7ff, SM_RAM);
-	SekMapMemory(DrvFgRAM,		0x08c800, 0x08cfff, SM_RAM);
-	SekMapMemory(DrvMgRAM,		0x08d000, 0x08d7ff, SM_RAM);
-	SekMapMemory(DrvTxRAM,		0x08d800, 0x08e7ff, SM_RAM);
-	SekMapMemory(DrvPalRAM,		0x08e800, 0x08f7ff, SM_RAM);
-	SekMapMemory(DrvSprRAM,		0x08f800, 0x08ffff, SM_RAM);
+	SekMapMemory(Drv68KROM,		0x000000, 0x07ffff, MAP_ROM);
+	SekMapMemory(Drv68KRAM,		0x080000, 0x08bfff, MAP_RAM);
+	SekMapMemory(DrvBgRAM,		0x08c000, 0x08c7ff, MAP_RAM);
+	SekMapMemory(DrvFgRAM,		0x08c800, 0x08cfff, MAP_RAM);
+	SekMapMemory(DrvMgRAM,		0x08d000, 0x08d7ff, MAP_RAM);
+	SekMapMemory(DrvTxRAM,		0x08d800, 0x08e7ff, MAP_RAM);
+	SekMapMemory(DrvPalRAM,		0x08e800, 0x08f7ff, MAP_RAM);
+	SekMapMemory(DrvSprRAM,		0x08f800, 0x08ffff, MAP_RAM);
 	SekSetWriteWordHandler(0,	dcon_main_write_word);
 	SekSetReadWordHandler(0,	dcon_main_read_word);
 	SekClose();
@@ -613,7 +613,7 @@ static INT32 DrvFrame()
 	}
 
 	INT32 nSegment;
-	INT32 nInterleave = 100;
+	INT32 nInterleave = 256;
 	INT32 nSoundBufferPos = 0;
 	INT32 nTotalCycles[2] = { 10000000 / 60, 3579545 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
@@ -627,6 +627,10 @@ static INT32 DrvFrame()
 		{
 			SekRun(nTotalCycles[0] / nInterleave);
 			ZetRun(nTotalCycles[1] / nInterleave);
+
+			if (i == 240) {
+				SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
+			}
 			
 			if (pBurnSoundOut) {
 				INT32 nSegmentLength = nBurnSoundLen / nInterleave;
@@ -644,13 +648,15 @@ static INT32 DrvFrame()
 
 			nCyclesDone[0] += SekRun(nSegment);
 
-			BurnTimerUpdateYM3812(i * (nTotalCycles[1] / nInterleave));
+			BurnTimerUpdateYM3812((i + 1) * (nTotalCycles[1] / nInterleave));
+
+			if (i == 240) {
+				SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
+			}
 		}
 
 		BurnTimerEndFrameYM3812(nTotalCycles[1]);
 	}
-
-	SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
 
 	if (pBurnSoundOut && !is_sdgndmps) {
 		seibu_sound_update(pBurnSoundOut, nBurnSoundLen);

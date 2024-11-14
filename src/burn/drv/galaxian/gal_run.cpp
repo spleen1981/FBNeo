@@ -78,6 +78,7 @@ UINT8 GameIsGmgalax;
 UINT8 GameIsBagmanmc;
 UINT8 CavelonBankSwitch;
 UINT8 GalVBlank;
+UINT8 Dingo;
 
 static inline void GalMakeInputs()
 {
@@ -841,7 +842,17 @@ void __fastcall JumpbugZ80Write(UINT16 a, UINT8 d)
 			AY8910Write(0, 0, d);
 			return;
 		}
-		
+
+		case 0x2600:
+		case 0x6000:
+		case 0x6001:
+		case 0x6803:
+		case 0x6805:
+		case 0xb000:
+		case 0xb004:
+			// ??? unknown writes
+			return;
+
 		case 0x6002:
 		case 0x6003:
 		case 0x6004:
@@ -1537,6 +1548,7 @@ INT32 GalExit()
 	GalBackgroundEnable = 0;
 	ScrambleProtectionState = 0;
 	ScrambleProtectionResult = 0;
+	Dingo = 0;
 	
 	GalZ80Rom1Size = 0;
 	GalZ80Rom1Num = 0;
@@ -1650,7 +1662,7 @@ INT32 GalFrame()
 			nGalCyclesDone[nCurrentCPU] += ZetRun(nGalCyclesSegment);
 			if (i == nIrqInterleaveFire && GalIrqFire) {
 				if (GalIrqType == GAL_IRQ_TYPE_NMI) ZetNmi();
-				if (GalIrqType == GAL_IRQ_TYPE_IRQ0) ZetRaiseIrq(0);
+				if (GalIrqType == GAL_IRQ_TYPE_IRQ0) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 				GalIrqFire = 0;
 			}
 			ZetClose();
@@ -1663,11 +1675,12 @@ INT32 GalFrame()
 			nNext = (i + 1) * nGalCyclesTotal[nCurrentCPU] / nInterleave;
 			nGalCyclesSegment = nNext - nGalCyclesDone[nCurrentCPU];
 			nGalCyclesDone[nCurrentCPU] += ZetRun(nGalCyclesSegment);
-			if (GalSoundType == GAL_SOUND_HARDWARE_TYPE_CHECKMANAY8910) ZetRaiseIrq(0);
+			if (GalSoundType == GAL_SOUND_HARDWARE_TYPE_CHECKMANAY8910) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 			ZetClose();
 		}
 			
 		if (GalSoundType == GAL_SOUND_HARDWARE_TYPE_CHECKMAJAY8910) {
+			if (Dingo && !((i%2) == 0)) continue; // slow down dingo music a bit.
 			// Run Z80 #2
 			nCurrentCPU = 1;
 			ZetOpen(nCurrentCPU);
@@ -1675,10 +1688,7 @@ INT32 GalFrame()
 			nGalCyclesSegment = nNext - nGalCyclesDone[nCurrentCPU];
 			nGalCyclesSegment = ZetRun(nGalCyclesSegment);
 			nGalCyclesDone[nCurrentCPU] += nGalCyclesSegment;
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
-			nGalCyclesDone[nCurrentCPU] += ZetRun(300);
-			ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
-			nGalCyclesDone[nCurrentCPU] += ZetRun(300);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 			ZetClose();
 		}
 			
@@ -1701,9 +1711,9 @@ INT32 GalFrame()
 			nGalCyclesDone[nCurrentCPU] += s2650Run(nGalCyclesSegment);
 			if (i == nIrqInterleaveFire) {
 				GalVBlank = 1;
-				s2650SetIRQLine(0, S2650_IRQSTATUS_ACK);
+				s2650SetIRQLine(0, CPU_IRQSTATUS_ACK);
 				s2650Run(0);
-				s2650SetIRQLine(0, S2650_IRQSTATUS_NONE);
+				s2650SetIRQLine(0, CPU_IRQSTATUS_NONE);
 				s2650Run(0);
 			}
 			s2650Close();
@@ -1716,7 +1726,7 @@ INT32 GalFrame()
 			nNext = (i + 1) * nGalCyclesTotal[nCurrentCPU] / nInterleave;
 			nGalCyclesSegment = nNext - nGalCyclesDone[nCurrentCPU];
 			nGalCyclesDone[nCurrentCPU] += ZetRun(nGalCyclesSegment);
-			if (HunchbksSoundIrqFire) ZetRaiseIrq(0);
+			if (HunchbksSoundIrqFire) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 			ZetClose();
 		}
 		

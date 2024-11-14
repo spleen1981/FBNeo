@@ -132,7 +132,7 @@ static void bankswitch(INT32 cpu, INT32 data)
 	{
 		nBank[cpu] = (data & 0x0f);
 
-		ZetMapMemory((cpu ? DrvZ80ROM1 : DrvZ80ROM0) + ((nBank[cpu] - 2) * 0x4000) + 0x8000, 0x8000, 0xbfff, ZET_ROM);
+		ZetMapMemory((cpu ? DrvZ80ROM1 : DrvZ80ROM0) + ((nBank[cpu] - 2) * 0x4000) + 0x8000, 0x8000, 0xbfff, MAP_ROM);
 	}
 
 	*flipscreen = data & 0x40;
@@ -252,7 +252,7 @@ static UINT8 __fastcall exzisus_sound_read(UINT16 address)
 
 static void exzisusYM2151IrqHandler(INT32 state)
 {
-	ZetSetIRQLine(0, (state) ? ZET_IRQSTATUS_ACK : ZET_IRQSTATUS_NONE);
+	ZetSetIRQLine(0, (state) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 }
 
 static INT32 DrvDoReset()
@@ -276,6 +276,8 @@ static INT32 DrvDoReset()
 	BurnYM2151Reset();
 	TC0140SYTReset();
 	ZetClose();
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -423,38 +425,38 @@ static INT32 DrvInit(INT32 bigcolprom)
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapMemory(DrvZ80ROM0,	0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvSharedRAMAC,	0xe000, 0xefff, ZET_RAM);
-	ZetMapMemory(DrvObjRAM1,	0xc000, 0xc5ff, ZET_RAM);
-	ZetMapMemory(DrvVidRAM1,	0xc600, 0xdfff, ZET_RAM);
-	ZetMapMemory(DrvSharedRAMAB,	0xf800, 0xffff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM0,	0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvSharedRAMAC,	0xe000, 0xefff, MAP_RAM);
+	ZetMapMemory(DrvObjRAM1,	0xc000, 0xc5ff, MAP_RAM);
+	ZetMapMemory(DrvVidRAM1,	0xc600, 0xdfff, MAP_RAM);
+	ZetMapMemory(DrvSharedRAMAB,	0xf800, 0xffff, MAP_RAM);
 	ZetSetWriteHandler(exzisus_main_write);
 	ZetClose();
 
 	ZetInit(1);
 	ZetOpen(1);
-	ZetMapMemory(DrvZ80ROM1,	0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvObjRAM0,	0xc000, 0xc5ff, ZET_RAM);
-	ZetMapMemory(DrvVidRAM0,	0xc600, 0xdfff, ZET_RAM);
-	ZetMapMemory(DrvZ80RAM1,	0xe000, 0xefff, ZET_RAM);
-	ZetMapMemory(DrvSharedRAMAB,	0xf800, 0xffff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM1,	0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvObjRAM0,	0xc000, 0xc5ff, MAP_RAM);
+	ZetMapMemory(DrvVidRAM0,	0xc600, 0xdfff, MAP_RAM);
+	ZetMapMemory(DrvZ80RAM1,	0xe000, 0xefff, MAP_RAM);
+	ZetMapMemory(DrvSharedRAMAB,	0xf800, 0xffff, MAP_RAM);
 	ZetSetWriteHandler(exzisus_cpub_write);
 	ZetSetReadHandler(exzisus_cpub_read);
 	ZetClose();
 
 	ZetInit(2);
 	ZetOpen(2);
-	ZetMapMemory(DrvZ80ROM2,	0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvObjRAM1,	0x8000, 0x85ff, ZET_RAM);
-	ZetMapMemory(DrvVidRAM1,	0x8600, 0x9fff, ZET_RAM);
-	ZetMapMemory(DrvSharedRAMAC,	0xa000, 0xafff, ZET_RAM);
-	ZetMapMemory(DrvZ80RAM2,	0xb000, 0xbfff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM2,	0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvObjRAM1,	0x8000, 0x85ff, MAP_RAM);
+	ZetMapMemory(DrvVidRAM1,	0x8600, 0x9fff, MAP_RAM);
+	ZetMapMemory(DrvSharedRAMAC,	0xa000, 0xafff, MAP_RAM);
+	ZetMapMemory(DrvZ80RAM2,	0xb000, 0xbfff, MAP_RAM);
 	ZetClose();
 
 	ZetInit(3);
 	ZetOpen(3);
-	ZetMapMemory(DrvZ80ROM3,	0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvZ80RAM3,	0x8000, 0x8fff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM3,	0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80RAM3,	0x8000, 0x8fff, MAP_RAM);
 	ZetSetWriteHandler(exzisus_sound_write);
 	ZetSetReadHandler(exzisus_sound_read);
 	ZetClose();
@@ -612,7 +614,7 @@ static INT32 DrvFrame()
 
 		nSegment = nCyclesTotal[0] / nInterleave;
 		nCyclesDone[0] += ZetRun(nSegment);
-		if (i == (nInterleave - 1)) ZetSetIRQLine(0, ZET_IRQSTATUS_AUTO);
+		if (i == (nInterleave - 1)) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 
 		nSegment = ZetTotalCycles();
 
@@ -620,12 +622,12 @@ static INT32 DrvFrame()
 
 		ZetOpen(1);
 		nCyclesDone[0] += ZetRun(nSegment - ZetTotalCycles());
-		if (i == (nInterleave - 1)) ZetSetIRQLine(0, ZET_IRQSTATUS_AUTO);
+		if (i == (nInterleave - 1)) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		ZetClose();
 
 		ZetOpen(2);
 		nCyclesDone[0] += ZetRun(nSegment - ZetTotalCycles());
-		if (i == (nInterleave - 1)) ZetSetIRQLine(0, ZET_IRQSTATUS_AUTO);
+		if (i == (nInterleave - 1)) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		ZetClose();
 
 		ZetOpen(3);
@@ -746,7 +748,7 @@ struct BurnDriver BurnDrvExzisus = {
 	"exzisus", NULL, NULL, NULL, "1987",
 	"Exzisus (Japan, dedicated)\0", NULL, "Taito Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
 	NULL, exzisusRomInfo, exzisusRomName, NULL, NULL, ExzisusInputInfo, ExzisusDIPInfo,
 	exzisusInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	256, 224, 4, 3
@@ -796,7 +798,7 @@ struct BurnDriver BurnDrvExzisusa = {
 	"exzisusa", "exzisus", NULL, NULL, "1987",
 	"Exzisus (Japan, conversion)\0", NULL, "Taito Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
 	NULL, exzisusaRomInfo, exzisusaRomName, NULL, NULL, ExzisusInputInfo, ExzisusDIPInfo,
 	exzisusaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	256, 224, 4, 3
@@ -841,7 +843,7 @@ struct BurnDriver BurnDrvExzisust = {
 	"exzisust", "exzisus", NULL, NULL, "1987",
 	"Exzisus (TAD license)\0", NULL, "Taito Corporation (TAD license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
 	NULL, exzisustRomInfo, exzisustRomName, NULL, NULL, ExzisusInputInfo, ExzisusDIPInfo,
 	exzisusaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	256, 224, 4, 3

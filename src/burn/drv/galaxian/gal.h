@@ -71,6 +71,7 @@ extern UINT8 GalPaletteBank;
 extern UINT8 GalSpriteClipStart;
 extern UINT8 GalSpriteClipEnd;
 extern UINT8 FroggerAdjust;
+extern UINT8 Dingo;
 extern UINT8 GalBackgroundRed;
 extern UINT8 GalBackgroundGreen;
 extern UINT8 GalBackgroundBlue;
@@ -174,6 +175,7 @@ void DambustrRenderFrame();
 void FantastcRenderFrame();
 void TimefgtrRenderFrame();
 void ScramblerRenderFrame();
+void ZigZagRenderFrame();
 
 // gal_run.cpp
 extern UINT8 GalInputPort0[8];

@@ -159,7 +159,7 @@ void __fastcall boogwing_main_write_byte(UINT32 address, UINT8 data)
 
 		case 0x24e151:
 			deco16_soundlatch = data;
-			h6280SetIRQLine(0, H6280_IRQSTATUS_ACK);
+			h6280SetIRQLine(0, CPU_IRQSTATUS_ACK);
 		break;
 
 		case 0x282008:
@@ -195,7 +195,7 @@ void __fastcall boogwing_main_write_word(UINT32 address, UINT16 data)
 
 		case 0x24e150:
 			deco16_soundlatch = data & 0xff;
-			h6280SetIRQLine(0, H6280_IRQSTATUS_ACK);
+			h6280SetIRQLine(0, CPU_IRQSTATUS_ACK);
 		break;
 
 		case 0x282008:
@@ -432,20 +432,20 @@ static INT32 DrvInit()
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KROM,			0x000000, 0x0fffff, SM_READ);
-	SekMapMemory(Drv68KCode,		0x000000, 0x0fffff, SM_FETCH);
-	SekMapMemory(Drv68KRAM,			0x200000, 0x20ffff, SM_RAM);
-	SekMapMemory(DrvSprRAM,			0x242000, 0x2427ff, SM_RAM);
-	SekMapMemory(DrvSprRAM1,		0x246000, 0x2467ff, SM_RAM);
-	SekMapMemory(deco16_pf_ram[0],		0x264000, 0x265fff, SM_RAM);
-	SekMapMemory(deco16_pf_ram[1],		0x266000, 0x267fff, SM_RAM);
-	SekMapMemory(deco16_pf_rowscroll[0],	0x268000, 0x268fff, SM_RAM);
-	SekMapMemory(deco16_pf_rowscroll[1],	0x26a000, 0x26afff, SM_RAM);
-	SekMapMemory(deco16_pf_ram[2],		0x274000, 0x275fff, SM_RAM);
-	SekMapMemory(deco16_pf_ram[3],		0x276000, 0x277fff, SM_RAM);
-	SekMapMemory(deco16_pf_rowscroll[2],	0x278000, 0x278fff, SM_RAM);
-	SekMapMemory(deco16_pf_rowscroll[3],	0x27a000, 0x27afff, SM_RAM);
-	SekMapMemory(DrvPalRAM,			0x284000, 0x285fff, SM_RAM);
+	SekMapMemory(Drv68KROM,			0x000000, 0x0fffff, MAP_READ);
+	SekMapMemory(Drv68KCode,		0x000000, 0x0fffff, MAP_FETCH);
+	SekMapMemory(Drv68KRAM,			0x200000, 0x20ffff, MAP_RAM);
+	SekMapMemory(DrvSprRAM,			0x242000, 0x2427ff, MAP_RAM);
+	SekMapMemory(DrvSprRAM1,		0x246000, 0x2467ff, MAP_RAM);
+	SekMapMemory(deco16_pf_ram[0],		0x264000, 0x265fff, MAP_RAM);
+	SekMapMemory(deco16_pf_ram[1],		0x266000, 0x267fff, MAP_RAM);
+	SekMapMemory(deco16_pf_rowscroll[0],	0x268000, 0x268fff, MAP_RAM);
+	SekMapMemory(deco16_pf_rowscroll[1],	0x26a000, 0x26afff, MAP_RAM);
+	SekMapMemory(deco16_pf_ram[2],		0x274000, 0x275fff, MAP_RAM);
+	SekMapMemory(deco16_pf_ram[3],		0x276000, 0x277fff, MAP_RAM);
+	SekMapMemory(deco16_pf_rowscroll[2],	0x278000, 0x278fff, MAP_RAM);
+	SekMapMemory(deco16_pf_rowscroll[3],	0x27a000, 0x27afff, MAP_RAM);
+	SekMapMemory(DrvPalRAM,			0x284000, 0x285fff, MAP_RAM);
 	SekSetWriteWordHandler(0,		boogwing_main_write_word);
 	SekSetWriteByteHandler(0,		boogwing_main_write_byte);
 	SekSetReadWordHandler(0,		boogwing_main_read_word);
@@ -733,7 +733,7 @@ static INT32 DrvFrame()
 		}
 	}
 
-	SekSetIRQLine(6, SEK_IRQSTATUS_AUTO);
+	SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
 	
 	if (pBurnSoundOut) {
 		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
@@ -830,6 +830,53 @@ struct BurnDriver BurnDrvBoogwing = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_HORSHOOT, 0,
 	NULL, boogwingRomInfo, boogwingRomName, NULL, NULL, BoogwingInputInfo, BoogwingDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 240, 4, 3
+};
+
+
+// Boogie Wings (USA v1.7, 92.12.14)
+
+static struct BurnRomInfo boogwinguRomDesc[] = {
+	{ "kl_00.2b",		0x040000, 0x4dc14798,  1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "kl_02.2e",		0x040000, 0x3bb3b0a0,  1 | BRF_PRG | BRF_ESS }, //  1
+	{ "kl_01.4b",		0x040000, 0xd109ba13,  1 | BRF_PRG | BRF_ESS }, //  2
+	{ "kl_03.4e",		0x040000, 0xfef2a176,  1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "kl06.18p",		0x010000, 0x3e8bc4e1,  2 | BRF_PRG | BRF_ESS }, //  4 Huc6280 Code
+
+	{ "kl05.9e",		0x010000, 0xd10aef95,  3 | BRF_GRA },           //  5 Characters
+	{ "kl04.8e",		0x010000, 0x329323a8,  3 | BRF_GRA },           //  6
+
+	{ "mbd-01.9b",		0x100000, 0xd7de4f4b,  4 | BRF_GRA },           //  7 Foreground Tiles
+	{ "mbd-00.8b",		0x100000, 0xadb20ba9,  4 | BRF_GRA },           //  8
+	{ "mbd-02.10e",		0x080000, 0xb25aa721,  4 | BRF_GRA },           //  9
+
+	{ "mbd-03.13b",		0x100000, 0xcf798f2c,  5 | BRF_GRA },           // 10 Background Tiles
+	{ "mbd-04.14b",		0x100000, 0xd9764d0b,  5 | BRF_GRA },           // 11
+
+	{ "mbd-05.16b",		0x200000, 0x1768c66a,  6 | BRF_GRA },           // 12 Sprite Bank A
+	{ "mbd-06.17b",		0x200000, 0x7750847a,  6 | BRF_GRA },           // 13
+
+	{ "mbd-07.18b",		0x200000, 0x241faac1,  7 | BRF_GRA },           // 14 Sprite Bank B
+	{ "mbd-08.19b",		0x200000, 0xf13b1e56,  7 | BRF_GRA },           // 15
+
+	{ "mbd-10.17p",		0x080000, 0xf159f76a,  8 | BRF_SND },           // 16 OKI M6295 Samples 0
+
+	{ "mbd-09.16p",		0x080000, 0xf44f2f87,  9 | BRF_SND },           // 17 OKI M6295 Samples 1
+
+	{ "kj-00.15n",		0x000400, 0xadd4d50b, 10 | BRF_OPT },           // 18 Unknown PROMs
+};
+
+STD_ROM_PICK(boogwingu)
+STD_ROM_FN(boogwingu)
+
+struct BurnDriver BurnDrvBoogwingu = {
+	"boogwingu", "boogwing", NULL, NULL, "1992",
+	"Boogie Wings (USA v1.7, 92.12.14)\0", NULL, "Data East Corporation", "DECO IC16",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_HORSHOOT, 0,
+	NULL, boogwinguRomInfo, boogwinguRomName, NULL, NULL, BoogwingInputInfo, BoogwingDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };

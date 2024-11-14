@@ -11,6 +11,7 @@
 
 static INT32 bAddToStream = 0;
 static INT32 nTotalSamples = 0;
+INT32 bBurnSampleTrimSampleEnd = 0;
 
 struct sample_format
 {
@@ -65,7 +66,7 @@ static void make_raw(UINT8 *src, UINT32 len)
 
 	sample_ptr->data = (UINT8*)malloc(converted_len * 4);
 
-	// up/down sample everything and convert to raw 16 bit stereo
+//	up/down sample everything and convert to raw 16 bit stereo
 	{
 		INT16 *data = (INT16*)sample_ptr->data;
 		INT16 *poin = (INT16*)ptr;
@@ -94,12 +95,20 @@ static void make_raw(UINT8 *src, UINT32 len)
 			if (d < -0x7fff) d = -0x7fff;
 			data[i] = (INT16)d;
 		}
+
+		//bprintf(0, _T("converted_len before: %X [%d]\n"), converted_len, converted_len);
+		if (bBurnSampleTrimSampleEnd) { // trim silence off the end of the sample, bBurnSampleTrimSampleEnd must be set before init!
+			while (data[converted_len * 2] == 0) converted_len -= 2;
+		}
+		//bprintf(0, _T("converted_len after : %X [%d]\n"), converted_len, converted_len);
 	}
 
 	sample_ptr->length = converted_len;
 	sample_ptr->playing = 0;
 	sample_ptr->position = 0;
 }
+
+void BurnSampleInitOne(INT32); // below...
 
 void BurnSamplePlay(INT32 sample)
 {
@@ -112,6 +121,10 @@ void BurnSamplePlay(INT32 sample)
 	sample_ptr = &samples[sample];
 
 	if (sample_ptr->flags & SAMPLE_IGNORE) return;
+
+	if (sample_ptr->flags & SAMPLE_NOSTORE) {
+		BurnSampleInitOne(sample);
+	}
 
 	sample_ptr->playing = 1;
 	sample_ptr->position = 0;
@@ -164,8 +177,6 @@ void BurnSampleSetLoop(INT32 sample, bool dothis)
 
 	sample_ptr = &samples[sample];
 
-	if (sample_ptr->flags & SAMPLE_NOLOOP) return;
-
 	sample_ptr->loop = (dothis ? 1 : 0);
 }
 
@@ -215,8 +226,8 @@ void BurnSampleReset()
 		BurnSampleStop(i);
 
 		if (sample_ptr->flags & SAMPLE_AUTOLOOP) {
-			BurnSampleSetLoop(i, true);
-			BurnSamplePlay(i);
+			bprintf(0, _T("set loop #%X\n"), i);
+			BurnSampleSetLoop(i, true); // this sets the loop flag, from the driver.
 		}
 	}
 }
@@ -287,11 +298,24 @@ void BurnSampleInit(INT32 bAdd /*add sample to stream?*/)
 
 	for (INT32 i = 0; i < nTotalSamples; i++) {
 		BurnDrvGetSampleInfo(&si, i);
-		char *szSampleName = NULL;
-		BurnDrvGetSampleName(&szSampleName, i, 0);
+		char *szSampleNameTmp = NULL;
+		BurnDrvGetSampleName(&szSampleNameTmp, i, 0);
+
 		sample_ptr = &samples[i];
+		
+		// append .wav to filename
+		char szSampleName[1024];
+		memset(&szSampleName, 0, sizeof(szSampleName));
+		strncpy(&szSampleName[0], szSampleNameTmp, sizeof(szSampleName) - 5); // leave space for ".wav" + null, just incase!
+		strcat(&szSampleName[0], ".wav");
 
 		if (si.nFlags == 0) break;
+
+		if (si.nFlags & SAMPLE_NOSTORE) {
+			sample_ptr->flags = si.nFlags;
+			sample_ptr->data = NULL;
+			continue;
+		}
 
 		sprintf (path, "%s%s", szTempPath, setname);
 
@@ -300,9 +324,8 @@ void BurnSampleInit(INT32 bAdd /*add sample to stream?*/)
 		ZipLoadOneFile((char*)path, (const char*)szSampleName, &destination, &length);
 		
 		if (length) {
-			make_raw((UINT8*)destination, length);
-
 			sample_ptr->flags = si.nFlags;
+			make_raw((UINT8*)destination, length);
 		} else {
 			sample_ptr->flags = SAMPLE_IGNORE;
 		}
@@ -315,7 +338,79 @@ void BurnSampleInit(INT32 bAdd /*add sample to stream?*/)
 		if (destination) {
 			free (destination);
 			destination = NULL;
-		}		
+		}
+
+		BurnSetProgressRange(1.0 / nTotalSamples);
+		BurnUpdateProgress((double)1.0 / i * nTotalSamples, _T("Loading samples..."), 0);
+	}
+}
+
+void BurnSampleInitOne(INT32 sample)
+{
+	if (sample >= nTotalSamples) {
+		return;
+	}
+
+	{
+		struct sample_format *clr_ptr = &samples[0];
+
+		int i = 0;
+		while (i < nTotalSamples) {
+			
+			if (clr_ptr->data != NULL && i != sample && (clr_ptr->flags & SAMPLE_NOSTORE)) {
+				free(clr_ptr->data);
+				clr_ptr->playing = 0;
+				clr_ptr->data = NULL;
+			}
+
+			clr_ptr++, i++;
+		}
+	}
+
+	if ((sample_ptr->flags & SAMPLE_NOSTORE) == 0) {
+		return;
+	}
+
+	INT32 length;
+	char path[256];
+	char setname[128];
+	void *destination = NULL;
+	char szTempPath[MAX_PATH];
+	sprintf(szTempPath, _TtoA(SAMPLE_DIRECTORY));
+
+	strcpy(setname, BurnDrvGetTextA(DRV_SAMPLENAME));
+	sprintf(path, "%s%s.zip", szTempPath, setname);
+
+	struct BurnSampleInfo si;
+	BurnDrvGetSampleInfo(&si, sample);
+	char *szSampleNameTmp = NULL;
+	BurnDrvGetSampleName(&szSampleNameTmp, sample, 0);
+
+	sample_ptr = &samples[sample];
+
+	// append .wav to filename
+	char szSampleName[1024];
+	memset(&szSampleName, 0, sizeof(szSampleName));
+	strncpy(&szSampleName[0], szSampleNameTmp, sizeof(szSampleName) - 5); // leave space for ".wav" + null, just incase!
+	strcat(&szSampleName[0], ".wav");
+
+	if (sample_ptr->playing || sample_ptr->data != NULL || sample_ptr->flags == SAMPLE_IGNORE) {
+		return;
+	}
+
+	sprintf (path, "%s%s", szTempPath, setname);
+
+	destination = NULL;
+	length = 0;
+	ZipLoadOneFile((char*)path, (const char*)szSampleName, &destination, &length);
+		
+	if (length) {
+		make_raw((UINT8*)destination, length);
+	}
+
+	if (destination) {
+		free (destination);
+		destination = NULL;
 	}
 }
 
@@ -369,7 +464,8 @@ void BurnSampleExit()
 	sample_ptr = NULL;
 	nTotalSamples = 0;
 	bAddToStream = 0;
-	
+	bBurnSampleTrimSampleEnd = 0;
+
 	DebugSnd_SamplesInitted = 0;
 }
 
@@ -382,11 +478,11 @@ void BurnSampleRender(INT16 *pDest, UINT32 pLen)
 	if (pBurnSoundOut == NULL) return;
 
 	INT32 nFirstSample = 0;
-        UINT32 *dest = (UINT32*)pDest;
+	UINT32 *dest = (UINT32*)pDest;
 
-        if (bAddToStream == 0) {
-            memset(dest, 0, pLen * 4); // clear buffer to get rid of unwanted noise at end of short samples - dink
-        }
+	if (bAddToStream == 0) {
+		memset(dest, 0, pLen * 4); // clear buffer
+	}
 
 	for (INT32 i = 0; i < nTotalSamples; i++)
 	{
@@ -465,10 +561,10 @@ void BurnSampleRender(INT16 *pDest, UINT32 pLen)
 
 			if (length <= 0) {
 				if (loop == 0) {
-                                       sample_ptr->playing = 0;
-                                       continue;
+					sample_ptr->playing = 0;
+					continue;
 				}
-                        }
+			}
 
 			data += position;
 			if (playlen > length) playlen = length;

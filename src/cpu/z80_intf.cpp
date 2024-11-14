@@ -398,6 +398,10 @@ void ZetRunEnd()
 	if (!DebugCPU_ZetInitted) bprintf(PRINT_ERROR, _T("ZetRunEnd called without init\n"));
 	if (nOpenedCPU == -1) bprintf(PRINT_ERROR, _T("ZetRunEnd called when no CPU open\n"));
 #endif
+
+	//ZetRunEnd() re-broken March 23, 2016.  breaks YM irq's in some games:
+	//  karnov's revenge, haunted castle (before frame rewrite: see svn history for drv/konami/d_hcastle.cpp), and a few others that I forgot...
+	//z80_ICount = 0;
 }
 
 // This function will make an area callback ZetRead/ZetWrite
@@ -624,6 +628,20 @@ INT32 ZetHL(INT32 n)
 	}
 }
 
+INT32 ZetI(INT32 n)
+{
+#if defined FBA_DEBUG
+	if (!DebugCPU_ZetInitted) bprintf(PRINT_ERROR, _T("ZetI called without init\n"));
+	if (nOpenedCPU == -1 && n < 0) bprintf(PRINT_ERROR, _T("ZetI called when no CPU open\n"));
+#endif
+
+	if (n < 0) {
+		return ActiveZ80GetI();
+	} else {
+		return ZetCPUContext[n]->reg.i;
+	}
+}
+
 INT32 ZetScan(INT32 nAction)
 {
 #if defined FBA_DEBUG
@@ -658,17 +676,21 @@ void ZetSetIRQLine(const INT32 line, const INT32 status)
 #endif
 
 	switch ( status ) {
-		case ZET_IRQSTATUS_NONE:
-			Z80SetIrqLine(0, 0);
+		case CPU_IRQSTATUS_NONE:
+			Z80SetIrqLine(line, 0);
 			break;
-		case ZET_IRQSTATUS_ACK: 	
+		case CPU_IRQSTATUS_ACK: 	
 			Z80SetIrqLine(line, 1);
 			break;
-		case ZET_IRQSTATUS_AUTO:
+		case CPU_IRQSTATUS_AUTO:
 			Z80SetIrqLine(line, 1);
 			Z80Execute(0);
 			Z80SetIrqLine(0, 0);
 			Z80Execute(0);
+			break;
+		case CPU_IRQSTATUS_HOLD:
+			ActiveZ80SetIRQHold();
+			Z80SetIrqLine(line, 1);
 			break;
 	}
 }
@@ -754,6 +776,11 @@ void ZetSetBUSREQLine(INT32 nStatus)
 }
 
 void ZetSetHL(INT32 n, UINT16 value)
+{
+	ZetCPUContext[n]->reg.hl.w.l=value;
+}
+
+void ZetSetSP(INT32 n, UINT16 value)
 {
 	ZetCPUContext[n]->reg.sp.w.l=value;
 }

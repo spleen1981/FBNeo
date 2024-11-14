@@ -1,7 +1,6 @@
 // Run module
 #include "burner.h"
 
-
 bool bAltPause = 0;
 
 int bAlwaysDrawFrames = 0;
@@ -47,7 +46,6 @@ static void DisplayFPS()
 	time_t temptime = clock();
 	float fps = static_cast<float>(nFramesRendered - nPreviousFrames) * CLOCKS_PER_SEC / (temptime - fpstimer);
 	sprintf(fpsstring, "%2.1f", fps);
-    //VidSNewShortMsg(fpsstring, 0xDFDFFF, 480, 0);
 
 	fpstimer = temptime;
 	nPreviousFrames = nFramesRendered;
@@ -216,8 +214,7 @@ static int RunInit()
 static int RunExit()
 {
 	nNormalLast = 0;
-	// Stop sound if it was playing
-	AudSoundStop();
+
 	return 0;
 }
 
@@ -229,19 +226,7 @@ int RunMessageLoop()
 	do {
 		bRestartVideo = 0;
 
-		//MediaInit();
-
-		if (!bVidOkay) {
-
-			// Reinit the video plugin
-			VidInit();
-			if (!bVidOkay && nVidFullscreen) {
-
-				nVidFullscreen = 0;
-				VidInit();
-			}
-
-	}
+		MediaInit();
 
 		RunInit();
 

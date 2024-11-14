@@ -159,8 +159,7 @@ void rollerg_main_write(UINT16 address, UINT8 data)
 
 		case 0x0040:
 			ZetSetVector(0xff);
-		//	ZetRaiseIrq(0);
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 		return;
 	}
 
@@ -239,7 +238,7 @@ void __fastcall rollerg_sound_write(UINT16 address, UINT8 data)
 	{
 		case 0xc000:
 		case 0xc001:
-			BurnYM3812Write(address & 1, data);
+			BurnYM3812Write(0, address & 1, data);
 		return;
 
 		case 0xfc00:
@@ -260,12 +259,12 @@ UINT8 __fastcall rollerg_sound_read(UINT16 address)
 	{
 		case 0xc000:
 		case 0xc001:
-			return BurnYM3812Read(address & 1);
+			return BurnYM3812Read(0, address & 1);
 	}
 
 	if (address >= 0xa000 && address <= 0xa02f) {
 		// not sure...
-		if ((address & 0x3e) == 0x00) ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
+		if ((address & 0x3e) == 0x00) ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 
 		return K053260Read(0, address & 0x3f);
 	}
@@ -279,7 +278,7 @@ static void rollerg_set_lines(INT32 lines)
 
 	INT32 offs = 0x10000 + ((lines & 0x07) * 0x4000);
 
-	konamiMapMemory(DrvKonROM + offs, 0x4000, 0x7fff, KON_ROM); 
+	konamiMapMemory(DrvKonROM + offs, 0x4000, 0x7fff, MAP_ROM); 
 }
 
 static void K053245Callback(INT32 *, INT32 *color, INT32 *priority)
@@ -385,10 +384,10 @@ static INT32 DrvInit()
 
 	konamiInit(0);
 	konamiOpen(0);
-	konamiMapMemory(DrvPalRAM,	    0x1800, 0x1fff, KON_RAM);
-	konamiMapMemory(DrvKonRAM,          0x2000, 0x3aff, KON_RAM);
-	konamiMapMemory(DrvKonROM + 0x4000, 0x4000, 0x7fff, KON_ROM);
-	konamiMapMemory(DrvKonROM + 0x8000, 0x8000, 0xffff, KON_ROM);
+	konamiMapMemory(DrvPalRAM,	    0x1800, 0x1fff, MAP_RAM);
+	konamiMapMemory(DrvKonRAM,          0x2000, 0x3aff, MAP_RAM);
+	konamiMapMemory(DrvKonROM + 0x4000, 0x4000, 0x7fff, MAP_ROM);
+	konamiMapMemory(DrvKonROM + 0x8000, 0x8000, 0xffff, MAP_ROM);
 	konamiSetWriteHandler(rollerg_main_write);
 	konamiSetReadHandler(rollerg_main_read);
 	konamiSetlinesCallback(rollerg_set_lines);
@@ -411,9 +410,9 @@ static INT32 DrvInit()
 	K051316Init(0, DrvGfxROM1, DrvGfxROMExp1, 0x07ffff, K051316Callback, 4, 0);
 	K051316SetOffset(0, -90, -15);
 
-	BurnYM3812Init(3579545, NULL, DrvSynchroniseStream, 0);
+	BurnYM3812Init(1, 3579545, NULL, DrvSynchroniseStream, 0);
 	BurnTimerAttachZetYM3812(3579545);
-	BurnYM3812SetRoute(BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
+	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	K053260Init(0, 3579545, DrvSndROM, 0x80000);
 	K053260PCMSetAllRoutes(0, 0.70, BURN_SND_ROUTE_BOTH);
@@ -496,7 +495,7 @@ static INT32 DrvFrame()
 		BurnTimerUpdateYM3812(i * (nCyclesTotal[1] / nInterleave));
 	}
 
-	konamiSetIrqLine(KONAMI_IRQ_LINE, KONAMI_IRQSTATUS_AUTO);
+	konamiSetIrqLine(KONAMI_IRQ_LINE, CPU_IRQSTATUS_AUTO);
 	
 	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
 

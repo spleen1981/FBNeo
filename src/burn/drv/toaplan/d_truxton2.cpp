@@ -315,12 +315,14 @@ static INT32 DrvDoReset()
 {
 	SekOpen(0);
 	nIRQPending = 0;
-    SekSetIRQLine(0, SEK_IRQSTATUS_NONE);
+    SekSetIRQLine(0, CPU_IRQSTATUS_NONE);
 	SekReset();
 	SekClose();
 
 	MSM6295Reset(0);
 	BurnYM2151Reset();
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -400,7 +402,7 @@ static INT32 DrvFrame()
 			}
 
 			nIRQPending  = 1;
-			SekSetIRQLine(2, SEK_IRQSTATUS_AUTO);
+			SekSetIRQLine(2, CPU_IRQSTATUS_AUTO);
 
 			ToaBufferGP9001Sprites();
 
@@ -546,12 +548,12 @@ static INT32 DrvInit()
 	    SekOpen(0);
 
 		// Map 68000 memory:
-		SekMapMemory(Rom01,			0x000000, 0x07FFFF, SM_ROM);	// CPU 0 ROM
-		SekMapMemory(Ram01,			0x100000, 0x10FFFF, SM_RAM);
-		SekMapMemory(RamPal,		0x300000, 0x300FFF, SM_RAM);	// Palette RAM
-		SekMapMemory(ExtraTRAM,		0x400000, 0x401FFF, SM_RAM);
-		SekMapMemory(ExtraTSelect,	0x402000, 0x402FFF, SM_RAM);	// 0x502000 - Scroll; 0x502200 - RAM
-		SekMapMemory(ExtraTScroll,	0x403000, 0x403FFF, SM_RAM);	// 0x203000 - Offset; 0x503200 - RAM
+		SekMapMemory(Rom01,			0x000000, 0x07FFFF, MAP_ROM);	// CPU 0 ROM
+		SekMapMemory(Ram01,			0x100000, 0x10FFFF, MAP_RAM);
+		SekMapMemory(RamPal,		0x300000, 0x300FFF, MAP_RAM);	// Palette RAM
+		SekMapMemory(ExtraTRAM,		0x400000, 0x401FFF, MAP_RAM);
+		SekMapMemory(ExtraTSelect,	0x402000, 0x402FFF, MAP_RAM);	// 0x502000 - Scroll; 0x502200 - RAM
+		SekMapMemory(ExtraTScroll,	0x403000, 0x403FFF, MAP_RAM);	// 0x203000 - Offset; 0x503200 - RAM
 
 		SekSetReadWordHandler(0, truxton2ReadWord);
 		SekSetReadByteHandler(0, truxton2ReadByte);
@@ -606,7 +608,7 @@ struct BurnDriver BurnDrvTruxton2 = {
 	"truxton2", NULL, NULL, NULL, "1992",
 	"Truxton II\0Tatsujin Oh\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	L"Truxton II\0\u9054\u4EBA\u738B\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_68K_ONLY, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_68K_ONLY, GBF_VERSHOOT, 0,
 	NULL, truxton2RomInfo, truxton2RomName, NULL, NULL, truxton2InputInfo, truxton2DIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4

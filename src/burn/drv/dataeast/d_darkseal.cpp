@@ -154,7 +154,7 @@ void __fastcall darkseal_write_byte(UINT32 address, UINT8 data)
 
 			case 0x08:
 				deco16_soundlatch = data;
-				h6280SetIRQLine(0, H6280_IRQSTATUS_ACK);
+				h6280SetIRQLine(0, CPU_IRQSTATUS_ACK);
 			return;
 		}
 
@@ -173,7 +173,7 @@ void __fastcall darkseal_write_word(UINT32 address, UINT16 data)
 
 			case 0x08:
 				deco16_soundlatch = data & 0xff;
-				h6280SetIRQLine(0, H6280_IRQSTATUS_ACK);
+				h6280SetIRQLine(0, CPU_IRQSTATUS_ACK);
 			return;
 		}
 
@@ -378,16 +378,16 @@ static INT32 DrvInit()
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KROM,			0x000000, 0x07ffff, SM_ROM);
-	SekMapMemory(Drv68KRAM,			0x100000, 0x103fff, SM_RAM);
-	SekMapMemory(DrvSprRAM,			0x120000, 0x1207ff, SM_RAM);
-	SekMapMemory(DrvPalRAM,			0x140000, 0x141fff, SM_RAM); // split ram
-	SekMapMemory(DrvPf3RAM + 0x001000,	0x200000, 0x200fff, SM_RAM); // mirror
-	SekMapMemory(DrvPf3RAM,			0x202000, 0x203fff, SM_RAM);
-	SekMapMemory(DrvPf12RowRAM,		0x220000, 0x220fff, SM_RAM);
-	SekMapMemory(DrvPf34RowRAM,		0x222000, 0x222fff, SM_RAM);
-	SekMapMemory(DrvPf2RAM,			0x260000, 0x261fff, SM_RAM);
-	SekMapMemory(DrvPf1RAM,			0x262000, 0x263fff, SM_RAM);
+	SekMapMemory(Drv68KROM,			0x000000, 0x07ffff, MAP_ROM);
+	SekMapMemory(Drv68KRAM,			0x100000, 0x103fff, MAP_RAM);
+	SekMapMemory(DrvSprRAM,			0x120000, 0x1207ff, MAP_RAM);
+	SekMapMemory(DrvPalRAM,			0x140000, 0x141fff, MAP_RAM); // split ram
+	SekMapMemory(DrvPf3RAM + 0x001000,	0x200000, 0x200fff, MAP_RAM); // mirror
+	SekMapMemory(DrvPf3RAM,			0x202000, 0x203fff, MAP_RAM);
+	SekMapMemory(DrvPf12RowRAM,		0x220000, 0x220fff, MAP_RAM);
+	SekMapMemory(DrvPf34RowRAM,		0x222000, 0x222fff, MAP_RAM);
+	SekMapMemory(DrvPf2RAM,			0x260000, 0x261fff, MAP_RAM);
+	SekMapMemory(DrvPf1RAM,			0x262000, 0x263fff, MAP_RAM);
 	SekSetWriteWordHandler(0,		darkseal_write_word);
 	SekSetWriteByteHandler(0,		darkseal_write_byte);
 	SekSetReadWordHandler(0,		darkseal_read_word);
@@ -662,7 +662,7 @@ static INT32 DrvFrame()
 		nSoundBufferPos += nSegmentLength;
 	}
 
-	SekSetIRQLine(6, SEK_IRQSTATUS_AUTO);
+	SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
 	BurnTimerEndFrame(nCyclesTotal[1]);
 
 	if (pBurnSoundOut) {
@@ -724,26 +724,26 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 // Dark Seal (World revision 3)
 
 static struct BurnRomInfo darksealRomDesc[] = {
-	{ "ga_04-3.j12",0x20000, 0xbafad556, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "ga_01-3.h14",0x20000, 0xf409050e, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "ga_00.h12",	0x20000, 0xfbf3ac63, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "ga_05.j14",	0x20000, 0xd5e3ae3f, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "ga_04-3.j12",	0x20000, 0xbafad556, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "ga_01-3.h14",	0x20000, 0xf409050e, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ga_00.h12",		0x20000, 0xfbf3ac63, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ga_05.j14",		0x20000, 0xd5e3ae3f, 1 | BRF_PRG | BRF_ESS }, //  3
 
-	{ "fz_06-1.j15",0x10000, 0xc4828a6d, 2 | BRF_PRG | BRF_ESS }, //  4 H6280 Code
+	{ "fz_06-1.j15",	0x10000, 0xc4828a6d, 2 | BRF_PRG | BRF_ESS }, //  4 H6280 Code
 
-	{ "fz_02.j1",	0x10000, 0x3c9c3012, 3 | BRF_GRA },           //  5 Text Tiles
-	{ "fz_03.j2",	0x10000, 0x264b90ed, 3 | BRF_GRA },           //  6
+	{ "fz_02.j1",		0x10000, 0x3c9c3012, 3 | BRF_GRA },           //  5 Text Tiles
+	{ "fz_03.j2",		0x10000, 0x264b90ed, 3 | BRF_GRA },           //  6
 
-	{ "mac-03.h3",	0x80000, 0x9996f3dc, 4 | BRF_GRA },           //  7 Foreground Tiles
+	{ "mac-03.h3",		0x80000, 0x9996f3dc, 4 | BRF_GRA },           //  7 Foreground Tiles
 
-	{ "mac-02.e20",	0x80000, 0x49504e89, 5 | BRF_GRA },           //  8 Background Tiles
+	{ "mac-02.e20",		0x80000, 0x49504e89, 5 | BRF_GRA },           //  8 Background Tiles
 
-	{ "mac-00.b1",	0x80000, 0x52acf1d6, 6 | BRF_GRA },           //  9 Sprite Tiles
-	{ "mac-01.b3",	0x80000, 0xb28f7584, 6 | BRF_GRA },           // 10
+	{ "mac-00.b1",		0x80000, 0x52acf1d6, 6 | BRF_GRA },           //  9 Sprite Tiles
+	{ "mac-01.b3",		0x80000, 0xb28f7584, 6 | BRF_GRA },           // 10
 
-	{ "fz_08.l17",	0x20000, 0xc9bf68e1, 7 | BRF_SND },           // 11 Oki6295 #0 Samples
+	{ "fz_08.l17",		0x20000, 0xc9bf68e1, 7 | BRF_SND },           // 11 Oki6295 #0 Samples
 
-	{ "fz_07.k14",	0x20000, 0x588dd3cb, 8 | BRF_SND },           // 12 Oki6295 #1 Samples
+	{ "fz_07.k14",		0x20000, 0x588dd3cb, 8 | BRF_SND },           // 12 Oki6295 #1 Samples
 };
 
 STD_ROM_PICK(darkseal)
@@ -763,26 +763,26 @@ struct BurnDriver BurnDrvDarkseal = {
 // Dark Seal (World revision 1)
 
 static struct BurnRomInfo darksea1RomDesc[] = {
-	{ "ga_04.j12",	0x20000, 0xa1a985a9, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "ga_01.h14",	0x20000, 0x98bd2940, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "ga_00.h12",	0x20000, 0xfbf3ac63, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "ga_05.j14",	0x20000, 0xd5e3ae3f, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "FZ_04-4.J12",	0x20000, 0xa1a985a9, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "FZ_01-1.H14",	0x20000, 0x98bd2940, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "FZ_00-2.H12",	0x20000, 0xfbf3ac63, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "FZ_05-2.J14",	0x20000, 0xd5e3ae3f, 1 | BRF_PRG | BRF_ESS }, //  3
+	
+	{ "FZ_06-1.J15",	0x10000, 0xc4828a6d, 2 | BRF_PRG | BRF_ESS }, //  4 H6280 Code
 
-	{ "fz_06-1.j15",0x10000, 0xc4828a6d, 2 | BRF_PRG | BRF_ESS }, //  4 H6280 Code
+	{ "FZ_02-1.J1",		0x10000, 0x3c9c3012, 3 | BRF_GRA },           //  5 Text Tiles
+	{ "FZ_03-1.J2",		0x10000, 0x264b90ed, 3 | BRF_GRA },           //  6
 
-	{ "fz_02.j1",	0x10000, 0x3c9c3012, 3 | BRF_GRA },           //  5 Text Tiles
-	{ "fz_03.j2",	0x10000, 0x264b90ed, 3 | BRF_GRA },           //  6
+	{ "mac-03.h3",		0x80000, 0x9996f3dc, 4 | BRF_GRA },           //  7 Foreground Tiles
 
-	{ "mac-03.h3",	0x80000, 0x9996f3dc, 4 | BRF_GRA },           //  7 Foreground Tiles
+	{ "mac-02.e20",		0x80000, 0x49504e89, 5 | BRF_GRA },           //  8 Background Tiles
 
-	{ "mac-02.e20",	0x80000, 0x49504e89, 5 | BRF_GRA },           //  8 Background Tiles
+	{ "mac-00.b1",		0x80000, 0x52acf1d6, 6 | BRF_GRA },           //  9 Sprite Tiles
+	{ "mac-01.b3",		0x80000, 0xb28f7584, 6 | BRF_GRA },           // 10
 
-	{ "mac-00.b1",	0x80000, 0x52acf1d6, 6 | BRF_GRA },           //  9 Sprite Tiles
-	{ "mac-01.b3",	0x80000, 0xb28f7584, 6 | BRF_GRA },           // 10
+	{ "FZ_08-1.K17",	0x20000, 0xc9bf68e1, 7 | BRF_SND },           // 11 Oki6295 #0 Samples
 
-	{ "fz_08.l17",	0x20000, 0xc9bf68e1, 7 | BRF_SND },           // 11 Oki6295 #0 Samples
-
-	{ "fz_07.k14",	0x20000, 0x588dd3cb, 8 | BRF_SND },           // 12 Oki6295 #1 Samples
+	{ "FZ_07-.K14",		0x20000, 0x588dd3cb, 8 | BRF_SND },           // 12 Oki6295 #1 Samples 
 };
 
 STD_ROM_PICK(darksea1)
@@ -802,26 +802,26 @@ struct BurnDriver BurnDrvDarksea1 = {
 // Dark Seal (Japan)
 
 static struct BurnRomInfo darkseajRomDesc[] = {
-	{ "fz_04-4.j12",0x20000, 0x817faa2c, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "fz_01-4.h14",0x20000, 0x373caeee, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "fz_00-2.h12",0x20000, 0x1ab99aa7, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "fz_05-2.j14",0x20000, 0x3374ef8c, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "fz_04-4.j12",	0x20000, 0x817faa2c, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "fz_01-4.h14",	0x20000, 0x373caeee, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "fz_00-2.h12",	0x20000, 0x1ab99aa7, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "fz_05-2.j14",	0x20000, 0x3374ef8c, 1 | BRF_PRG | BRF_ESS }, //  3
 
-	{ "fz_06-1.j15",0x10000, 0xc4828a6d, 2 | BRF_PRG | BRF_ESS }, //  4 H6280 Code
+	{ "fz_06-1.j15",	0x10000, 0xc4828a6d, 2 | BRF_PRG | BRF_ESS }, //  4 H6280 Code
 
-	{ "fz_02.j1",	0x10000, 0x3c9c3012, 3 | BRF_GRA },           //  5 Text Tiles
-	{ "fz_03.j2",	0x10000, 0x264b90ed, 3 | BRF_GRA },           //  6
+	{ "fz_02.j1",		0x10000, 0x3c9c3012, 3 | BRF_GRA },           //  5 Text Tiles
+	{ "fz_03.j2",		0x10000, 0x264b90ed, 3 | BRF_GRA },           //  6
 
-	{ "mac-03.h3",	0x80000, 0x9996f3dc, 4 | BRF_GRA },           //  7 Foreground Tiles
+	{ "mac-03.h3",		0x80000, 0x9996f3dc, 4 | BRF_GRA },           //  7 Foreground Tiles
 
-	{ "mac-02.e20",	0x80000, 0x49504e89, 5 | BRF_GRA },           //  8 Background Tiles
+	{ "mac-02.e20",		0x80000, 0x49504e89, 5 | BRF_GRA },           //  8 Background Tiles
 
-	{ "mac-00.b1",	0x80000, 0x52acf1d6, 6 | BRF_GRA },           //  9 Sprite Tiles
-	{ "mac-01.b3",	0x80000, 0xb28f7584, 6 | BRF_GRA },           // 10
+	{ "mac-00.b1",		0x80000, 0x52acf1d6, 6 | BRF_GRA },           //  9 Sprite Tiles
+	{ "mac-01.b3",		0x80000, 0xb28f7584, 6 | BRF_GRA },           // 10
 
-	{ "fz_08.l17",	0x20000, 0xc9bf68e1, 7 | BRF_SND },           // 11 Oki6295 #0 Samples
+	{ "fz_08.l17",		0x20000, 0xc9bf68e1, 7 | BRF_SND },           // 11 Oki6295 #0 Samples
 
-	{ "fz_07.k14",	0x20000, 0x588dd3cb, 8 | BRF_SND },           // 12 Oki6295 #1 Samples
+	{ "fz_07.k14",		0x20000, 0x588dd3cb, 8 | BRF_SND },           // 12 Oki6295 #1 Samples
 };
 
 STD_ROM_PICK(darkseaj)
@@ -841,26 +841,26 @@ struct BurnDriver BurnDrvDarkseaj = {
 // Gate of Doom (US revision 4)
 
 static struct BurnRomInfo gatedoomRomDesc[] = {
-	{ "gb_04-4.j12",0x20000, 0x8e3a0bfd, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "gb_01-4.h14",0x20000, 0x8d0fd383, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "gb_00.h12",	0x20000, 0xa88c16a1, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "gb_05.j14",	0x20000, 0x252d7e14, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "gb_04-4.j12",	0x20000, 0x8e3a0bfd, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "gb_01-4.h14",	0x20000, 0x8d0fd383, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "gb_00.h12",		0x20000, 0xa88c16a1, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "gb_05.j14",		0x20000, 0x252d7e14, 1 | BRF_PRG | BRF_ESS }, //  3
 
-	{ "fz_06-1.j15",0x10000, 0xc4828a6d, 2 | BRF_PRG | BRF_ESS }, //  4 H6280 Code
+	{ "fz_06-1.j15",	0x10000, 0xc4828a6d, 2 | BRF_PRG | BRF_ESS }, //  4 H6280 Code
 
-	{ "fz_02.j1",	0x10000, 0x3c9c3012, 3 | BRF_GRA },           //  5 Text Tiles
-	{ "fz_03.j2",	0x10000, 0x264b90ed, 3 | BRF_GRA },           //  6
+	{ "fz_02.j1",		0x10000, 0x3c9c3012, 3 | BRF_GRA },           //  5 Text Tiles
+	{ "fz_03.j2",		0x10000, 0x264b90ed, 3 | BRF_GRA },           //  6
 
-	{ "mac-03.h3",	0x80000, 0x9996f3dc, 4 | BRF_GRA },           //  7 Foreground Tiles
+	{ "mac-03.h3",		0x80000, 0x9996f3dc, 4 | BRF_GRA },           //  7 Foreground Tiles
 
-	{ "mac-02.e20",	0x80000, 0x49504e89, 5 | BRF_GRA },           //  8 Background Tiles
+	{ "mac-02.e20",		0x80000, 0x49504e89, 5 | BRF_GRA },           //  8 Background Tiles
 
-	{ "mac-00.b1",	0x80000, 0x52acf1d6, 6 | BRF_GRA },           //  9 Sprite Tiles
-	{ "mac-01.b3",	0x80000, 0xb28f7584, 6 | BRF_GRA },           // 10
+	{ "mac-00.b1",		0x80000, 0x52acf1d6, 6 | BRF_GRA },           //  9 Sprite Tiles
+	{ "mac-01.b3",		0x80000, 0xb28f7584, 6 | BRF_GRA },           // 10
 
-	{ "fz_08.l17",	0x20000, 0xc9bf68e1, 7 | BRF_SND },           // 11 Oki6295 #0 Samples
+	{ "fz_08.l17",		0x20000, 0xc9bf68e1, 7 | BRF_SND },           // 11 Oki6295 #0 Samples
 
-	{ "fz_07.k14",	0x20000, 0x588dd3cb, 8 | BRF_SND },           // 12 Oki6295 #1 Samples
+	{ "fz_07.k14",		0x20000, 0x588dd3cb, 8 | BRF_SND },           // 12 Oki6295 #1 Samples
 };
 
 STD_ROM_PICK(gatedoom)
@@ -880,26 +880,26 @@ struct BurnDriver BurnDrvGatedoom = {
 // Gate of Doom (US revision 1)
 
 static struct BurnRomInfo gatedom1RomDesc[] = {
-	{ "gb_04.j12",	0x20000, 0x4c3bbd2b, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "gb_01.h14",	0x20000, 0x59e367f4, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "gb_00.h12",	0x20000, 0xa88c16a1, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "gb_05.j14",	0x20000, 0x252d7e14, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "gb_04.j12",		0x20000, 0x4c3bbd2b, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "gb_01.h14",		0x20000, 0x59e367f4, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "gb_00.h12",		0x20000, 0xa88c16a1, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "gb_05.j14",		0x20000, 0x252d7e14, 1 | BRF_PRG | BRF_ESS }, //  3
 
-	{ "fz_06-1.j15",0x10000, 0xc4828a6d, 2 | BRF_PRG | BRF_ESS }, //  4 H6280 Code
+	{ "fz_06-1.j15",	0x10000, 0xc4828a6d, 2 | BRF_PRG | BRF_ESS }, //  4 H6280 Code
 
-	{ "fz_02.j1",	0x10000, 0x3c9c3012, 3 | BRF_GRA },           //  5 Text Tiles
-	{ "fz_03.j2",	0x10000, 0x264b90ed, 3 | BRF_GRA },           //  6
+	{ "fz_02.j1",		0x10000, 0x3c9c3012, 3 | BRF_GRA },           //  5 Text Tiles
+	{ "fz_03.j2",		0x10000, 0x264b90ed, 3 | BRF_GRA },           //  6
 
-	{ "mac-03.h3",	0x80000, 0x9996f3dc, 4 | BRF_GRA },           //  7 Foreground Tiles
+	{ "mac-03.h3",		0x80000, 0x9996f3dc, 4 | BRF_GRA },           //  7 Foreground Tiles
 
-	{ "mac-02.e20",	0x80000, 0x49504e89, 5 | BRF_GRA },           //  8 Background Tiles
+	{ "mac-02.e20",		0x80000, 0x49504e89, 5 | BRF_GRA },           //  8 Background Tiles
 
-	{ "mac-00.b1",	0x80000, 0x52acf1d6, 6 | BRF_GRA },           //  9 Sprite Tiles
-	{ "mac-01.b3",	0x80000, 0xb28f7584, 6 | BRF_GRA },           // 10
+	{ "mac-00.b1",		0x80000, 0x52acf1d6, 6 | BRF_GRA },           //  9 Sprite Tiles
+	{ "mac-01.b3",		0x80000, 0xb28f7584, 6 | BRF_GRA },           // 10
 
-	{ "fz_08.l17",	0x20000, 0xc9bf68e1, 7 | BRF_SND },           // 11 Oki6295 #0 Samples
+	{ "fz_08.l17",		0x20000, 0xc9bf68e1, 7 | BRF_SND },           // 11 Oki6295 #0 Samples
 
-	{ "fz_07.k14",	0x20000, 0x588dd3cb, 8 | BRF_SND },           // 12 Oki6295 #1 Samples
+	{ "fz_07.k14",		0x20000, 0x588dd3cb, 8 | BRF_SND },           // 12 Oki6295 #1 Samples
 };
 
 STD_ROM_PICK(gatedom1)

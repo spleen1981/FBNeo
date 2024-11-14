@@ -137,7 +137,7 @@ static void bankswitch(INT32 data)
 
 	INT32 nBank = (data & 0x80) ? 0x14000 : 0x10000;
 
-	ZetMapMemory(DrvZ80ROM + nBank, 0x8000, 0xbfff, ZET_ROM);
+	ZetMapMemory(DrvZ80ROM + nBank, 0x8000, 0xbfff, MAP_ROM);
 }
 
 static void __fastcall darkmist_main_write(UINT16 address, UINT8 data)
@@ -498,13 +498,13 @@ static INT32 DrvInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapMemory(DrvZ80ROM,		0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvZ80ROMDec,	0x0000, 0x7fff, ZET_FETCHOP);
-	ZetMapMemory(DrvPalRAM,		0xd000, 0xd3ff, ZET_ROM);
-	ZetMapMemory(DrvScrollRAM,	0xd400, 0xd4ff, ZET_RAM);
-	ZetMapMemory(DrvVidRAM,		0xd800, 0xdfff, ZET_RAM);
-	ZetMapMemory(DrvZ80RAM,		0xe000, 0xefff, ZET_RAM);
-	ZetMapMemory(DrvSprRAM,		0xf000, 0xffff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM,		0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80ROMDec,	0x0000, 0x7fff, MAP_FETCHOP);
+	ZetMapMemory(DrvPalRAM,		0xd000, 0xd3ff, MAP_ROM);
+	ZetMapMemory(DrvScrollRAM,	0xd400, 0xd4ff, MAP_RAM);
+	ZetMapMemory(DrvVidRAM,		0xd800, 0xdfff, MAP_RAM);
+	ZetMapMemory(DrvZ80RAM,		0xe000, 0xefff, MAP_RAM);
+	ZetMapMemory(DrvSprRAM,		0xf000, 0xffff, MAP_RAM);
 	ZetSetWriteHandler(darkmist_main_write);
 	ZetSetReadHandler(darkmist_main_read);
 	ZetClose();
@@ -766,12 +766,12 @@ static INT32 DrvFrame()
 
 		if (i == 0) {
 			ZetSetVector(0x08);
-			ZetSetIRQLine(0, ZET_IRQSTATUS_AUTO);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		}
 
 		if (i == 15) {
 			ZetSetVector(0x10);
-			ZetSetIRQLine(0, ZET_IRQSTATUS_AUTO);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		}
 
 		ZetClose();
@@ -848,7 +848,12 @@ static struct BurnRomInfo darkmistRomDesc[] = {
 	{ "dm_15.rom",		0x08000, 0x21e6503c, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
 	{ "dm_16.rom",		0x08000, 0x094579d9, 1 | BRF_PRG | BRF_ESS }, //  1
 
+#if !defined (ROM_VERIFY)
 	{ "t5182.rom",		0x02000, 0xd354c8fc, 2 | BRF_PRG | BRF_ESS }, //  2 t5182 (Z80 #1) Code
+#else
+	{ "",				0x00000, 0x00000000, 2 | BRF_PRG | BRF_ESS }, //  2 t5182 (Z80 #1) Code
+#endif
+
 	{ "dm_17.rom",		0x08000, 0x7723dcae, 2 | BRF_PRG | BRF_ESS }, //  3
 
 	{ "dm_13.rom",		0x02000, 0x38bb38d9, 3 | BRF_GRA },           //  4 Characters

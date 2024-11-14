@@ -214,6 +214,8 @@ static INT32 DrvDoReset(INT32 clear_ram)
 
 	watchdog = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -350,20 +352,20 @@ static INT32 DrvInit()
 
 	M6809Init(1);
 	M6809Open(0);
-	M6809MapMemory(DrvM6809RAM,	0x2800, 0x30ff, M6809_RAM);
-	M6809MapMemory(DrvSprRAM,	0x3100, 0x33ff, M6809_RAM);
-	M6809MapMemory(DrvColRAM,	0x3800, 0x3bff, M6809_RAM);
-	M6809MapMemory(DrvVidRAM,	0x3c00, 0x3fff, M6809_RAM);
+	M6809MapMemory(DrvM6809RAM,	0x2800, 0x30ff, MAP_RAM);
+	M6809MapMemory(DrvSprRAM,	0x3100, 0x33ff, MAP_RAM);
+	M6809MapMemory(DrvColRAM,	0x3800, 0x3bff, MAP_RAM);
+	M6809MapMemory(DrvVidRAM,	0x3c00, 0x3fff, MAP_RAM);
 
-	M6809MapMemory(DrvM6809ROM,	0x4000, 0xffff, M6809_ROM);
+	M6809MapMemory(DrvM6809ROM,	0x4000, 0xffff, MAP_ROM);
 	M6809SetWriteHandler(shaolins_write);
 	M6809SetReadHandler(shaolins_read);
 	M6809Close();
 
-	SN76496Init(0, 1536000, 0);
+	SN76489AInit(0, 1536000, 0);
 	SN76496SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
 
-	SN76496Init(1, 3072000, 1);
+	SN76489AInit(1, 3072000, 1);
 	SN76496SetRoute(1, 1.00, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
@@ -392,8 +394,9 @@ static void draw_layer()
 		INT32 sx = (offs & 0x1f) * 8;
 		INT32 sy = ((offs / 0x20) * 8);
 
-		if (sx >= 32) sy -= (scroll[0] + 16) & 0xff;
+		if (sx >= 32) sy -= scroll[0] & 0xff;
 		if (sy < -7) sy += 256;
+		sy -= 16;
 
 		INT32 attr  = DrvColRAM[offs];
 		INT32 code  = DrvVidRAM[offs] | ((attr & 0x40) << 2);
@@ -486,6 +489,7 @@ static INT32 DrvFrame()
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[1] = { 1536000 / 60 };
 	INT32 nCyclesDone[1] = { 0 };
+	INT32 nSoundBufferPos = 0;
 
 	M6809Open(0);
 
@@ -494,14 +498,28 @@ static INT32 DrvFrame()
 		nCyclesDone[0] += M6809Run(nCyclesTotal[0] / nInterleave);
 
 		if (*nmi_enable && (i & 0x1f) == 0)
-			M6809SetIRQLine(0x20, M6809_IRQSTATUS_AUTO); // 480x/second (8x/frame)
+			M6809SetIRQLine(0x20, CPU_IRQSTATUS_AUTO); // 480x/second (8x/frame)
 
-		if (i == 240) M6809SetIRQLine(0, M6809_IRQSTATUS_AUTO);
+		if (i == 240) M6809SetIRQLine(0, CPU_IRQSTATUS_AUTO);
+
+		// Render Sound Segment
+		if (pBurnSoundOut) {
+			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
+			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
+			SN76496Update(0, pSoundBuf, nSegmentLength);
+			SN76496Update(1, pSoundBuf, nSegmentLength);
+			nSoundBufferPos += nSegmentLength;
+		}
 	}
 
+	// Make sure the buffer is entirely filled.
 	if (pBurnSoundOut) {
-		SN76496Update(0, pBurnSoundOut, nBurnSoundLen);
-		SN76496Update(1, pBurnSoundOut, nBurnSoundLen);
+		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
+		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
+		if (nSegmentLength) {
+			SN76496Update(0, pSoundBuf, nSegmentLength);
+			SN76496Update(1, pSoundBuf, nSegmentLength);
+		}
 	}
 
 	M6809Close();
@@ -562,9 +580,9 @@ STD_ROM_FN(kicker)
 
 struct BurnDriver BurnDrvKicker = {
 	"kicker", NULL, NULL, NULL, "1985",
-	"Kicker\0", NULL, "Konami", "Miscellaneous",
+	"Kicker\0", NULL, "Konami", "GX477",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, kickerRomInfo, kickerRomName, NULL, NULL, ShaolinsInputInfo, ShaolinsDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	224, 256, 3, 4
@@ -596,9 +614,9 @@ STD_ROM_FN(shaolins)
 
 struct BurnDriver BurnDrvShaolins = {
 	"shaolins", "kicker", NULL, NULL, "1985",
-	"Shao-lin's Road (set 1)\0", NULL, "Konami", "Miscellaneous",
+	"Shao-lin's Road (set 1)\0", NULL, "Konami", "GX477",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, shaolinsRomInfo, shaolinsRomName, NULL, NULL, ShaolinsInputInfo, ShaolinsDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	224, 256, 3, 4
@@ -630,9 +648,9 @@ STD_ROM_FN(shaolinb)
 
 struct BurnDriver BurnDrvShaolinb = {
 	"shaolinb", "kicker", NULL, NULL, "1985",
-	"Shao-lin's Road (set 2)\0", NULL, "Konami", "Miscellaneous",
+	"Shao-lin's Road (set 2)\0", NULL, "Konami", "GX477",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, shaolinbRomInfo, shaolinbRomName, NULL, NULL, ShaolinsInputInfo, ShaolinsDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	224, 256, 3, 4

@@ -1040,22 +1040,22 @@ static struct BurnRomInfo TmntRomDesc[] = {
 	
 	{ "963e20.g13",         0x008000, 0x1692a6d6, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	   //  5	Tiles
-	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	   //  6
+	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	   	   //  5	Tiles
+	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	   	   //  6
 	
-	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	   //  7	Sprites
-	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	   //  8
-	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	   //  9
-	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	   //  10
+	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	       //  7	Sprites
+	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	       //  8
+	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	       //  9
+	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	       // 10
 	
-	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	   //  11	PROMs
-	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	   //  12
+	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	       // 11	PROMs
+	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	   	   // 12
 	
-	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	   //  13	K007232 Samples
+	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	   	   // 13	K007232 Samples
 	
-	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	   //  14	UP7759C Samples
+	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	       // 14	UP7759C Samples
 	
-	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	   //  15	Title Music Sample
+	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	       // 15	Title Music Sample
 };
 
 STD_ROM_PICK(Tmnt)
@@ -1069,22 +1069,22 @@ static struct BurnRomInfo TmntuRomDesc[] = {
 	
 	{ "963e20.g13",         0x008000, 0x1692a6d6, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	   //  5	Tiles
-	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	   //  6
+	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	       //  5	Tiles
+	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	       //  6
 	
-	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	   //  7	Sprites
-	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	   //  8
-	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	   //  9
-	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	   //  10
+	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	       //  7	Sprites
+	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	       //  8
+	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	       //  9
+	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	       // 10
 	
-	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	   //  11	PROMs
-	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	   //  12
+	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	       // 11	PROMs
+	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	   	   // 12
 	
-	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	   //  13	K007232 Samples
+	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	       // 13	K007232 Samples
 	
-	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	   //  14	UP7759C Samples
+	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	       // 14	UP7759C Samples
 	
-	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	   //  15	Title Music Sample
+	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	       // 15	Title Music Sample
 };
 
 STD_ROM_PICK(Tmntu)
@@ -1098,22 +1098,22 @@ static struct BurnRomInfo TmntuaRomDesc[] = {
 	
 	{ "963e20.g13",         0x008000, 0x1692a6d6, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	   //  5	Tiles
-	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	   //  6
+	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	       //  5	Tiles
+	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	       //  6
 	
-	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	   //  7	Sprites
-	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	   //  8
-	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	   //  9
-	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	   //  10
+	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	       //  7	Sprites
+	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	       //  8
+	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	       //  9
+	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	       // 10
 	
-	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	   //  11	PROMs
-	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	   //  12
+	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	       // 11	PROMs
+	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	       // 12
 	
-	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	   //  13	K007232 Samples
+	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	       // 13	K007232 Samples
 	
-	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	   //  14	UP7759C Samples
+	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	       // 14	UP7759C Samples
 	
-	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	   //  15	Title Music Sample
+	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	       // 15	Title Music Sample
 };
 
 STD_ROM_PICK(Tmntua)
@@ -1127,22 +1127,22 @@ static struct BurnRomInfo TmhtRomDesc[] = {
 	
 	{ "963e20.g13",         0x008000, 0x1692a6d6, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	   //  5	Tiles
-	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	   //  6
+	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	       //  5	Tiles
+	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	       //  6
 	
-	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	   //  7	Sprites
-	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	   //  8
-	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	   //  9
-	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	   //  10
+	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	       //  7	Sprites
+	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	       //  8
+	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	       //  9
+	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	       // 10
 	
-	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	   //  11	PROMs
-	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	   //  12
+	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	       // 11	PROMs
+	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	       // 12
 	
-	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	   //  13	K007232 Samples
+	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	       // 13	K007232 Samples
 	
-	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	   //  14	UP7759C Samples
+	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	       // 14	UP7759C Samples
 	
-	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	   //  15	Title Music Sample
+	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	       // 15	Title Music Sample
 };
 
 STD_ROM_PICK(Tmht)
@@ -1156,26 +1156,55 @@ static struct BurnRomInfo TmhtaRomDesc[] = {
 	
 	{ "963e20.g13",         0x008000, 0x1692a6d6, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	   //  5	Tiles
-	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	   //  6
+	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	       //  5	Tiles
+	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	       //  6
 	
-	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	   //  7	Sprites
-	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	   //  8
-	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	   //  9
-	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	   //  10
+	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	       //  7	Sprites
+	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	       //  8
+	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	       //  9
+	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	       // 10
 	
-	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	   //  11	PROMs
-	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	   //  12
+	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	       // 11	PROMs
+	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	       // 12
 	
-	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	   //  13	K007232 Samples
+	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	       // 13	K007232 Samples
 	
-	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	   //  14	UP7759C Samples
+	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	       // 14	UP7759C Samples
 	
-	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	   //  15	Title Music Sample
+	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	       // 15	Title Music Sample
 };
 
 STD_ROM_PICK(Tmhta)
 STD_ROM_FN(Tmhta)
+
+static struct BurnRomInfo TmhtbRomDesc[] = {
+	{ "unk3.i17",        	0x020000, 0x537eb047, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
+	{ "unk4.k17",        	0x020000, 0x5afae564, BRF_ESS | BRF_PRG }, //  1
+	{ "unk2.j15",        	0x010000, 0xee34de05, BRF_ESS | BRF_PRG }, //  2
+	{ "unk5.k15",        	0x010000, 0x5ef58d4e, BRF_ESS | BRF_PRG }, //  3
+	
+	{ "963e20.g13",         0x008000, 0x1692a6d6, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
+	
+	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	       //  5	Tiles
+	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	       //  6
+	
+	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	       //  7	Sprites
+	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	       //  8
+	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	       //  9
+	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	       // 10
+	
+	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	       // 11	PROMs
+	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	       // 12
+	
+	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	       // 13	K007232 Samples
+	
+	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	       // 14	UP7759C Samples
+	
+	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	       // 15	Title Music Sample
+};
+
+STD_ROM_PICK(Tmhtb)
+STD_ROM_FN(Tmhtb)
 
 static struct BurnRomInfo TmntjRomDesc[] = {
 	{ "963_223.j17",        0x020000, 0x0d34a5ff, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
@@ -1185,22 +1214,22 @@ static struct BurnRomInfo TmntjRomDesc[] = {
 	
 	{ "963e20.g13",         0x008000, 0x1692a6d6, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	   //  5	Tiles
-	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	   //  6
+	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	       //  5	Tiles
+	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	       //  6
 	
-	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	   //  7	Sprites
-	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	   //  8
-	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	   //  9
-	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	   //  10
+	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	       //  7	Sprites
+	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	       //  8
+	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	       //  9
+	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	       // 10
 	
-	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	   //  11	PROMs
-	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	   //  12
+	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	       // 11	PROMs
+	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	       // 12
 	
-	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	   //  13	K007232 Samples
+	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	       // 13	K007232 Samples
 	
-	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	   //  14	UP7759C Samples
+	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	       // 14	UP7759C Samples
 	
-	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	   //  15	Title Music Sample
+	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	       // 15	Title Music Sample
 };
 
 STD_ROM_PICK(Tmntj)
@@ -1214,22 +1243,22 @@ static struct BurnRomInfo Tmht2pRomDesc[] = {
 	
 	{ "963e20.g13",         0x008000, 0x1692a6d6, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	   //  5	Tiles
-	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	   //  6
+	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	       //  5	Tiles
+	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	       //  6
 	
-	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	   //  7	Sprites
-	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	   //  8
-	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	   //  9
-	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	   //  10
+	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	       //  7	Sprites
+	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	       //  8
+	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	       //  9
+	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	       // 10
 	
-	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	   //  11	PROMs
-	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	   //  12
+	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	       // 11	PROMs
+	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	       // 12
 	
-	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	   //  13	K007232 Samples
+	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	       // 13	K007232 Samples
 	
-	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	   //  14	UP7759C Samples
+	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	       // 14	UP7759C Samples
 	
-	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	   //  15	Title Music Sample
+	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	       // 15	Title Music Sample
 };
 
 STD_ROM_PICK(Tmht2p)
@@ -1243,22 +1272,22 @@ static struct BurnRomInfo Tmht2paRomDesc[] = {
 	
 	{ "963e20.g13",         0x008000, 0x1692a6d6, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	   //  5	Tiles
-	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	   //  6
+	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	       //  5	Tiles
+	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	       //  6
 	
-	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	   //  7	Sprites
-	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	   //  8
-	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	   //  9
-	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	   //  10
+	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	       //  7	Sprites
+	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	       //  8
+	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	       //  9
+	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	       // 10
 	
-	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	   //  11	PROMs
-	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	   //  12
+	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	       // 11	PROMs
+	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	       // 12
 	
-	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	   //  13	K007232 Samples
+	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	       // 13	K007232 Samples
 	
-	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	   //  14	UP7759C Samples
+	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	       // 14	UP7759C Samples
 	
-	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	   //  15	Title Music Sample
+	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	       // 15	Title Music Sample
 };
 
 STD_ROM_PICK(Tmht2pa)
@@ -1272,22 +1301,22 @@ static struct BurnRomInfo Tmnt2pjRomDesc[] = {
 	
 	{ "963e20.g13",         0x008000, 0x1692a6d6, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	   //  5	Tiles
-	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	   //  6
+	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	       //  5	Tiles
+	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	       //  6
 	
-	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	   //  7	Sprites
-	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	   //  8
-	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	   //  9
-	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	   //  10
+	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	       //  7	Sprites
+	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	       //  8
+	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	       //  9
+	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	       // 10
 	
-	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	   //  11	PROMs
-	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	   //  12
+	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	       // 11	PROMs
+	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	       // 12
 	
-	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	   //  13	K007232 Samples
+	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	       // 13	K007232 Samples
 	
-	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	   //  14	UP7759C Samples
+	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	       // 14	UP7759C Samples
 	
-	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	   //  15	Title Music Sample
+	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	       // 15	Title Music Sample
 };
 
 STD_ROM_PICK(Tmnt2pj)
@@ -1301,22 +1330,22 @@ static struct BurnRomInfo Tmnt2poRomDesc[] = {
 	
 	{ "963e20.g13",         0x008000, 0x1692a6d6, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	   //  5	Tiles
-	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	   //  6
+	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	       //  5	Tiles
+	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	       //  6
 	
-	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	   //  7	Sprites
-	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	   //  8
-	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	   //  9
-	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	   //  10
+	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	       //  7	Sprites
+	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	       //  8
+	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	       //  9
+	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	       // 10
 	
-	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	   //  11	PROMs
-	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	   //  12
+	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	       // 11	PROMs
+	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	       // 12
 	
-	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	   //  13	K007232 Samples
+	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	       // 13	K007232 Samples
 	
-	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	   //  14	UP7759C Samples
+	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	       // 14	UP7759C Samples
 	
-	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	   //  15	Title Music Sample
+	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	       // 15	Title Music Sample
 };
 
 STD_ROM_PICK(Tmnt2po)
@@ -1328,17 +1357,17 @@ static struct BurnRomInfo MiaRomDesc[] = {
 	
 	{ "808e03.f4",          0x008000, 0x3d93a7cd, BRF_ESS | BRF_PRG }, //  2	Z80 Program 
 	
-	{ "808e12.f28",         0x010000, 0xd62f1fde, BRF_GRA },	   //  3	Tiles
-	{ "808e13.h28",         0x010000, 0x1fa708f4, BRF_GRA },	   //  4
-	{ "808e22.i28",         0x010000, 0x73d758f6, BRF_GRA },	   //  5
-	{ "808e23.k28",         0x010000, 0x8ff08b21, BRF_GRA },	   //  6
+	{ "808e12.f28",         0x010000, 0xd62f1fde, BRF_GRA },	       //  3	Tiles
+	{ "808e13.h28",         0x010000, 0x1fa708f4, BRF_GRA },	       //  4
+	{ "808e22.i28",         0x010000, 0x73d758f6, BRF_GRA },	       //  5
+	{ "808e23.k28",         0x010000, 0x8ff08b21, BRF_GRA },	       //  6
 	
-	{ "808d17.j4",          0x080000, 0xd1299082, BRF_GRA },	   //  7	Sprites
-	{ "808d15.h4",          0x080000, 0x2b22a6b6, BRF_GRA },	   //  8
+	{ "808d17.j4",          0x080000, 0xd1299082, BRF_GRA },	       //  7	Sprites
+	{ "808d15.h4",          0x080000, 0x2b22a6b6, BRF_GRA },	       //  8
 	
-	{ "808a18.f16",         0x000100, 0xeb95aede, BRF_GRA },	   //  9	PROMs
+	{ "808a18.f16",         0x000100, 0xeb95aede, BRF_GRA },	       //  9	PROMs
 	
-	{ "808d01.d4",          0x020000, 0xfd4d37c0, BRF_SND },	   //  10	K007232 Samples
+	{ "808d01.d4",          0x020000, 0xfd4d37c0, BRF_SND },	       // 10	K007232 Samples
 };
 
 STD_ROM_PICK(Mia)
@@ -1350,17 +1379,17 @@ static struct BurnRomInfo Mia2RomDesc[] = {
 	
 	{ "808e03.f4",          0x008000, 0x3d93a7cd, BRF_ESS | BRF_PRG }, //  2	Z80 Program 
 	
-	{ "808e12.f28",         0x010000, 0xd62f1fde, BRF_GRA },	   //  3	Tiles
-	{ "808e13.h28",         0x010000, 0x1fa708f4, BRF_GRA },	   //  4
-	{ "808e22.i28",         0x010000, 0x73d758f6, BRF_GRA },	   //  5
-	{ "808e23.k28",         0x010000, 0x8ff08b21, BRF_GRA },	   //  6
+	{ "808e12.f28",         0x010000, 0xd62f1fde, BRF_GRA },	       //  3	Tiles
+	{ "808e13.h28",         0x010000, 0x1fa708f4, BRF_GRA },	       //  4
+	{ "808e22.i28",         0x010000, 0x73d758f6, BRF_GRA },	       //  5
+	{ "808e23.k28",         0x010000, 0x8ff08b21, BRF_GRA },	       //  6
 	
-	{ "808d17.j4",          0x080000, 0xd1299082, BRF_GRA },	   //  7	Sprites
-	{ "808d15.h4",          0x080000, 0x2b22a6b6, BRF_GRA },	   //  8
+	{ "808d17.j4",          0x080000, 0xd1299082, BRF_GRA },	       //  7	Sprites
+	{ "808d15.h4",          0x080000, 0x2b22a6b6, BRF_GRA },	       //  8
 	
-	{ "808a18.f16",         0x000100, 0xeb95aede, BRF_GRA },	   //  9	PROMs
+	{ "808a18.f16",         0x000100, 0xeb95aede, BRF_GRA },	       //  9	PROMs
 	
-	{ "808d01.d4",          0x020000, 0xfd4d37c0, BRF_SND },	   //  10	K007232 Samples
+	{ "808d01.d4",          0x020000, 0xfd4d37c0, BRF_SND },	       // 10	K007232 Samples
 };
 
 STD_ROM_PICK(Mia2)
@@ -1370,15 +1399,15 @@ static struct BurnRomInfo CuebrickRomDesc[] = {
 	{ "903d25.g12",         0x010000, 0x8d575663, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
 	{ "903d24.f12",         0x010000, 0x2973625d, BRF_ESS | BRF_PRG }, //  1
 	
-	{ "903c29.k21",         0x010000, 0xfada986d, BRF_GRA },	   //  2	Tiles
-	{ "903c27.k17",         0x010000, 0x5bd4b8e1, BRF_GRA },	   //  3
-	{ "903c28.k19",         0x010000, 0x80d2bfaf, BRF_GRA },	   //  4
-	{ "903c26.k15",         0x010000, 0xf808fa3d, BRF_GRA },	   //  5
+	{ "903c29.k21",         0x010000, 0xfada986d, BRF_GRA },	       //  2	Tiles
+	{ "903c27.k17",         0x010000, 0x5bd4b8e1, BRF_GRA },	       //  3
+	{ "903c28.k19",         0x010000, 0x80d2bfaf, BRF_GRA },	       //  4
+	{ "903c26.k15",         0x010000, 0xf808fa3d, BRF_GRA },	       //  5
 	
-	{ "903d23.k12",         0x010000, 0xc39fc9fd, BRF_GRA },	   //  6	Sprites
-	{ "903d21.k8",          0x010000, 0x3c7bf8cd, BRF_GRA },	   //  7
-	{ "903d22.k10",         0x010000, 0x95ad8591, BRF_GRA },	   //  8
-	{ "903d20.k6",          0x010000, 0x2872a1bb, BRF_GRA },	   //  9
+	{ "903d23.k12",         0x010000, 0xc39fc9fd, BRF_GRA },	       //  6	Sprites
+	{ "903d21.k8",          0x010000, 0x3c7bf8cd, BRF_GRA },	       //  7
+	{ "903d22.k10",         0x010000, 0x95ad8591, BRF_GRA },	       //  8
+	{ "903d20.k6",          0x010000, 0x2872a1bb, BRF_GRA },	       //  9
 };
 
 STD_ROM_PICK(Cuebrick)
@@ -1392,19 +1421,41 @@ static struct BurnRomInfo BlswhstlRomDesc[] = {
 	
 	{ "060j01.f3",          0x010000, 0xf9d9a673, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "060e07.k16",         0x080000, 0xc400edf3, BRF_GRA },	   //  5	Tiles
-	{ "060e08.k12",         0x080000, 0x70dddba1, BRF_GRA },	   //  6
+	{ "060e07.k16",         0x080000, 0xc400edf3, BRF_GRA },	       //  5	Tiles
+	{ "060e08.k12",         0x080000, 0x70dddba1, BRF_GRA },	       //  6
 	
-	{ "060e06.k7",          0x080000, 0x09381492, BRF_GRA },	   //  7	Sprites
-	{ "060e05.k3",          0x080000, 0x32454241, BRF_GRA },	   //  8
+	{ "060e06.k7",          0x080000, 0x09381492, BRF_GRA },	       //  7	Sprites
+	{ "060e05.k3",          0x080000, 0x32454241, BRF_GRA },	       //  8
 	
-	{ "060e04.d1",          0x100000, 0xc680395d, BRF_SND },	   //  9	K053260 Samples
+	{ "060e04.d1",          0x100000, 0xc680395d, BRF_SND },	       //  9	K053260 Samples
 
-	{ "blswhstl.nv",  0x000080, 0x87434e3f, BRF_OPT },
+	{ "blswhstl.nv",  		0x000080, 0x87434e3f, BRF_OPT },
 };
 
 STD_ROM_PICK(Blswhstl)
 STD_ROM_FN(Blswhstl)
+
+static struct BurnRomInfo BlswhstlaRomDesc[] = {
+	{ "060_m02.e09",        0x020000, 0xbc9dd08f, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
+	{ "060_m03.g09",        0x020000, 0x7b6ee4a4, BRF_ESS | BRF_PRG }, //  1
+	{ "060_m09.e11",        0x020000, 0x14628736, BRF_ESS | BRF_PRG }, //  2
+	{ "060_m10.g11",        0x020000, 0xf738ad4a, BRF_ESS | BRF_PRG }, //  3
+	
+	{ "060j01.f3",          0x010000, 0xf9d9a673, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
+	
+	{ "060e07.k16",         0x080000, 0xc400edf3, BRF_GRA },	       //  5	Tiles
+	{ "060e08.k12",         0x080000, 0x70dddba1, BRF_GRA },	       //  6
+	
+	{ "060e06.k7",          0x080000, 0x09381492, BRF_GRA },	       //  7	Sprites
+	{ "060e05.k3",          0x080000, 0x32454241, BRF_GRA },	       //  8
+	
+	{ "060e04.d1",          0x100000, 0xc680395d, BRF_SND },	       //  9	K053260 Samples
+
+	{ "blswhstl.nv",  		0x000080, 0x87434e3f, BRF_OPT },
+};
+
+STD_ROM_PICK(Blswhstla)
+STD_ROM_FN(Blswhstla)
 
 static struct BurnRomInfo DetatwinRomDesc[] = {
 	{ "060_j02.e09",        0x020000, 0x11b761ac, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
@@ -1414,15 +1465,15 @@ static struct BurnRomInfo DetatwinRomDesc[] = {
 	
 	{ "060j01.f3",          0x010000, 0xf9d9a673, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "060e07.k16",         0x080000, 0xc400edf3, BRF_GRA },	   //  5	Tiles
-	{ "060e08.k12",         0x080000, 0x70dddba1, BRF_GRA },	   //  6
+	{ "060e07.k16",         0x080000, 0xc400edf3, BRF_GRA },	   	   //  5	Tiles
+	{ "060e08.k12",         0x080000, 0x70dddba1, BRF_GRA },	       //  6
 	
-	{ "060e06.k7",          0x080000, 0x09381492, BRF_GRA },	   //  7	Sprites
-	{ "060e05.k3",          0x080000, 0x32454241, BRF_GRA },	   //  8
+	{ "060e06.k7",          0x080000, 0x09381492, BRF_GRA },	       //  7	Sprites
+	{ "060e05.k3",          0x080000, 0x32454241, BRF_GRA },	       //  8
 	
-	{ "060e04.d1",          0x100000, 0xc680395d, BRF_SND },	   //  9	K053260 Samples
+	{ "060e04.d1",          0x100000, 0xc680395d, BRF_SND },	       //  9	K053260 Samples
 
-	{ "blswhstl.nv",  0x000080, 0x87434e3f, BRF_OPT },
+	{ "blswhstl.nv",  		0x000080, 0x87434e3f, BRF_OPT },
 };
 
 STD_ROM_PICK(Detatwin)
@@ -1436,15 +1487,15 @@ static struct BurnRomInfo SsridersRomDesc[] = {
 	
 	{ "064e01.2f",          0x010000, 0x44b9bc52, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	   //  5	Tiles
-	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	   //  6
+	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	       //  5	Tiles
+	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	       //  6
 	
-	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	   //  7	Sprites
-	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	   //  8
+	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	       //  7	Sprites
+	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	       //  8
 	
-	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	   //  9	K053260 Samples
+	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	       //  9	K053260 Samples
 
-	{ "ssriders_eac.nv",  0x000080, 0xf6d641a7, BRF_OPT },
+	{ "ssriders_eac.nv",  	0x000080, 0xf6d641a7, BRF_OPT },
 };
 
 STD_ROM_PICK(Ssriders)
@@ -1458,15 +1509,15 @@ static struct BurnRomInfo SsridersebdRomDesc[] = {
 	
 	{ "064e01.2f",          0x010000, 0x44b9bc52, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	   //  5	Tiles
-	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	   //  6
+	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	       //  5	Tiles
+	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	       //  6
 	
-	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	   //  7	Sprites
-	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	   //  8
+	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	       //  7	Sprites
+	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	       //  8
 	
-	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	   //  9	K053260 Samples
+	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	       //  9	K053260 Samples
 
-	{ "ssriders_ebd.nv",  0x000080, 0xcbc903f6, BRF_OPT },
+	{ "ssriders_ebd.nv",  	0x000080, 0xcbc903f6, BRF_OPT },
 };
 
 STD_ROM_PICK(Ssridersebd)
@@ -1480,15 +1531,15 @@ static struct BurnRomInfo SsridersebcRomDesc[] = {
 	
 	{ "064e01.2f",          0x010000, 0x44b9bc52, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	   //  5	Tiles
-	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	   //  6
+	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	       //  5	Tiles
+	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	       //  6
 	
-	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	   //  7	Sprites
-	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	   //  8
+	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	       //  7	Sprites
+	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	       //  8
 	
-	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	   //  9	K053260 Samples
+	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	       //  9	K053260 Samples
 
-	{ "ssriders_ebc.nv",  0x000080, 0x1918e90f, BRF_OPT },
+	{ "ssriders_ebc.nv",  	0x000080, 0x1918e90f, BRF_OPT },
 };
 
 STD_ROM_PICK(Ssridersebc)
@@ -1502,15 +1553,15 @@ static struct BurnRomInfo SsridersudaRomDesc[] = {
 	
 	{ "064e01.2f",          0x010000, 0x44b9bc52, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	   //  5	Tiles
-	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	   //  6
+	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	       //  5	Tiles
+	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	       //  6
 	
-	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	   //  7	Sprites
-	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	   //  8
+	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	       //  7	Sprites
+	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	       //  8
 	
-	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	   //  9	K053260 Samples
+	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	       //  9	K053260 Samples
 
-	{ "ssriders_uda.nv",  0x000080, 0x148c6d64, BRF_OPT },
+	{ "ssriders_uda.nv",  	0x000080, 0x148c6d64, BRF_OPT },
 };
 
 STD_ROM_PICK(Ssridersuda)
@@ -1524,15 +1575,15 @@ static struct BurnRomInfo SsriderseaaRomDesc[] = {
 	
 	{ "064eaa01.2f",        0x010000, 0xbce45d82, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	   //  5	Tiles
-	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	   //  6
+	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	       //  5	Tiles
+	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	       //  6
 	
-	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	   //  7	Sprites
-	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	   //  8
+	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	       //  7	Sprites
+	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	       //  8
 	
-	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	   //  9	K053260 Samples
+	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	       //  9	K053260 Samples
 
-	{ "ssriders_eaa.nv",  0x000080, 0x74a45ef5, BRF_OPT },
+	{ "ssriders_eaa.nv",  	0x000080, 0x74a45ef5, BRF_OPT },
 };
 
 STD_ROM_PICK(Ssriderseaa)
@@ -1546,15 +1597,15 @@ static struct BurnRomInfo SsridersuabRomDesc[] = {
 	
 	{ "064e01.2f",          0x010000, 0x44b9bc52, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	   //  5	Tiles
-	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	   //  6
+	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	       //  5	Tiles
+	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	       //  6
 	
-	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	   //  7	Sprites
-	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	   //  8
+	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	       //  7	Sprites
+	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	       //  8
 	
-	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	   //  9	K053260 Samples
+	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	       //  9	K053260 Samples
 
-	{ "ssriders_uab.nv",  0x000080, 0xfe08b210, BRF_OPT },
+	{ "ssriders_uab.nv",  	0x000080, 0xfe08b210, BRF_OPT },
 };
 
 STD_ROM_PICK(Ssridersuab)
@@ -1568,15 +1619,15 @@ static struct BurnRomInfo SsridersuacRomDesc[] = {
 	
 	{ "064e01.2f",          0x010000, 0x44b9bc52, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	   //  5	Tiles
-	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	   //  6
+	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	       //  5	Tiles
+	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	       //  6
 	
-	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	   //  7	Sprites
-	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	   //  8
+	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	       //  7	Sprites
+	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	       //  8
 	
-	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	   //  9	K053260 Samples
+	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	       //  9	K053260 Samples
 
-	{ "ssriders_uac.nv",  0x000080, 0x26c8f1a0, BRF_OPT },
+	{ "ssriders_uac.nv",  	0x000080, 0x26c8f1a0, BRF_OPT },
 };
 
 STD_ROM_PICK(Ssridersuac)
@@ -1590,15 +1641,15 @@ static struct BurnRomInfo SsridersubcRomDesc[] = {
 	
 	{ "064e01.2f",          0x010000, 0x44b9bc52, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	   //  5	Tiles
-	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	   //  6
+	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	       //  5	Tiles
+	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	       //  6
 	
-	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	   //  7	Sprites
-	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	   //  8
+	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	       //  7	Sprites
+	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	       //  8
 	
-	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	   //  9	K053260 Samples
+	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	       //  9	K053260 Samples
 
-	{ "ssriders_ubc.nv",  0x000080, 0x31c5504f, BRF_OPT },
+	{ "ssriders_ubc.nv",  	0x000080, 0x31c5504f, BRF_OPT },
 };
 
 STD_ROM_PICK(Ssridersubc)
@@ -1612,15 +1663,15 @@ static struct BurnRomInfo SsridersabdRomDesc[] = {
 	
 	{ "064e01.2f",          0x010000, 0x44b9bc52, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	   //  5	Tiles
-	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	   //  6
+	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	       //  5	Tiles
+	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	       //  6
 	
-	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	   //  7	Sprites
-	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	   //  8
+	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	       //  7	Sprites
+	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	       //  8
 	
-	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	   //  9	K053260 Samples
+	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	       //  9	K053260 Samples
 
-	{ "ssriders_abd.nv",  0x000080, 0xbfdafedf, BRF_OPT },
+	{ "ssriders_abd.nv",  	0x000080, 0xbfdafedf, BRF_OPT },
 };
 
 STD_ROM_PICK(Ssridersabd)
@@ -1634,15 +1685,15 @@ static struct BurnRomInfo SsridersaddRomDesc[] = {
 	
 	{ "064e01.2f",          0x010000, 0x44b9bc52, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	   //  5	Tiles
-	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	   //  6
+	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	       //  5	Tiles
+	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	       //  6
 	
-	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	   //  7	Sprites
-	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	   //  8
+	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	       //  7	Sprites
+	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	       //  8
 	
-	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	   //  9	K053260 Samples
+	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	       //  9	K053260 Samples
 
-	{ "ssriders_add.nv",  0x000080, 0xf06242d5, BRF_OPT },
+	{ "ssriders_add.nv",  	0x000080, 0xf06242d5, BRF_OPT },
 };
 
 STD_ROM_PICK(Ssridersadd)
@@ -1656,19 +1707,41 @@ static struct BurnRomInfo SsridersjacRomDesc[] = {
 	
 	{ "064e01.2f",          0x010000, 0x44b9bc52, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	   //  5	Tiles
-	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	   //  6
+	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	       //  5	Tiles
+	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	       //  6
 	
-	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	   //  7	Sprites
-	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	   //  8
+	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	       //  7	Sprites
+	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	       //  8
 	
-	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	   //  9	K053260 Samples
+	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	       //  9	K053260 Samples
 
-	{ "ssriders_jac.nv",  0x000080, 0xeeb0c55f, BRF_OPT },
+	{ "ssriders_jac.nv",  	0x000080, 0xeeb0c55f, BRF_OPT },
 };
 
 STD_ROM_PICK(Ssridersjac)
 STD_ROM_FN(Ssridersjac)
+
+static struct BurnRomInfo SsridersjadRomDesc[] = {
+	{ "064jad02.8e",        0x040000, 0x13709ee6, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
+	{ "064jad03.8g",        0x040000, 0x2fa32229, BRF_ESS | BRF_PRG }, //  1
+	{ "064eab04.10e",       0x020000, 0xef2315bd, BRF_ESS | BRF_PRG }, //  2
+	{ "064eab05.10g",       0x020000, 0x51d6fbc4, BRF_ESS | BRF_PRG }, //  3
+	
+	{ "064e01.2f",          0x010000, 0x44b9bc52, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
+	
+	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	       //  5	Tiles
+	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	       //  6
+	
+	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	       //  7	Sprites
+	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	       //  8
+	
+	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	       //  9	K053260 Samples
+
+	{ "ssriders_jad.nv",  	0x000080, 0x8962058c, BRF_OPT },
+};
+
+STD_ROM_PICK(Ssridersjad)
+STD_ROM_FN(Ssridersjad)
 
 static struct BurnRomInfo SsridersjbdRomDesc[] = {
 	{ "064jbd02.8e",        0x040000, 0x7acdc1e3, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
@@ -1678,15 +1751,15 @@ static struct BurnRomInfo SsridersjbdRomDesc[] = {
 	
 	{ "064e01.2f",          0x010000, 0x44b9bc52, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
 	
-	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	   //  5	Tiles
-	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	   //  6
+	{ "064e12.16k",         0x080000, 0xe2bdc619, BRF_GRA },	       //  5	Tiles
+	{ "064e11.12k",         0x080000, 0x2d8ca8b0, BRF_GRA },	       //  6
 	
-	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	   //  7	Sprites
-	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	   //  8
+	{ "064e09.7l",          0x100000, 0x4160c372, BRF_GRA },	       //  7	Sprites
+	{ "064e07.3l",          0x100000, 0x64dd673c, BRF_GRA },	       //  8
 	
-	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	   //  9	K053260 Samples
+	{ "064e06.1d",          0x100000, 0x59810df9, BRF_SND },	       //  9	K053260 Samples
 
-	{ "ssriders_jbd.nv",  0x000080, 0x006200e3, BRF_OPT },
+	{ "ssriders_jbd.nv",  	0x000080, 0x006200e3, BRF_OPT },
 };
 
 STD_ROM_PICK(Ssridersjbd)
@@ -1696,16 +1769,16 @@ static struct BurnRomInfo ssridersbRomDesc[] = {
 	{ "sunsetb.03",		0x080000, 0x37ffe90b, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
 	{ "sunsetb.04",		0x080000, 0x8ff647b7, BRF_ESS | BRF_PRG }, //  1
 
-	{ "064e12.16k",		0x080000, 0xe2bdc619, BRF_GRA },	   //  2	Tiles
-	{ "064e11.12k",		0x080000, 0x2d8ca8b0, BRF_GRA },	   //  3
+	{ "064e12.16k",		0x080000, 0xe2bdc619, BRF_GRA },	       //  2	Tiles
+	{ "064e11.12k",		0x080000, 0x2d8ca8b0, BRF_GRA },	       //  3
 
-	{ "sunsetb.05",		0x080000, 0x8a0ff31a, BRF_GRA },	   //  4	Sprites
-	{ "sunsetb.06",		0x080000, 0xfdf2c887, BRF_GRA },	   //  5
-	{ "sunsetb.07",		0x080000, 0xa545b1ed, BRF_GRA },	   //  6
-	{ "sunsetb.08",		0x080000, 0xf867cd38, BRF_GRA },	   //  7
+	{ "sunsetb.05",		0x080000, 0x8a0ff31a, BRF_GRA },	       //  4	Sprites
+	{ "sunsetb.06",		0x080000, 0xfdf2c887, BRF_GRA },	       //  5
+	{ "sunsetb.07",		0x080000, 0xa545b1ed, BRF_GRA },	       //  6
+	{ "sunsetb.08",		0x080000, 0xf867cd38, BRF_GRA },	       //  7
 
-	{ "sunsetb.01",		0x080000, 0x1a8b5ca2, BRF_SND },	   //  8	OKI Samples
-	{ "sunsetb.02",		0x080000, 0x5d485523, BRF_SND },	   //  9
+	{ "sunsetb.01",		0x080000, 0x1a8b5ca2, BRF_SND },	       //  8	OKI Samples
+	{ "sunsetb.02",		0x080000, 0x5d485523, BRF_SND },	       //  9
 };
 
 STD_ROM_PICK(ssridersb)
@@ -1725,7 +1798,7 @@ static struct BurnRomInfo thndrx2RomDesc[] = {
 
 	{ "073-b04.2d",		0x080000, 0x05287a0b, BRF_SND },           //  7 	K053260 Samples
 
-	{ "thndrx2.nv",  0x000080, 0xca613e98, BRF_OPT },
+	{ "thndrx2.nv",  	0x000080, 0xca613e98, BRF_OPT },
 };
 
 STD_ROM_PICK(thndrx2)
@@ -1745,7 +1818,7 @@ static struct BurnRomInfo thndrx2aRomDesc[] = {
 
 	{ "073-b04.2d",		0x080000, 0x05287a0b, BRF_SND },           //  7 	K053260 Samples
 
-	{ "thndrx2a.nv",  0x000080, 0xf7893d00, BRF_OPT },
+	{ "thndrx2a.nv",  	0x000080, 0xf7893d00, BRF_OPT },
 };
 
 STD_ROM_PICK(thndrx2a)
@@ -1765,7 +1838,7 @@ static struct BurnRomInfo thndrx2jRomDesc[] = {
 
 	{ "073-b04.2d",		0x080000, 0x05287a0b, BRF_SND },           //  7 	K053260 Samples
 
-	{ "thndrx2j.nv",  0x000080, 0x83b4799b, BRF_OPT },
+	{ "thndrx2j.nv",  	0x000080, 0x83b4799b, BRF_OPT },
 };
 
 STD_ROM_PICK(thndrx2j)
@@ -1861,7 +1934,7 @@ static struct BurnRomInfo tmnt2RomDesc[] = {
 
 	{ "063b06.1d",		0x200000, 0x1e510aa5, BRF_SND },           // 11	K053260 Samples
 
-	{ "tmnt2_uaa.nv",  0x000080, 0x284357bd, BRF_OPT },
+	{ "tmnt2_uaa.nv",  	0x000080, 0x284357bd, BRF_OPT },
 };
 
 STD_ROM_PICK(tmnt2)
@@ -1885,7 +1958,7 @@ static struct BurnRomInfo tmnt22puRomDesc[] = {
 
 	{ "063b06.1d",		0x200000, 0x1e510aa5, BRF_SND },           // 11	K053260 Samples
 
-	{ "tmnt2_uda.nv",  0x000080, 0x44928d33, BRF_OPT },
+	{ "tmnt2_uda.nv",  	0x000080, 0x44928d33, BRF_OPT },
 };
 
 STD_ROM_PICK(tmnt22pu)
@@ -1909,7 +1982,7 @@ static struct BurnRomInfo tmht22peRomDesc[] = {
 
 	{ "063b06.1d",		0x200000, 0x1e510aa5, BRF_SND },           // 11	K053260 Samples
 
-	{ "tmnt2_eba.nv",  0x000080, 0xc0a3ed50, BRF_OPT },
+	{ "tmnt2_eba.nv",  	0x000080, 0xc0a3ed50, BRF_OPT },
 };
 
 STD_ROM_PICK(tmht22pe)
@@ -1933,7 +2006,7 @@ static struct BurnRomInfo tmnt2aRomDesc[] = {
 
 	{ "063b06.1d",		0x200000, 0x1e510aa5, BRF_SND },           // 11	K053260 Samples
 
-	{ "tmnt2_ada.nv",  0x000080, 0x063068a0, BRF_OPT },
+	{ "tmnt2_ada.nv",  	0x000080, 0x063068a0, BRF_OPT },
 };
 
 STD_ROM_PICK(tmnt2a)
@@ -1955,7 +2028,7 @@ static struct BurnRomInfo qgakumonRomDesc[] = {
 
 	{ "248a06.1d",		0x200000, 0x0fba1def, BRF_SND },           //  9	K053260 Samples
 
-	{ "qgakumon.nv",  0x000080, 0x847bd238, BRF_OPT },
+	{ "qgakumon.nv",  	0x000080, 0x847bd238, BRF_OPT },
 };
 
 STD_ROM_PICK(qgakumon)
@@ -1967,13 +2040,13 @@ static struct BurnRomInfo punkshotRomDesc[] = {
 
 	{ "907f01.e8",		0x008000, 0xf040c484, BRF_ESS | BRF_PRG }, //  2	Z80 Program
 
-	{ "907d06.e23",		0x040000, 0xf5cc38f4, BRF_GRA },	   //  3	Tiles
-	{ "907d05.e22",		0x040000, 0xe25774c1, BRF_GRA },	   //  4
+	{ "907d06.e23",		0x040000, 0xf5cc38f4, BRF_GRA },	   	   //  3	Tiles
+	{ "907d05.e22",		0x040000, 0xe25774c1, BRF_GRA },	       //  4
 
-	{ "907d07.k2",		0x100000, 0xb0fe4543, BRF_GRA },	   //  5	Sprites
-	{ "907d08.k7",		0x100000, 0xd5ac8d9d, BRF_GRA },	   //  6
+	{ "907d07.k2",		0x100000, 0xb0fe4543, BRF_GRA },	       //  5	Sprites
+	{ "907d08.k7",		0x100000, 0xd5ac8d9d, BRF_GRA },	       //  6
 
-	{ "907d04.d3",		0x080000, 0x090feb5e, BRF_SND },	   //  7	K053260 Samples
+	{ "907d04.d3",		0x080000, 0x090feb5e, BRF_SND },	       //  7	K053260 Samples
 };
 
 STD_ROM_PICK(punkshot)
@@ -1985,13 +2058,13 @@ static struct BurnRomInfo punkshot2RomDesc[] = {
 
 	{ "907f01.e8",		0x008000, 0xf040c484, BRF_ESS | BRF_PRG }, //  2	Z80 Program
 
-	{ "907d06.e23",		0x040000, 0xf5cc38f4, BRF_GRA },	   //  3	Tiles
-	{ "907d05.e22",		0x040000, 0xe25774c1, BRF_GRA },	   //  4
+	{ "907d06.e23",		0x040000, 0xf5cc38f4, BRF_GRA },	       //  3	Tiles
+	{ "907d05.e22",		0x040000, 0xe25774c1, BRF_GRA },	       //  4
 
-	{ "907d07.k2",		0x100000, 0xb0fe4543, BRF_GRA },	   //  5	Sprites
-	{ "907d08.k7",		0x100000, 0xd5ac8d9d, BRF_GRA },	   //  6
+	{ "907d07.k2",		0x100000, 0xb0fe4543, BRF_GRA },	       //  5	Sprites
+	{ "907d08.k7",		0x100000, 0xd5ac8d9d, BRF_GRA },	       //  6
 
-	{ "907d04.d3",		0x080000, 0x090feb5e, BRF_SND },	   //  7	K053260 Samples
+	{ "907d04.d3",		0x080000, 0x090feb5e, BRF_SND },	       //  7	K053260 Samples
 };
 
 STD_ROM_PICK(punkshot2)
@@ -2003,13 +2076,13 @@ static struct BurnRomInfo punkshotjRomDesc[] = {
 
 	{ "907f01.e8",		0x008000, 0xf040c484, BRF_ESS | BRF_PRG }, //  2	Z80 Program
 
-	{ "907d06.e23",		0x040000, 0xf5cc38f4, BRF_GRA },	   //  3	Tiles
-	{ "907d05.e22",		0x040000, 0xe25774c1, BRF_GRA },	   //  4
+	{ "907d06.e23",		0x040000, 0xf5cc38f4, BRF_GRA },	       //  3	Tiles
+	{ "907d05.e22",		0x040000, 0xe25774c1, BRF_GRA },	       //  4
 
-	{ "907d07.k2",		0x100000, 0xb0fe4543, BRF_GRA },	   //  5	Sprites
-	{ "907d08.k7",		0x100000, 0xd5ac8d9d, BRF_GRA },	   //  6
+	{ "907d07.k2",		0x100000, 0xb0fe4543, BRF_GRA },	       //  5	Sprites
+	{ "907d08.k7",		0x100000, 0xd5ac8d9d, BRF_GRA },	       //  6
 
-	{ "907d04.d3",		0x080000, 0x090feb5e, BRF_SND },	   //  7	K053260 Samples
+	{ "907d04.d3",		0x080000, 0x090feb5e, BRF_SND },	       //  7	K053260 Samples
 };
 
 STD_ROM_PICK(punkshotj)
@@ -2481,7 +2554,7 @@ void __fastcall Tmnt68KWriteByte(UINT32 a, UINT8 d)
 			static INT32 Last;
 			if (Last == 0x08 && (d & 0x08) == 0) {
 				ZetOpen(0);
-				ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+				ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 				ZetClose();
 			}
 			Last = d & 0x08;
@@ -2590,7 +2663,7 @@ void __fastcall Mia68KWriteByte(UINT32 a, UINT8 d)
 			static INT32 Last;
 			if (Last == 0x08 && (d & 0x08) == 0) {
 				ZetOpen(0);
-				ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+				ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 				ZetClose();
 			}
 			Last = d & 0x08;
@@ -2940,7 +3013,7 @@ void __fastcall Blswhstl68KWriteByte(UINT32 a, UINT8 d)
 		case 0x780605: {
 			ZetOpen(0);
 			ZetSetVector(0xff);
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 			ZetClose();
 			return;
 		}
@@ -3368,7 +3441,7 @@ void __fastcall Ssriders68KWriteByte(UINT32 a, UINT8 d)
 		case 0x5c0605: {
 			ZetOpen(0);
 			ZetSetVector(0xff);
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 			ZetClose();
 			return;
 		}	
@@ -3562,7 +3635,7 @@ void __fastcall Thndrx268KWriteByte(UINT32 a, UINT8 d)
 			static INT32 last;
 			if (last == 0 && (d & 0x20) != 0) {
 				ZetSetVector(0xff);
-				ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+				ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 			}
 			last = d & 0x20;
 
@@ -3705,7 +3778,7 @@ void __fastcall Lgtnfght68KWriteByte(UINT32 a, UINT8 d)
 			static INT32 last;
 			if (last == 0 && (d & 0x4) != 0) {
 				ZetSetVector(0xff);
-				ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+				ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 			}
 			last = d & 0x4;
 
@@ -3813,7 +3886,7 @@ void __fastcall Punkshot68KWriteByte(UINT32 a, UINT8 d)
 
 			if (last == 0x04 && (d & 0x04) == 0x00) {
 				ZetSetVector(0xff);
-				ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+				ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 			}
 
 			last = d & 0x04; 
@@ -3842,7 +3915,7 @@ UINT8 __fastcall TmntZ80Read(UINT16 a)
 		}
 		
 		case 0xa000: {
-			ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 			return DrvSoundLatch;
 		}
 		
@@ -3917,7 +3990,7 @@ UINT8 __fastcall MiaZ80Read(UINT16 a)
 	
 	switch (a) {
 		case 0xa000: {
-			ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 			return DrvSoundLatch;
 		}
 		
@@ -3960,7 +4033,7 @@ void __fastcall MiaZ80Write(UINT16 a, UINT8 d)
 UINT8 __fastcall BlswhstlZ80Read(UINT16 a)
 {
 	if (a >= 0xfa00 && a <= 0xfa2f) {
-		if (a == 0xfa00) ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
+		if (a == 0xfa00) ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 		return K053260Read(0, a - 0xfa00);
 	}
 	
@@ -4036,7 +4109,7 @@ void __fastcall Thndrx2Z80Write(UINT16 a, UINT8 d)
 UINT8 __fastcall Thndrx2Z80Read(UINT16 a)
 {
 	if (a >= 0xfc00 && a <= 0xfc2f) {
-		if (a == 0xfc00) ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
+		if (a == 0xfc00) ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 		return K053260Read(0, a - 0xfc00);
 	}
 
@@ -4072,7 +4145,7 @@ void __fastcall LgtnfghtZ80Write(UINT16 a, UINT8 d)
 UINT8 __fastcall LgtnfghtZ80Read(UINT16 a)
 {
 	if (a >= 0xc000 && a <= 0xc02f) {
-		if (a == 0xc000) ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
+		if (a == 0xc000) ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 		return K053260Read(0, a - 0xc000);
 	}
 
@@ -4276,13 +4349,13 @@ static void K052109CuebrickCallback(INT32 Layer, INT32, INT32 *Code, INT32 *Colo
 {
 	if (K052109RMRDLine == 0 && Layer == 0) {
 		*Code |= ((*Colour & 0x01) << 8);
-		*Colour = LayerColourBase[Layer] + ((*Colour & 0x80) >> 5) + ((*Colour & 0x10) >> 1);
+		*Colour = LayerColourBase[Layer] + ((*Colour & 0x0e) >> 1);
+
 	} else {
 		*Code |= ((*Colour & 0x0f) << 8);
 		*Colour = LayerColourBase[Layer] + ((*Colour & 0xe0) >> 5);
 	}
 }
-
 
 static void K052109BlswhstlCallback(INT32 Layer, INT32 Bank, INT32 *Code, INT32 *Colour, INT32 *, INT32 *)
 {
@@ -4442,9 +4515,9 @@ static INT32 TmntInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KRom           , 0x000000, 0x05ffff, SM_ROM);
-	SekMapMemory(Drv68KRam           , 0x060000, 0x063fff, SM_RAM);
-	SekMapMemory(DrvPaletteRam       , 0x080000, 0x080fff, SM_RAM);
+	SekMapMemory(Drv68KRom           , 0x000000, 0x05ffff, MAP_ROM);
+	SekMapMemory(Drv68KRam           , 0x060000, 0x063fff, MAP_RAM);
+	SekMapMemory(DrvPaletteRam       , 0x080000, 0x080fff, MAP_RAM);
 	SekSetReadWordHandler(0, Tmnt68KReadWord);
 	SekSetWriteWordHandler(0, Tmnt68KWriteWord);
 	SekSetReadByteHandler(0, Tmnt68KReadByte);
@@ -4541,10 +4614,10 @@ static INT32 MiaInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KRom           , 0x000000, 0x03ffff, SM_ROM);
-	SekMapMemory(Drv68KRam + 0x0000  , 0x040000, 0x043fff, SM_RAM);
-	SekMapMemory(Drv68KRam + 0x4000  , 0x060000, 0x063fff, SM_RAM);
-	SekMapMemory(DrvPaletteRam       , 0x080000, 0x080fff, SM_RAM);
+	SekMapMemory(Drv68KRom           , 0x000000, 0x03ffff, MAP_ROM);
+	SekMapMemory(Drv68KRam + 0x0000  , 0x040000, 0x043fff, MAP_RAM);
+	SekMapMemory(Drv68KRam + 0x4000  , 0x060000, 0x063fff, MAP_RAM);
+	SekMapMemory(DrvPaletteRam       , 0x080000, 0x080fff, MAP_RAM);
 	SekSetReadWordHandler(0, Mia68KReadWord);
 	SekSetWriteWordHandler(0, Mia68KWriteWord);
 	SekSetReadByteHandler(0, Mia68KReadByte);
@@ -4625,9 +4698,9 @@ static INT32 CuebrickInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KRom           , 0x000000, 0x01ffff, SM_ROM);
-	SekMapMemory(Drv68KRam + 0x0000  , 0x040000, 0x043fff, SM_RAM);
-	SekMapMemory(DrvPaletteRam       , 0x080000, 0x080fff, SM_RAM);
+	SekMapMemory(Drv68KRom           , 0x000000, 0x01ffff, MAP_ROM);
+	SekMapMemory(Drv68KRam + 0x0000  , 0x040000, 0x043fff, MAP_RAM);
+	SekMapMemory(DrvPaletteRam       , 0x080000, 0x080fff, MAP_RAM);
 	SekSetReadWordHandler(0, Cuebrick68KReadWord);
 	SekSetWriteWordHandler(0, Cuebrick68KWriteWord);
 	SekSetReadByteHandler(0, Cuebrick68KReadByte);
@@ -4700,9 +4773,9 @@ static INT32 BlswhstlInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KRom           , 0x000000, 0x07ffff, SM_ROM);
-	SekMapMemory(Drv68KRam           , 0x204000, 0x207fff, SM_RAM);
-	SekMapMemory(DrvPaletteRam       , 0x400000, 0x400fff, SM_RAM);
+	SekMapMemory(Drv68KRom           , 0x000000, 0x07ffff, MAP_ROM);
+	SekMapMemory(Drv68KRam           , 0x204000, 0x207fff, MAP_RAM);
+	SekMapMemory(DrvPaletteRam       , 0x400000, 0x400fff, MAP_RAM);
 	SekSetReadWordHandler(0, Blswhstl68KReadWord);
 	SekSetWriteWordHandler(0, Blswhstl68KWriteWord);
 	SekSetReadByteHandler(0, Blswhstl68KReadByte);
@@ -4787,9 +4860,9 @@ static INT32 SsridersInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KRom           , 0x000000, 0x0bffff, SM_ROM);
-	SekMapMemory(Drv68KRam           , 0x104000, 0x107fff, SM_RAM);
-	SekMapMemory(DrvPaletteRam       , 0x140000, 0x140fff, SM_RAM);
+	SekMapMemory(Drv68KRom           , 0x000000, 0x0bffff, MAP_ROM);
+	SekMapMemory(Drv68KRam           , 0x104000, 0x107fff, MAP_RAM);
+	SekMapMemory(DrvPaletteRam       , 0x140000, 0x140fff, MAP_RAM);
 	SekSetReadWordHandler(0, Ssriders68KReadWord);
 	SekSetWriteWordHandler(0, Ssriders68KWriteWord);
 	SekSetReadByteHandler(0, Ssriders68KReadByte);
@@ -4872,9 +4945,9 @@ static INT32 Thndrx2Init()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KRom           , 0x000000, 0x03ffff, SM_ROM);
-	SekMapMemory(Drv68KRam           , 0x100000, 0x103fff, SM_RAM);
-	SekMapMemory(DrvPaletteRam       , 0x200000, 0x200fff, SM_RAM);
+	SekMapMemory(Drv68KRom           , 0x000000, 0x03ffff, MAP_ROM);
+	SekMapMemory(Drv68KRam           , 0x100000, 0x103fff, MAP_RAM);
+	SekMapMemory(DrvPaletteRam       , 0x200000, 0x200fff, MAP_RAM);
 	SekSetWriteWordHandler(0, Thndrx268KWriteWord);
 	SekSetReadByteHandler(0, Thndrx268KReadByte);
 	SekSetWriteByteHandler(0, Thndrx268KWriteByte);
@@ -4956,9 +5029,9 @@ static INT32 LgtnfghtInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KRom           , 0x000000, 0x03ffff, SM_ROM);
-	SekMapMemory(DrvPaletteRam       , 0x080000, 0x080fff, SM_RAM);
-	SekMapMemory(Drv68KRam           , 0x090000, 0x093fff, SM_RAM);
+	SekMapMemory(Drv68KRom           , 0x000000, 0x03ffff, MAP_ROM);
+	SekMapMemory(DrvPaletteRam       , 0x080000, 0x080fff, MAP_RAM);
+	SekMapMemory(Drv68KRam           , 0x090000, 0x093fff, MAP_RAM);
 	SekSetReadWordHandler(0, Lgtnfght68KReadWord);
 	SekSetWriteWordHandler(0, Lgtnfght68KWriteWord);
 	SekSetReadByteHandler(0, Lgtnfght68KReadByte);
@@ -5045,15 +5118,15 @@ static INT32 Tmnt2Init()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KRom           , 0x000000, 0x0fffff, SM_ROM);
-	SekMapMemory(Drv68KRam           , 0x104000, 0x107fff, SM_RAM);
-	SekMapMemory(DrvPaletteRam       , 0x140000, 0x140fff, SM_RAM);
+	SekMapMemory(Drv68KRom           , 0x000000, 0x0fffff, MAP_ROM);
+	SekMapMemory(Drv68KRam           , 0x104000, 0x107fff, MAP_RAM);
+	SekMapMemory(DrvPaletteRam       , 0x140000, 0x140fff, MAP_RAM);
 	SekSetReadWordHandler(0, Ssriders68KReadWord);
 	SekSetWriteWordHandler(0, Ssriders68KWriteWord);
 	SekSetReadByteHandler(0, Ssriders68KReadByte);
 	SekSetWriteByteHandler(0, Ssriders68KWriteByte);
 
-	SekMapHandler(1,		  0x1c0800, 0x1c081f, SM_WRITE);
+	SekMapHandler(1,		  0x1c0800, 0x1c081f, MAP_WRITE);
 	SekSetWriteWordHandler(1, 	Tmnt268KProtWord);
 	SekSetWriteByteHandler(1, 	Tmnt268KProtByte);
 	SekClose();
@@ -5136,15 +5209,15 @@ static INT32 QgakumonInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KRom           , 0x000000, 0x0fffff, SM_ROM);
-	SekMapMemory(Drv68KRam           , 0x104000, 0x107fff, SM_RAM);
-	SekMapMemory(DrvPaletteRam       , 0x140000, 0x140fff, SM_RAM);
+	SekMapMemory(Drv68KRom           , 0x000000, 0x0fffff, MAP_ROM);
+	SekMapMemory(Drv68KRam           , 0x104000, 0x107fff, MAP_RAM);
+	SekMapMemory(DrvPaletteRam       , 0x140000, 0x140fff, MAP_RAM);
 	SekSetReadWordHandler(0, Ssriders68KReadWord);
 	SekSetWriteWordHandler(0, Ssriders68KWriteWord);
 	SekSetReadByteHandler(0, Ssriders68KReadByte);
 	SekSetWriteByteHandler(0, Ssriders68KWriteByte);
 
-	SekMapHandler(1,		  0x1c0800, 0x1c081f, SM_WRITE);
+	SekMapHandler(1,		  0x1c0800, 0x1c081f, MAP_WRITE);
 	SekSetWriteWordHandler(1, 	Tmnt268KProtWord);
 	SekSetWriteByteHandler(1, 	Tmnt268KProtByte);
 	SekClose();
@@ -5225,9 +5298,9 @@ static INT32 PunkshotInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KRom           , 0x000000, 0x03ffff, SM_ROM);
-	SekMapMemory(Drv68KRam  	 , 0x080000, 0x083fff, SM_RAM);
-	SekMapMemory(DrvPaletteRam       , 0x090000, 0x090fff, SM_RAM);
+	SekMapMemory(Drv68KRom           , 0x000000, 0x03ffff, MAP_ROM);
+	SekMapMemory(Drv68KRam  	 , 0x080000, 0x083fff, MAP_RAM);
+	SekMapMemory(DrvPaletteRam       , 0x090000, 0x090fff, MAP_RAM);
 	SekSetReadWordHandler(0, 	Punkshot68KReadWord);
 	SekSetWriteWordHandler(0, 	Punkshot68KWriteWord);
 	SekSetReadByteHandler(0, 	Punkshot68KReadByte);
@@ -5585,7 +5658,7 @@ static INT32 TmntFrame()
 		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
 		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		if (i == (nInterleave - 1) && bIrqEnable) SekSetIRQLine(5, SEK_IRQSTATUS_AUTO);
+		if (i == (nInterleave - 1) && bIrqEnable) SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
 		SekClose();
 		
 		// Run Z80
@@ -5651,7 +5724,7 @@ static INT32 MiaFrame()
 		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
 		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		if (i == (nInterleave - 1) && bIrqEnable) SekSetIRQLine(5, SEK_IRQSTATUS_AUTO);
+		if (i == (nInterleave - 1) && bIrqEnable) SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
 		SekClose();
 		
 		// Run Z80
@@ -5711,8 +5784,8 @@ static INT32 CuebrickFrame()
 		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
 		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		if (i == (nInterleave - 1) && bIrqEnable) SekSetIRQLine(5, SEK_IRQSTATUS_AUTO);
-		if (CuebrickSndIrqFire) SekSetIRQLine(6, SEK_IRQSTATUS_AUTO);
+		if (i == (nInterleave - 1) && bIrqEnable) SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
+		if (CuebrickSndIrqFire) SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
 				
 		if (pBurnSoundOut) {
 			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
@@ -5764,7 +5837,7 @@ static INT32 BlswhstlFrame()
 		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
 		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		if (i == (nInterleave - 1) && K052109_irq_enabled) SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
+		if (i == (nInterleave - 1) && K052109_irq_enabled) SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
 		SekClose();
 		
 		// Run Z80
@@ -5805,7 +5878,7 @@ static INT32 BlswhstlFrame()
 
 static INT32 SsridersFrame()
 {
-	INT32 nInterleave = 262;
+	INT32 nInterleave = 256;
 	INT32 nSoundBufferPos = 0;
 
 	if (DrvReset) SsridersDoReset();
@@ -5818,7 +5891,7 @@ static INT32 SsridersFrame()
 
 	SekNewFrame();
 	ZetNewFrame();
-	
+
 	for (INT32 i = 0; i < nInterleave; i++) {
 		INT32 nCurrentCPU, nNext;
 
@@ -5829,10 +5902,9 @@ static INT32 SsridersFrame()
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
 		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 		if (i == 19) DrvVBlank = 0;
-		if (i == 235) DrvVBlank = 1;
-		if (i == 235 && K052109_irq_enabled) SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
+		if (i == 240) DrvVBlank = 1;
 		SekClose();
-		
+
 		// Run Z80
 		nCurrentCPU = 1;
 		ZetOpen(0);
@@ -5841,7 +5913,7 @@ static INT32 SsridersFrame()
 		nCyclesSegment = ZetRun(nCyclesSegment);
 		nCyclesDone[nCurrentCPU] += nCyclesSegment;
 		ZetClose();
-		
+
 		if (pBurnSoundOut) {
 			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
 			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
@@ -5850,7 +5922,11 @@ static INT32 SsridersFrame()
 			nSoundBufferPos += nSegmentLength;
 		}
 	}
-	
+
+	SekOpen(0);
+	if (K052109_irq_enabled) SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
+	SekClose();
+
 	// Make sure the buffer is entirely filled.
 	if (pBurnSoundOut) {
 		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
@@ -5861,7 +5937,7 @@ static INT32 SsridersFrame()
 			K053260Update(0, pSoundBuf, nSegmentLength);
 		}
 	}
-	
+
 	if (pBurnDraw) BlswhstlDraw();
 
 	return 0;
@@ -5911,7 +5987,7 @@ static INT32 Thndrx2Frame()
 		}
 	}
 	
-	if (K052109_irq_enabled) SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
+	if (K052109_irq_enabled) SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
 
 	// Make sure the buffer is entirely filled.
 	if (pBurnSoundOut) {
@@ -5976,7 +6052,7 @@ static INT32 LgtnfghtFrame()
 		}
 	}
 	
-	if (K052109_irq_enabled) SekSetIRQLine(5, SEK_IRQSTATUS_AUTO);
+	if (K052109_irq_enabled) SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
 
 	// Make sure the buffer is entirely filled.
 	if (pBurnSoundOut) {
@@ -6024,7 +6100,7 @@ static INT32 Tmnt2Frame()
 		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 		if (i == 19) DrvVBlank = 0;
 		if (i == 243) DrvVBlank = 1;
-		if (i == 243 && K052109_irq_enabled) SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
+		if (i == 243 && K052109_irq_enabled) SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
 		SekClose();
 		
 		// Run Z80
@@ -6105,7 +6181,7 @@ static INT32 PunkshotFrame()
 		}
 	}
 	
-	if (K052109_irq_enabled) SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
+	if (K052109_irq_enabled) SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
 
 	// Make sure the buffer is entirely filled.
 	if (pBurnSoundOut) {
@@ -6295,6 +6371,16 @@ struct BurnDriver BurnDrvTmhta = {
 	NULL, 0x400, 304, 224, 4, 3
 };
 
+struct BurnDriver BurnDrvTmhtb = {
+	"tmhtb", "tmnt", NULL, NULL, "1989",
+	"Teenage Mutant Hero Turtles (UK 4 Players, set 3)\0", NULL, "Konami", "GX963",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	NULL, TmhtbRomInfo, TmhtbRomName, NULL, NULL, TmntInputInfo, TmntDIPInfo,
+	TmntInit, TmntExit, TmntFrame, NULL, TmntScan,
+	NULL, 0x400, 304, 224, 4, 3
+};
+
 struct BurnDriver BurnDrvTmntj = {
 	"tmntj", "tmnt", NULL, NULL, "1990",
 	"Teenage Mutant Ninja Turtles (Japan 4 Players)\0", NULL, "Konami", "GX963",
@@ -6347,7 +6433,7 @@ struct BurnDriver BurnDrvTmht2po = {
 
 struct BurnDriver BurnDrvMia = {
 	"mia", NULL, NULL, NULL, "1989",
-	"M.I.A. - Missing in Action (ver. T)\0", NULL, "Konami", "GX808",
+	"M.I.A. - Missing in Action (version T)\0", NULL, "Konami", "GX808",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_KONAMI_68K_Z80, GBF_PLATFORM, 0,
 	NULL, MiaRomInfo, MiaRomName, NULL, NULL, MiaInputInfo, MiaDIPInfo,
@@ -6357,7 +6443,7 @@ struct BurnDriver BurnDrvMia = {
 
 struct BurnDriver BurnDrvMia2 = {
 	"mia2", "mia", NULL, NULL, "1989",
-	"M.I.A. - Missing in Action (ver. S)\0", NULL, "Konami", "GX808",
+	"M.I.A. - Missing in Action (version S)\0", NULL, "Konami", "GX808",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_PLATFORM, 0,
 	NULL, Mia2RomInfo, Mia2RomName, NULL, NULL, MiaInputInfo, MiaDIPInfo,
@@ -6367,7 +6453,7 @@ struct BurnDriver BurnDrvMia2 = {
 
 struct BurnDriver BurnDrvCuebrick = {
 	"cuebrick", NULL, NULL, NULL, "1989",
-	"Cue Brick (World ver. D)\0", NULL, "Konami", "GX903",
+	"Cue Brick (World, version D)\0", NULL, "Konami", "GX903",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_KONAMI_68K_Z80, GBF_PUZZLE, 0,
 	NULL, CuebrickRomInfo, CuebrickRomName, NULL, NULL, MiaInputInfo, MiaDIPInfo,
@@ -6377,7 +6463,7 @@ struct BurnDriver BurnDrvCuebrick = {
 
 struct BurnDriver BurnDrvBlswhstl = {
 	"blswhstl", NULL, NULL, NULL, "1991",
-	"Bells & Whistles (ver. L)\0", NULL, "Konami", "GX060",
+	"Bells & Whistles (World, version L)\0", NULL, "Konami", "GX060",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, BlswhstlRomInfo, BlswhstlRomName, NULL, NULL, BlswhstlInputInfo, NULL,
@@ -6385,10 +6471,20 @@ struct BurnDriver BurnDrvBlswhstl = {
 	NULL, 0x810, 224, 280, 3, 4
 };
 
+struct BurnDriver BurnDrvBlswhstla = {
+	"blswhstla", "blswhstl", NULL, NULL, "1991",
+	"Bells & Whistles (Asia, version M)\0", NULL, "Konami", "GX060",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
+	NULL, BlswhstlaRomInfo, BlswhstlaRomName, NULL, NULL, BlswhstlInputInfo, NULL,
+	BlswhstlInit, BlswhstlExit, BlswhstlFrame, NULL, BlswhstlScan,
+	NULL, 0x810, 224, 280, 3, 4
+};
+
 struct BurnDriver BurnDrvDetatwin = {
 	"detatwin", "blswhstl", NULL, NULL, "1991",
 	"Detana!! Twin Bee (Japan ver. J)\0", NULL, "Konami", "GX060",
-	L"\u51FA\u305F\u306A!! Twin Bee \u30C4\u30A4\u30F3\u30D3\u30FC (Japan ver. J)\0", NULL, NULL, NULL,
+	L"\u51FA\u305F\u306A!! Twin Bee \u30C4\u30A4\u30F3\u30D3\u30FC (Japan, version J)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, DetatwinRomInfo, DetatwinRomName, NULL, NULL, BlswhstlInputInfo, NULL,
 	BlswhstlInit, BlswhstlExit, BlswhstlFrame, NULL, BlswhstlScan,
@@ -6501,6 +6597,16 @@ struct BurnDriver BurnDrvSsridersjac = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_PLATFORM, 0,
 	NULL, SsridersjacRomInfo, SsridersjacRomName, NULL, NULL, SsridersInputInfo, NULL,
+	SsridersInit, BlswhstlExit, SsridersFrame, NULL, SsridersScan,
+	NULL, 0x810, 288, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvSsridersjad = {
+	"ssridersjad", "ssriders", NULL, NULL, "1991",
+	"Sunset Riders (4 Players ver. JAD)\0", NULL, "Konami", "GX064",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_PLATFORM, 0,
+	NULL, SsridersjadRomInfo, SsridersjadRomName, NULL, NULL, SsridersInputInfo, NULL,
 	SsridersInit, BlswhstlExit, SsridersFrame, NULL, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
 };
@@ -6642,8 +6748,8 @@ struct BurnDriver BurnDrvTmnt2a = {
 
 struct BurnDriver BurnDrvQgakumon = {
 	"qgakumon", NULL, NULL, NULL, "1993",
-	"Quiz Gakumon no Susume (Japan ver. JA1 Type H)\0", NULL, "Konami", "GX248",
-	L"\u30AF\u30A4\u30BA \u5B66\u554F\u30CE\u30B9\u30B9\u30E1 Gakumon no Susume (Japan ver. JA1 Type H)\0", NULL, NULL, NULL,
+	"Quiz Gakumon no Susume (Japan ver. JA2 Type L)\0", NULL, "Konami", "GX248",
+	L"\u30AF\u30A4\u30BA \u5B66\u554F\u30CE\u30B9\u30B9\u30E1 Gakumon no Susume (Japan ver. JA2 Type L)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_KONAMI_68K_Z80, GBF_QUIZ, 0,
 	NULL, qgakumonRomInfo, qgakumonRomName, NULL, NULL, QgakumonInputInfo, NULL,
 	QgakumonInit, BlswhstlExit, Tmnt2Frame, NULL, SsridersScan, 

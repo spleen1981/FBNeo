@@ -75,6 +75,7 @@ typedef INT32 (__fastcall *pSekResetCallback)();
 typedef INT32 (__fastcall *pSekRTECallback)();
 typedef INT32 (__fastcall *pSekIrqCallback)(INT32 irq);
 typedef INT32 (__fastcall *pSekCmpCallback)(UINT32 val, INT32 reg);
+typedef INT32 (__fastcall *pSekTASCallback)();
 
 extern INT32 nSekCycles[SEK_MAX], nSekCPUType[SEK_MAX];
 
@@ -96,6 +97,7 @@ struct SekExt {
 	pSekRTECallback RTECallback;
 	pSekIrqCallback IrqCallback;
 	pSekCmpCallback CmpCallback;
+	pSekTASCallback TASCallback;
 };
 
 #define SEK_DEF_READ_WORD(i, a) { UINT16 d; d = (UINT16)(pSekExt->ReadByte[i](a) << 8); d |= (UINT16)(pSekExt->ReadByte[i]((a) + 1)); return d; }
@@ -132,6 +134,7 @@ void SekSetCyclesScanline(INT32 nCycles);
 void SekClose();
 void SekOpen(const INT32 i);
 INT32 SekGetActive();
+INT32 SekShouldInterrupt(void);
 
 #define SEK_IRQSTATUS_NONE (0x0000)
 #define SEK_IRQSTATUS_AUTO (0x2000)
@@ -202,12 +205,6 @@ inline static INT32 SekCurrentScanline()
 	return SekTotalCycles() / nSekCyclesScanline;
 }
 
-// SekMemory types:
-#define SM_READ  (1)
-#define SM_WRITE (2)
-#define SM_FETCH (4)
-#define SM_ROM (SM_READ | SM_FETCH)
-#define SM_RAM (SM_READ | SM_WRITE | SM_FETCH)
 
 // Map areas of memory
 INT32 SekMapMemory(UINT8* pMemory, UINT32 nStart, UINT32 nEnd, INT32 nType);
@@ -226,6 +223,7 @@ INT32 SekSetResetCallback(pSekResetCallback pCallback);
 INT32 SekSetRTECallback(pSekRTECallback pCallback);
 INT32 SekSetIrqCallback(pSekIrqCallback pCallback);
 INT32 SekSetCmpCallback(pSekCmpCallback pCallback);
+INT32 SekSetTASCallback(pSekTASCallback pCallback);
 
 // Get a CPU's PC
 UINT32 SekGetPC(INT32 n);

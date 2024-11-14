@@ -21,17 +21,6 @@ struct M6809Ext {
 	INT32 nCyclesLeft;
 };
 
-#define M6809_IRQSTATUS_NONE	0
-#define M6809_IRQSTATUS_ACK	1
-#define M6809_IRQSTATUS_AUTO	2
-
-#define M6809_READ	1
-#define M6809_WRITE	2
-#define M6809_FETCH	4
-
-#define M6809_RAM	(M6809_READ | M6809_WRITE | M6809_FETCH)
-#define M6809_ROM	(M6809_READ | M6809_FETCH)
-
 extern INT32 nM6809Count;
 
 extern INT32 nM6809CyclesTotal;
@@ -47,6 +36,7 @@ void M6809SetIRQLine(INT32 vector, INT32 status);
 INT32 M6809Run(INT32 cycles);
 void M6809RunEnd();
 INT32 M6809MapMemory(UINT8* pMemory, UINT16 nStart, UINT16 nEnd, INT32 nType);
+INT32 M6809UnmapMemory(UINT16 nStart, UINT16 nEnd, INT32 nType);
 void M6809SetReadHandler(UINT8 (*pHandler)(UINT16));
 void M6809SetWriteHandler(void (*pHandler)(UINT16, UINT8));
 void M6809SetReadOpHandler(UINT8 (*pHandler)(UINT16));

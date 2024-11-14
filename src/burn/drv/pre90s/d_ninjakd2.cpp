@@ -568,7 +568,7 @@ static void ninjakd2_bankswitch(INT32 data)
 
 	nZ80RomBank = data;
 
-	ZetMapMemory(DrvZ80ROM0 + nBank, 	0x8000, 0xbfff, ZET_ROM);
+	ZetMapMemory(DrvZ80ROM0 + nBank, 	0x8000, 0xbfff, MAP_ROM);
 }
 
 static void ninjakd2_bgconfig(INT32 sel, INT32 offset, UINT8 data)
@@ -728,7 +728,7 @@ static void robokid_rambank(INT32 sel, UINT8 data)
 
 	nZ80RamBank[sel&3] = data;
 
-	ZetMapMemory(ram[sel&3] + nBank, off[sel>>2][sel&3], off[sel>>2][sel&3] | 0x3ff, ZET_RAM);
+	ZetMapMemory(ram[sel&3] + nBank, off[sel>>2][sel&3], off[sel>>2][sel&3] | 0x3ff, MAP_RAM);
 }
 
 static void __fastcall robokid_main_write(UINT16 address, UINT8 data)
@@ -1053,7 +1053,7 @@ static void __fastcall ninjakd2_sound_write_port(UINT16 port, UINT8 data)
 
 inline static void DrvYM2203IRQHandler(INT32, INT32 nStatus)
 {
-	ZetSetIRQLine(0, (nStatus) ? ZET_IRQSTATUS_ACK : ZET_IRQSTATUS_NONE);
+	ZetSetIRQLine(0, (nStatus) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 }
 
 inline static INT32 DrvSynchroniseStream(INT32 nSoundRate)
@@ -1071,12 +1071,12 @@ static void ninjakd2_sound_init()
 	ZetInit(1);
 	ZetOpen(1);
 
-//	ZetMapMemory(DrvZ80ROM1, 0x0000, 0xbfff, ZET_ROM);
+//	ZetMapMemory(DrvZ80ROM1, 0x0000, 0xbfff, MAP_ROM);
 
 	ZetMapArea(0x0000, 0xbfff, 0, DrvZ80ROM1);
 	ZetMapArea(0x0000, 0xbfff, 2, DrvZ80ROM1 + 0x10000, DrvZ80ROM1);
 
-	ZetMapMemory(DrvZ80RAM1,		0xc000, 0xc7ff, ZET_RAM);
+	ZetMapMemory(DrvZ80RAM1,		0xc000, 0xc7ff, MAP_RAM);
 	ZetSetOutHandler(ninjakd2_sound_write_port);
 	ZetSetWriteHandler(ninjakd2_sound_write);
 	ZetSetReadHandler(ninjakd2_sound_read);
@@ -1084,24 +1084,14 @@ static void ninjakd2_sound_init()
 
 	BurnYM2203Init(2,  1500000, &DrvYM2203IRQHandler, DrvSynchroniseStream, DrvGetTime, 0);
 	BurnTimerAttachZet(5000000);
-	BurnYM2203SetRoute(0, BURN_SND_YM2203_YM2203_ROUTE,   0.10, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(0, BURN_SND_YM2203_YM2203_ROUTE,   0.50, BURN_SND_ROUTE_BOTH);
 	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_1, 0.10, BURN_SND_ROUTE_BOTH);
 	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_2, 0.10, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_3, 0.50, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(1, BURN_SND_YM2203_YM2203_ROUTE,   0.10, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_3, 0.10, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(1, BURN_SND_YM2203_YM2203_ROUTE,   0.50, BURN_SND_ROUTE_BOTH);
 	BurnYM2203SetRoute(1, BURN_SND_YM2203_AY8910_ROUTE_1, 0.10, BURN_SND_ROUTE_BOTH);
 	BurnYM2203SetRoute(1, BURN_SND_YM2203_AY8910_ROUTE_2, 0.10, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(1, BURN_SND_YM2203_AY8910_ROUTE_3, 0.50, BURN_SND_ROUTE_BOTH);
-}
-
-static void lower_psg_volume(double voll)
-{
-	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_1, voll, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(1, BURN_SND_YM2203_AY8910_ROUTE_1, voll, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_2, voll, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(1, BURN_SND_YM2203_AY8910_ROUTE_2, voll, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_3, voll, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(1, BURN_SND_YM2203_AY8910_ROUTE_3, voll, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(1, BURN_SND_YM2203_AY8910_ROUTE_3, 0.10, BURN_SND_ROUTE_BOTH);
 }
 
 static INT32 DrvDoReset()
@@ -1133,6 +1123,8 @@ static INT32 DrvDoReset()
 	ninjakd2_sample_offset = -1;
 
 	previous_coin[0] = previous_coin[1] = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -1275,13 +1267,13 @@ static INT32 Ninjakd2CommonInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapMemory(DrvZ80ROM0,		0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvZ80ROM0 + 0x10000, 	0x8000, 0xbfff, ZET_ROM);
-	ZetMapMemory(DrvPalRAM,			0xc800, 0xcdff, ZET_ROM);
-	ZetMapMemory(DrvFgRAM,			0xd000, 0xd7ff, ZET_RAM);
-	ZetMapMemory(DrvBgRAM,			0xd800, 0xdfff, ZET_RAM);
-	ZetMapMemory(DrvZ80RAM0,		0xe000, 0xf9ff, ZET_RAM);
-	ZetMapMemory(DrvSprRAM,			0xfa00, 0xffff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM0,		0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80ROM0 + 0x10000, 	0x8000, 0xbfff, MAP_ROM);
+	ZetMapMemory(DrvPalRAM,			0xc800, 0xcdff, MAP_ROM);
+	ZetMapMemory(DrvFgRAM,			0xd000, 0xd7ff, MAP_RAM);
+	ZetMapMemory(DrvBgRAM,			0xd800, 0xdfff, MAP_RAM);
+	ZetMapMemory(DrvZ80RAM0,		0xe000, 0xf9ff, MAP_RAM);
+	ZetMapMemory(DrvSprRAM,			0xfa00, 0xffff, MAP_RAM);
 	ZetSetWriteHandler(ninjakd2_main_write);
 	ZetSetReadHandler(ninjakd2_main_read);
 	ZetClose();
@@ -1361,19 +1353,20 @@ static INT32 MnightInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapMemory(DrvZ80ROM0,		0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvZ80ROM0 + 0x10000, 	0x8000, 0xbfff, ZET_ROM);
-	ZetMapMemory(DrvZ80RAM0,		0xc000, 0xd9ff, ZET_RAM);
-	ZetMapMemory(DrvSprRAM,			0xda00, 0xdfff, ZET_RAM);
-	ZetMapMemory(DrvBgRAM,			0xe000, 0xe7ff, ZET_RAM);
-	ZetMapMemory(DrvFgRAM,			0xe800, 0xefff, ZET_RAM);
-	ZetMapMemory(DrvPalRAM,			0xf000, 0xf5ff, ZET_ROM);
+	ZetMapMemory(DrvZ80ROM0,		0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80ROM0 + 0x10000, 	0x8000, 0xbfff, MAP_ROM);
+	ZetMapMemory(DrvZ80RAM0,		0xc000, 0xd9ff, MAP_RAM);
+	ZetMapMemory(DrvSprRAM,			0xda00, 0xdfff, MAP_RAM);
+	ZetMapMemory(DrvBgRAM,			0xe000, 0xe7ff, MAP_RAM);
+	ZetMapMemory(DrvFgRAM,			0xe800, 0xefff, MAP_RAM);
+	ZetMapMemory(DrvPalRAM,			0xf000, 0xf5ff, MAP_ROM);
 	ZetSetWriteHandler(mnight_main_write);
 	ZetSetReadHandler(ninjakd2_main_read);
 	ZetClose();
 
 	ninjakd2_sound_init();
-	lower_psg_volume(0.05);
+	BurnYM2203SetPSGVolume(0, 0.05);
+	BurnYM2203SetPSGVolume(1, 0.05);
 
 	GenericTilesInit();
 
@@ -1441,21 +1434,22 @@ static INT32 RobokidInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapMemory(DrvZ80ROM0,		0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvZ80ROM0 + 0x10000, 	0x8000, 0xbfff, ZET_ROM);
-	ZetMapMemory(DrvPalRAM,			0xc000, 0xc7ff, ZET_ROM);
-	ZetMapMemory(DrvFgRAM,			0xc800, 0xcfff, ZET_RAM);
-	ZetMapMemory(DrvBgRAM2,			0xd000, 0xd3ff, ZET_RAM);
-	ZetMapMemory(DrvBgRAM1,			0xd400, 0xd7ff, ZET_RAM);
-	ZetMapMemory(DrvBgRAM0,			0xd800, 0xdbff, ZET_RAM);
-	ZetMapMemory(DrvZ80RAM0,		0xe000, 0xf9ff, ZET_RAM);
-	ZetMapMemory(DrvSprRAM,			0xfa00, 0xffff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM0,		0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80ROM0 + 0x10000, 	0x8000, 0xbfff, MAP_ROM);
+	ZetMapMemory(DrvPalRAM,			0xc000, 0xc7ff, MAP_ROM);
+	ZetMapMemory(DrvFgRAM,			0xc800, 0xcfff, MAP_RAM);
+	ZetMapMemory(DrvBgRAM2,			0xd000, 0xd3ff, MAP_RAM);
+	ZetMapMemory(DrvBgRAM1,			0xd400, 0xd7ff, MAP_RAM);
+	ZetMapMemory(DrvBgRAM0,			0xd800, 0xdbff, MAP_RAM);
+	ZetMapMemory(DrvZ80RAM0,		0xe000, 0xf9ff, MAP_RAM);
+	ZetMapMemory(DrvSprRAM,			0xfa00, 0xffff, MAP_RAM);
 	ZetSetWriteHandler(robokid_main_write);
 	ZetSetReadHandler(ninjakd2_main_read);
 	ZetClose();
 
 	ninjakd2_sound_init();
-	lower_psg_volume(0.03);
+	BurnYM2203SetPSGVolume(0, 0.03);
+	BurnYM2203SetPSGVolume(1, 0.03);
 
 	GenericTilesInit();
 
@@ -1500,21 +1494,22 @@ static INT32 OmegafInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapMemory(DrvZ80ROM0,		0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvZ80ROM0 + 0x10000, 	0x8000, 0xbfff, ZET_ROM);
-	ZetMapMemory(DrvBgRAM0,			0xc400, 0xc7ff, ZET_RAM);
-	ZetMapMemory(DrvBgRAM1,			0xc800, 0xcbff, ZET_RAM);
-	ZetMapMemory(DrvBgRAM2,			0xcc00, 0xcfff, ZET_RAM);
-	ZetMapMemory(DrvFgRAM,			0xd000, 0xd7ff, ZET_RAM);
-	ZetMapMemory(DrvPalRAM,			0xd800, 0xdfff, ZET_ROM);
-	ZetMapMemory(DrvZ80RAM0,		0xe000, 0xf9ff, ZET_RAM);
-	ZetMapMemory(DrvSprRAM,			0xfa00, 0xffff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM0,		0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80ROM0 + 0x10000, 	0x8000, 0xbfff, MAP_ROM);
+	ZetMapMemory(DrvBgRAM0,			0xc400, 0xc7ff, MAP_RAM);
+	ZetMapMemory(DrvBgRAM1,			0xc800, 0xcbff, MAP_RAM);
+	ZetMapMemory(DrvBgRAM2,			0xcc00, 0xcfff, MAP_RAM);
+	ZetMapMemory(DrvFgRAM,			0xd000, 0xd7ff, MAP_RAM);
+	ZetMapMemory(DrvPalRAM,			0xd800, 0xdfff, MAP_ROM);
+	ZetMapMemory(DrvZ80RAM0,		0xe000, 0xf9ff, MAP_RAM);
+	ZetMapMemory(DrvSprRAM,			0xfa00, 0xffff, MAP_RAM);
 	ZetSetWriteHandler(omegaf_main_write);
 	ZetSetReadHandler(omegaf_main_read);
 	ZetClose();
 
 	ninjakd2_sound_init();
-	lower_psg_volume(0.03);
+	BurnYM2203SetRoute(0, BURN_SND_YM2203_YM2203_ROUTE,   0.80, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(1, BURN_SND_YM2203_YM2203_ROUTE,   0.80, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
 
@@ -1945,7 +1940,7 @@ static INT32 DrvFrame()
 		if (i == (nInterleave-1))
 		{
 			ZetSetVector(0xd7);
-			ZetSetIRQLine(0, ZET_IRQSTATUS_AUTO);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		}
 
 		ZetClose();
@@ -1954,7 +1949,7 @@ static INT32 DrvFrame()
 
 		ZetOpen(1);
 	//	nCyclesDone[1] += ZetRun(nCycleSegment);
-		BurnTimerUpdate(i * nCycleSegment);
+		BurnTimerUpdate((i + 1) * nCycleSegment);
 		ZetClose();
 	}
 
@@ -2093,7 +2088,7 @@ struct BurnDriver BurnDrvNinjakd2 = {
 	"ninjakd2", NULL, NULL, NULL, "1987",
 	"Ninja-Kid II / NinjaKun Ashura no Shou (set 1)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
 	NULL, ninjakd2RomInfo, ninjakd2RomName, NULL, NULL, DrvInputInfo, Ninjakd2DIPInfo,
 	Ninjakd2Init, DrvExit, DrvFrame, Ninjakd2Draw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
@@ -2129,7 +2124,7 @@ struct BurnDriver BurnDrvNinjakd2a = {
 	"ninjakd2a", "ninjakd2", NULL, NULL, "1987",
 	"Ninja-Kid II / NinjaKun Ashura no Shou (set 2, bootleg?)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
 	NULL, ninjakd2aRomInfo, ninjakd2aRomName, NULL, NULL, DrvInputInfo, Ninjakd2DIPInfo,
 	Ninjakd2DecryptedInit, DrvExit, DrvFrame, Ninjakd2Draw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
@@ -2139,8 +2134,8 @@ struct BurnDriver BurnDrvNinjakd2a = {
 // Ninja-Kid II / NinjaKun Ashura no Shou (set 3, bootleg?)
 
 static struct BurnRomInfo ninjakd2bRomDesc[] = {
-	{ "1.3s",		0x08000, 0xcb4f4624, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
-	{ "2.3q",		0x08000, 0x0ad0c100, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "1.3s",			0x08000, 0xcb4f4624, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "2.3q",			0x08000, 0x0ad0c100, 1 | BRF_PRG | BRF_ESS }, //  1
 	{ "nk2_03.rom",		0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
 	{ "nk2_04.rom",		0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
 	{ "nk2_05.rom",		0x08000, 0x5dac9426, 1 | BRF_PRG | BRF_ESS }, //  4
@@ -2165,9 +2160,48 @@ struct BurnDriver BurnDrvNinjakd2b = {
 	"ninjakd2b", "ninjakd2", NULL, NULL, "1987",
 	"Ninja-Kid II / NinjaKun Ashura no Shou (set 3, bootleg?)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
 	NULL, ninjakd2bRomInfo, ninjakd2bRomName, NULL, NULL, DrvInputInfo, RdactionDIPInfo,
 	Ninjakd2DecryptedInit, DrvExit, DrvFrame, Ninjakd2Draw, DrvScan, &DrvRecalc, 0x300,
+	256, 192, 4, 3
+};
+
+
+// Ninja-Kid II / NinjaKun Ashura no Shou (set 4)
+// close to set 3
+
+static struct BurnRomInfo ninjakd2cRomDesc[] = {
+	{ "1.3U",			0x08000, 0x06096412, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "2.3T",			0x08000, 0x9ed9a994, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "nk2_03.rom",		0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "nk2_04.rom",		0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "5.3M",			0x08000, 0x800d4951, 1 | BRF_PRG | BRF_ESS }, //  4
+
+	{ "nk2_06.rom",		0x10000, 0xd3a18a79, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code (mc8123 encrypted)
+
+	{ "nk2_12.rom",		0x08000, 0xdb5657a9, 3 | BRF_GRA },           //  6 Foreground Tiles
+
+	{ "nk2_08.rom",		0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
+	{ "nk2_07.rom",		0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
+
+	{ "nk2_11.rom",		0x10000, 0x41a714b3, 5 | BRF_GRA },           //  9 Background Tiles
+	{ "nk2_10.rom",		0x10000, 0xc913c4ab, 5 | BRF_GRA },           // 10
+
+	{ "nk2_09.rom",		0x10000, 0xc1d2d170, 6 | BRF_GRA },           // 11 Samples (8 bit unsigned)
+	
+	{ "ninjakd2.key",	0x02000, 0xec25318f, 7 | BRF_PRG | BRF_ESS }, // 12 mc8123 key
+};
+
+STD_ROM_PICK(ninjakd2c)
+STD_ROM_FN(ninjakd2c)
+
+struct BurnDriver BurnDrvNinjakd2c = {
+	"ninjakd2c", "ninjakd2", NULL, NULL, "1987",
+	"Ninja-Kid II / NinjaKun Ashura no Shou (set 4)\0", NULL, "UPL", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
+	NULL, ninjakd2cRomInfo, ninjakd2cRomName, NULL, NULL, DrvInputInfo, RdactionDIPInfo,
+	Ninjakd2Init, DrvExit, DrvFrame, Ninjakd2Draw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
 };
 
@@ -2175,15 +2209,15 @@ struct BurnDriver BurnDrvNinjakd2b = {
 // Rad Action / NinjaKun Ashura no Shou
 
 static struct BurnRomInfo rdactionRomDesc[] = {
-	{ "1.3u",		0x08000, 0x5c475611, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
-	{ "2.3s",		0x08000, 0xa1e23bd2, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "1.3u",			0x08000, 0x5c475611, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "2.3s",			0x08000, 0xa1e23bd2, 1 | BRF_PRG | BRF_ESS }, //  1
 	{ "nk2_03.rom",		0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
 	{ "nk2_04.rom",		0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
 	{ "nk2_05.bin",		0x08000, 0x960725fb, 1 | BRF_PRG | BRF_ESS }, //  4
 
 	{ "nk2_06.rom",		0x10000, 0xd3a18a79, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code (mc8123 encrypted)
 
-	{ "12.5n",		0x08000, 0x0936b365, 3 | BRF_GRA },           //  6 Foreground Tiles
+	{ "12.5n",			0x08000, 0x0936b365, 3 | BRF_GRA },           //  6 Foreground Tiles
 
 	{ "nk2_08.rom",		0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
 	{ "nk2_07.rom",		0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
@@ -2203,9 +2237,48 @@ struct BurnDriver BurnDrvRdaction = {
 	"rdaction", "ninjakd2", NULL, NULL, "1987",
 	"Rad Action / NinjaKun Ashura no Shou\0", NULL, "UPL (World Games license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
 	NULL, rdactionRomInfo, rdactionRomName, NULL, NULL, DrvInputInfo, RdactionDIPInfo,
 	Ninjakd2Init, DrvExit, DrvFrame, Ninjakd2Draw, DrvScan, &DrvRecalc, 0x300,
+	256, 192, 4, 3
+};
+
+
+// JT-104 (title screen modification of Rad Action)
+// identical to rdaction set with different gfx rom and decrypted sound rom
+
+static struct BurnRomInfo jt104RomDesc[] = {
+	{ "1.3u",			0x08000, 0x5c475611, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "2.3s",			0x08000, 0xa1e23bd2, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "nk2_03.rom",		0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "nk2_04.rom",		0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "nk2_05.bin",		0x08000, 0x960725fb, 1 | BRF_PRG | BRF_ESS }, //  4
+
+	{ "nk2_06.bin",		0x10000, 0x7bfe6c9e, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code
+
+	{ "jt_104_12.bin",	0x08000, 0xc038fadb, 3 | BRF_GRA },           //  6 Foreground Tiles
+
+	{ "nk2_08.rom",		0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
+	{ "nk2_07.rom",		0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
+
+	{ "nk2_11.rom",		0x10000, 0x41a714b3, 5 | BRF_GRA },           //  9 Background Tiles
+	{ "nk2_10.rom",		0x10000, 0xc913c4ab, 5 | BRF_GRA },           // 10
+
+	{ "nk2_09.rom",		0x10000, 0xc1d2d170, 6 | BRF_GRA },           // 11 Samples (8 bit unsigned)
+
+	{ "ninjakd2.key",	0x02000, 0xec25318f, 7 | BRF_PRG | BRF_ESS }, // 12 mc8123 key
+};
+
+STD_ROM_PICK(jt104)
+STD_ROM_FN(jt104)
+
+struct BurnDriver BurnDrvJt104 = {
+	"jt104", "ninjakd2", NULL, NULL, "1987",
+	"JT-104 (title screen modification of Rad Action)\0", NULL, "UPL (United Amusements license)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
+	NULL, jt104RomInfo, jt104RomName, NULL, NULL, DrvInputInfo, RdactionDIPInfo,
+	Ninjakd2DecryptedInit, DrvExit, DrvFrame, Ninjakd2Draw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
 };
 
@@ -2239,7 +2312,7 @@ struct BurnDriver BurnDrvMnight = {
 	"mnight", NULL, NULL, NULL, "1987",
 	"Mutant Night\0", NULL, "UPL (Kawakus license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
 	NULL, mnightRomInfo, mnightRomName, NULL, NULL, DrvInputInfo, MnightDIPInfo,
 	MnightInit, DrvExit, DrvFrame, MnightDraw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
@@ -2275,14 +2348,14 @@ struct BurnDriver BurnDrvArkarea = {
 	"arkarea", NULL, NULL, NULL, "1988",
 	"Ark Area\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, arkareaRomInfo, arkareaRomName, NULL, NULL, Drv2InputInfo, ArkareaDIPInfo,
 	MnightInit, DrvExit, DrvFrame, MnightDraw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
 };
 
 
-// Atomic Robo-kid
+// Atomic Robo-kid (World, Type-2)
 
 static struct BurnRomInfo robokidRomDesc[] = {
 	{ "robokid1.18j",	0x10000, 0x378c21fc, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
@@ -2322,6 +2395,8 @@ static struct BurnRomInfo robokidRomDesc[] = {
 	{ "robokid.16a",	0x10000, 0x4e340815, 7 | BRF_GRA },           // 28
 	{ "robokid.17a",	0x10000, 0xf0863106, 7 | BRF_GRA },           // 29
 	{ "robokid.18a",	0x10000, 0xfdff7441, 7 | BRF_GRA },           // 30
+	
+	{ "prom82s129.cpu",	0x00100, 0x4dd96f67, 0 | BRF_OPT },
 };
 
 STD_ROM_PICK(robokid)
@@ -2329,20 +2404,20 @@ STD_ROM_FN(robokid)
 
 struct BurnDriver BurnDrvRobokid = {
 	"robokid", NULL, NULL, NULL, "1988",
-	"Atomic Robo-kid\0", NULL, "UPL", "Miscellaneous",
+	"Atomic Robo-kid (World, Type-2)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, robokidRomInfo, robokidRomName, NULL, NULL, DrvInputInfo, RobokidDIPInfo,
 	RobokidInit, DrvExit, DrvFrame, RobokidDraw, RobokidScan, &DrvRecalc, 0x400,
 	256, 192, 4, 3
 };
 
 
-// Atomic Robo-kid (Japan, set 1)
+// Atomic Robo-kid (Japan, Type-2, set 1)
 
 static struct BurnRomInfo robokidjRomDesc[] = {
-	{ "1.29",		0x10000, 0x59a1e2ec, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
-	{ "2.30",		0x10000, 0xe3f73476, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "1.29",			0x10000, 0x59a1e2ec, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "2.30",			0x10000, 0xe3f73476, 1 | BRF_PRG | BRF_ESS }, //  1
 	{ "robokid3.15k",	0x10000, 0x05295ec3, 1 | BRF_PRG | BRF_ESS }, //  2
 	{ "robokid4.12k",	0x10000, 0x3bc3977f, 1 | BRF_PRG | BRF_ESS }, //  3
 
@@ -2378,6 +2453,8 @@ static struct BurnRomInfo robokidjRomDesc[] = {
 	{ "robokid.16a",	0x10000, 0x4e340815, 7 | BRF_GRA },           // 28
 	{ "robokid.17a",	0x10000, 0xf0863106, 7 | BRF_GRA },           // 29
 	{ "robokid.18a",	0x10000, 0xfdff7441, 7 | BRF_GRA },           // 30
+	
+	{ "prom82s129.cpu",	0x00100, 0x4dd96f67, 0 | BRF_OPT },
 };
 
 STD_ROM_PICK(robokidj)
@@ -2385,16 +2462,16 @@ STD_ROM_FN(robokidj)
 
 struct BurnDriver BurnDrvRobokidj = {
 	"robokidj", "robokid", NULL, NULL, "1988",
-	"Atomic Robo-kid (Japan, set 1)\0", NULL, "UPL", "Miscellaneous",
+	"Atomic Robo-kid (Japan, Type-2, set 1)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, robokidjRomInfo, robokidjRomName, NULL, NULL, DrvInputInfo, RobokidjDIPInfo,
 	RobokidInit, DrvExit, DrvFrame, RobokidDraw, RobokidScan, &DrvRecalc, 0x400,
 	256, 192, 4, 3
 };
 
 
-// Atomic Robo-kid (Japan, set 2)
+// Atomic Robo-kid (Japan, Type-2, set 2)
 
 static struct BurnRomInfo robokidj2RomDesc[] = {
 	{ "1_rom29.18j",	0x10000, 0x969fb951, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
@@ -2434,6 +2511,8 @@ static struct BurnRomInfo robokidj2RomDesc[] = {
 	{ "robokid.16a",	0x10000, 0x4e340815, 7 | BRF_GRA },           // 28
 	{ "robokid.17a",	0x10000, 0xf0863106, 7 | BRF_GRA },           // 29
 	{ "robokid.18a",	0x10000, 0xfdff7441, 7 | BRF_GRA },           // 30
+	
+	{ "prom82s129.cpu",	0x00100, 0x4dd96f67, 0 | BRF_OPT },
 };
 
 STD_ROM_PICK(robokidj2)
@@ -2441,10 +2520,68 @@ STD_ROM_FN(robokidj2)
 
 struct BurnDriver BurnDrvRobokidj2 = {
 	"robokidj2", "robokid", NULL, NULL, "1988",
-	"Atomic Robo-kid (Japan, set 2)\0", NULL, "UPL", "Miscellaneous",
+	"Atomic Robo-kid (Japan, Type-2, set 2)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, robokidj2RomInfo, robokidj2RomName, NULL, NULL, DrvInputInfo, RobokidjDIPInfo,
+	RobokidInit, DrvExit, DrvFrame, RobokidDraw, RobokidScan, &DrvRecalc, 0x400,
+	256, 192, 4, 3
+};
+
+
+// Atomic Robo-kid (Japan)
+
+static struct BurnRomInfo robokidj3RomDesc[] = {
+	{ "robokid1.18j",	0x10000, 0x77a9332a, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "robokid2.18k",	0x10000, 0x715ecee4, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "robokid3.15k",	0x10000, 0xce12fa86, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "robokid4.12k",	0x10000, 0x97e86600, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "robokid.k7",		0x10000, 0xf490a2e9, 2 | BRF_PRG | BRF_ESS }, //  4 Z80 #1 Code
+
+	{ "robokid.b9",		0x08000, 0xfac59c3f, 3 | BRF_GRA },           //  5 Foreground Tiles
+
+	{ "robokid.15f",	0x10000, 0xba61f5ab, 4 | BRF_GRA },           //  6 Sprite Tiles
+	{ "robokid.16f",	0x10000, 0xd9b399ce, 4 | BRF_GRA },           //  7
+	{ "robokid.17f",	0x10000, 0xafe432b9, 4 | BRF_GRA },           //  8
+	{ "robokid.18f",	0x10000, 0xa0aa2a84, 4 | BRF_GRA },           //  9
+
+	{ "robokid.19c",	0x10000, 0x02220421, 5 | BRF_GRA },           // 10 Background Layer 0 Tiles
+	{ "robokid.20c",	0x10000, 0x02d59bc2, 5 | BRF_GRA },           // 11
+	{ "robokid.17d",	0x10000, 0x2fa29b99, 5 | BRF_GRA },           // 12
+	{ "robokid.18d",	0x10000, 0xae15ce02, 5 | BRF_GRA },           // 13
+	{ "robokid.19d",	0x10000, 0x784b089e, 5 | BRF_GRA },           // 14
+	{ "robokid.20d",	0x10000, 0xb0b395ed, 5 | BRF_GRA },           // 15
+	{ "robokid.19f",	0x10000, 0x0f9071c6, 5 | BRF_GRA },           // 16
+
+	{ "robokid.12c",	0x10000, 0x0ab45f94, 6 | BRF_GRA },           // 17 Background Layer 1 Tiles
+	{ "robokid.14c",	0x10000, 0x029bbd4a, 6 | BRF_GRA },           // 18
+	{ "robokid.15c",	0x10000, 0x7de67ebb, 6 | BRF_GRA },           // 19
+	{ "robokid.16c",	0x10000, 0x53c0e582, 6 | BRF_GRA },           // 20
+	{ "robokid.17c",	0x10000, 0x0cae5a1e, 6 | BRF_GRA },           // 21
+	{ "robokid.18c",	0x10000, 0x56ac7c8a, 6 | BRF_GRA },           // 22
+	{ "robokid.15d",	0x10000, 0xcd632a4d, 6 | BRF_GRA },           // 23
+	{ "robokid.16d",	0x10000, 0x18d92b2b, 6 | BRF_GRA },           // 24
+
+	{ "robokid.12a",	0x10000, 0xe64d1c10, 7 | BRF_GRA },           // 25 Background Layer 2 Tiles
+	{ "robokid.14a",	0x10000, 0x8f9371e4, 7 | BRF_GRA },           // 26
+	{ "robokid.15a",	0x10000, 0x469204e7, 7 | BRF_GRA },           // 27
+	{ "robokid.16a",	0x10000, 0x4e340815, 7 | BRF_GRA },           // 28
+	{ "robokid.17a",	0x10000, 0xf0863106, 7 | BRF_GRA },           // 29
+	{ "robokid.18a",	0x10000, 0xfdff7441, 7 | BRF_GRA },           // 30
+	
+	{ "prom82s129.cpu",	0x00100, 0x4dd96f67, 0 | BRF_OPT },
+};
+
+STD_ROM_PICK(robokidj3)
+STD_ROM_FN(robokidj3)
+
+struct BurnDriver BurnDrvRobokidj3 = {
+	"robokidj3", "robokid", NULL, NULL, "1988",
+	"Atomic Robo-kid (Japan)\0", NULL, "UPL", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	NULL, robokidj3RomInfo, robokidj3RomName, NULL, NULL, DrvInputInfo, RobokidjDIPInfo,
 	RobokidInit, DrvExit, DrvFrame, RobokidDraw, RobokidScan, &DrvRecalc, 0x400,
 	256, 192, 4, 3
 };
@@ -2476,7 +2613,7 @@ struct BurnDriver BurnDrvOmegaf = {
 	"omegaf", NULL, NULL, NULL, "1989",
 	"Omega Fighter\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, omegafRomInfo, omegafRomName, NULL, NULL, OmegafInputInfo, OmegafDIPInfo,
 	OmegafInit, DrvExit, DrvFrame, OmegafDraw, OmegafScan, &DrvRecalc, 0x400,
 	192, 256, 3, 4
@@ -2509,7 +2646,7 @@ struct BurnDriver BurnDrvOmegafs = {
 	"omegafs", "omegaf", NULL, NULL, "1989",
 	"Omega Fighter Special\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, omegafsRomInfo, omegafsRomName, NULL, NULL, OmegafInputInfo, OmegafDIPInfo,
 	OmegafInit, DrvExit, DrvFrame, OmegafDraw, OmegafScan, &DrvRecalc, 0x400,
 	192, 256, 3, 4

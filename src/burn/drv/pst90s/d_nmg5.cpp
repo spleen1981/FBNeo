@@ -876,11 +876,11 @@ void __fastcall nmg5_write_port(UINT16 port, UINT8 data)
 		return;
 
 		case 0x10:
-			BurnYM3812Write(0, data);
+			BurnYM3812Write(0, 0, data);
 		return;
 
 		case 0x11:
-			BurnYM3812Write(1, data);
+			BurnYM3812Write(0, 1, data);
 		return;
 
 		case 0x1c:
@@ -896,7 +896,7 @@ UINT8 __fastcall nmg5_read_port(UINT16 port)
 	switch (port & 0xff)
 	{
 		case 0x10:
-			return BurnYM3812Read(0);
+			return BurnYM3812Read(0, 0);
 
 		case 0x18:
 			return soundlatch;
@@ -1050,9 +1050,9 @@ static INT32 DrvSynchroniseStream(INT32 nSoundRate)
 static void DrvFMIRQHandler(INT32, INT32 nStatus)
 {
 	if (nStatus) {
-		ZetSetIRQLine(0xFF, ZET_IRQSTATUS_ACK);
+		ZetSetIRQLine(0xFF, CPU_IRQSTATUS_ACK);
 	} else {
-		ZetSetIRQLine(0,    ZET_IRQSTATUS_NONE);
+		ZetSetIRQLine(0,    CPU_IRQSTATUS_NONE);
 	}
 }
 
@@ -1098,24 +1098,24 @@ static INT32 DrvInit(INT32 loadtype, INT32 sektype, INT32 zettype) // 0 nmg, 1 p
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KROM,		0x000000, 0x0fffff, SM_ROM);
-	SekMapMemory(DrvBmpRAM,		0x800000, 0x80ffff, SM_RAM);
+	SekMapMemory(Drv68KROM,		0x000000, 0x0fffff, MAP_ROM);
+	SekMapMemory(DrvBmpRAM,		0x800000, 0x80ffff, MAP_RAM);
 	if (sektype) {
-		SekMapMemory(Drv68KRAM,		0x200000, 0x20ffff, SM_RAM);
-		SekMapMemory(DrvPalRAM,		0x440000, 0x4407ff, SM_ROM);
-		SekMapMemory(DrvSprRAM,		0x460000, 0x4607ff, SM_RAM);
-		SekMapMemory(DrvVidRAM0,	0x520000, 0x521fff, SM_RAM);
-		SekMapMemory(DrvVidRAM1,	0x522000, 0x523fff, SM_RAM);
+		SekMapMemory(Drv68KRAM,		0x200000, 0x20ffff, MAP_RAM);
+		SekMapMemory(DrvPalRAM,		0x440000, 0x4407ff, MAP_ROM);
+		SekMapMemory(DrvSprRAM,		0x460000, 0x4607ff, MAP_RAM);
+		SekMapMemory(DrvVidRAM0,	0x520000, 0x521fff, MAP_RAM);
+		SekMapMemory(DrvVidRAM1,	0x522000, 0x523fff, MAP_RAM);
 		SekSetWriteByteHandler(0,	pclubys_write_byte);
 		SekSetWriteWordHandler(0,	pclubys_write_word);
 		SekSetReadByteHandler(0,	pclubys_read_byte);
 		SekSetReadWordHandler(0,	pclubys_read_word);
 	} else {
-		SekMapMemory(Drv68KRAM,		0x120000, 0x12ffff, SM_RAM);
-		SekMapMemory(DrvPalRAM,		0x140000, 0x1407ff, SM_ROM);
-		SekMapMemory(DrvSprRAM,		0x160000, 0x1607ff, SM_RAM);
-		SekMapMemory(DrvVidRAM0,	0x320000, 0x321fff, SM_RAM);
-		SekMapMemory(DrvVidRAM1,	0x322000, 0x323fff, SM_RAM);
+		SekMapMemory(Drv68KRAM,		0x120000, 0x12ffff, MAP_RAM);
+		SekMapMemory(DrvPalRAM,		0x140000, 0x1407ff, MAP_ROM);
+		SekMapMemory(DrvSprRAM,		0x160000, 0x1607ff, MAP_RAM);
+		SekMapMemory(DrvVidRAM0,	0x320000, 0x321fff, MAP_RAM);
+		SekMapMemory(DrvVidRAM1,	0x322000, 0x323fff, MAP_RAM);
 		SekSetWriteByteHandler(0,	nmg5_write_byte);
 		SekSetWriteWordHandler(0,	nmg5_write_word);
 		SekSetReadByteHandler(0,	nmg5_read_byte);
@@ -1142,9 +1142,9 @@ static INT32 DrvInit(INT32 loadtype, INT32 sektype, INT32 zettype) // 0 nmg, 1 p
 	ZetSetOutHandler(nmg5_write_port);
 	ZetClose();
 
-	BurnYM3812Init(4000000, &DrvFMIRQHandler, &DrvSynchroniseStream, 0);
+	BurnYM3812Init(1, 4000000, &DrvFMIRQHandler, &DrvSynchroniseStream, 0);
 	BurnTimerAttachZetYM3812(4000000);
-	BurnYM3812SetRoute(BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
+	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	MSM6295Init(0, 1000000 / 132, 1);
 	MSM6295SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
@@ -1356,7 +1356,7 @@ static INT32 DrvFrame()
 
 	SekRun(nTotalCycles[0]);
 
-	SekSetIRQLine(6, SEK_IRQSTATUS_AUTO);
+	SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
 
 	if (pBurnSoundOut) {
 		BurnTimerEndFrameYM3812(nTotalCycles[1]);
@@ -1851,7 +1851,7 @@ struct BurnDriver BurnDrvOrdi7 = {
 };
 
 
-// Wonder Stick
+// Wonder Stick (set 1)
 
 static struct BurnRomInfo wondstckRomDesc[] = {
 	{ "u4.bin",	0x20000, 0x46a3e9f6, 1 | BRF_PRG | BRF_ESS }, //  0 - 68k Code
@@ -1889,10 +1889,51 @@ static INT32 WondstckInit()
 
 struct BurnDriver BurnDrvWondstck = {
 	"wondstck", NULL, NULL, NULL, "????",
-	"Wonder Stick\0", NULL, "Yun Sung", "Miscellaneous",
+	"Wonder Stick (set 1)\0", NULL, "Yun Sung", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, wondstckRomInfo, wondstckRomName, NULL, NULL, SearcheyInputInfo, WondstckDIPInfo,
+	WondstckInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
+	&DrvRecalc, 0x400, 320, 240, 4, 3
+};
+
+
+// Wonder Stick (set 2, censored)
+
+static struct BurnRomInfo wondstckaRomDesc[] = {
+	{ "4.u2",		0x20000, 0x0b28ab9d, 1 | BRF_PRG | BRF_ESS }, //  0 - 68k Code
+	{ "3.u7",		0x20000, 0x5f1337d8, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "1.u128",		0x10000, 0x86dba085, 2 | BRF_PRG | BRF_ESS }, //  2 - Z80 Code
+
+	{ "7.u63",		0x80000, 0x25ee44ce, 3 | BRF_GRA },	      //  3 - Tiles
+	{ "2.u68",		0x80000, 0xb26afb40, 3 | BRF_GRA },	      //  4
+	{ "8.u73",		0x80000, 0x7cf46203, 3 | BRF_GRA },	      //  5
+	{ "4.u79",		0x80000, 0x825213e0, 3 | BRF_GRA },	      //  6
+	{ "5.u64",		0x80000, 0x9ece36d6, 3 | BRF_GRA },	      //  7
+	{ "1.u69",		0x80000, 0xec091e87, 3 | BRF_GRA },	      //  8
+	{ "6.u74", 		0x80000, 0x9795ff80, 3 | BRF_GRA },	      //  9
+	{ "3.u80", 		0x80000, 0x553c5781, 3 | BRF_GRA },	      // 10
+
+	{ "8.u83 ",		0x80000, 0xf51cf9c6, 4 | BRF_GRA },	      // 11 - Sprites
+//	{ "9.u82",		0x80000, 0x8c6cff4d, 4 | BRF_GRA },	      // 12 Bad dump
+	{ "9.u82",		0x80000, 0xddd3c60c, 4 | BRF_GRA },	      // 12
+	{ "7.u105",		0x80000, 0xa7fc624d, 4 | BRF_GRA },	      // 13
+	{ "6.u96",		0x80000, 0x2369d8a3, 4 | BRF_GRA },	      // 14
+	{ "5.u97",		0x80000, 0xaba1bd94, 4 | BRF_GRA },	      // 15
+
+	{ "2.u137",		0x40000, 0x294b6cbd, 5 | BRF_SND },	      // 16 - Samples
+};
+
+STD_ROM_PICK(wondstcka)
+STD_ROM_FN(wondstcka)
+
+struct BurnDriver BurnDrvWondstcka = {
+	"wondstcka", "wondstck", NULL, NULL, "????",
+	"Wonder Stick (set 2, censored)\0", NULL, "Yun Sung", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	NULL, wondstckaRomInfo, wondstckaRomName, NULL, NULL, SearcheyInputInfo, WondstckDIPInfo,
 	WondstckInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x400, 320, 240, 4, 3
 };

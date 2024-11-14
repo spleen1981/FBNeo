@@ -306,6 +306,7 @@ void UnloadDrvIcons();
 extern bool bEnableIcons;
 extern bool bIconsLoaded;
 extern int nIconsSize, nIconsSizeXY, nIconsYDiff;
+extern bool bGameInfoOpen;
 
 // neocdsel.cpp
 extern int NeoCDList_Init();
@@ -429,6 +430,9 @@ int ProgressUpdateBurner(double dProgress, const TCHAR* pszText, bool bAbs);
 int ProgressCreate();
 int ProgressDestroy();
 
+// gameinfo.cpp
+int GameInfoDialogCreate(HWND hParentWND, int nDrvSel);
+
 // ---------------------------------------------------------------------------
 // Debugger
 
@@ -449,6 +453,9 @@ int GetIpsNumActivePatches();
 int IpsManagerCreate(HWND hParentWND);
 void IpsPatchExit();
 
+// localise_download.cpp
+int LocaliseDownloadCreate(HWND hParentWND);
+
 // Misc
 #define _TtoA(a)	TCHARToANSI(a, NULL, 0)
 #define _AtoT(a)	ANSIToTCHAR(a, NULL, 0)
@@ -457,3 +464,15 @@ void IpsPatchExit();
 TCHAR* FormatCommasNumber(__int64);
 #define _uInt64ToCommaFormattedTCHAR(szOUT, nIN)	\
 	_stprintf(szOUT, _T("%s"), FormatCommasNumber(nIN));
+
+#ifdef INCLUDE_AVI_RECORDING
+// ----------------------------------------------------------------------------
+// AVI recording
+
+// avi.cpp
+INT32 AviStart();
+INT32 AviRecordFrame(INT32 bDraw);
+void AviStop();
+extern INT32 nAviStatus;
+extern INT32 nAvi3x;
+#endif

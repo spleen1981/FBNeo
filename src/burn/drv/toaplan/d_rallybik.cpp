@@ -73,6 +73,10 @@ static struct BurnDIPInfo RallybikDIPList[]=
 	{0x13, 0x01, 0x02, 0x00, "Off"				},
 	{0x13, 0x01, 0x02, 0x02, "On"				},
 
+	{0   , 0xfe, 0   ,    2, "Service Mode"     },
+	{0x13, 0x01, 0x04, 0x00, "Off"	            },
+	{0x13, 0x01, 0x04, 0x04, "On"		        },
+
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"			},
 	{0x13, 0x01, 0x08, 0x08, "Off"				},
 	{0x13, 0x01, 0x08, 0x00, "On"				},
@@ -222,11 +226,11 @@ void __fastcall rallybik_sound_write_port(UINT16 p, UINT8 d)
 		return;
 
 		case 0x60:
-			BurnYM3812Write(0, d);
+			BurnYM3812Write(0, 0, d);
 		return;
 
 		case 0x61:
-			BurnYM3812Write(1, d);
+			BurnYM3812Write(0, 1, d);
 		return;
 	}
 }
@@ -252,7 +256,7 @@ UINT8 __fastcall rallybik_sound_read_port(UINT16 p)
 
 		case 0x60:
 		case 0x61:
-			return BurnYM3812Read(p & 1);
+			return BurnYM3812Read(0, p & 1);
 
 		case 0x70:
 			return DrvDips[2];
@@ -375,18 +379,18 @@ static INT32 DrvInit()
 	{
 		SekInit(0, 0x68000);
 		SekOpen(0);
-		SekMapMemory(Drv68KROM,			0x000000, 0x00FFFF, SM_ROM);
-		SekMapMemory(Drv68KROM + 0x40000,	0x040000, 0x07FFFF, SM_ROM);
-		SekMapMemory(Drv68KRAM,			0x080000, 0x083FFF, SM_RAM);
-		SekMapMemory(DrvSprRAM,			0x0c0000, 0x0C0FFF, SM_RAM);
-		SekMapMemory(DrvPalRAM,			0x144000, 0x1447FF, SM_RAM);
-		SekMapMemory(DrvPalRAM2,		0x146000, 0x1467FF, SM_RAM);
+		SekMapMemory(Drv68KROM,			0x000000, 0x00FFFF, MAP_ROM);
+		SekMapMemory(Drv68KROM + 0x40000,	0x040000, 0x07FFFF, MAP_ROM);
+		SekMapMemory(Drv68KRAM,			0x080000, 0x083FFF, MAP_RAM);
+		SekMapMemory(DrvSprRAM,			0x0c0000, 0x0C0FFF, MAP_RAM);
+		SekMapMemory(DrvPalRAM,			0x144000, 0x1447FF, MAP_RAM);
+		SekMapMemory(DrvPalRAM2,		0x146000, 0x1467FF, MAP_RAM);
 		SekSetReadWordHandler(0, 		rallybikReadWord);
 		SekSetReadByteHandler(0, 		rallybikReadByte);
 		SekSetWriteWordHandler(0, 		rallybikWriteWord);
 		SekSetWriteByteHandler(0, 		rallybikWriteByte);
 
-		SekMapHandler(1,			0x180000, 0x180FFF, SM_RAM);
+		SekMapHandler(1,			0x180000, 0x180FFF, MAP_RAM);
 		SekSetReadByteHandler(1, 		toaplan1ReadByteZ80RAM);
 		SekSetReadWordHandler(1, 		toaplan1ReadWordZ80RAM);
 		SekSetWriteByteHandler(1, 		toaplan1WriteByteZ80RAM);
@@ -420,9 +424,9 @@ static INT32 DrvInit()
 	ToaPalSrc2 = DrvPalRAM2;
 	ToaPalInit();
 
-	BurnYM3812Init(28000000 / 8, &toaplan1FMIRQHandler, &toaplan1SynchroniseStream, 0);
+	BurnYM3812Init(1, 28000000 / 8, &toaplan1FMIRQHandler, &toaplan1SynchroniseStream, 0);
 	BurnTimerAttachZetYM3812(28000000 / 8);
-	BurnYM3812SetRoute(BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
+	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	bDrawScreen = true;
 
@@ -523,7 +527,7 @@ static INT32 DrvFrame()
 
 			bVBlank = true;
 			if (bEnableInterrupts) {
-				SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
+				SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
 			}
 		}
 
@@ -607,8 +611,8 @@ STD_ROM_FN(rallybik)
 struct BurnDriver BurnDrvRallybik = {
 	"rallybik", NULL, NULL, NULL, "1988",
 	"Rally Bike / Dash Yarou\0", NULL, "[Toaplan] Taito Corporation", "Toaplan BCU-2 / FCU-2 based",
-	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
+	L"Rally Bike\0\u30C0\u30C3\u30B7\u30E5\u91CE\u90CE\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_RAIZING, GBF_RACING, 0,
 	NULL, rallybikRomInfo, rallybikRomName, NULL, NULL, RallybikInputInfo, RallybikDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4

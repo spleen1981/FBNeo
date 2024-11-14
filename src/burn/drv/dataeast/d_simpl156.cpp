@@ -253,8 +253,8 @@ static void common_map(INT32 ram, INT32 sfx, INT32 mus)
 
 	ArmInit(0);
 	ArmOpen(0);	
-	ArmMapMemory(DrvArmROM,		0x000000, 0x07ffff, ARM_ROM);
-	ArmMapMemory(DrvSysRAM,		0x201000, 0x201fff, ARM_RAM); // 32-bit
+	ArmMapMemory(DrvArmROM,		0x000000, 0x07ffff, MAP_ROM);
+	ArmMapMemory(DrvSysRAM,		0x201000, 0x201fff, MAP_RAM); // 32-bit
 	// ram regions and oki addresses set in map offsets
 	ArmSetWriteByteHandler(simpl156_write_byte);
 	ArmSetWriteLongHandler(simpl156_write_long);
@@ -547,7 +547,7 @@ static INT32 DrvFrame()
 	ArmOpen(0);
 	deco16_vblank = 0x00;
 	ArmRun(nTotalCycles - 12240);
-	ArmSetIRQLine(ARM_IRQ_LINE, ARM_IRQSTATUS_AUTO);
+	ArmSetIRQLine(ARM_IRQ_LINE, CPU_IRQSTATUS_AUTO);
 	deco16_vblank = 0xf0;
 	ArmRun(12240);
 	ArmClose();
@@ -706,6 +706,63 @@ struct BurnDriver BurnDrvJoemacra = {
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
 	NULL, joemacraRomInfo, joemacraRomName, NULL, NULL, Simpl156InputInfo, Simpl156DIPInfo,
 	joemacraInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
+	320, 240, 4, 3
+};
+
+
+// Joe & Mac Returns (Japan, Version 1.2, 1994.06.06)
+
+static struct BurnRomInfo joemacrjRomDesc[] = {
+	{ "my00-.e1",		0x080000, 0x2c184981, 1 | BRF_PRG | BRF_ESS }, //  0 ARM Code
+
+	{ "mbn00",			0x100000, 0x11b2dac7, 2 | BRF_GRA },           //  1 Characters & Tiles
+
+	{ "mbn01",			0x080000, 0xa3a37353, 3 | BRF_GRA },           //  2 Sprites
+	{ "mbn02",			0x080000, 0xaa2230c5, 3 | BRF_GRA },           //  3
+
+	{ "mbn04",			0x040000, 0xdcbd4771, 4 | BRF_SND },           //  4 OKI SFX Samples
+
+	{ "mbn03",			0x200000, 0x70b71a2a, 5 | BRF_SND },           //  5 OKI Music Samples
+	
+	{ "jmrj_ak93c45.h3",	0x000080, 0x31f17522, 6 | BRF_PRG | BRF_ESS }, //  6 Default EEPROM Data
+};
+
+STD_ROM_PICK(joemacrj)
+STD_ROM_FN(joemacrj)
+
+static INT32 joemacrjLoadCallback(INT32 *gfxlen0, INT32 *gfxlen1)
+{
+	if (BurnLoadRom(DrvArmROM  + 0x000000,  0, 1)) return 1;
+
+	if (BurnLoadRom(DrvGfxROM0 + 0x000000,  1, 1)) return 1;
+
+	if (BurnLoadRom(DrvGfxROM2 + 0x000001,  2, 2)) return 1;
+	if (BurnLoadRom(DrvGfxROM2 + 0x000000,  3, 2)) return 1;
+
+	if (BurnLoadRom(DrvSndROM0 + 0x000000,  4, 1)) return 1;
+
+	if (BurnLoadRom(DrvSndROM1 + 0x000000,  5, 1)) return 1;
+	
+	if (BurnLoadRom(DrvEEPROM  + 0x000000,  6, 1)) return 1;
+
+	*gfxlen0 = 0x100000;
+	*gfxlen1 = 0x200000;
+
+	return 0;
+}
+
+static INT32 joemacrjInit()
+{
+	return CommonInit(joemacrjLoadCallback, joemacr_map, 1, 0x0284);
+}
+
+struct BurnDriver BurnDrvJoemacrj = {
+	"joemacrj", "joemacr", NULL, NULL, "1994",
+	"Joe & Mac Returns (Japan, Version 1.2, 1994.06.06)\0", NULL, "Data East", "Simple 156",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
+	NULL, joemacrjRomInfo, joemacrjRomName, NULL, NULL, Simpl156InputInfo, Simpl156DIPInfo,
+	joemacrjInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	320, 240, 4, 3
 };
 

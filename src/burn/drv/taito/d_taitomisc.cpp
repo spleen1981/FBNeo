@@ -33,6 +33,8 @@ static double DariusMSM5205RouteMasterVol;
 static UINT16 VolfiedVidCtrl;
 static UINT16 VolfiedVidMask;
 
+static INT32 RainbowCChipVer = 0;
+
 static UINT16 *pTopspeedTempDraw = NULL;
 
 static void DariusDraw();
@@ -1377,7 +1379,7 @@ static struct BurnRomInfo DariusRomDesc[] = {
 	{ "a96_59-1.186",  0x10000, 0x11aab4eb, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
 	{ "a96_58-1.152",  0x10000, 0x5f71e697, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
 	{ "a96_61-2.187",  0x10000, 0x4736aa9b, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
-	{ "a96_99-2.153",  0x10000, 0x4ede5f56, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
+	{ "a96_66-2.153",  0x10000, 0x4ede5f56, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
 	{ "a96_31.188",    0x10000, 0xe9bb5d89, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
 	{ "a96_30.154",    0x10000, 0x9eb5e127, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
 	
@@ -1516,15 +1518,15 @@ STD_ROM_PICK(Dariusj)
 STD_ROM_FN(Dariusj)
 
 static struct BurnRomInfo DariusoRomDesc[] = {
-	{ "a96-29.185",    0x10000, 0xf775162b, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
-	{ "a96-28.152",    0x10000, 0x4721d667, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
+	{ "a96_29.185",    0x10000, 0xf775162b, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
+	{ "a96_28.152",    0x10000, 0x4721d667, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
 	{ "a96_31.187",    0x10000, 0xe9bb5d89, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
 	{ "a96_30.154",    0x10000, 0x9eb5e127, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
 	
-	{ "a96-33.190",    0x10000, 0xd2f340d2, BRF_ESS | BRF_PRG | TAITO_68KROM2_BYTESWAP },
-	{ "a96-32.157",    0x10000, 0x044c9848, BRF_ESS | BRF_PRG | TAITO_68KROM2_BYTESWAP },
-	{ "a96-35.191",    0x10000, 0xb8ed718b, BRF_ESS | BRF_PRG | TAITO_68KROM2_BYTESWAP },
-	{ "a96-34.158",    0x10000, 0x7556a660, BRF_ESS | BRF_PRG | TAITO_68KROM2_BYTESWAP },
+	{ "a96_33.190",    0x10000, 0xd2f340d2, BRF_ESS | BRF_PRG | TAITO_68KROM2_BYTESWAP },
+	{ "a96_32.157",    0x10000, 0x044c9848, BRF_ESS | BRF_PRG | TAITO_68KROM2_BYTESWAP },
+	{ "a96_35.191",    0x10000, 0xb8ed718b, BRF_ESS | BRF_PRG | TAITO_68KROM2_BYTESWAP },
+	{ "a96_34.158",    0x10000, 0x7556a660, BRF_ESS | BRF_PRG | TAITO_68KROM2_BYTESWAP },
 
 	{ "a96_57.33",     0x10000, 0x33ceb730, BRF_ESS | BRF_PRG | TAITO_Z80ROM1 },
 	
@@ -1792,10 +1794,10 @@ static struct BurnRomInfo JumpingRomDesc[] = {
 	{ "10.h8",         0x10000, 0x8c878827, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
 	{ "5.i4",          0x10000, 0x443492cf, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
 	{ "9.i8",          0x10000, 0xed33bae1, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
-	{ "4.bin",         0x10000, 0x00bf8a91, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
-	{ "8.bin",         0x10000, 0xe3d7a844, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
-	{ "3.bin",         0x10000, 0xa3ab61c6, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
-	{ "7.bin",         0x10000, 0xc1c4c701, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
+	{ "4.bin",         0x10000, 0x00bf8a91, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP }, // 4+3 == b22-03.23
+	{ "8.bin",         0x10000, 0xe3d7a844, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP }, // 8+7 == b22-04.24
+	{ "3.bin",         0x10000, 0xa3ab61c6, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP }, // 4+3 == b22-03.23
+	{ "7.bin",         0x10000, 0xc1c4c701, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP }, // 8+7 == b22-04.24
 	{ "2.f89",         0x10000, 0x0810d327, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP_JUMPING },
 
 	{ "jb1_cd67",      0x10000, 0x8527c00e, BRF_ESS | BRF_PRG | TAITO_Z80ROM1 },
@@ -1822,8 +1824,9 @@ static struct BurnRomInfo JumpingRomDesc[] = {
 	{ "jb2_i120",      0x10000, 0x7c4e893b, BRF_GRA | TAITO_SPRITESA },
 	{ "jb2_i119",      0x08000, 0x7e1d58d8, BRF_GRA | TAITO_SPRITESA },
 	
-	{ "jumping-pal16r6.bin", 0x00104, 0x12e9a7b8, BRF_OPT },
-	{ "jumping-pal20l8.bin", 0x00144, 0x76944f81, BRF_OPT },
+	{ "jumping-pal16r6.bin", 	0x00104, 0x12e9a7b8, BRF_OPT },
+	{ "jumping-pal20l8.bin", 	0x00144, 0x76944f81, BRF_OPT },
+	{ "pal16l8a.ic51.bin", 		0x00104, 0xc1e6cb8f, BRF_OPT },	
 };
 
 STD_ROM_PICK(Jumping)
@@ -1834,10 +1837,10 @@ static struct BurnRomInfo JumpingaRomDesc[] = {
 	{ "10.h8",         0x10000, 0x8c878827, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
 	{ "seyutu_5.i4",   0x10000, 0x25f19b71, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
 	{ "seyutu_9.i8",   0x10000, 0x9c94f260, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
-	{ "4.bin",         0x10000, 0x00bf8a91, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
-	{ "8.bin",         0x10000, 0xe3d7a844, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
-	{ "3.bin",         0x10000, 0xa3ab61c6, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
-	{ "7.bin",         0x10000, 0xc1c4c701, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
+	{ "4.bin",         0x10000, 0x00bf8a91, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP }, // 4+3 == b22-03.23
+	{ "8.bin",         0x10000, 0xe3d7a844, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP }, // 8+7 == b22-04.24
+	{ "3.bin",         0x10000, 0xa3ab61c6, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP }, // 4+3 == b22-03.23
+	{ "7.bin",         0x10000, 0xc1c4c701, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP }, // 8+7 == b22-04.24
 	{ "2.f89",         0x10000, 0x0810d327, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP_JUMPING },
 
 	{ "jb1_cd67",      0x10000, 0x8527c00e, BRF_ESS | BRF_PRG | TAITO_Z80ROM1 },
@@ -1852,7 +1855,7 @@ static struct BurnRomInfo JumpingaRomDesc[] = {
 	{ "12.ic13",       0x10000, 0x06226492, BRF_GRA | TAITO_CHARS },
 
 	{ "jb2_ic62",      0x10000, 0x8548db6c, BRF_GRA | TAITO_SPRITESA },
-	{ "jb2_ic61",      0x10000, 0x37c5923b, BRF_GRA | TAITO_SPRITESA },
+	{ "20.bin",        0x10000, 0x89b3d8ee, BRF_GRA | TAITO_SPRITESA }, // dumped multiple times, always the same
 	{ "jb2_ic60",      0x08000, 0x662a2f1e, BRF_GRA | TAITO_SPRITESA },
 	{ "jb2_ic78",      0x10000, 0x925865e1, BRF_GRA | TAITO_SPRITESA },
 	{ "jb2_ic77",      0x10000, 0xb09695d1, BRF_GRA | TAITO_SPRITESA },
@@ -1864,12 +1867,53 @@ static struct BurnRomInfo JumpingaRomDesc[] = {
 	{ "jb2_i120",      0x10000, 0x7c4e893b, BRF_GRA | TAITO_SPRITESA },
 	{ "jb2_i119",      0x08000, 0x7e1d58d8, BRF_GRA | TAITO_SPRITESA },
 	
-	{ "jumping-pal16r6.bin", 0x00104, 0x12e9a7b8, BRF_OPT },
-	{ "jumping-pal20l8.bin", 0x00144, 0x76944f81, BRF_OPT },
+	{ "jumping-pal16r6.bin", 	0x00104, 0x12e9a7b8, BRF_OPT },
+	{ "jumping-pal20l8.bin", 	0x00144, 0x76944f81, BRF_OPT },
+	{ "pal16l8a.ic51.bin", 		0x00104, 0xc1e6cb8f, BRF_OPT },
 };
 
 STD_ROM_PICK(Jumpinga)
 STD_ROM_FN(Jumpinga)
+
+static struct BurnRomInfo JumpingiRomDesc[] = {
+	/* red 'Imnoe' PCB */
+	{ "05.IC3",        0x20000, 0x69ac4af4, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
+	{ "03.IC6",        0x20000, 0x38975cdc, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
+	{ "06.IC2",   	   0x20000, 0x3ebb0fb8, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP }, // b22-03.23
+	{ "04.IC5",   	   0x20000, 0x91625e7f, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP }, // b22-04.24
+	{ "02",            0x10000, 0x0810d327, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP_JUMPING },
+
+	{ "01.IC53",       0x10000, 0x8527c00e, BRF_ESS | BRF_PRG | TAITO_Z80ROM1 },
+
+	{ "13.IC8",        0x10000, 0x65b76309, BRF_GRA | TAITO_CHARS },
+	{ "14.IC7",        0x10000, 0x43a94283, BRF_GRA | TAITO_CHARS },
+	{ "11.IC10",       0x10000, 0xe61933fb, BRF_GRA | TAITO_CHARS },
+	{ "12.IC9",        0x10000, 0xed031eb2, BRF_GRA | TAITO_CHARS },
+	{ "09.IC12",       0x10000, 0x312700ca, BRF_GRA | TAITO_CHARS },
+	{ "10.IC11",       0x10000, 0xde3b0b88, BRF_GRA | TAITO_CHARS },
+	{ "07.IC14",       0x10000, 0x9fdc6c8e, BRF_GRA | TAITO_CHARS },
+	{ "08.IC13",       0x10000, 0x06226492, BRF_GRA | TAITO_CHARS },
+
+	{ "15.IC62",       0x10000, 0x8548db6c, BRF_GRA | TAITO_SPRITESA },
+	{ "19.IC61",       0x10000, 0x89b3d8ee, BRF_GRA | TAITO_SPRITESA }, 
+	{ "23.IC60",       0x08000, 0x662a2f1e, BRF_GRA | TAITO_SPRITESA },
+	{ "16.IC78",       0x10000, 0x925865e1, BRF_GRA | TAITO_SPRITESA },
+	{ "20.IC77",       0x10000, 0xb09695d1, BRF_GRA | TAITO_SPRITESA },
+	{ "24.IC76",       0x08000, 0x41937743, BRF_GRA | TAITO_SPRITESA },
+	{ "17.IC93",       0x10000, 0xf644eeab, BRF_GRA | TAITO_SPRITESA },
+	{ "21.IC92",       0x10000, 0x16e1b0ff, BRF_GRA | TAITO_SPRITESA },
+	{ "25.IC91",       0x08000, 0xd886c014, BRF_GRA | TAITO_SPRITESA },
+	{ "18.IC121",      0x10000, 0x93df1e4d, BRF_GRA | TAITO_SPRITESA },
+	{ "22.IC120",      0x10000, 0x7c4e893b, BRF_GRA | TAITO_SPRITESA },
+	{ "26.IC119",      0x08000, 0x7e1d58d8, BRF_GRA | TAITO_SPRITESA },
+	
+	{ "JP2.IC56", 	   0x00104, 0x12e9a7b8, BRF_OPT },
+	{ "JP1.IC13", 	   0x00144, 0x76944f81, BRF_OPT },
+	{ "JP3.IC51", 	   0x00104, 0xc1e6cb8f, BRF_OPT },
+};
+
+STD_ROM_PICK(Jumpingi)
+STD_ROM_FN(Jumpingi)
 
 static struct BurnRomInfo RastanRomDesc[] = {
 	{ "b04-38.19",   0x10000, 0x1c91dbb1, BRF_ESS | BRF_PRG | TAITO_68KROM1_BYTESWAP },
@@ -2948,7 +2992,7 @@ void __fastcall Jumping68KWriteByte(UINT32 a, UINT8 d)
 		case 0x400007: {
 			TaitoSoundLatch = d;
 			ZetOpen(0);
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 			ZetClose();
 			return;
 		}
@@ -3800,7 +3844,7 @@ UINT8 __fastcall JumpingZ80Read(UINT16 a)
 		}
 		
 		case 0xb800: {
-			ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 			return TaitoSoundLatch;
 		}
 	}
@@ -4052,18 +4096,18 @@ void __fastcall OpwolfbCChipSubZ80Write(UINT16 a, UINT8)
 static void TaitoYM2151IRQHandler(INT32 Irq)
 {
 	if (Irq) {
-		ZetSetIRQLine(0xff, ZET_IRQSTATUS_ACK);
+		ZetSetIRQLine(0xff, CPU_IRQSTATUS_ACK);
 	} else {
-		ZetSetIRQLine(0,    ZET_IRQSTATUS_NONE);
+		ZetSetIRQLine(0,    CPU_IRQSTATUS_NONE);
 	}
 }
 
 static void TaitoYM2203IRQHandler(INT32, INT32 nStatus)
 {
 	if (nStatus & 1) {
-		ZetSetIRQLine(0xFF, ZET_IRQSTATUS_ACK);
+		ZetSetIRQLine(0xFF, CPU_IRQSTATUS_ACK);
 	} else {
-		ZetSetIRQLine(0,    ZET_IRQSTATUS_NONE);
+		ZetSetIRQLine(0,    CPU_IRQSTATUS_NONE);
 	}
 }
 
@@ -4293,7 +4337,7 @@ static INT32 DariusInit()
 		
 	TaitoLoadRoms(0);
 	
-	if (strcmp(BurnDrvGetTextA(DRV_NAME), "darius") != 0)  Taito68KRom1Size = 0x60000;	
+	if (Taito68KRom1Size < 0x60000) Taito68KRom1Size = 0x60000;	
 	TaitoZ80Rom1Size = 0x30000;
 	
 	// Allocate and Blank all required memory
@@ -4306,7 +4350,7 @@ static INT32 DariusInit()
 	
 	if (TaitoLoadRoms(1)) return 1;
 	
-	if (strcmp(BurnDrvGetTextA(DRV_NAME), "darius") != 0)  {
+	if (Taito68KRom1Num == 4)  {
 		memcpy(Taito68KRom1 + 0x40000, Taito68KRom1 + 0x20000, 0x20000);
 		memset(Taito68KRom1 + 0x20000, 0xff, 0x20000);
 	}
@@ -4322,14 +4366,14 @@ static INT32 DariusInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Taito68KRom1           , 0x000000, 0x05ffff, SM_ROM);
-	SekMapMemory(Taito68KRam1           , 0x080000, 0x08ffff, SM_RAM);
-	SekMapMemory(PC080SNRam[0]          , 0xd00000, 0xd0ffff, SM_RAM);
-	SekMapMemory(TaitoPaletteRam        , 0xd80000, 0xd80fff, SM_RAM);
-	SekMapMemory(TaitoSpriteRam         , 0xe00100, 0xe00fff, SM_RAM);
-	SekMapMemory(TaitoSharedRam         , 0xe01000, 0xe02fff, SM_RAM);
-	SekMapMemory(TaitoVideoRam          , 0xe08000, 0xe0ffff, SM_RAM);
-	SekMapMemory(Taito68KRam1 + 0x10000 , 0xe10000, 0xe10fff, SM_RAM);
+	SekMapMemory(Taito68KRom1           , 0x000000, 0x05ffff, MAP_ROM);
+	SekMapMemory(Taito68KRam1           , 0x080000, 0x08ffff, MAP_RAM);
+	SekMapMemory(PC080SNRam[0]          , 0xd00000, 0xd0ffff, MAP_RAM);
+	SekMapMemory(TaitoPaletteRam        , 0xd80000, 0xd80fff, MAP_RAM);
+	SekMapMemory(TaitoSpriteRam         , 0xe00100, 0xe00fff, MAP_RAM);
+	SekMapMemory(TaitoSharedRam         , 0xe01000, 0xe02fff, MAP_RAM);
+	SekMapMemory(TaitoVideoRam          , 0xe08000, 0xe0ffff, MAP_RAM);
+	SekMapMemory(Taito68KRam1 + 0x10000 , 0xe10000, 0xe10fff, MAP_RAM);
 	SekSetReadByteHandler(0, Darius68K1ReadByte);
 	SekSetWriteByteHandler(0, Darius68K1WriteByte);
 	SekSetReadWordHandler(0, Darius68K1ReadWord);	
@@ -4338,12 +4382,12 @@ static INT32 DariusInit()
 	
 	SekInit(1, 0x68000);
 	SekOpen(1);
-	SekMapMemory(Taito68KRom2           , 0x000000, 0x03ffff, SM_ROM);
-	SekMapMemory(Taito68KRam2           , 0x040000, 0x04ffff, SM_RAM);
-	SekMapMemory(TaitoPaletteRam        , 0xd80000, 0xd80fff, SM_RAM);
-	SekMapMemory(TaitoSpriteRam         , 0xe00100, 0xe00fff, SM_RAM);
-	SekMapMemory(TaitoSharedRam         , 0xe01000, 0xe02fff, SM_RAM);
-	SekMapMemory(TaitoVideoRam          , 0xe08000, 0xe0ffff, SM_RAM);
+	SekMapMemory(Taito68KRom2           , 0x000000, 0x03ffff, MAP_ROM);
+	SekMapMemory(Taito68KRam2           , 0x040000, 0x04ffff, MAP_RAM);
+	SekMapMemory(TaitoPaletteRam        , 0xd80000, 0xd80fff, MAP_RAM);
+	SekMapMemory(TaitoSpriteRam         , 0xe00100, 0xe00fff, MAP_RAM);
+	SekMapMemory(TaitoSharedRam         , 0xe01000, 0xe02fff, MAP_RAM);
+	SekMapMemory(TaitoVideoRam          , 0xe08000, 0xe0ffff, MAP_RAM);
 	SekSetReadByteHandler(0, Darius68K2ReadByte);
 	SekSetWriteByteHandler(0, Darius68K2WriteByte);
 	SekSetReadWordHandler(0, Darius68K2ReadWord);	
@@ -4446,12 +4490,12 @@ static INT32 OpwolfInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Taito68KRom1           , 0x000000, 0x03ffff, SM_ROM);
-	SekMapMemory(Taito68KRam1           , 0x100000, 0x107fff, SM_RAM);
-	SekMapMemory(TaitoPaletteRam        , 0x200000, 0x200fff, SM_RAM);
-	SekMapMemory(PC080SNRam[0]          , 0xc00000, 0xc0ffff, SM_RAM);
-	SekMapMemory(Taito68KRam1 + 0x8000  , 0xc10000, 0xc1ffff, SM_RAM);
-	SekMapMemory(PC090OJRam             , 0xd00000, 0xd03fff, SM_RAM);
+	SekMapMemory(Taito68KRom1           , 0x000000, 0x03ffff, MAP_ROM);
+	SekMapMemory(Taito68KRam1           , 0x100000, 0x107fff, MAP_RAM);
+	SekMapMemory(TaitoPaletteRam        , 0x200000, 0x200fff, MAP_RAM);
+	SekMapMemory(PC080SNRam[0]          , 0xc00000, 0xc0ffff, MAP_RAM);
+	SekMapMemory(Taito68KRam1 + 0x8000  , 0xc10000, 0xc1ffff, MAP_RAM);
+	SekMapMemory(PC090OJRam             , 0xd00000, 0xd03fff, MAP_RAM);
 	SekSetReadByteHandler(0, Opwolf68KReadByte);
 	SekSetWriteByteHandler(0, Opwolf68KWriteByte);
 	SekSetReadWordHandler(0, Opwolf68KReadWord);	
@@ -4553,12 +4597,12 @@ static INT32 OpwolfbInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Taito68KRom1           , 0x000000, 0x03ffff, SM_ROM);
-	SekMapMemory(Taito68KRam1           , 0x100000, 0x107fff, SM_RAM);
-	SekMapMemory(TaitoPaletteRam        , 0x200000, 0x200fff, SM_RAM);
-	SekMapMemory(PC080SNRam[0]          , 0xc00000, 0xc0ffff, SM_RAM);
-	SekMapMemory(Taito68KRam1 + 0x8000  , 0xc10000, 0xc1ffff, SM_RAM);
-	SekMapMemory(PC090OJRam             , 0xd00000, 0xd03fff, SM_RAM);
+	SekMapMemory(Taito68KRom1           , 0x000000, 0x03ffff, MAP_ROM);
+	SekMapMemory(Taito68KRam1           , 0x100000, 0x107fff, MAP_RAM);
+	SekMapMemory(TaitoPaletteRam        , 0x200000, 0x200fff, MAP_RAM);
+	SekMapMemory(PC080SNRam[0]          , 0xc00000, 0xc0ffff, MAP_RAM);
+	SekMapMemory(Taito68KRam1 + 0x8000  , 0xc10000, 0xc1ffff, MAP_RAM);
+	SekMapMemory(PC090OJRam             , 0xd00000, 0xd03fff, MAP_RAM);
 	SekSetReadByteHandler(0, Opwolfb68KReadByte);
 	SekSetWriteByteHandler(0, Opwolfb68KWriteByte);
 	SekSetReadWordHandler(0, Opwolfb68KReadWord);	
@@ -4668,12 +4712,12 @@ static INT32 RbislandInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Taito68KRom1           , 0x000000, 0x07ffff, SM_ROM);
-	SekMapMemory(Taito68KRam1           , 0x10c000, 0x10ffff, SM_RAM);
-	SekMapMemory(TaitoPaletteRam        , 0x200000, 0x200fff, SM_RAM);
-	SekMapMemory(Taito68KRam1 + 0x4000  , 0x201000, 0x203fff, SM_RAM);
-	SekMapMemory(PC080SNRam[0]          , 0xc00000, 0xc0ffff, SM_RAM);
-	SekMapMemory(PC090OJRam             , 0xd00000, 0xd03fff, SM_RAM);
+	SekMapMemory(Taito68KRom1           , 0x000000, 0x07ffff, MAP_ROM);
+	SekMapMemory(Taito68KRam1           , 0x10c000, 0x10ffff, MAP_RAM);
+	SekMapMemory(TaitoPaletteRam        , 0x200000, 0x200fff, MAP_RAM);
+	SekMapMemory(Taito68KRam1 + 0x4000  , 0x201000, 0x203fff, MAP_RAM);
+	SekMapMemory(PC080SNRam[0]          , 0xc00000, 0xc0ffff, MAP_RAM);
+	SekMapMemory(PC090OJRam             , 0xd00000, 0xd03fff, MAP_RAM);
 	SekSetReadByteHandler(0, Rbisland68KReadByte);
 	SekSetWriteByteHandler(0, Rbisland68KWriteByte);
 	SekSetReadWordHandler(0, Rbisland68KReadWord);	
@@ -4708,15 +4752,20 @@ static INT32 RbislandInit()
 	nTaitoCyclesTotal[0] = (16000000 / 2) / 60;
 	nTaitoCyclesTotal[1] = (16000000 / 4) / 60;
 	
-	INT32 CChipVer = 0;
-	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "rbislande")) CChipVer = 1;
-	RainbowCChipInit(CChipVer);
+	RainbowCChipInit(RainbowCChipVer);
 		
 	// Reset the driver
 	TaitoResetFunction = RbislandDoReset;
 	TaitoResetFunction();
 
 	return 0;
+}
+
+static INT32 RbislandeInit()
+{
+	RainbowCChipVer = 1;
+	
+	return RbislandInit();
 }
 
 static INT32 JumpingInit()
@@ -4763,13 +4812,13 @@ static INT32 JumpingInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Taito68KRom1           , 0x000000, 0x09ffff, SM_ROM);
-	SekMapMemory(Taito68KRam1           , 0x10c000, 0x10ffff, SM_RAM);
-	SekMapMemory(TaitoPaletteRam        , 0x200000, 0x200fff, SM_RAM);
-	SekMapMemory(Taito68KRam1 + 0x4000  , 0x201000, 0x203fff, SM_RAM);
-	SekMapMemory(TaitoSpriteRam         , 0x440000, 0x4407ff, SM_RAM);
-	SekMapMemory(PC080SNRam[0]          , 0xc00000, 0xc0ffff, SM_RAM);
-	SekMapMemory(TaitoSpriteRam + 0x800 , 0xd00000, 0xd01fff, SM_RAM);
+	SekMapMemory(Taito68KRom1           , 0x000000, 0x09ffff, MAP_ROM);
+	SekMapMemory(Taito68KRam1           , 0x10c000, 0x10ffff, MAP_RAM);
+	SekMapMemory(TaitoPaletteRam        , 0x200000, 0x200fff, MAP_RAM);
+	SekMapMemory(Taito68KRam1 + 0x4000  , 0x201000, 0x203fff, MAP_RAM);
+	SekMapMemory(TaitoSpriteRam         , 0x440000, 0x4407ff, MAP_RAM);
+	SekMapMemory(PC080SNRam[0]          , 0xc00000, 0xc0ffff, MAP_RAM);
+	SekMapMemory(TaitoSpriteRam + 0x800 , 0xd00000, 0xd01fff, MAP_RAM);
 	SekSetReadByteHandler(0, Jumping68KReadByte);
 	SekSetWriteByteHandler(0, Jumping68KWriteByte);
 	SekSetReadWordHandler(0, Jumping68KReadWord);	
@@ -4858,11 +4907,11 @@ static INT32 RastanInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Taito68KRom1           , 0x000000, 0x05ffff, SM_ROM);
-	SekMapMemory(Taito68KRam1           , 0x10c000, 0x10ffff, SM_RAM);
-	SekMapMemory(TaitoPaletteRam        , 0x200000, 0x200fff, SM_RAM);
-	SekMapMemory(PC080SNRam[0]          , 0xc00000, 0xc0ffff, SM_RAM);
-	SekMapMemory(PC090OJRam             , 0xd00000, 0xd03fff, SM_RAM);
+	SekMapMemory(Taito68KRom1           , 0x000000, 0x05ffff, MAP_ROM);
+	SekMapMemory(Taito68KRam1           , 0x10c000, 0x10ffff, MAP_RAM);
+	SekMapMemory(TaitoPaletteRam        , 0x200000, 0x200fff, MAP_RAM);
+	SekMapMemory(PC080SNRam[0]          , 0xc00000, 0xc0ffff, MAP_RAM);
+	SekMapMemory(PC090OJRam             , 0xd00000, 0xd03fff, MAP_RAM);
 	SekSetReadByteHandler(0, Rastan68KReadByte);
 	SekSetWriteByteHandler(0, Rastan68KWriteByte);
 	SekSetWriteWordHandler(0, Rastan68KWriteWord);
@@ -4953,15 +5002,15 @@ static INT32 TopspeedInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Taito68KRom1           , 0x000000, 0x01ffff, SM_ROM);
-	SekMapMemory(Taito68KRom1 + 0x20000 , 0x080000, 0x0fffff, SM_ROM);
-	SekMapMemory(TaitoSharedRam         , 0x400000, 0x40ffff, SM_RAM);
-	SekMapMemory(TaitoPaletteRam        , 0x500000, 0x503fff, SM_RAM);
-	SekMapMemory(Taito68KRam1           , 0x800000, 0x80ffff, SM_RAM);
-	SekMapMemory(PC080SNRam[0]          , 0xa00000, 0xa0ffff, SM_RAM);
-	SekMapMemory(PC080SNRam[1]          , 0xb00000, 0xb0ffff, SM_RAM);
-	SekMapMemory(TaitoSpriteRam         , 0xd00000, 0xd00fff, SM_RAM);	
-	SekMapMemory(TaitoVideoRam          , 0xe00000, 0xe0ffff, SM_RAM);
+	SekMapMemory(Taito68KRom1           , 0x000000, 0x01ffff, MAP_ROM);
+	SekMapMemory(Taito68KRom1 + 0x20000 , 0x080000, 0x0fffff, MAP_ROM);
+	SekMapMemory(TaitoSharedRam         , 0x400000, 0x40ffff, MAP_RAM);
+	SekMapMemory(TaitoPaletteRam        , 0x500000, 0x503fff, MAP_RAM);
+	SekMapMemory(Taito68KRam1           , 0x800000, 0x80ffff, MAP_RAM);
+	SekMapMemory(PC080SNRam[0]          , 0xa00000, 0xa0ffff, MAP_RAM);
+	SekMapMemory(PC080SNRam[1]          , 0xb00000, 0xb0ffff, MAP_RAM);
+	SekMapMemory(TaitoSpriteRam         , 0xd00000, 0xd00fff, MAP_RAM);	
+	SekMapMemory(TaitoVideoRam          , 0xe00000, 0xe0ffff, MAP_RAM);
 	SekSetReadByteHandler(0, Topspeed68K1ReadByte);
 	SekSetWriteByteHandler(0, Topspeed68K1WriteByte);
 	SekSetReadWordHandler(0, Topspeed68K1ReadWord);	
@@ -4970,8 +5019,8 @@ static INT32 TopspeedInit()
 	
 	SekInit(1, 0x68000);
 	SekOpen(1);
-	SekMapMemory(Taito68KRom2           , 0x000000, 0x01ffff, SM_ROM);
-	SekMapMemory(TaitoSharedRam         , 0x400000, 0x40ffff, SM_RAM);
+	SekMapMemory(Taito68KRom2           , 0x000000, 0x01ffff, MAP_ROM);
+	SekMapMemory(TaitoSharedRam         , 0x400000, 0x40ffff, MAP_RAM);
 	SekSetReadByteHandler(0, Topspeed68K2ReadByte);
 	SekSetWriteByteHandler(0, Topspeed68K2WriteByte);
 	SekSetReadWordHandler(0, Topspeed68K2ReadWord);	
@@ -5054,12 +5103,12 @@ static INT32 VolfiedInit()
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Taito68KRom1           , 0x000000, 0x03ffff, SM_ROM);
-	SekMapMemory(Taito68KRom1 + 0x40000 , 0x080000, 0x0fffff, SM_ROM);
-	SekMapMemory(Taito68KRam1           , 0x100000, 0x103fff, SM_RAM);
-	SekMapMemory(PC090OJRam             , 0x200000, 0x203fff, SM_RAM);
-	SekMapMemory(TaitoVideoRam          , 0x400000, 0x47ffff, SM_READ);
-	SekMapMemory(TaitoPaletteRam        , 0x500000, 0x503fff, SM_RAM);
+	SekMapMemory(Taito68KRom1           , 0x000000, 0x03ffff, MAP_ROM);
+	SekMapMemory(Taito68KRom1 + 0x40000 , 0x080000, 0x0fffff, MAP_ROM);
+	SekMapMemory(Taito68KRam1           , 0x100000, 0x103fff, MAP_RAM);
+	SekMapMemory(PC090OJRam             , 0x200000, 0x203fff, MAP_RAM);
+	SekMapMemory(TaitoVideoRam          , 0x400000, 0x47ffff, MAP_READ);
+	SekMapMemory(TaitoPaletteRam        , 0x500000, 0x503fff, MAP_RAM);
 	SekSetReadByteHandler(0, Volfied68KReadByte);
 	SekSetWriteByteHandler(0, Volfied68KWriteByte);
 	SekSetReadWordHandler(0, Volfied68KReadWord);	
@@ -5123,6 +5172,8 @@ static INT32 TaitoMiscExit()
 	
 	VolfiedVidCtrl = 0;
 	VolfiedVidMask = 0;
+	
+	RainbowCChipVer = 0;
 	
 	BurnFree(pTopspeedTempDraw);
 	
@@ -5654,7 +5705,7 @@ static INT32 TaitoMiscFrame()
 		nNext = (i + 1) * nTaitoCyclesTotal[nCurrentCPU] / nInterleave;
 		nTaitoCyclesSegment = nNext - nTaitoCyclesDone[nCurrentCPU];
 		nTaitoCyclesDone[nCurrentCPU] += SekRun(nTaitoCyclesSegment);
-		if (i == 9) SekSetIRQLine(TaitoIrqLine, SEK_IRQSTATUS_AUTO);
+		if (i == 9) SekSetIRQLine(TaitoIrqLine, CPU_IRQSTATUS_AUTO);
 		SekClose();
 		
 		// Run Z80
@@ -5676,7 +5727,7 @@ static INT32 TaitoMiscFrame()
 			nTaitoCyclesSegment = nNext - nTaitoCyclesDone[nCurrentCPU];
 			nTaitoCyclesSegment = ZetRun(nTaitoCyclesSegment);
 			nTaitoCyclesDone[nCurrentCPU] += nTaitoCyclesSegment;
-			if (i == 9) ZetRaiseIrq(0);
+			if (i == 9) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 			ZetClose();
 		}
 		
@@ -5736,7 +5787,7 @@ static INT32 DariusFrame()
 		nNext = (i + 1) * nTaitoCyclesTotal[nCurrentCPU] / nInterleave;
 		nTaitoCyclesSegment = nNext - nTaitoCyclesDone[nCurrentCPU];
 		nTaitoCyclesDone[nCurrentCPU] += SekRun(nTaitoCyclesSegment);
-		if (i == nInterleave - 1) SekSetIRQLine(TaitoIrqLine, SEK_IRQSTATUS_AUTO);
+		if (i == nInterleave - 1) SekSetIRQLine(TaitoIrqLine, CPU_IRQSTATUS_AUTO);
 		SekClose();
 		
 		// Run 68000 # 2
@@ -5746,7 +5797,7 @@ static INT32 DariusFrame()
 			nNext = (i + 1) * nTaitoCyclesTotal[nCurrentCPU] / nInterleave;
 			nTaitoCyclesSegment = nNext - nTaitoCyclesDone[nCurrentCPU];
 			nTaitoCyclesDone[nCurrentCPU] += SekRun(nTaitoCyclesSegment);
-			if (i == nInterleave - 1) SekSetIRQLine(TaitoIrqLine, SEK_IRQSTATUS_AUTO);
+			if (i == nInterleave - 1) SekSetIRQLine(TaitoIrqLine, CPU_IRQSTATUS_AUTO);
 			SekClose();
 		}
 		
@@ -5801,7 +5852,7 @@ static INT32 JumpingFrame()
 		nNext = (i + 1) * nTaitoCyclesTotal[nCurrentCPU] / nInterleave;
 		nTaitoCyclesSegment = nNext - nTaitoCyclesDone[nCurrentCPU];
 		nTaitoCyclesDone[nCurrentCPU] += SekRun(nTaitoCyclesSegment);
-		if (i == (nInterleave - 1)) SekSetIRQLine(TaitoIrqLine, SEK_IRQSTATUS_AUTO);
+		if (i == (nInterleave - 1)) SekSetIRQLine(TaitoIrqLine, CPU_IRQSTATUS_AUTO);
 		SekClose();
 		
 		// Run Z80
@@ -5844,8 +5895,8 @@ static INT32 TopspeedFrame()
 		nNext = (i + 1) * nTaitoCyclesTotal[nCurrentCPU] / nInterleave;
 		nTaitoCyclesSegment = nNext - nTaitoCyclesDone[nCurrentCPU];
 		nTaitoCyclesDone[nCurrentCPU] += SekRun(nTaitoCyclesSegment);
-		if (i == (nInterleave / 2) && (GetCurrentFrame > 0)) SekSetIRQLine(6, SEK_IRQSTATUS_AUTO);
-		if (i == (nInterleave - 1)) SekSetIRQLine(TaitoIrqLine, SEK_IRQSTATUS_AUTO);
+		if (i == (nInterleave / 2) && (GetCurrentFrame > 0)) SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
+		if (i == (nInterleave - 1)) SekSetIRQLine(TaitoIrqLine, CPU_IRQSTATUS_AUTO);
 		SekClose();
 		
 		// Run 68000 # 2
@@ -5855,8 +5906,8 @@ static INT32 TopspeedFrame()
 			nNext = (i + 1) * nTaitoCyclesTotal[nCurrentCPU] / nInterleave;
 			nTaitoCyclesSegment = nNext - nTaitoCyclesDone[nCurrentCPU];
 			nTaitoCyclesDone[nCurrentCPU] += SekRun(nTaitoCyclesSegment);
-			if (i == (nInterleave / 2) && (GetCurrentFrame > 0)) SekSetIRQLine(6, SEK_IRQSTATUS_AUTO);
-			if (i == (nInterleave - 1)) SekSetIRQLine(TaitoIrqLine, SEK_IRQSTATUS_AUTO);
+			if (i == (nInterleave / 2) && (GetCurrentFrame > 0)) SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
+			if (i == (nInterleave - 1)) SekSetIRQLine(TaitoIrqLine, CPU_IRQSTATUS_AUTO);
 			SekClose();
 		}
 		
@@ -5974,10 +6025,10 @@ struct BurnDriver BurnDrvDarius = {
 };
 
 struct BurnDriver BurnDrvDariusu = {
-	"dariusu", "darius", "main check sum error", NULL, "1986",
+	"dariusu", "darius", NULL, NULL, "1986",
 	"Darius (US)\0", NULL, "Taito America Corporation", "Taito Misc",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
 	NULL, DariusuRomInfo, DariusuRomName, NULL, NULL, DariusInputInfo, DariusuDIPInfo,
 	DariusInit, TaitoMiscExit, DariusFrame, NULL, TaitoMiscScan,
 	NULL, 0x2000, 864, 224, 12, 3
@@ -6089,7 +6140,7 @@ struct BurnDriver BurnDrvRbislande = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, RbislandeRomInfo, RbislandeRomName, NULL, NULL, RbislandInputInfo, RbislandDIPInfo,
-	RbislandInit, TaitoMiscExit, TaitoMiscFrame, NULL, TaitoMiscScan,
+	RbislandeInit, TaitoMiscExit, TaitoMiscFrame, NULL, TaitoMiscScan,
 	NULL, 0x2000, 320, 224, 4, 3
 };
 
@@ -6104,11 +6155,21 @@ struct BurnDriver BurnDrvJumping = {
 };
 
 struct BurnDriver BurnDrvJumpinga = {
-	"jumpinga", "rbisland", NULL, NULL, "1989",
+	"jumpinga", "rbisland", NULL, NULL, "1988",
 	"Jumping (set 2)\0", NULL, "bootleg (Seyutu)", "Taito Misc",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, JumpingaRomInfo, JumpingaRomName, NULL, NULL, JumpingInputInfo, JumpingDIPInfo,
+	JumpingInit, TaitoMiscExit, JumpingFrame, NULL, TaitoMiscScan,
+	NULL, 0x2000, 320, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvJumpingi = {
+	"jumpingi", "rbisland", NULL, NULL, "1988",
+	"Jumping (set 3, Imnoe PCB)\0", NULL, "bootleg (Seyutu)", "Taito Misc",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	NULL, JumpingiRomInfo, JumpingiRomName, NULL, NULL, JumpingInputInfo, JumpingDIPInfo,
 	JumpingInit, TaitoMiscExit, JumpingFrame, NULL, TaitoMiscScan,
 	NULL, 0x2000, 320, 224, 4, 3
 };

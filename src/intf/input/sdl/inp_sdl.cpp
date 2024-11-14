@@ -1,5 +1,5 @@
 // Module for input using SDL
-#include <SDL.h>
+#include <SDL/SDL.h>
 
 #include "burner.h"
 #include "inp_sdl_keys.h"
@@ -24,7 +24,8 @@ static int SDLinpJoystickInit(int i)
 static int SDLinpKeyboardInit()
 {
 	for (int i = 0; i < 512; i++) {
-		FBKtoSDL[SDLtoFBK[i]] = i;
+		if (SDLtoFBK[i] > 0)
+			FBKtoSDL[SDLtoFBK[i]] = i;
 	}
 
 	return 0;
@@ -62,12 +63,8 @@ int SDLinpExit()
 	if (!(nInitedSubsytems & SDL_INIT_JOYSTICK)) {
 		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
 	}
-	if (!(nInitedSubsytems & SDL_INIT_VIDEO)) {
-		SDL_QuitSubSystem(SDL_INIT_VIDEO);
-	}
-	nInitedSubsytems = 0;
 
-//	SDL_Quit();
+	nInitedSubsytems = 0;
 
 	return 0;
 }
@@ -87,18 +84,11 @@ int SDLinpInit()
 	}
 	memset(JoyPrevAxes, 0, nSize);
 
-//	SDL_Init(0);
+	nInitedSubsytems = SDL_WasInit(SDL_INIT_JOYSTICK);
 
-	nInitedSubsytems = SDL_WasInit(SDL_INIT_EVERYTHING);
-
-	if (!(nInitedSubsytems & SDL_INIT_VIDEO)) {
-		SDL_InitSubSystem(SDL_INIT_VIDEO);
-	}
 	if (!(nInitedSubsytems & SDL_INIT_JOYSTICK)) {
 		SDL_InitSubSystem(SDL_INIT_JOYSTICK);
 	}
-
-//	SDL_SetVideoMode(320, 224, 0, SDL_RESIZABLE | SDL_HWSURFACE);
 
 	// Set up the joysticks
 	nJoystickCount = SDL_NumJoysticks();

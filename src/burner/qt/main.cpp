@@ -7,6 +7,7 @@ bool bAlwaysProcessKeyboardInput;
 bool bDoIpsPatch;
 
 TCHAR szAppBurnVer[16];
+TCHAR szAppBlendPath[MAX_PATH];
 
 int nAppVirtualFps = 6000;
 
@@ -57,9 +58,19 @@ char *TCHARToANSI(const TCHAR* pszInString, char* pszOutString, int nOutSize)
 }
 
 
+QString loadAppStyle(const QString &name)
+{
+    QFile file(name);
+    file.open(QFile::ReadOnly);
+
+    return QString(file.readAll());
+}
+
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
+
+    app.setStyleSheet(loadAppStyle(":/resource/dark-flat.css"));
 
     MainWindow mw;
     mw.show();

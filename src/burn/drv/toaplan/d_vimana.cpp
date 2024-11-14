@@ -81,6 +81,10 @@ static struct BurnDIPInfo VimanaDIPList[]=
 	{0x15, 0x01, 0x02, 0x00, "Off"						},
 	{0x15, 0x01, 0x02, 0x02, "On"						},
 
+	{0   , 0xfe, 0   ,    2, "Service Mode"	},
+	{0x15, 0x01, 0x04, 0x00, "Off"	},
+	{0x15, 0x01, 0x04, 0x04, "On"		},
+
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"					},
 	{0x15, 0x01, 0x08, 0x08, "Off"						},
 	{0x15, 0x01, 0x08, 0x00, "On"						},
@@ -147,6 +151,10 @@ static struct BurnDIPInfo VimananDIPList[]=
 	{0   , 0xfe, 0   ,    2, "Flip Screen"					},
 	{0x15, 0x01, 0x02, 0x00, "Off"						},
 	{0x15, 0x01, 0x02, 0x02, "On"						},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"	},
+	{0x15, 0x01, 0x04, 0x00, "Off"	},
+	{0x15, 0x01, 0x04, 0x04, "On"		},
 
 	{0   , 0xfe, 0   ,    4, "Difficulty"					},
 	{0x16, 0x01, 0x03, 0x01, "Easy"						},
@@ -610,6 +618,8 @@ static INT32 DrvDoReset()
 
 	bEnableInterrupts = false;
 
+	HiscoreReset();
+
 	vimana_latch = 0;
 	vimana_credits = 0;
 
@@ -672,10 +682,10 @@ static INT32 DrvInit()
 	{
 		SekInit(0, 0x68000);
 		SekOpen(0);
-		SekMapMemory(Drv68KROM,		0x000000, 0x03FFFF, SM_ROM);
-		SekMapMemory(DrvPalRAM,		0x404000, 0x4047FF, SM_RAM);
-		SekMapMemory(DrvPalRAM2,	0x406000, 0x4067FF, SM_RAM);
-		SekMapMemory(Drv68KRAM,		0x480000, 0x487FFF, SM_RAM);
+		SekMapMemory(Drv68KROM,		0x000000, 0x03FFFF, MAP_ROM);
+		SekMapMemory(DrvPalRAM,		0x404000, 0x4047FF, MAP_RAM);
+		SekMapMemory(DrvPalRAM2,	0x406000, 0x4067FF, MAP_RAM);
+		SekMapMemory(Drv68KRAM,		0x480000, 0x487FFF, MAP_RAM);
 		SekSetReadWordHandler(0, 	vimanaReadWord);
 		SekSetReadByteHandler(0, 	vimanaReadByte);
 		SekSetWriteWordHandler(0, 	vimanaWriteWord);
@@ -802,7 +812,7 @@ static INT32 DrvFrame()
 
 			bVBlank = true;
 			if (bEnableInterrupts) {
-				SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
+				SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
 			}
 		}
 
@@ -880,41 +890,41 @@ static INT32 DrvScan(INT32 nAction, INT32* pnMin)
 static struct BurnSampleInfo vimanaSampleDesc[] = {
 #ifdef TOAPLAN_SOUND_SAMPLES_HACK
 #if !defined ROM_VERIFY
-	{ "00.wav", SAMPLE_NOLOOP },
-	{ "01.wav", SAMPLE_NOLOOP },
-	{ "02.wav", SAMPLE_NOLOOP },
-	{ "03.wav", SAMPLE_NOLOOP },
-	{ "04.wav", SAMPLE_NOLOOP },
-	{ "05.wav", SAMPLE_NOLOOP },
-	{ "06.wav", SAMPLE_NOLOOP },
-	{ "07.wav", SAMPLE_NOLOOP },
-	{ "08.wav", SAMPLE_NOLOOP },
-	{ "09.wav", SAMPLE_NOLOOP },
-	{ "0a.wav", SAMPLE_NOLOOP },
-	{ "0b.wav", SAMPLE_NOLOOP },
-	{ "0c.wav", SAMPLE_NOLOOP },
-	{ "0d.wav", SAMPLE_NOLOOP },
-	{ "0e.wav", SAMPLE_NOLOOP },
-	{ "0f.wav", SAMPLE_NOLOOP },
-	{ "10.wav", SAMPLE_NOLOOP },
-	{ "11.wav", SAMPLE_NOLOOP },
-	{ "12.wav", SAMPLE_NOLOOP },
-	{ "13.wav", SAMPLE_NOLOOP },
-	{ "14.wav", SAMPLE_NOLOOP },
-	{ "15.wav", SAMPLE_NOLOOP },
-	{ "16.wav", SAMPLE_NOLOOP },
-	{ "17.wav", SAMPLE_NOLOOP },
-	{ "18.wav", SAMPLE_NOLOOP },
-	{ "19.wav", SAMPLE_NOLOOP },
-	{ "dm.wav", SAMPLE_NOLOOP },
-	{ "dm.wav", SAMPLE_NOLOOP },
-	{ "1c.wav", SAMPLE_NOLOOP },
-	{ "1d.wav", SAMPLE_NOLOOP },
-	{ "1e.wav", SAMPLE_NOLOOP },
-	{ "dm.wav", SAMPLE_NOLOOP },
-	{ "20.wav", SAMPLE_NOLOOP },
-	{ "dm.wav", SAMPLE_NOLOOP },
-	{ "22.wav", SAMPLE_NOLOOP },
+	{ "00", SAMPLE_NOLOOP },
+	{ "01", SAMPLE_NOLOOP },
+	{ "02", SAMPLE_NOLOOP },
+	{ "03", SAMPLE_NOLOOP },
+	{ "04", SAMPLE_NOLOOP },
+	{ "05", SAMPLE_NOLOOP },
+	{ "06", SAMPLE_NOLOOP },
+	{ "07", SAMPLE_NOLOOP },
+	{ "08", SAMPLE_NOLOOP },
+	{ "09", SAMPLE_NOLOOP },
+	{ "0a", SAMPLE_NOLOOP },
+	{ "0b", SAMPLE_NOLOOP },
+	{ "0c", SAMPLE_NOLOOP },
+	{ "0d", SAMPLE_NOLOOP },
+	{ "0e", SAMPLE_NOLOOP },
+	{ "0f", SAMPLE_NOLOOP },
+	{ "10", SAMPLE_NOLOOP },
+	{ "11", SAMPLE_NOLOOP },
+	{ "12", SAMPLE_NOLOOP },
+	{ "13", SAMPLE_NOLOOP },
+	{ "14", SAMPLE_NOLOOP },
+	{ "15", SAMPLE_NOLOOP },
+	{ "16", SAMPLE_NOLOOP },
+	{ "17", SAMPLE_NOLOOP },
+	{ "18", SAMPLE_NOLOOP },
+	{ "19", SAMPLE_NOLOOP },
+	{ "dm", SAMPLE_NOLOOP },
+	{ "dm", SAMPLE_NOLOOP },
+	{ "1c", SAMPLE_NOLOOP },
+	{ "1d", SAMPLE_NOLOOP },
+	{ "1e", SAMPLE_NOLOOP },
+	{ "dm", SAMPLE_NOLOOP },
+	{ "20", SAMPLE_NOLOOP },
+	{ "dm", SAMPLE_NOLOOP },
+	{ "22", SAMPLE_NOLOOP },
 #endif
 #endif
 	{ "", 0 }
@@ -951,7 +961,7 @@ struct BurnDriver BurnDrvVimana = {
 	"vimana", NULL, NULL, "vimana", "1991",
 	"Vimana (World, set 1)\0", "No sound", "Toaplan", "Toaplan BCU-2 / FCU-2 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
 	NULL, vimanaRomInfo, vimanaRomName, vimanaSampleInfo, vimanaSampleName, VimanaInputInfo, VimanaDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -985,7 +995,7 @@ struct BurnDriver BurnDrvVimanan = {
 	"vimanan", "vimana", NULL, "vimana", "1991",
 	"Vimana (World, set 2)\0", "No sound", "Toaplan (Nova Apparate GMBH & Co license)", "Toaplan BCU-2 / FCU-2 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
 	NULL, vimananRomInfo, vimananRomName, vimanaSampleInfo, vimanaSampleName, VimanaInputInfo, VimananDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -1019,7 +1029,7 @@ struct BurnDriver BurnDrvVimanaj = {
 	"vimanaj", "vimana", NULL, "vimana", "1991",
 	"Vimana (Japan)\0", "No sound", "Toaplan", "Toaplan BCU-2 / FCU-2 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
 	NULL, vimanajRomInfo, vimanajRomName, vimanaSampleInfo, vimanaSampleName, VimanaInputInfo, VimanaDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4

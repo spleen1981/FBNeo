@@ -241,7 +241,7 @@ UINT8 __fastcall truxtonZ80In(UINT16 nAddress)
 
 	switch (nAddress) {
 		case 0x60:
-			return BurnYM3812Read(0);
+			return BurnYM3812Read(0, 0);
 		case 0x40:					// DIP A
 			return DrvInput[2];
 		case 0x50:					// DIP B
@@ -268,10 +268,10 @@ void __fastcall truxtonZ80Out(UINT16 nAddress, UINT8 nValue)
 
 	switch (nAddress) {
 		case 0x60:
-			BurnYM3812Write(0, nValue);
+			BurnYM3812Write(0, 0, nValue);
 			break;
 		case 0x61:
-			BurnYM3812Write(1, nValue);
+			BurnYM3812Write(0, 1, nValue);
 			break;
 
 		case 0x30:				// Coin counter
@@ -472,6 +472,8 @@ static INT32 DrvDoReset()
 
 	bEnableInterrupts = false;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -508,17 +510,17 @@ static INT32 DrvInit()
 	    SekOpen(0);
 
 		// Map 68000 memory:
-		SekMapMemory(Rom01,			0x000000, 0x03FFFF, SM_ROM);	// 68K ROM
-		SekMapMemory(Ram01,			0x080000, 0x083FFF, SM_RAM);	// 68K RAM
-		SekMapMemory(RamPal,		0x144000, 0x1447FF, SM_RAM);	// BCU-2 palette RAM
-		SekMapMemory(RamPal2,		0x146000, 0x1467FF, SM_RAM);	// FCU-2 palette RAM
+		SekMapMemory(Rom01,			0x000000, 0x03FFFF, MAP_ROM);	// 68K ROM
+		SekMapMemory(Ram01,			0x080000, 0x083FFF, MAP_RAM);	// 68K RAM
+		SekMapMemory(RamPal,		0x144000, 0x1447FF, MAP_RAM);	// BCU-2 palette RAM
+		SekMapMemory(RamPal2,		0x146000, 0x1467FF, MAP_RAM);	// FCU-2 palette RAM
 
 		SekSetReadWordHandler(0, truxtonReadWord);
 		SekSetReadByteHandler(0, truxtonReadByte);
 		SekSetWriteWordHandler(0, truxtonWriteWord);
 		SekSetWriteByteHandler(0, truxtonWriteByte);
 
-		SekMapHandler(1,			0x180000, 0x180FFF, SM_RAM);	// Z80 RAM
+		SekMapHandler(1,			0x180000, 0x180FFF, MAP_RAM);	// Z80 RAM
 
 		SekSetReadByteHandler(1, toaplan1ReadByteZ80RAM);
 		SekSetReadWordHandler(1, toaplan1ReadWordZ80RAM);
@@ -537,9 +539,9 @@ static INT32 DrvInit()
 	ToaPalSrc2 = RamPal2;
 	ToaPalInit();
 
-	BurnYM3812Init(28000000 / 8, &toaplan1FMIRQHandler, &toaplan1SynchroniseStream, 0);
+	BurnYM3812Init(1, 28000000 / 8, &toaplan1FMIRQHandler, &toaplan1SynchroniseStream, 0);
 	BurnTimerAttachZetYM3812(28000000 / 8);
-	BurnYM3812SetRoute(BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
+	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	bDrawScreen = true;
 
@@ -640,7 +642,7 @@ static INT32 DrvFrame()
 
 			bVBlank = true;
 			if (bEnableInterrupts) {
-				SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
+				SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
 			}
 		}
 
@@ -675,7 +677,7 @@ struct BurnDriver BurnDrvTruxton = {
 	"truxton", NULL, NULL, NULL, "1988",
 	"Truxton\0Tatsujin\0", NULL, "[Toaplan] Taito Corporation", "Toaplan BCU-2 / FCU-2 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
 	NULL, truxtonRomInfo, truxtonRomName, NULL, NULL, truxtonInputInfo, truxtonDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x400,
 	240, 320, 3, 4

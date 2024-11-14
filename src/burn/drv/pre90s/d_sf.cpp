@@ -614,7 +614,7 @@ UINT8 __fastcall sf_sound2_in(UINT16 port)
 	switch (port & 0xff)
 	{
 		case 0x01:
-			ZetSetIRQLine(0,    ZET_IRQSTATUS_NONE);
+			ZetSetIRQLine(0,    CPU_IRQSTATUS_NONE);
 			return soundlatch;
 	}
 
@@ -704,6 +704,8 @@ static INT32 DrvDoReset()
 	BurnYM2151Reset();
 	MSM5205Reset();
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -743,9 +745,9 @@ static INT32 MemIndex()
 void sfYM2151IrqHandler(INT32 Irq)
 {
 	if (Irq) {
-		ZetSetIRQLine(0xff, ZET_IRQSTATUS_ACK);
+		ZetSetIRQLine(0xff, CPU_IRQSTATUS_ACK);
 	} else {
-		ZetSetIRQLine(0,    ZET_IRQSTATUS_NONE);
+		ZetSetIRQLine(0,    CPU_IRQSTATUS_NONE);
 	}
 }
 
@@ -820,9 +822,9 @@ static INT32 DrvInit(INT32 initver)
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68kRom,		0x000000, 0x04ffff, SM_ROM);
-	SekMapMemory(Drv68kVidRam,	0x800000, 0x800fff, SM_RAM);
-	SekMapMemory(Drv68kRam,		0xff8000, 0xffffff, SM_RAM);
+	SekMapMemory(Drv68kRom,		0x000000, 0x04ffff, MAP_ROM);
+	SekMapMemory(Drv68kVidRam,	0x800000, 0x800fff, MAP_RAM);
+	SekMapMemory(Drv68kRam,		0xff8000, 0xffffff, MAP_RAM);
 	SekSetWriteByteHandler(0, sf_write_byte);
 	SekSetWriteWordHandler(0, sf_write_word);
 	SekSetReadByteHandler(0, sf_read_byte);
@@ -1262,11 +1264,11 @@ static INT32 DrvFrame()
 		ZetOpen(1);
 		nNext[2] += nCyclesTotal[2] / nInterleave;
 		nCyclesDone[2] += ZetRun(nNext[2] - nCyclesDone[2]);
-		ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+		ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 		ZetClose();
 	}
 
-	SekSetIRQLine((version == 4) ? 6 : 1, SEK_IRQSTATUS_AUTO);
+	SekSetIRQLine((version == 4) ? 6 : 1, CPU_IRQSTATUS_AUTO);
 
 	SekClose();
 
@@ -1408,7 +1410,7 @@ struct BurnDriver BurnDrvsf = {
 	"sf", NULL, NULL, NULL, "1987",
 	"Street Fighter (US set 1)\0", NULL, "Capcom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARWARE_CAPCOM_MISC, GBF_VSFIGHT, FBF_SF,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_VSFIGHT, FBF_SF,
 	NULL, sfRomInfo, sfRomName, NULL, NULL, SfusInputInfo, SfusDIPInfo,
 	SfusInit, DrvExit, DrvFrame, DrvDraw, DrvScan, 
 	&DrvRecalc, 0x401, 384, 224, 4, 3
@@ -1484,7 +1486,7 @@ struct BurnDriver BurnDrvsfan = {
 	"sfan", "sf", NULL, NULL, "1987",
 	"Street Fighter (World, pneumatic buttons)\0", NULL, "Capcom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARWARE_CAPCOM_MISC, GBF_VSFIGHT, FBF_SF,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_VSFIGHT, FBF_SF,
 	NULL, sfanRomInfo, sfanRomName, NULL, NULL, SfInputInfo, SfDIPInfo,
 	SfanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, 
 	&DrvRecalc, 0x401, 384, 224, 4, 3
@@ -1562,7 +1564,7 @@ struct BurnDriver BurnDrvsfua = {
 	"sfua", "sf", NULL, NULL, "1987",
 	"Street Fighter (US set 2)\0", NULL, "Capcom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARWARE_CAPCOM_MISC, GBF_VSFIGHT, FBF_SF,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_VSFIGHT, FBF_SF,
 	NULL, sfuaRomInfo, sfuaRomName, NULL, NULL, SfjpInputInfo, SfusDIPInfo,
 	SfuaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, 
 	&DrvRecalc, 0x401, 384, 224, 4, 3
@@ -1640,7 +1642,7 @@ struct BurnDriver BurnDrvsfjp = {
 	"sfj", "sf", NULL, NULL, "1987",
 	"Street Fighter (Japan)\0", NULL, "Capcom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARWARE_CAPCOM_MISC, GBF_VSFIGHT, FBF_SF,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_VSFIGHT, FBF_SF,
 	NULL, sfjpRomInfo, sfjpRomName, NULL, NULL, SfjpInputInfo, SfusDIPInfo,
 	SfjpInit, DrvExit, DrvFrame, DrvDraw, DrvScan, 
 	&DrvRecalc, 0x401, 384, 224, 4, 3
@@ -1709,7 +1711,7 @@ struct BurnDriver BurnDrvsfp = {
 	"sfp", "sf", NULL, NULL, "1987",
 	"Street Fighter (Prototype)\0", NULL, "Capcom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE, 2, HARWARE_CAPCOM_MISC, GBF_VSFIGHT, FBF_SF,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_VSFIGHT, FBF_SF,
 	NULL, sfpRomInfo, sfpRomName, NULL, NULL, SfInputInfo, SfDIPInfo,
 	SfpInit, DrvExit, DrvFrame, DrvDraw, DrvScan, 
 	&DrvRecalc, 0x401, 384, 224, 4, 3

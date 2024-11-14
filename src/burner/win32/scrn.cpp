@@ -298,6 +298,8 @@ int CreateDatfileWindows(int bType)
 	if (bType == DAT_SGX_ONLY) _sntprintf(szConsoleString, 64, _T(", SuprGrafx only"));
 	if (bType == DAT_SG1000_ONLY) _sntprintf(szConsoleString, 64, _T(", Sega SG-1000 only"));
 	if (bType == DAT_COLECO_ONLY) _sntprintf(szConsoleString, 64, _T(", ColecoVision only"));
+	if (bType == DAT_MASTERSYSTEM_ONLY) _sntprintf(szConsoleString, 64, _T(", Master System only"));
+	if (bType == DAT_GAMEGEAR_ONLY) _sntprintf(szConsoleString, 64, _T(", Game Gear only"));
 
 	TCHAR szProgramString[25];	
 	_sntprintf(szProgramString, 25, _T("ClrMame Pro XML"));
@@ -613,6 +615,9 @@ static void OnPaint(HWND hWnd)
 
 static void OnClose(HWND)
 {
+#ifdef INCLUDE_AVI_RECORDING
+	AviStop();
+#endif
     PostQuitMessage(0);					// Quit the program if the window is closed
 }
 
@@ -816,6 +821,10 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 			SplashDestroy(1);
 			StopReplay();
 
+#ifdef INCLUDE_AVI_RECORDING
+			AviStop();
+#endif
+
 			InputSetCooperativeLevel(false, bAlwaysProcessKeyboardInput);
 
 			bLoading = 1;
@@ -919,6 +928,9 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 				AudBlankSound();
 				SplashDestroy(1);
 				StopReplay();
+#ifdef INCLUDE_AVI_RECORDING
+				AviStop();
+#endif
 				DrvExit();
 				DoNetGame();
 				MenuEnableItems();
@@ -949,7 +961,21 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 		case MENU_STOPREPLAY:
 			StopReplay();
 			break;
-			
+
+#ifdef INCLUDE_AVI_RECORDING
+			case MENU_AVISTART:
+			if (AviStart()) {
+				AviStop();
+			} else {
+				VidSNewShortMsg(FBALoadStringEx(hAppInst, IDS_REC_AVI, true), 0x0000FF);
+			}
+			break;
+		case MENU_AVISTOP:
+			AviStop();
+			VidSNewShortMsg(FBALoadStringEx(hAppInst, IDS_STOP_AVI, true), 0xFF3F3F);
+			break;
+#endif
+
 		case MENU_QUIT:
 			AudBlankSound();
 			if (nVidFullscreen) {
@@ -958,6 +984,9 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 			}
 			if (bDrvOkay) {
 				StopReplay();
+#ifdef INCLUDE_AVI_RECORDING
+				AviStop();
+#endif
 				DrvExit();
   				if (kNetGame) {
 					kNetGame = 0;
@@ -980,6 +1009,9 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 
 		case MENU_EXIT:
 			StopReplay();
+#ifdef INCLUDE_AVI_RECORDING
+			AviStop();
+#endif
 			if (kNetGame) {
 				kNetGame = 0;
 //				kailleraEndGame();
@@ -1810,6 +1842,12 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 			bBurnUseBlend = !bBurnUseBlend;
 			break;
 			
+#ifdef INCLUDE_AVI_RECORDING
+		case MENU_AVI3X:
+			nAvi3x = !nAvi3x;
+			break;
+#endif
+			
 		case MENU_ROMDIRS:
 			RomsDirCreate(hScrnWnd);
 			break;
@@ -1833,6 +1871,11 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 			szLocalisationTemplate[0] = _T('\0');
 			FBALocaliseInit(szLocalisationTemplate);
 			POST_INITIALISE_MESSAGE;
+			break;
+		case MENU_LANGUAGE_DOWNLOAD:
+			if (UseDialogs()) {
+				LocaliseDownloadCreate(hScrnWnd);
+			}
 			break;
 			
 		case MENU_LANGUAGE_GL_SELECT:
@@ -1988,6 +2031,18 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 		case MENU_CLRMAME_PRO_XML_COLECO_ONLY:
 			if (UseDialogs()) {
 				CreateDatfileWindows(DAT_COLECO_ONLY);
+			}
+			break;
+			
+		case MENU_CLRMAME_PRO_XML_SMS_ONLY:
+			if (UseDialogs()) {
+				CreateDatfileWindows(DAT_MASTERSYSTEM_ONLY);
+			}
+			break;
+			
+		case MENU_CLRMAME_PRO_XML_GG_ONLY:
+			if (UseDialogs()) {
+				CreateDatfileWindows(DAT_GAMEGEAR_ONLY);
 			}
 			break;
 
@@ -2205,7 +2260,7 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 
 		case MENU_WWW_HOME:
 			if (!nVidFullscreen) {
-				ShellExecute(NULL, _T("open"), _T("http://www.barryharris.me.uk/"), NULL, NULL, SW_SHOWNORMAL);
+				ShellExecute(NULL, _T("open"), _T("http://www.fbalpha.com/"), NULL, NULL, SW_SHOWNORMAL);
 			}
 			break;
 
@@ -3156,7 +3211,7 @@ int ScrnInit()
 
 			rebarBandInfo.cbSize		= sizeof(REBARBANDINFO);
 			rebarBandInfo.fMask			= RBBIM_CHILD | RBBIM_CHILDSIZE | RBBIM_SIZE | RBBIM_STYLE;// | RBBIM_BACKGROUND;
-			rebarBandInfo.fStyle		= RBBS_GRIPPERALWAYS;// | RBBS_FIXEDBMP;
+			rebarBandInfo.fStyle		= 0;//RBBS_GRIPPERALWAYS;// | RBBS_FIXEDBMP;
 			rebarBandInfo.hwndChild		= hMenubar;
 			rebarBandInfo.cxMinChild	= 100;
 			rebarBandInfo.cyMinChild	= ((SendMessage(hMenubar, TB_GETBUTTONSIZE, 0, 0)) >> 16) + 1;

@@ -5,14 +5,10 @@
 			background layer #2 on intro (bad guy on motorcycle), bottom clipped??
 
 		metamorphic force
-			(possible) rotation/zoom layer offsets ok? circle stuff on second area part of zoom/rot? offset wrong?
 			background in lava level is too fast. (irq?)
 
 		martial champ
 			why are the sprite positions messed up? protection?
-
-		mystic warriors
-			level 3, sub headlights need to be highlights, not shadows!
 
 	unkown bugs.
 		probably a lot! go ahead and fix it!
@@ -21,7 +17,6 @@
 		fix bugs
 		clean up
 		optimize
-		save states - done(dink)
 */
 
 #include "tiles_generic.h"
@@ -562,7 +557,7 @@ static void __fastcall mystwarr_main_write_byte(UINT32 address, UINT8 data)
 
 		case 0x49a000:
 		case 0x49a001:
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 		return;
 
 		case 0x49e004:
@@ -839,7 +834,7 @@ static void __fastcall metamrph_main_write_word(UINT32 address, UINT16 data)
 	{
 		case 0x264000:
 		case 0x264001:
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 		return;
 
 		case 0x26800c:
@@ -922,7 +917,7 @@ static void __fastcall metamrph_main_write_byte(UINT32 address, UINT8 data)
 	{
 		case 0x264000:
 		case 0x264001:
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 		return;
 
 		case 0x26800c:
@@ -935,7 +930,6 @@ static void __fastcall metamrph_main_write_byte(UINT32 address, UINT8 data)
 			*soundlatch2 = data;
 		return;
 
-		case 0x27c000:
 		case 0x27c001:
 			EEPROMWrite((data & 0x04), (data & 0x02), (data & 0x01));
 		return;
@@ -1155,7 +1149,7 @@ static void __fastcall martchmp_main_write_word(UINT32 address, UINT16 data)
 	}
 
 	if ((address & 0xfffff0) == 0x402010) {
-		K053247WriteRegsWord(address, data);
+		K053247WriteRegsWord(address&0xf, data);
 		return;
 	}
 
@@ -1213,7 +1207,7 @@ static void __fastcall martchmp_main_write_byte(UINT32 address, UINT8 data)
 	}
 
 	if ((address & 0xfffff0) == 0x402010) {
-		K053247WriteRegsByte(address, data);
+		K053247WriteRegsByte(address&0xf, data);
 		return;
 	}
 
@@ -1288,7 +1282,7 @@ static void __fastcall martchmp_main_write_byte(UINT32 address, UINT8 data)
 
 		case 0x41a000:
 		case 0x41a001:
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 		return;
 	}
 }
@@ -1413,14 +1407,10 @@ static void __fastcall dadandrn_main_write_word(UINT32 address, UINT16 data)
 		clip[1] <<= 7;
 
 		K053936GP_set_cliprect(0, clip[0], clip[2], clip[1], clip[3]);
-
-		// 053939_clip
-		//bprintf (0, _T("ClipW: %2.2x, %4.4x\n"), address & 3, data);
 		return;
 	}
 
 	if ((address & 0xfffffe) == 0x484002) {
-		//bprintf (0, _T("clipw enable %2.2x\n"), data);
 		K053936GP_clip_enable(0, (data >> 8) & 1);
 		return;
 	}
@@ -1440,8 +1430,8 @@ static void __fastcall dadandrn_main_write_word(UINT32 address, UINT16 data)
 		return;
 	}
 
-	if ((address & 0xffff00) == 0x660000) {
-		K054000Write((address/2)&0xff, data);
+	if ((address & 0xffffc0) == 0x660000) {
+		K054000Write((address/2)&0x1f, data);
 		return;
 	}
 
@@ -1507,8 +1497,8 @@ static void __fastcall dadandrn_main_write_byte(UINT32 address, UINT8 data)
 		return;
 	}
 
-	if ((address & 0xffff00) == 0x660000) {
-		K054000Write((address/2)&0xff, data);
+	if ((address & 0xffffc0) == 0x660000) {
+		K054000Write((address/2)&0x1f, data);
 		return;
 	}
 
@@ -1546,7 +1536,7 @@ static void __fastcall dadandrn_main_write_byte(UINT32 address, UINT8 data)
 		return;
 
 		case 0x6e0000:
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 		return;
 
 		case 0xe00000:
@@ -1565,7 +1555,7 @@ static UINT16 __fastcall dadandrn_main_read_word(UINT32 address)
 	}
 
 	if ((address & 0xffff00) == 0x660000) {
-		return K054000Read((address / 2) & 0xff);
+		return K054000Read((address / 2) & 0x1f);
 	}
 
 	switch (address)
@@ -1594,8 +1584,8 @@ static UINT8 __fastcall dadandrn_main_read_byte(UINT32 address)
 		return K055550_word_read(address) >> ((~address & 1) * 8);
 	}
 
-	if ((address & 0xffff00) == 0x660000) {
-		return K054000Read((address / 2) & 0xff);
+	if ((address & 0xffffc0) == 0x660000) {
+		return K054000Read((address / 2) & 0x1f);
 	}
 
 	switch (address)
@@ -1626,7 +1616,7 @@ static UINT8 __fastcall dadandrn_main_read_byte(UINT32 address)
 static void bankswitch(INT32 data)
 {
 	z80_bank = data;
-	ZetMapMemory(DrvZ80ROM + ((data & 0x0f) * 0x4000), 0x8000, 0xbfff, ZET_ROM);
+	ZetMapMemory(DrvZ80ROM + ((data & 0x0f) * 0x4000), 0x8000, 0xbfff, MAP_ROM);
 }
 
 static void __fastcall mystwarr_sound_write(UINT16 address, UINT8 data)
@@ -1640,7 +1630,7 @@ static void __fastcall mystwarr_sound_write(UINT16 address, UINT8 data)
 		case 0xf800:
 			sound_control = data & 0x10;
 			bankswitch(data);
-		//	if (!sound_control) ZetSetIRQLine(0x20, ZET_IRQSTATUS_NONE);	// CLEAR NMI LINE!
+		//	if (!sound_control) ZetSetIRQLine(0x20, CPU_IRQSTATUS_NONE);	// CLEAR NMI LINE!
 		return;
 	}
 
@@ -1675,11 +1665,11 @@ static UINT8 __fastcall mystwarr_sound_read(UINT16 address)
 	switch (address)
 	{
 		case 0xf002:
-			ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 			return *soundlatch;
 
 		case 0xf003:
-			ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 			return *soundlatch2;
 	}
 
@@ -1996,10 +1986,10 @@ static INT32 MystwarrInit()
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KROM,			0x000000, 0x1fffff, SM_ROM);
-	SekMapMemory(Drv68KRAM,			0x200000, 0x20ffff, SM_RAM);
-	SekMapMemory(DrvSpriteRam,		0x400000, 0x40ffff, SM_ROM);
-	SekMapMemory(DrvPalRAM,			0x700000, 0x701fff, SM_RAM);
+	SekMapMemory(Drv68KROM,			0x000000, 0x1fffff, MAP_ROM);
+	SekMapMemory(Drv68KRAM,			0x200000, 0x20ffff, MAP_RAM);
+	SekMapMemory(DrvSpriteRam,		0x400000, 0x40ffff, MAP_ROM);
+	SekMapMemory(DrvPalRAM,			0x700000, 0x701fff, MAP_RAM);
 	SekSetWriteWordHandler(0,		mystwarr_main_write_word);
 	SekSetWriteByteHandler(0,		mystwarr_main_write_byte);
 	SekSetReadWordHandler(0,		mystwarr_main_read_word);
@@ -2008,8 +1998,8 @@ static INT32 MystwarrInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapMemory(DrvZ80ROM,			0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvZ80RAM,			0xc000, 0xdfff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM,			0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80RAM,			0xc000, 0xdfff, MAP_RAM);
 	ZetSetWriteHandler(mystwarr_sound_write);
 	ZetSetReadHandler(mystwarr_sound_read);
 	ZetClose();
@@ -2092,25 +2082,25 @@ static INT32 MetamrphInit()
 	K056832Init(DrvGfxROM0, DrvGfxROMExp0, 0x200000, metamrph_tile_callback);
 	K056832SetGlobalOffsets(24, 15);
 	K056832SetLayerOffsets(0, -2+4, 2);
-	K056832SetLayerOffsets(1,  0+4, 0);
+	K056832SetLayerOffsets(1,  0+4, 2);
 	K056832SetLayerOffsets(2,  2+4, 2);
-	K056832SetLayerOffsets(3,  3+4, 0);
+	K056832SetLayerOffsets(3,  3+4, 2);
 
 	K053247Init(DrvGfxROM1, DrvGfxROMExp1, 0x7fffff, metamrph_sprite_callback, 1);
-	K053247SetSpriteOffset(-51-24, -24-15);
+	K053247SetSpriteOffset(-51-24, -24-15+0);
 
 	K053250Init(0, DrvGfxROM2, DrvGfxROMExp2, 0x40000);
-	K053250SetOffsets(0, -7, 0); // verify
+	K053250SetOffsets(0, -60+29, -16); // verify
 
 	konamigx_mixer_init(0);
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KROM,			0x000000, 0x1fffff, SM_ROM);
-	SekMapMemory(Drv68KRAM,			0x200000, 0x20ffff, SM_RAM);
-	SekMapMemory(DrvSpriteRam,		0x211000, 0x21ffff, SM_RAM);
-	SekMapMemory((UINT8*)K053250Ram,	0x24c000, 0x24ffff, SM_RAM);
-	SekMapMemory(DrvPalRAM,			0x330000, 0x331fff, SM_RAM);
+	SekMapMemory(Drv68KROM,			0x000000, 0x1fffff, MAP_ROM);
+	SekMapMemory(Drv68KRAM,			0x200000, 0x20ffff, MAP_RAM);
+	SekMapMemory(DrvSpriteRam,		0x211000, 0x21ffff, MAP_RAM);
+	SekMapMemory((UINT8*)K053250Ram,	0x24c000, 0x24ffff, MAP_RAM);
+	SekMapMemory(DrvPalRAM,			0x330000, 0x331fff, MAP_RAM);
 	SekSetWriteWordHandler(0,		metamrph_main_write_word);
 	SekSetWriteByteHandler(0,		metamrph_main_write_byte);
 	SekSetReadWordHandler(0,		metamrph_main_read_word);
@@ -2119,8 +2109,8 @@ static INT32 MetamrphInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapMemory(DrvZ80ROM,			0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvZ80RAM,			0xc000, 0xdfff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM,			0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80RAM,			0xc000, 0xdfff, MAP_RAM);
 	ZetSetWriteHandler(mystwarr_sound_write);
 	ZetSetReadHandler(mystwarr_sound_read);
 	ZetClose();
@@ -2212,11 +2202,11 @@ static INT32 ViostormInit()
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KROM,			0x000000, 0x1fffff, SM_ROM);
-	SekMapMemory(Drv68KRAM,			0x200000, 0x20ffff, SM_RAM);
-	SekMapMemory(DrvSpriteRam,		0x211000, 0x21ffff, SM_RAM);
-	SekMapMemory((UINT8*)K053250Ram,	0x24c000, 0x24ffff, SM_RAM);
-	SekMapMemory(DrvPalRAM,			0x330000, 0x331fff, SM_RAM);
+	SekMapMemory(Drv68KROM,			0x000000, 0x1fffff, MAP_ROM);
+	SekMapMemory(Drv68KRAM,			0x200000, 0x20ffff, MAP_RAM);
+	SekMapMemory(DrvSpriteRam,		0x211000, 0x21ffff, MAP_RAM);
+	SekMapMemory((UINT8*)K053250Ram,	0x24c000, 0x24ffff, MAP_RAM);
+	SekMapMemory(DrvPalRAM,			0x330000, 0x331fff, MAP_RAM);
 	SekSetWriteWordHandler(0,		metamrph_main_write_word);
 	SekSetWriteByteHandler(0,		metamrph_main_write_byte);
 	SekSetReadWordHandler(0,		metamrph_main_read_word);
@@ -2225,8 +2215,8 @@ static INT32 ViostormInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapMemory(DrvZ80ROM,			0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvZ80RAM,			0xc000, 0xdfff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM,			0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80RAM,			0xc000, 0xdfff, MAP_RAM);
 	ZetSetWriteHandler(mystwarr_sound_write);
 	ZetSetReadHandler(mystwarr_sound_read);
 	ZetClose();
@@ -2314,11 +2304,11 @@ static INT32 MartchmpInit()
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KROM + 0x000000,	0x000000, 0x0fffff, SM_ROM);
-	SekMapMemory(Drv68KRAM,			0x100000, 0x10ffff, SM_RAM);
-	SekMapMemory(Drv68KROM + 0x100000,	0x300000, 0x3fffff, SM_ROM);
-	SekMapMemory(DrvSpriteRam,		0x480000, 0x483fff, SM_ROM);	// should be written through handler
-	SekMapMemory(DrvPalRAM,			0x600000, 0x601fff, SM_RAM);
+	SekMapMemory(Drv68KROM + 0x000000,	0x000000, 0x0fffff, MAP_ROM);
+	SekMapMemory(Drv68KRAM,			0x100000, 0x10ffff, MAP_RAM);
+	SekMapMemory(Drv68KROM + 0x100000,	0x300000, 0x3fffff, MAP_ROM);
+	SekMapMemory(DrvSpriteRam,		0x480000, 0x483fff, MAP_ROM);	// should be written through handler
+	SekMapMemory(DrvPalRAM,			0x600000, 0x601fff, MAP_RAM);
 	SekSetWriteWordHandler(0,		martchmp_main_write_word);
 	SekSetWriteByteHandler(0,		martchmp_main_write_byte);
 	SekSetReadWordHandler(0,		martchmp_main_read_word);
@@ -2327,8 +2317,8 @@ static INT32 MartchmpInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapMemory(DrvZ80ROM,			0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvZ80RAM,			0xc000, 0xdfff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM,			0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80RAM,			0xc000, 0xdfff, MAP_RAM);
 	ZetSetWriteHandler(mystwarr_sound_write);
 	ZetSetReadHandler(mystwarr_sound_read);
 	ZetClose();
@@ -2468,12 +2458,12 @@ static INT32 GaiapolisInit()
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KROM,			0x000000, 0x2fffff, SM_ROM);
-	SekMapMemory(DrvSpriteRam,		0x400000, 0x40ffff, SM_ROM);
-	SekMapMemory(DrvPalRAM,			0x420000, 0x421fff, SM_RAM);
-	SekMapMemory(DrvK053936Ctrl,		0x460000, 0x46001f, SM_RAM);
-	SekMapMemory(DrvK053936RAM,		0x470000, 0x470fff, SM_RAM);
-	SekMapMemory(Drv68KRAM,			0x600000, 0x60ffff, SM_RAM);
+	SekMapMemory(Drv68KROM,			0x000000, 0x2fffff, MAP_ROM);
+	SekMapMemory(DrvSpriteRam,		0x400000, 0x40ffff, MAP_ROM);
+	SekMapMemory(DrvPalRAM,			0x420000, 0x421fff, MAP_RAM);
+	SekMapMemory(DrvK053936Ctrl,		0x460000, 0x46001f, MAP_RAM);
+	SekMapMemory(DrvK053936RAM,		0x470000, 0x470fff, MAP_RAM);
+	SekMapMemory(Drv68KRAM,			0x600000, 0x60ffff, MAP_RAM);
 	SekSetWriteWordHandler(0,		dadandrn_main_write_word);
 	SekSetWriteByteHandler(0,		dadandrn_main_write_byte);
 	SekSetReadWordHandler(0,		dadandrn_main_read_word);
@@ -2482,8 +2472,8 @@ static INT32 GaiapolisInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapMemory(DrvZ80ROM,			0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvZ80RAM,			0xc000, 0xdfff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM,			0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80RAM,			0xc000, 0xdfff, MAP_RAM);
 	ZetSetWriteHandler(mystwarr_sound_write);
 	ZetSetReadHandler(mystwarr_sound_read);
 	ZetClose();
@@ -2626,12 +2616,12 @@ static INT32 DadandrnInit()
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KROM,			0x000000, 0x1fffff, SM_ROM);
-	SekMapMemory(DrvSpriteRam,		0x400000, 0x40ffff, SM_ROM);
-	SekMapMemory(DrvPalRAM,			0x420000, 0x421fff, SM_RAM);
-	SekMapMemory(DrvK053936Ctrl,		0x460000, 0x46001f, SM_RAM);
-	SekMapMemory(DrvK053936RAM,		0x470000, 0x470fff, SM_RAM);
-	SekMapMemory(Drv68KRAM,			0x600000, 0x60ffff, SM_RAM);
+	SekMapMemory(Drv68KROM,			0x000000, 0x1fffff, MAP_ROM);
+	SekMapMemory(DrvSpriteRam,		0x400000, 0x40ffff, MAP_ROM);
+	SekMapMemory(DrvPalRAM,			0x420000, 0x421fff, MAP_RAM);
+	SekMapMemory(DrvK053936Ctrl,		0x460000, 0x46001f, MAP_RAM);
+	SekMapMemory(DrvK053936RAM,		0x470000, 0x470fff, MAP_RAM);
+	SekMapMemory(Drv68KRAM,			0x600000, 0x60ffff, MAP_RAM);
 	SekSetWriteWordHandler(0,		dadandrn_main_write_word);
 	SekSetWriteByteHandler(0,		dadandrn_main_write_byte);
 	SekSetReadWordHandler(0,		dadandrn_main_read_word);
@@ -2640,8 +2630,8 @@ static INT32 DadandrnInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapMemory(DrvZ80ROM,			0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvZ80RAM,			0xc000, 0xdfff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM,			0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80RAM,			0xc000, 0xdfff, MAP_RAM);
 	ZetSetWriteHandler(mystwarr_sound_write);
 	ZetSetReadHandler(mystwarr_sound_read);
 	ZetClose();
@@ -2800,7 +2790,7 @@ static INT32 DrvFrame()
 	SekNewFrame();
 	ZetNewFrame();
 
-	INT32 nInterleave = nBurnSoundLen / 4;
+	INT32 nInterleave = 60; //nBurnSoundLen / 4;
 	INT32 nSoundBufferPos = 0;
 	INT32 nCyclesTotal[2] = { 16000000 / 60, 8000000 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
@@ -2821,20 +2811,23 @@ static INT32 DrvFrame()
 			if (mw_irq_control & 1)
 			{
 				if (i == 0)
-					SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
+					SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
 	
 				if (i == ((nInterleave * 240)/256))
-					SekSetIRQLine(2, SEK_IRQSTATUS_AUTO);
+					SekSetIRQLine(2, CPU_IRQSTATUS_AUTO);
 			}
 		}
 
 		if (nGame == 2 || nGame == 3)
 		{
+			if (i == 0) // otherwise service mode doesn't work!
+				SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
+
 			if (i == ((nInterleave *  24) / 256))
-				SekSetIRQLine(6, SEK_IRQSTATUS_AUTO);
+				SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
 
 			if (i == ((nInterleave * 248) / 256) && K053246_is_IRQ_enabled())
-				SekSetIRQLine(5, SEK_IRQSTATUS_AUTO);
+				SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
 		}
 
 		if (nGame == 4) // martchmp
@@ -2842,17 +2835,17 @@ static INT32 DrvFrame()
 			if (mw_irq_control & 2)
 			{
 				if (i == ((nInterleave *  23) / 256))
-					SekSetIRQLine(2, SEK_IRQSTATUS_AUTO);
+					SekSetIRQLine(2, CPU_IRQSTATUS_AUTO);
 
 				if (i == ((nInterleave * 247) / 256) && K053246_is_IRQ_enabled())
-					SekSetIRQLine(6, SEK_IRQSTATUS_AUTO);
+					SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
 			}
 		}
 
 		if (nGame == 5 || nGame == 6)
 		{
 			if (i == (nInterleave - 1))
-				SekSetIRQLine(5, SEK_IRQSTATUS_AUTO);
+				SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
 		}
 
 		nNext = (i + 1) * nCyclesTotal[1] / nInterleave;
@@ -2861,7 +2854,7 @@ static INT32 DrvFrame()
 		nCyclesDone[1] += nCyclesSegment;
 
 		if ((i % (nInterleave / 8)) == ((nInterleave / 8) - 1)) {// && sound_nmi_enable && sound_control) { // iq_132
-			ZetNmi(); //ZetSetIRQLine(0x20, ZET_IRQSTATUS_ACK);
+			ZetNmi(); //ZetSetIRQLine(0x20, CPU_IRQSTATUS_ACK);
 		}
 
 		if (pBurnSoundOut) {
@@ -3064,9 +3057,50 @@ struct BurnDriver BurnDrvMystwarrj = {
 };
 
 
-// Mystic Warriors (ver AAA)
+// Mystic Warriors (ver AAB)
 
 static struct BurnRomInfo mystwarraRomDesc[] = {
+	{ "128aab01.20f",	0x040000, 0x3dc89153, 1 }, //  0 maincpu
+	{ "128aab02.20g",	0x040000, 0x8fe92ad2, 1 }, //  1
+	{ "128a03.19f",		0x080000, 0xe98094f3, 1 }, //  2
+	{ "128a04.19g",		0x080000, 0x88c6a3e4, 1 }, //  3
+
+	{ "128a05.6b",		0x020000, 0x0e5194e0, 2 }, //  4 soundcpu
+
+	{ "128a08.1h",		0x100000, 0x63d6cfa0, 3 }, //  5 gfx1
+	{ "128a09.1k",		0x100000, 0x573a7725, 3 }, //  6
+	{ "128a10.3h",		0x080000, 0x558e545a, 3 }, //  7
+
+	{ "128a16.22k",		0x100000, 0x459b6407, 4 }, //  8 gfx2
+	{ "128a15.20k",		0x100000, 0x6bbfedf4, 4 }, //  9
+	{ "128a14.19k",		0x100000, 0xf7bd89dd, 4 }, // 10
+	{ "128a13.17k",		0x100000, 0xe89b66a2, 4 }, // 11
+	{ "128a12.12k",		0x080000, 0x63de93e2, 4 }, // 12
+	{ "128a11.10k",		0x080000, 0x4eac941a, 4 }, // 13
+
+	{ "128a06.2d",		0x200000, 0x88ed598c, 5 }, // 14 shared
+	{ "128a07.1d",		0x200000, 0xdb79a66e, 5 }, // 15
+
+	{ "eeprom",			0x000080, 0xfd6a25b4, 6 }, // 16 eeprom
+};
+
+STD_ROM_PICK(mystwarra)
+STD_ROM_FN(mystwarra)
+
+struct BurnDriver BurnDrvMystwarra = {
+	"mystwarra", "mystwarr", NULL, NULL, "1993",
+	"Mystic Warriors (ver AAB)\0", NULL, "Konami", "GX128",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	NULL, mystwarraRomInfo, mystwarraRomName, NULL, NULL, MystwarrInputInfo, MystwarrDIPInfo,
+	MystwarrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
+	288, 224, 4, 3
+};
+
+
+// Mystic Warriors (ver AAA)
+
+static struct BurnRomInfo mystwarraaRomDesc[] = {
 	{ "128aaa01.20f",	0x040000, 0x633ead86, 1 }, //  0 maincpu
 	{ "128aaa02.20g",	0x040000, 0x69ab81a2, 1 }, //  1
 	{ "128a03.19f",		0x080000, 0xe98094f3, 1 }, //  2
@@ -3091,15 +3125,15 @@ static struct BurnRomInfo mystwarraRomDesc[] = {
 	{ "mystwarra.nv",	0x000080, 0x38951263, 6 }, // 16 eeprom
 };
 
-STD_ROM_PICK(mystwarra)
-STD_ROM_FN(mystwarra)
+STD_ROM_PICK(mystwarraa)
+STD_ROM_FN(mystwarraa)
 
-struct BurnDriver BurnDrvMystwarra = {
-	"mystwarra", "mystwarr", NULL, NULL, "1993",
+struct BurnDriver BurnDrvMystwarraa = {
+	"mystwarraa", "mystwarr", NULL, NULL, "1993",
 	"Mystic Warriors (ver AAA)\0", NULL, "Konami", "GX128",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, mystwarraRomInfo, mystwarraRomName, NULL, NULL, MystwarrInputInfo, MystwarrDIPInfo,
+	NULL, mystwarraaRomInfo, mystwarraaRomName, NULL, NULL, MystwarrInputInfo, MystwarrDIPInfo,
 	MystwarrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3
 };
@@ -3507,11 +3541,11 @@ static struct BurnRomInfo mtlchampRomDesc[] = {
 STD_ROM_PICK(mtlchamp)
 STD_ROM_FN(mtlchamp)
 
-struct BurnDriver BurnDrvMtlchamp = {
+struct BurnDriverD BurnDrvMtlchamp = {
 	"mtlchamp", NULL, NULL, NULL, "1993",
 	"Martial Champion (ver EAB)\0", NULL, "Konami", "GX234",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
+	0, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
 	NULL, mtlchampRomInfo, mtlchampRomName, NULL, NULL, MartchmpInputInfo, MartchmpDIPInfo,
 	MartchmpInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -3548,11 +3582,11 @@ static struct BurnRomInfo mtlchamp1RomDesc[] = {
 STD_ROM_PICK(mtlchamp1)
 STD_ROM_FN(mtlchamp1)
 
-struct BurnDriver BurnDrvMtlchamp1 = {
+struct BurnDriverD BurnDrvMtlchamp1 = {
 	"mtlchamp1", "mtlchamp", NULL, NULL, "1993",
 	"Martial Champion (ver EAA)\0", NULL, "Konami", "GX234",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
+	BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
 	NULL, mtlchamp1RomInfo, mtlchamp1RomName, NULL, NULL, MartchmpInputInfo, MartchmpDIPInfo,
 	MartchmpInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -3589,11 +3623,11 @@ static struct BurnRomInfo mtlchampaRomDesc[] = {
 STD_ROM_PICK(mtlchampa)
 STD_ROM_FN(mtlchampa)
 
-struct BurnDriver BurnDrvMtlchampa = {
+struct BurnDriverD BurnDrvMtlchampa = {
 	"mtlchampa", "mtlchamp", NULL, NULL, "1993",
 	"Martial Champion (ver AAA)\0", NULL, "Konami", "GX234",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
+	BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
 	NULL, mtlchampaRomInfo, mtlchampaRomName, NULL, NULL, MartchmpInputInfo, MartchmpDIPInfo,
 	MartchmpInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -3630,11 +3664,11 @@ static struct BurnRomInfo mtlchampjRomDesc[] = {
 STD_ROM_PICK(mtlchampj)
 STD_ROM_FN(mtlchampj)
 
-struct BurnDriver BurnDrvMtlchampj = {
+struct BurnDriverD BurnDrvMtlchampj = {
 	"mtlchampj", "mtlchamp", NULL, NULL, "1993",
 	"Martial Champion (ver JAA)\0", NULL, "Konami", "GX234",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
+	BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
 	NULL, mtlchampjRomInfo, mtlchampjRomName, NULL, NULL, MartchmpInputInfo, MartchmpDIPInfo,
 	MartchmpInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -3671,11 +3705,11 @@ static struct BurnRomInfo mtlchampuRomDesc[] = {
 STD_ROM_PICK(mtlchampu)
 STD_ROM_FN(mtlchampu)
 
-struct BurnDriver BurnDrvMtlchampu = {
+struct BurnDriverD BurnDrvMtlchampu = {
 	"mtlchampu", "mtlchamp", NULL, NULL, "1993",
 	"Martial Champion (ver UAE)\0", NULL, "Konami", "GX234",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
+	BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
 	NULL, mtlchampuRomInfo, mtlchampuRomName, NULL, NULL, MartchmpInputInfo, MartchmpDIPInfo,
 	MartchmpInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -3712,11 +3746,11 @@ static struct BurnRomInfo mtlchampu1RomDesc[] = {
 STD_ROM_PICK(mtlchampu1)
 STD_ROM_FN(mtlchampu1)
 
-struct BurnDriver BurnDrvMtlchampu1 = {
+struct BurnDriverD BurnDrvMtlchampu1 = {
 	"mtlchampu1", "mtlchamp", NULL, NULL, "1993",
 	"Martial Champion (ver UAD)\0", NULL, "Konami", "GX234",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
+	BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
 	NULL, mtlchampu1RomInfo, mtlchampu1RomName, NULL, NULL, MartchmpInputInfo, MartchmpDIPInfo,
 	MartchmpInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3

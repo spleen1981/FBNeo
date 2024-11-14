@@ -202,7 +202,7 @@ static void _fastcall xexex_main_write_byte(UINT32 address, UINT8 data)
 	{
 		case 0x0d4000:
 		case 0x0d4001:
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 		return;
 
 		case 0x0d6001:
@@ -339,7 +339,7 @@ static UINT8 _fastcall xexex_main_read_byte(UINT32 address)
 static void bankswitch(INT32 data)
 {
 	z80_bank = data;
-	ZetMapMemory(DrvZ80ROM + ((data & 0x07) * 0x4000), 0x8000, 0xbfff, ZET_ROM);
+	ZetMapMemory(DrvZ80ROM + ((data & 0x07) * 0x4000), 0x8000, 0xbfff, MAP_ROM);
 }
 
 static void __fastcall xexex_sound_write(UINT16 address, UINT8 data)
@@ -381,11 +381,11 @@ static UINT8 __fastcall xexex_sound_read(UINT16 address)
 			return BurnYM2151ReadStatus();
 
 		case 0xf002:
-			ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 			return *soundlatch;
 
 		case 0xf003:
-			ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 			return *soundlatch2;
 	}
 
@@ -503,6 +503,7 @@ static INT32 MemIndex()
 
 static INT32 DrvInit()
 {
+	BurnSetRefreshRate(54.25);
 	GenericTilesInit();
 
 	AllMem = NULL;
@@ -556,13 +557,13 @@ static INT32 DrvInit()
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KROM,			0x000000, 0x07ffff, SM_ROM);
-	SekMapMemory(Drv68KRAM,			0x080000, 0x08ffff, SM_RAM);
-	SekMapMemory(DrvSprRAM,			0x090000, 0x097fff, SM_RAM);
-	SekMapMemory(DrvSprRAM,			0x098000, 0x09ffff, SM_RAM);
-	SekMapMemory((UINT8*)K053250Ram,	0x0c6000, 0x0c7fff, SM_RAM);
-	SekMapMemory(Drv68KROM + 0x080000,	0x100000, 0x17ffff, SM_ROM);
-	SekMapMemory(DrvPalRAM,			0x1b0000, 0x1b1fff, SM_RAM);
+	SekMapMemory(Drv68KROM,			0x000000, 0x07ffff, MAP_ROM);
+	SekMapMemory(Drv68KRAM,			0x080000, 0x08ffff, MAP_RAM);
+	SekMapMemory(DrvSprRAM,			0x090000, 0x097fff, MAP_RAM);
+	SekMapMemory(DrvSprRAM,			0x098000, 0x09ffff, MAP_RAM);
+	SekMapMemory((UINT8*)K053250Ram,	0x0c6000, 0x0c7fff, MAP_RAM);
+	SekMapMemory(Drv68KROM + 0x080000,	0x100000, 0x17ffff, MAP_ROM);
+	SekMapMemory(DrvPalRAM,			0x1b0000, 0x1b1fff, MAP_RAM);
 	SekSetWriteWordHandler(0,		xexex_main_write_word);
 	SekSetWriteByteHandler(0,		xexex_main_write_byte);
 	SekSetReadWordHandler(0,		xexex_main_read_word);
@@ -571,21 +572,25 @@ static INT32 DrvInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapMemory(DrvZ80ROM,			0x0000, 0x7fff, ZET_ROM);
-	ZetMapMemory(DrvZ80RAM,			0xc000, 0xdfff, ZET_RAM);
+	ZetMapMemory(DrvZ80ROM,			0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80RAM,			0xc000, 0xdfff, MAP_RAM);
 	ZetSetWriteHandler(xexex_sound_write);
 	ZetSetReadHandler(xexex_sound_read);
 	ZetClose();
 
 	EEPROMInit(&xexex_eeprom_interface);
 
-	BurnYM2151Init(4000000);
+	if (nBurnSoundRate == 44100) {
+		BurnYM2151Init(3700000); // 3.7mhz here to match the tuning of the 48000khz k054539 chip, otherwise the music sounds horrible! - dink Nov.7.2014
+	} else {
+		BurnYM2151Init(4000000);
+	}
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.50, BURN_SND_ROUTE_BOTH);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.50, BURN_SND_ROUTE_BOTH);
 
 	K054539Init(0, 48000, DrvSndROM, 0x300000);
-	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 0.75, BURN_SND_ROUTE_LEFT);
-	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 0.75, BURN_SND_ROUTE_RIGHT);
+	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
+	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 
 	DrvDoReset();
 
@@ -698,9 +703,9 @@ static INT32 DrvFrame()
 		DrvInputs[3] = DrvDips[0] & 0x08;
 	}
 
-	INT32 nInterleave = nBurnSoundLen;
+	INT32 nInterleave = 120;
 	INT32 nSoundBufferPos = 0;
-	INT32 nCyclesTotal[2] = { 16000000 / 60, 8000000 / 60 };
+	INT32 nCyclesTotal[2] = { (16000000 * 100) / 5425, (8000000 * 100) / 5425 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
 	SekOpen(0);
@@ -715,25 +720,26 @@ static INT32 DrvFrame()
 		nCyclesDone[0] += nCyclesSegment;
 
 		if (i == 0 && control_data & 0x20) {
-			SekSetIRQLine(6, SEK_IRQSTATUS_AUTO);
+			SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
 		}
 
 		if (i != 0 && i != ((nInterleave/2)-1)) {
 			if (irq5_timer > 0) {
 				irq5_timer--;
 				if (irq5_timer == 0 && control_data & 0x40) {
-					SekSetIRQLine(5, SEK_IRQSTATUS_AUTO);
+					SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
 				}
 			} 
 		}
 
-		if (i == ((nInterleave/2)-1) && control_data & 0x0800) {
-			SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
-
+		if (i == ((nInterleave/2)-1)) {
 			if (K053246_is_IRQ_enabled()) {
 				xexex_objdma();
-				irq5_timer = 10; // guess
+				irq5_timer = 5; // guess
 			}
+
+			if (control_data & 0x0800)
+				SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
 		}
 
 		nNext = (i + 1) * nCyclesTotal[1] / nInterleave;
@@ -855,6 +861,46 @@ struct BurnDriver BurnDrvXexex = {
 };
 
 
+// Orius (ver UAA)
+
+static struct BurnRomInfo oriusRomDesc[] = {
+	{ "067uaa01.16d",	0x040000, 0xf1263d3e, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
+	{ "067uaa02.16f",	0x040000, 0x77709f64, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "067b03.13d",		0x040000, 0x97833086, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "067b04.13f",		0x040000, 0x26ec5dc8, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "067uaa05.4e",	0x020000, 0x0e33d6ec, 2 | BRF_PRG | BRF_ESS }, //  4 Z80 Code
+
+	{ "067b14.1n",		0x100000, 0x02a44bfa, 3 | BRF_GRA },           //  5 K056832 Characters
+	{ "067b13.2n",		0x100000, 0x633c8eb5, 3 | BRF_GRA },           //  6
+
+	{ "067b12.17n",		0x100000, 0x08d611b0, 4 | BRF_GRA },           //  7 K056832 Sprites
+	{ "067b11.19n",		0x100000, 0xa26f7507, 4 | BRF_GRA },           //  8
+	{ "067b10.20n",		0x100000, 0xee31db8d, 4 | BRF_GRA },           //  9
+	{ "067b09.22n",		0x100000, 0x88f072ef, 4 | BRF_GRA },           // 10
+
+	{ "067b08.22f",		0x080000, 0xca816b7b, 5 | BRF_GRA },           // 11 K053250 Tiles
+
+	{ "067b06.3e",		0x200000, 0x3b12fce4, 6 | BRF_SND },           // 12 K054539 Samples
+	{ "067b07.1e",		0x100000, 0xec87fe1b, 6 | BRF_SND },           // 13
+
+	{ "er5911.19b",		0x000080, 0x547ee4e4, 7 | BRF_PRG | BRF_ESS }, // 14 eeprom data
+};
+
+STD_ROM_PICK(orius)
+STD_ROM_FN(orius)
+
+struct BurnDriver BurnDrvOrius = {
+	"orius", "xexex", NULL, NULL, "1991",
+	"Orius (ver UAA)\0", NULL, "Konami", "GX067",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_HORSHOOT, 0,
+	NULL, oriusRomInfo, oriusRomName, NULL, NULL, XexexInputInfo, XexexDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
+	384, 256, 4, 3
+};
+
+
 // Xexex (ver AAA)
 
 static struct BurnRomInfo xexexaRomDesc[] = {
@@ -878,7 +924,7 @@ static struct BurnRomInfo xexexaRomDesc[] = {
 	{ "067b06.3e",		0x200000, 0x3b12fce4, 6 | BRF_SND },           // 12 K054539 Samples
 	{ "067b07.1e",		0x100000, 0xec87fe1b, 6 | BRF_SND },           // 13
 
-	{ "er5911.19b",	0x000080, 0x051c14c6, 7 | BRF_PRG | BRF_ESS }, // 14 eeprom data
+	{ "er5911.19b",		0x000080, 0x051c14c6, 7 | BRF_PRG | BRF_ESS }, // 14 eeprom data
 };
 
 STD_ROM_PICK(xexexa)
@@ -918,7 +964,7 @@ static struct BurnRomInfo xexexjRomDesc[] = {
 	{ "067b06.3e",		0x200000, 0x3b12fce4, 6 | BRF_SND },           // 12 K054539 Samples
 	{ "067b07.1e",		0x100000, 0xec87fe1b, 6 | BRF_SND },           // 13
 
-	{ "er5911.19b",	0x000080, 0x79a79c7b, 7 | BRF_PRG | BRF_ESS }, // 14 eeprom data
+	{ "er5911.19b",		0x000080, 0x79a79c7b, 7 | BRF_PRG | BRF_ESS }, // 14 eeprom data
 };
 
 STD_ROM_PICK(xexexj)

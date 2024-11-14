@@ -303,6 +303,8 @@ static INT32 DrvDoReset()
 
 	v25_reset = 1;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -385,7 +387,7 @@ static INT32 DrvFrame()
 				}
 			}
 
-			SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
+			SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
 
 			ToaBufferGP9001Sprites();
 
@@ -564,12 +566,12 @@ static INT32 DrvInit(INT32 region)
 	{
 		SekInit(0, 0x68000);										// Allocate 68000
 		SekOpen(0);
-		SekMapMemory(Rom01,		0x000000, 0x07FFFF, SM_ROM);	// CPU 0 ROM
-		SekMapMemory(Ram01,		0x100000, 0x103FFF, SM_RAM);
-		SekMapMemory(RamPal,		0x400000, 0x400FFF, SM_RAM);	// Palette RAM
-		SekMapMemory(ExtraTRAM,		0x500000, 0x501FFF, SM_RAM);
-		SekMapMemory(ExtraTSelect,	0x502000, 0x502FFF, SM_RAM);	// 0x502000 - Scroll; 0x502200 - RAM
-		SekMapMemory(ExtraTScroll,	0x503000, 0x503FFF, SM_RAM);	// 0x203000 - Offset; 0x503200 - RAM
+		SekMapMemory(Rom01,		0x000000, 0x07FFFF, MAP_ROM);	// CPU 0 ROM
+		SekMapMemory(Ram01,		0x100000, 0x103FFF, MAP_RAM);
+		SekMapMemory(RamPal,		0x400000, 0x400FFF, MAP_RAM);	// Palette RAM
+		SekMapMemory(ExtraTRAM,		0x500000, 0x501FFF, MAP_RAM);
+		SekMapMemory(ExtraTSelect,	0x502000, 0x502FFF, MAP_RAM);	// 0x502000 - Scroll; 0x502200 - RAM
+		SekMapMemory(ExtraTScroll,	0x503000, 0x503FFF, MAP_RAM);	// 0x203000 - Offset; 0x503200 - RAM
 		SekSetReadWordHandler(0, fixeightReadWord);
 		SekSetReadByteHandler(0, fixeightReadByte);
 		SekSetWriteWordHandler(0, fixeightWriteWord);
@@ -644,7 +646,7 @@ struct BurnDriver BurnDrvFixeight = {
 	"fixeight", NULL, NULL, NULL, "1992",
 	"FixEight (Europe)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
 	NULL, fixeightRomInfo, fixeightRomName, NULL, NULL, FixeightInputInfo, FixeightDIPInfo,
 	fixeightInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -674,7 +676,7 @@ struct BurnDriver BurnDrvFixeightkt = {
 	"fixeightkt", "fixeight", NULL, NULL, "1992",
 	"FixEight (Korea, Taito license)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
 	NULL, fixeightktRomInfo, fixeightktRomName, NULL, NULL, FixeightInputInfo, FixeightDIPInfo,
 	fixeightktInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -704,7 +706,7 @@ struct BurnDriver BurnDrvFixeightk = {
 	"fixeightk", "fixeight", NULL, NULL, "1992",
 	"FixEight (Korea)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
 	NULL, fixeightkRomInfo, fixeightkRomName, NULL, NULL, FixeightInputInfo, FixeightDIPInfo,
 	fixeightkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -734,7 +736,7 @@ struct BurnDriver BurnDrvFixeightht = {
 	"fixeightht", "fixeight", NULL, NULL, "1992",
 	"FixEight (Hong Kong, Taito license)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
 	NULL, fixeighthtRomInfo, fixeighthtRomName, NULL, NULL, FixeightInputInfo, FixeightDIPInfo,
 	fixeighthtInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -764,7 +766,7 @@ struct BurnDriver BurnDrvFixeighth = {
 	"fixeighth", "fixeight", NULL, NULL, "1992",
 	"FixEight (Hong Kong)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
 	NULL, fixeighthRomInfo, fixeighthRomName, NULL, NULL, FixeightInputInfo, FixeightDIPInfo,
 	fixeighthInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -794,7 +796,7 @@ struct BurnDriver BurnDrvFixeighttwt = {
 	"fixeighttwt", "fixeight", NULL, NULL, "1992",
 	"FixEight (Taiwan, Taito license)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
 	NULL, fixeighttwtRomInfo, fixeighttwtRomName, NULL, NULL, FixeightInputInfo, FixeightDIPInfo,
 	fixeighttwtInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -824,7 +826,7 @@ struct BurnDriver BurnDrvFixeighttw = {
 	"fixeighttw", "fixeight", NULL, NULL, "1992",
 	"FixEight (Taiwan)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
 	NULL, fixeighttwRomInfo, fixeighttwRomName, NULL, NULL, FixeightInputInfo, FixeightDIPInfo,
 	fixeighttwInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -855,7 +857,7 @@ struct BurnDriver BurnDrvFixeightat = {
 	"fixeightat", "fixeight", NULL, NULL, "1992",
 	"FixEight (Southeast Asia, Taito license)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
 	NULL, fixeightatRomInfo, fixeightatRomName, NULL, NULL, FixeightInputInfo, FixeightDIPInfo,
 	fixeightatInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -885,7 +887,7 @@ struct BurnDriver BurnDrvFixeighta = {
 	"fixeighta", "fixeight", NULL, NULL, "1992",
 	"FixEight (Southeast Asia)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
 	NULL, fixeightaRomInfo, fixeightaRomName, NULL, NULL, FixeightInputInfo, FixeightDIPInfo,
 	fixeightaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -915,7 +917,7 @@ struct BurnDriver BurnDrvFixeightt = {
 	"fixeightt", "fixeight", NULL, NULL, "1992",
 	"FixEight (Europe, Taito license)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
 	NULL, fixeighttRomInfo, fixeighttRomName, NULL, NULL, FixeightInputInfo, FixeightDIPInfo,
 	fixeighttInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -945,7 +947,7 @@ struct BurnDriver BurnDrvFixeightut = {
 	"fixeightut", "fixeight", NULL, NULL, "1992",
 	"FixEight (USA, Taito license)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
 	NULL, fixeightutRomInfo, fixeightutRomName, NULL, NULL, FixeightInputInfo, FixeightDIPInfo,
 	fixeightutInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -975,7 +977,7 @@ struct BurnDriver BurnDrvFixeightu = {
 	"fixeightu", "fixeight", NULL, NULL, "1992",
 	"FixEight (USA)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
 	NULL, fixeightuRomInfo, fixeightuRomName, NULL, NULL, FixeightInputInfo, FixeightDIPInfo,
 	fixeightuInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -1005,7 +1007,7 @@ struct BurnDriver BurnDrvFixeightjt = {
 	"fixeightjt", "fixeight", NULL, NULL, "1992",
 	"FixEight (Japan, Taito license)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
 	NULL, fixeightjtRomInfo, fixeightjtRomName, NULL, NULL, FixeightInputInfo, FixeightDIPInfo,
 	fixeightjtInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -1035,7 +1037,7 @@ struct BurnDriver BurnDrvFixeightj = {
 	"fixeightj", "fixeight", NULL, NULL, "1992",
 	"FixEight (Japan)\0", NULL, "Toaplan", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 3, HARDWARE_TOAPLAN_68K_Zx80, GBF_SHOOT, 0,
 	NULL, fixeightjRomInfo, fixeightjRomName, NULL, NULL, FixeightInputInfo, FixeightDIPInfo,
 	fixeightjInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4

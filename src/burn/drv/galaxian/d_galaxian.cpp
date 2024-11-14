@@ -9207,7 +9207,7 @@ struct BurnDriver BurnDrvDevilfsg = {
 };
 
 // Sound hardware replaced with AY8910
-static struct BurnRomInfo ZigzagRomDesc[] = {
+static struct BurnRomInfo ZigzagbRomDesc[] = {
 	{ "zz_d1.7l",      0x01000, 0x8cc08d81, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
 	{ "zz_d2.7k",      0x01000, 0x326d8d45, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
 	{ "zz_d4.7f",      0x01000, 0xa94ed92a, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
@@ -9219,10 +9219,10 @@ static struct BurnRomInfo ZigzagRomDesc[] = {
 	{ "zzbpr_e9.bin",  0x00020, 0xaa486dd0, BRF_GRA | GAL_ROM_PROM },
 };
 
-STD_ROM_PICK(Zigzag)
-STD_ROM_FN(Zigzag)
+STD_ROM_PICK(Zigzagb)
+STD_ROM_FN(Zigzagb)
 
-static struct BurnRomInfo Zigzag2RomDesc[] = {
+static struct BurnRomInfo Zigzagb2RomDesc[] = {
 	{ "z1.7l",         0x01000, 0x4c28349a, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
 	{ "zz_d2.7k",      0x01000, 0x326d8d45, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
 	{ "zz_d4.7f",      0x01000, 0xa94ed92a, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
@@ -9234,8 +9234,8 @@ static struct BurnRomInfo Zigzag2RomDesc[] = {
 	{ "zzbpr_e9.bin",  0x00020, 0xaa486dd0, BRF_GRA | GAL_ROM_PROM },
 };
 
-STD_ROM_PICK(Zigzag2)
-STD_ROM_FN(Zigzag2)
+STD_ROM_PICK(Zigzagb2)
+STD_ROM_FN(Zigzagb2)
 
 static struct BurnRomInfo Ozon1RomDesc[] = {
 	{ "rom1.bin",      0x01000, 0x54899e8b, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
@@ -9342,7 +9342,8 @@ void __fastcall ZigzagZ80Write(UINT16 a, UINT8 d)
 		}
 		
 		default: {
-			bprintf(PRINT_NORMAL, _T("Z80 #1 Write => %04X, %02X\n"), a, d);
+			if (!(a >= 0x5400 && a <= 0x70ff))
+				bprintf(PRINT_NORMAL, _T("Z80 #1 Write => %04X, %02X\n"), a, d);
 		}
 	}
 }
@@ -9459,6 +9460,7 @@ static INT32 ZigzagInit()
 	BurnFree(GalTempRom);
 	BurnFree(TempRom);
 	
+	GalRenderFrameFunction = ZigZagRenderFrame;
 	GalDrawBulletsFunction = NULL;
 	
 	AY8910SetAllRoutes(0, 0.20, BURN_SND_ROUTE_BOTH);
@@ -9506,22 +9508,22 @@ static INT32 Ozon1Init()
 	return nRet;
 }
 
-struct BurnDriver BurnDrvZigzag = {
-	"zigzag", NULL, NULL, NULL, "1982",
+struct BurnDriver BurnDrvZigzagb = {
+	"zigzagb", NULL, NULL, NULL, "1982",
 	"Zig Zag (Galaxian hardware, set 1)\0", NULL, "LAX", "Galaxian",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_GALAXIAN, GBF_MAZE, 0,
-	NULL, ZigzagRomInfo, ZigzagRomName, NULL, NULL, ZigzagInputInfo, ZigzagDIPInfo,
+	NULL, ZigzagbRomInfo, ZigzagbRomName, NULL, NULL, ZigzagInputInfo, ZigzagDIPInfo,
 	ZigzagInit, GalExit, GalFrame, NULL, GalScan,
 	NULL, 392, 224, 256, 3, 4
 };
 
-struct BurnDriver BurnDrvZigzag2 = {
-	"zigzag2", "zigzag", NULL, NULL, "1982",
+struct BurnDriver BurnDrvZigzagb2 = {
+	"zigzagb2", "zigzagb", NULL, NULL, "1982",
 	"Zig Zag (Galaxian hardware, set 2)\0", NULL, "LAX", "Galaxian",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_GALAXIAN, GBF_MAZE, 0,
-	NULL, Zigzag2RomInfo, Zigzag2RomName, NULL, NULL, ZigzagInputInfo, ZigzagDIPInfo,
+	NULL, Zigzagb2RomInfo, Zigzagb2RomName, NULL, NULL, ZigzagInputInfo, ZigzagDIPInfo,
 	ZigzagInit, GalExit, GalFrame, NULL, GalScan,
 	NULL, 392, 224, 256, 3, 4
 };
@@ -10327,6 +10329,28 @@ static struct BurnRomInfo SmooncrsRomDesc[] = {
 
 STD_ROM_PICK(Smooncrs)
 STD_ROM_FN(Smooncrs)
+
+static struct BurnRomInfo MooncrstsoRomDesc[] = {
+	{ "1.BIN",         0x00800, 0x0357ab1a, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "2.BIN",         0x00800, 0xcf6e78f5, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "3.BIN",         0x00800, 0x716eaa10, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "4.BIN",         0x00800, 0xcea864f2, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "5.BIN",         0x00800, 0x32cd9adc, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "6.BIN",         0x00800, 0xf0230048, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "7.BIN",         0x00800, 0x73783cee, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "8.BIN",         0x00800, 0x1644965a, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	
+	// missing, assuming 'super moon cresta' gfx
+	{ "epr203",        0x00800, 0xbe26b561, BRF_GRA | GAL_ROM_TILES_SHARED },
+	{ "mcs_d",         0x00800, 0x13932a15, BRF_GRA | GAL_ROM_TILES_SHARED },
+	{ "epr202",        0x00800, 0x26c7e800, BRF_GRA | GAL_ROM_TILES_SHARED },
+	{ "mcs_c",         0x00800, 0x24cfd145, BRF_GRA | GAL_ROM_TILES_SHARED },
+	
+	{ "mmi6331.6l",    0x00020, 0x6a0c7d87, BRF_GRA | GAL_ROM_PROM },
+};
+
+STD_ROM_PICK(Mooncrstso)
+STD_ROM_FN(Mooncrstso)
 
 static struct BurnRomInfo MooncptcRomDesc[] = {
 	{ "mc1.bin",       0x00800, 0x16f17cd5, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
@@ -11153,6 +11177,16 @@ struct BurnDriver BurnDrvSmooncrs = {
 	NULL, 392, 224, 256, 3, 4
 };
 
+struct BurnDriver BurnDrvMooncrstso = {
+	"mooncrstso", "mooncrst", NULL, NULL, "1980",
+	"Moon Cresta (SegaSA / Sonic)\0", NULL, "Nichibutsu (Sonic license)", "Galaxian",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_GALAXIAN, GBF_VERSHOOT, 0,
+	NULL, MooncrstsoRomInfo, MooncrstsoRomName, NULL, NULL, OmegaInputInfo, MooncptcDIPInfo,
+	MooncrstInit, GalExit, GalFrame, NULL, GalScan,
+	NULL, 392, 224, 256, 3, 4
+};
+
 struct BurnDriver BurnDrvMooncptc = {
 	"mooncptc", "mooncrst", NULL, NULL, "1980?",
 	"Moon Cresta (Petaco S.A. Spanish bootleg)\0", NULL, "bootleg (Petaco S.A.)", "Galaxian",
@@ -11264,17 +11298,17 @@ struct BurnDriver BurnDrvMoonqsr = {
 };
 
 struct BurnDriver BurnDrvMoonal2 = {
-	"moonal2", "galaxian", NULL, NULL, "1980",
+	"moonal2", NULL, NULL, NULL, "1980",
 	"Moon Alien Part 2\0", NULL, "Nichibutsu", "Galaxian",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_GALAXIAN, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_GALAXIAN, GBF_VERSHOOT, 0,
 	NULL, Moonal2RomInfo, Moonal2RomName, NULL, NULL, GalaxianInputInfo, Moonal2DIPInfo,
 	Moonal2Init, GalExit, GalFrame, NULL, GalScan,
 	NULL, 392, 224, 256, 3, 4
 };
 
 struct BurnDriver BurnDrvMoonal2b = {
-	"moonal2b", "galaxian", NULL, NULL, "1980",
+	"moonal2b", "moonal2", NULL, NULL, "1980",
 	"Moon Alien Part 2 (older version)\0", NULL, "Nichibutsu", "Galaxian",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_GALAXIAN, GBF_VERSHOOT, 0,
@@ -13502,7 +13536,7 @@ static INT32 DingoInit()
 	
 	GalPostLoadCallbackFunction = DingoPostLoad;
 	GalSoundType = GAL_SOUND_HARDWARE_TYPE_CHECKMAJAY8910;
-	
+	Dingo = 1;
 	nRet = GalInit();
 	
 	AY8910SetAllRoutes(0, 1.00, BURN_SND_ROUTE_BOTH);
@@ -14260,6 +14294,24 @@ static struct BurnRomInfo Froggers2RomDesc[] = {
 STD_ROM_PICK(Froggers2)
 STD_ROM_FN(Froggers2)
 
+static struct BurnRomInfo Froggers3RomDesc[] = {
+	{ "29",    		   0x01000, 0xa58e43a7, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "30",    		   0x01000, 0x119bbedb, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "31",    		   0x01000, 0x405595e9, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	
+	{ "epr-608.ic32",  0x00800, 0xe8ab0256, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
+	{ "epr-609.ic33",  0x00800, 0x7380a48f, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
+	{ "epr-610.ic34",  0x00800, 0x31d7eb27, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
+	
+	{ "epr-607.ic101", 0x00800, 0x05f7d883, BRF_GRA | GAL_ROM_TILES_SHARED },
+	{ "epr-606.ic102", 0x00800, 0xf524ee30, BRF_GRA | GAL_ROM_TILES_SHARED },
+	
+	{ "pr-91.6l",      0x00020, 0x413703bf, BRF_GRA | GAL_ROM_PROM },
+};
+
+STD_ROM_PICK(Froggers3)
+STD_ROM_FN(Froggers3)
+
 static struct BurnRomInfo FroggermcRomDesc[] = {
 	{ "epr-1031.15",   0x01000, 0x4b7c8d11, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
 	{ "epr-1032.16",   0x01000, 0xac00b9d9, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
@@ -14396,7 +14448,7 @@ void __fastcall FroggermcZ80Write(UINT16 a, UINT8 d)
 			if (!(d & 1)) {
 				ZetClose();
 				ZetOpen(1);
-				ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+				ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 				ZetClose();
 				ZetOpen(0);
 			}
@@ -14710,6 +14762,16 @@ struct BurnDriver BurnDrvFroggers2 = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_GALAXIAN, GBF_MISC, 0,
 	NULL, Froggers2RomInfo, Froggers2RomName, NULL, NULL, FroggerInputInfo, FroggerDIPInfo,
+	FroggerEncGfxInit, KonamiExit, GalFrame, NULL, GalScan,
+	NULL, 392, 224, 256, 3, 4
+};
+
+struct BurnDriver BurnDrvFroggers3 = {
+	"froggers3", "frogger", NULL, NULL, "1981",
+	"Frogger (Sega set 3)\0", NULL, "Konami (Sega license)", "Galaxian",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_GALAXIAN, GBF_MISC, 0,
+	NULL, Froggers3RomInfo, Froggers3RomName, NULL, NULL, FroggerInputInfo, FroggerDIPInfo,
 	FroggerEncGfxInit, KonamiExit, GalFrame, NULL, GalScan,
 	NULL, 392, 224, 256, 3, 4
 };
@@ -15243,20 +15305,20 @@ STD_ROM_PICK(Theend)
 STD_ROM_FN(Theend)
 
 static struct BurnRomInfo TheendsRomDesc[] = {
-	{ "ic13",          0x00800, 0x90e5ab14, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
-	{ "ic14",          0x00800, 0x950f0a07, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
-	{ "ic15",          0x00800, 0x6786bcf5, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
-	{ "ic16",          0x00800, 0x380a0017, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
-	{ "ic17",          0x00800, 0xaf067b7f, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
-	{ "ic18",          0x00800, 0xa0411b93, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "the_end_ra3_13.ic13",	0x00800, 0x90e5ab14, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "the_end_ra3_14.ic14",    0x00800, 0x950f0a07, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "the_end_ra3_15.ic15",    0x00800, 0x6786bcf5, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "the_end_ra3_16.ic16",    0x00800, 0x380a0017, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "the_end_ra3_17.ic17",    0x00800, 0xaf067b7f, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "the_end_ra3_18.ic18",    0x00800, 0xa0411b93, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
 	
-	{ "ic56",          0x00800, 0x3b2c2f70, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
-	{ "ic55",          0x00800, 0xe0429e50, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
+	{ "the_end_ra3_56.ic56",    0x00800, 0x3b2c2f70, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
+	{ "the_end_ra2_55.ic55",    0x00800, 0xe0429e50, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
 
-	{ "ic30",          0x00800, 0x527fd384, BRF_GRA | GAL_ROM_TILES_SHARED },
-	{ "ic31",          0x00800, 0xaf6d09b6, BRF_GRA | GAL_ROM_TILES_SHARED },
+	{ "the_end_ra3_30.ic30",    0x00800, 0x527fd384, BRF_GRA | GAL_ROM_TILES_SHARED },
+	{ "the_end_ra3_31.ic31",    0x00800, 0xaf6d09b6, BRF_GRA | GAL_ROM_TILES_SHARED },
 		
-	{ "6331-1j.86",    0x00020, 0x24652bc4, BRF_GRA | GAL_ROM_PROM },
+	{ "6331-1j.86",    			0x00020, 0x24652bc4, BRF_GRA | GAL_ROM_PROM },
 };
 
 STD_ROM_PICK(Theends)
@@ -15353,6 +15415,29 @@ static struct BurnRomInfo ScrambpRomDesc[] = {
 
 STD_ROM_PICK(Scrambp)
 STD_ROM_FN(Scrambp)
+
+static struct BurnRomInfo ScramceRomDesc[] = {
+	{ "es1.2c",  	   0x00800, 0x726fb19e, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "es2.2e",  	   0x00800, 0x66ebc070, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "es3.2f",  	   0x00800, 0x317548fd, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "es4.2h",  	   0x00800, 0xdd380a22, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "es5.2j", 	   0x00800, 0xfa4f1a70, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "es6.2l",  	   0x00800, 0x9fd96374, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "es7.2m", 	   0x00800, 0x88ac07a0, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "es8.2p",  	   0x00800, 0xd20088ee, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	
+	{ "11.5c",  	   0x00800, 0xbe037cf6, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
+	{ "12.5d",         0x00800, 0xde7912da, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
+	{ "13.5e",  	   0x00800, 0xba2fa933, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
+
+	{ "9.5f", 		   0x00800, 0x4708845b, BRF_GRA | GAL_ROM_TILES_SHARED },
+	{ "10.5h", 		   0x00800, 0x11fd2887, BRF_GRA | GAL_ROM_TILES_SHARED },
+		
+	{ "prom7051.6e",   0x00020, 0x4e3caeab, BRF_GRA | GAL_ROM_PROM },
+};
+
+STD_ROM_PICK(Scramce)
+STD_ROM_FN(Scramce)
 
 static struct BurnRomInfo ScramptRomDesc[] = {
 	{ "cx8-2716.cpu",  0x00800, 0x12b97cc6, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
@@ -15778,6 +15863,30 @@ static struct BurnRomInfo MimonscrRomDesc[] = {
 STD_ROM_PICK(Mimonscr)
 STD_ROM_FN(Mimonscr)
 
+static struct BurnRomInfo MimonscraRomDesc[] = {
+	{ "1.c2",          0x01000, 0xcfff26f3, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "2.e2",          0x01000, 0x1fca805f, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "3.f2",          0x01000, 0x24ce1ce3, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "4.h2",          0x01000, 0xc83fb639, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "5.j2",          0x01000, 0xa9f12dfc, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "6.l2",          0x01000, 0xe492a40c, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "7.m2",          0x01000, 0x5339928d, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "8.p2",          0x01000, 0x0b9915b8, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	
+	{ "2732.c5",       0x01000, 0x5995f24b, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
+	{ "2732.d5",       0x01000, 0x35ed0f96, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
+			
+	{ "top.g5",        0x01000, 0xf73a8412, BRF_GRA | GAL_ROM_TILES_SHARED },
+	{ "bottom.g5",     0x01000, 0x3828c9db, BRF_GRA | GAL_ROM_TILES_SHARED },
+	{ "top.f5",        0x01000, 0x9e0e9289, BRF_GRA | GAL_ROM_TILES_SHARED },
+	{ "bottom.f5",     0x01000, 0x92085b0c, BRF_GRA | GAL_ROM_TILES_SHARED },
+		
+	{ "mb7051.e6",     0x00020, 0x4e3caeab, BRF_GRA | GAL_ROM_PROM },
+};
+
+STD_ROM_PICK(Mimonscra)
+STD_ROM_FN(Mimonscra)
+
 UINT8 __fastcall ExplorerZ80Read(UINT16 a)
 {
 	switch (a) {
@@ -15885,7 +15994,7 @@ void __fastcall ExplorerZ80Write(UINT16 a, UINT8 d)
 		case 0x9000: {
 			ZetClose();
 			ZetOpen(1);
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 			ZetClose();
 			ZetOpen(0);
 			return;
@@ -16318,7 +16427,7 @@ void __fastcall HotshockZ80Write(UINT16 a, UINT8 d)
 		case 0x9000: {
 			ZetClose();
 			ZetOpen(1);
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 			ZetClose();
 			ZetOpen(0);
 			return;
@@ -17208,6 +17317,16 @@ struct BurnDriver BurnDrvScrambp = {
 	NULL, 392, 224, 256, 3, 4
 };
 
+struct BurnDriver BurnDrvScramce = {
+	"scramce", "scramble", NULL, NULL, "1981",
+	"Scramble (Centromatic S.A., Spanish bootleg)\0", NULL, "bootleg (Centromatic S.A.)", "Galaxian",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_GALAXIAN, GBF_HORSHOOT, 0,
+	NULL, ScramceRomInfo, ScramceRomName, NULL, NULL, ScrambleInputInfo, ScrambleDIPInfo,
+	ScrambleInit, KonamiExit, GalFrame, NULL, GalScan,
+	NULL, 392, 224, 256, 3, 4
+};
+
 struct BurnDriver BurnDrvScrampt = {
 	"scrampt", "scramble", NULL, NULL, "1981",
 	"Scramble (Petaco S.A., Spanish bootleg)\0", NULL, "bootleg (Petaco S.A.)", "Galaxian",
@@ -17414,6 +17533,16 @@ struct BurnDriver BurnDrvMimonscr = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG, 2, HARDWARE_GALAXIAN, GBF_HORSHOOT, 0,
 	NULL, MimonscrRomInfo, MimonscrRomName, NULL, NULL, AtlantisInputInfo, MimonkeyDIPInfo,
+	MimonscrInit, KonamiExit, GalFrame, NULL, GalScan,
+	NULL, 392, 224, 256, 3, 4
+};
+
+struct BurnDriver BurnDrvMimonscra = {
+	"mimonscra", "mimonkey", NULL, NULL, "198?",
+	"Mighty Monkey (Kaina Games, bootleg on Scramble hardware)\0", NULL, "bootleg (Kaina Games)", "Galaxian",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG, 2, HARDWARE_GALAXIAN, GBF_HORSHOOT, 0,
+	NULL, MimonscraRomInfo, MimonscraRomName, NULL, NULL, AtlantisInputInfo, MimonkeyDIPInfo,
 	MimonscrInit, KonamiExit, GalFrame, NULL, GalScan,
 	NULL, 392, 224, 256, 3, 4
 };
@@ -18225,7 +18354,7 @@ void __fastcall Ad2083Z80Write(UINT16 a, UINT8 d)
 		case 0x9000: {
 			ZetClose();
 			ZetOpen(1);
-			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 			ZetClose();
 			ZetOpen(0);
 			return;
@@ -18793,6 +18922,27 @@ static struct BurnRomInfo ScobrabRomDesc[] = {
 
 STD_ROM_PICK(Scobrab)
 STD_ROM_FN(Scobrab)
+
+static struct BurnRomInfo ScobraeRomDesc[] = {
+	{ "super cobra ra1 2c 1981.2c", 0x01000, 0xba9d4152, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "super cobra ra1 2e 1981.2e", 0x01000, 0xf9b77b27, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "super cobra ra1 2f 1981.2f", 0x01000, 0xe6109c2c, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "super cobra ra1 2h 1981.2h", 0x01000, 0x8762735b, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "super cobra ra1 2j 1981.2j", 0x01000, 0x5648f404, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	{ "super cobra ra1 2l 1981.2l", 0x01000, 0x34476cc3, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
+	
+	{ "5c",            0x00800, 0xdeeb0dd3, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
+	{ "5d",            0x00800, 0x872c1a74, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
+	{ "5e",            0x00800, 0xccd7a110, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG2 },
+		
+	{ "super cobra ra1 5f 1981.5f", 0x00800, 0x64d113b4, BRF_GRA | GAL_ROM_TILES_SHARED },
+	{ "super cobra ra1 5h 1981.5h", 0x00800, 0xa96316d3, BRF_GRA | GAL_ROM_TILES_SHARED },
+		
+	{ "82s123.6e",     0x00020, 0x9b87f90d, BRF_GRA | GAL_ROM_PROM },
+};
+
+STD_ROM_PICK(Scobrae)
+STD_ROM_FN(Scobrae)
 
 static struct BurnRomInfo SuprheliRomDesc[] = {
 	{ "1.2c",          0x01000, 0xb25141d8, BRF_ESS | BRF_PRG | GAL_ROM_Z80_PROG1 },
@@ -20054,6 +20204,41 @@ static INT32 ScobraInit()
 	return nRet;
 }
 
+static INT32 ScobraeInit()
+{
+	INT32 nRet;
+	
+	GalPostLoadCallbackFunction = MapScobra;
+	GalSoundType = GAL_SOUND_HARDWARE_TYPE_KONAMIAY8910;
+	
+	nRet = GalInit();
+	KonamiSoundInit();
+	
+	for (INT32 Offs = 0; Offs < 0x6000; Offs++) {
+		INT32 i = Offs & 0x7f;
+		INT32 x = GalZ80Rom1[Offs];
+
+		if (Offs & 0x80) i ^= 0x7f;
+
+		if (i & 0x01) x ^= 0x49;
+		if (i & 0x02) x ^= 0x21;
+		if (i & 0x04) x ^= 0x18;
+		if (i & 0x08) x ^= 0x12;
+		if (i & 0x10) x ^= 0x84;
+		if (i & 0x20) x ^= 0x24;
+		if (i & 0x40) x ^= 0x40;
+
+		GalZ80Rom1[Offs] = x ^ 0xff;
+	}
+	
+	GalRenderBackgroundFunction = ScrambleDrawBackground;
+	GalDrawBulletsFunction = ScrambleDrawBullets;
+	
+	KonamiPPIInit();
+	
+	return nRet;
+}
+
 static INT32 LosttombInit()
 {
 	INT32 nRet;
@@ -20644,11 +20829,11 @@ static void BilliardPostLoad()
 		if (Bits[2] ^ ( Bits[3] &  Bits[6])) XorMask ^= 0x01;
 		if (Bits[4] ^ ( Bits[5] &  Bits[7])) XorMask ^= 0x02;
 		if (Bits[0] ^ ( Bits[7] & !Bits[3])) XorMask ^= 0x04;
-		if (Bits[3] ^ (!Bits[0] &  Bits[2])) XorMask ^= 0x08;
-		if (Bits[5] ^ (!Bits[4] &  Bits[1])) XorMask ^= 0x10;
-		if (Bits[6] ^ (!Bits[2] & !Bits[5])) XorMask ^= 0x20;
-		if (Bits[1] ^ (!Bits[6] & !Bits[4])) XorMask ^= 0x40;
-		if (Bits[7] ^ (!Bits[1] &  Bits[0])) XorMask ^= 0x80;
+		if (Bits[3] ^ ((!Bits[0]) &  Bits[2])) XorMask ^= 0x08;
+		if (Bits[5] ^ ((!Bits[4]) &  Bits[1])) XorMask ^= 0x10;
+		if (Bits[6] ^ ((!Bits[2]) & !Bits[5])) XorMask ^= 0x20;
+		if (Bits[1] ^ ((!Bits[6]) & !Bits[4])) XorMask ^= 0x40;
+		if (Bits[7] ^ ((!Bits[1]) &  Bits[0])) XorMask ^= 0x80;
 
 		GalZ80Rom1[Offset] ^= XorMask;
 		GalZ80Rom1[Offset] = BITSWAP08(GalZ80Rom1[Offset], 6, 1, 2, 5, 4, 3, 0, 7);
@@ -20852,6 +21037,16 @@ struct BurnDriver BurnDrvScobrab = {
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG, 2, HARDWARE_GALAXIAN, GBF_HORSHOOT, 0,
 	NULL, ScobrabRomInfo, ScobrabRomName, NULL, NULL, SfxInputInfo, ScobrasDIPInfo,
 	ScobraInit, KonamiExit, GalFrame, NULL, GalScan,
+	NULL, 392, 224, 256, 3, 4
+};
+
+struct BurnDriver BurnDrvScobrae = {
+	"scobrae", "scobra", NULL, NULL, "1981",
+	"Super Cobra (Stern) (encrypted, KONATEC XC-103SS CPU)\0", NULL, "Konami (Stern license)", "Galaxian",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_GALAXIAN, GBF_HORSHOOT, 0,
+	NULL, ScobraeRomInfo, ScobraeRomName, NULL, NULL, SfxInputInfo, ScobrasDIPInfo,
+	ScobraeInit, KonamiExit, GalFrame, NULL, GalScan,
 	NULL, 392, 224, 256, 3, 4
 };
 
@@ -22456,22 +22651,22 @@ static void S2650PostLoad()
 {
 	s2650Init(1);
 	s2650Open(0);
-	s2650MapMemory(GalS2650Rom1 + 0x0000, 0x0000, 0x0fff, S2650_ROM);
-	s2650MapMemory(GalSpriteRam, 0x1480, 0x14ff, S2650_READ);
-	s2650MapMemory(GalVideoRam, 0x1800, 0x1bff, S2650_RAM);
-	s2650MapMemory(GalZ80Ram1, 0x1c00, 0x1fff, S2650_RAM);
-	s2650MapMemory(GalS2650Rom1 + 0x1000, 0x2000, 0x2fff, S2650_ROM);
-	s2650MapMemory(GalSpriteRam, 0x3480, 0x34ff, S2650_READ);
-	s2650MapMemory(GalVideoRam, 0x3800, 0x3bff, S2650_RAM);
-	s2650MapMemory(GalZ80Ram1, 0x3c00, 0x3fff, S2650_RAM);
-	s2650MapMemory(GalS2650Rom1 + 0x2000, 0x4000, 0x4fff, S2650_ROM);
-	s2650MapMemory(GalSpriteRam, 0x5480, 0x54ff, S2650_READ);
-	s2650MapMemory(GalVideoRam, 0x5800, 0x5bff, S2650_RAM);
-	s2650MapMemory(GalZ80Ram1, 0x5c00, 0x5fff, S2650_RAM);
-	s2650MapMemory(GalS2650Rom1 + 0x3000, 0x6000, 0x6fff, S2650_ROM);
-	s2650MapMemory(GalSpriteRam, 0x7480, 0x74ff, S2650_READ);
-	s2650MapMemory(GalVideoRam, 0x7800, 0x7bff, S2650_RAM);
-	s2650MapMemory(GalZ80Ram1, 0x7c00, 0x7fff, S2650_RAM);
+	s2650MapMemory(GalS2650Rom1 + 0x0000, 0x0000, 0x0fff, MAP_ROM);
+	s2650MapMemory(GalSpriteRam, 0x1480, 0x14ff, MAP_READ);
+	s2650MapMemory(GalVideoRam, 0x1800, 0x1bff, MAP_RAM);
+	s2650MapMemory(GalZ80Ram1, 0x1c00, 0x1fff, MAP_RAM);
+	s2650MapMemory(GalS2650Rom1 + 0x1000, 0x2000, 0x2fff, MAP_ROM);
+	s2650MapMemory(GalSpriteRam, 0x3480, 0x34ff, MAP_READ);
+	s2650MapMemory(GalVideoRam, 0x3800, 0x3bff, MAP_RAM);
+	s2650MapMemory(GalZ80Ram1, 0x3c00, 0x3fff, MAP_RAM);
+	s2650MapMemory(GalS2650Rom1 + 0x2000, 0x4000, 0x4fff, MAP_ROM);
+	s2650MapMemory(GalSpriteRam, 0x5480, 0x54ff, MAP_READ);
+	s2650MapMemory(GalVideoRam, 0x5800, 0x5bff, MAP_RAM);
+	s2650MapMemory(GalZ80Ram1, 0x5c00, 0x5fff, MAP_RAM);
+	s2650MapMemory(GalS2650Rom1 + 0x3000, 0x6000, 0x6fff, MAP_ROM);
+	s2650MapMemory(GalSpriteRam, 0x7480, 0x74ff, MAP_READ);
+	s2650MapMemory(GalVideoRam, 0x7800, 0x7bff, MAP_RAM);
+	s2650MapMemory(GalZ80Ram1, 0x7c00, 0x7fff, MAP_RAM);
 	s2650SetReadHandler(HunchbkgS2650Read);
 	s2650SetWriteHandler(HunchbkgS2650Write);
 	s2650SetInHandler(HunchbkgS2650PortRead);
@@ -22569,22 +22764,22 @@ static void RacknrolPostLoad()
 {
 	s2650Init(1);
 	s2650Open(0);
-	s2650MapMemory(GalS2650Rom1 + 0x0000, 0x0000, 0x0fff, S2650_ROM);
-	s2650MapMemory(GalSpriteRam, 0x1400, 0x14ff, S2650_READ);
-	s2650MapMemory(GalVideoRam, 0x1800, 0x1bff, S2650_RAM);
-	s2650MapMemory(GalZ80Ram1, 0x1c00, 0x1fff, S2650_RAM);
-	s2650MapMemory(GalS2650Rom1 + 0x1000, 0x2000, 0x2fff, S2650_ROM);
-	s2650MapMemory(GalSpriteRam, 0x3400, 0x34ff, S2650_READ);
-	s2650MapMemory(GalVideoRam, 0x3800, 0x3bff, S2650_RAM);
-	s2650MapMemory(GalZ80Ram1, 0x3c00, 0x3fff, S2650_RAM);
-	s2650MapMemory(GalS2650Rom1 + 0x2000, 0x4000, 0x4fff, S2650_ROM);
-	s2650MapMemory(GalSpriteRam, 0x5400, 0x54ff, S2650_READ);
-	s2650MapMemory(GalVideoRam, 0x5800, 0x5bff, S2650_RAM);
-	s2650MapMemory(GalZ80Ram1, 0x5c00, 0x5fff, S2650_RAM);
-	s2650MapMemory(GalS2650Rom1 + 0x3000, 0x6000, 0x6fff, S2650_ROM);
-	s2650MapMemory(GalSpriteRam, 0x7400, 0x74ff, S2650_READ);
-	s2650MapMemory(GalVideoRam, 0x7800, 0x7bff, S2650_RAM);
-	s2650MapMemory(GalZ80Ram1, 0x7c00, 0x7fff, S2650_RAM);
+	s2650MapMemory(GalS2650Rom1 + 0x0000, 0x0000, 0x0fff, MAP_ROM);
+	s2650MapMemory(GalSpriteRam, 0x1400, 0x14ff, MAP_READ);
+	s2650MapMemory(GalVideoRam, 0x1800, 0x1bff, MAP_RAM);
+	s2650MapMemory(GalZ80Ram1, 0x1c00, 0x1fff, MAP_RAM);
+	s2650MapMemory(GalS2650Rom1 + 0x1000, 0x2000, 0x2fff, MAP_ROM);
+	s2650MapMemory(GalSpriteRam, 0x3400, 0x34ff, MAP_READ);
+	s2650MapMemory(GalVideoRam, 0x3800, 0x3bff, MAP_RAM);
+	s2650MapMemory(GalZ80Ram1, 0x3c00, 0x3fff, MAP_RAM);
+	s2650MapMemory(GalS2650Rom1 + 0x2000, 0x4000, 0x4fff, MAP_ROM);
+	s2650MapMemory(GalSpriteRam, 0x5400, 0x54ff, MAP_READ);
+	s2650MapMemory(GalVideoRam, 0x5800, 0x5bff, MAP_RAM);
+	s2650MapMemory(GalZ80Ram1, 0x5c00, 0x5fff, MAP_RAM);
+	s2650MapMemory(GalS2650Rom1 + 0x3000, 0x6000, 0x6fff, MAP_ROM);
+	s2650MapMemory(GalSpriteRam, 0x7400, 0x74ff, MAP_READ);
+	s2650MapMemory(GalVideoRam, 0x7800, 0x7bff, MAP_RAM);
+	s2650MapMemory(GalZ80Ram1, 0x7c00, 0x7fff, MAP_RAM);
 	s2650SetReadHandler(RacknrolS2650Read);
 	s2650SetWriteHandler(RacknrolS2650Write);
 	s2650SetInHandler(RacknrolS2650PortRead);

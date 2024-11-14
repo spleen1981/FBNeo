@@ -492,10 +492,6 @@ static struct BurnDIPInfo Gunforc2DIPList[]=
 	{0x12, 0x01, 0x0c, 0x0c, "Normal"				},
 	{0x12, 0x01, 0x0c, 0x04, "Hard"					},
 
-	{0   , 0xfe, 0   ,    2, "Bonus Life"				},
-	{0x12, 0x01, 0x10, 0x00, "15000 35000 75000 120000"		},
-	{0x12, 0x01, 0x10, 0x10, "20000 40000 90000 150000"		},
-
 	{0   , 0xfe, 0   ,    2, "Allow Continue"			},
 	{0x12, 0x01, 0x20, 0x00, "No"					},
 	{0x12, 0x01, 0x20, 0x20, "Yes"					},
@@ -1230,7 +1226,7 @@ inline static UINT32 CalcCol(INT32 offs)
 static void m92YM2151IRQHandler(INT32 nStatus)
 {
 	if (VezGetActive() == -1) return;
-	VezSetIRQLineAndVector(NEC_INPUT_LINE_INTP0, 0xff/*default*/, nStatus ? VEZ_IRQSTATUS_ACK : VEZ_IRQSTATUS_NONE);
+	VezSetIRQLineAndVector(NEC_INPUT_LINE_INTP0, 0xff/*default*/, nStatus ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 	VezRun(100);
 }
 
@@ -1308,8 +1304,8 @@ UINT8 __fastcall m92ReadPort(UINT32 port)
 		case 0x06: return ~DrvInput[2];	// player 3
 		case 0x07: return ~DrvInput[3];	// player 4
 
-		case 0x08: VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 12)/4, VEZ_IRQSTATUS_NONE); return sound_status[0]; 
-		case 0x09: VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 12)/4, VEZ_IRQSTATUS_NONE); return sound_status[1];
+		case 0x08: VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 12)/4, CPU_IRQSTATUS_NONE); return sound_status[0]; 
+		case 0x09: VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 12)/4, CPU_IRQSTATUS_NONE); return sound_status[1];
 
 		case 0x18: return (m92_kludge == 3) ? MSM6295ReadStatus(0) : 0; // ppan
 
@@ -1363,9 +1359,9 @@ void __fastcall m92WritePort(UINT32 port, UINT8 data)
 			sound_latch[0] = data;
 			VezClose();
 			VezOpen(1);
-			VezSetIRQLineAndVector(NEC_INPUT_LINE_INTP1, 0xff/*default*/, VEZ_IRQSTATUS_ACK);
+			VezSetIRQLineAndVector(NEC_INPUT_LINE_INTP1, 0xff/*default*/, CPU_IRQSTATUS_ACK);
 			VezRun(10);
-			VezSetIRQLineAndVector(NEC_INPUT_LINE_INTP1, 0xff/*default*/, VEZ_IRQSTATUS_NONE);
+			VezSetIRQLineAndVector(NEC_INPUT_LINE_INTP1, 0xff/*default*/, CPU_IRQSTATUS_NONE);
 			VezRun(10);
 			VezClose();
 			VezOpen(0);
@@ -1398,11 +1394,15 @@ void __fastcall m92WritePort(UINT32 port, UINT8 data)
 			}
 			return;
 
-	//	case 0x40:	// Interrupt controller, only written to at bootup
-	//	case 0x41:
-	//	case 0x42:
-	//	case 0x43:
-	//		return;
+		case 0x40:
+		case 0x41:
+		case 0x43: // IRQ controller init (ignored)
+		return;
+		case 0x42: // get vectorbase from IRQ controller init - first write on port 0x42
+			if (m92_irq_vectorbase == 0) {
+				m92_irq_vectorbase = data << 2;
+			}
+		return;
 
 		case 0x80: pf_control[0][0] = data; set_pf_scroll(0); return;
 		case 0x81: pf_control[0][1] = data; set_pf_scroll(0); return;
@@ -1435,7 +1435,6 @@ void __fastcall m92WritePort(UINT32 port, UINT8 data)
 		case 0x9c: pf_control[3][4] = data; set_pf_info(2, data); return;
 		case 0x9d: pf_control[3][5] = data; return;
 		case 0x9e: pf_control[3][6] = data;
-			m92_raster_irq_position = ((pf_control[3][7]<<8) | pf_control[3][6]) - 128;
 			return;
 		case 0x9f: pf_control[3][7] = data;
 			m92_raster_irq_position = ((pf_control[3][7]<<8) | pf_control[3][6]) - 128;
@@ -1462,7 +1461,7 @@ UINT8 __fastcall m92SndReadByte(UINT32 address)
 			return BurnYM2151ReadStatus();
 
 		case 0xa8044:
-//			VezSetIRQLineAndVector(NEC_INPUT_LINE_INTP1, 0xff/*default*/, VEZ_IRQSTATUS_NONE);
+			//VezSetIRQLineAndVector(NEC_INPUT_LINE_INTP1, 0xff/*default*/, CPU_IRQSTATUS_NONE);
 			return sound_latch[0];
 
 		case 0xa8045:
@@ -1488,26 +1487,22 @@ void __fastcall m92SndWriteByte(UINT32 address, UINT8 data)
 	switch (address)
 	{
 		case 0xa8040:
-	//	case 0xa8041:
 			BurnYM2151SelectRegister(data);
 			return;
 
 		case 0xa8042:
-	//	case 0xa8043:
 			BurnYM2151WriteRegister(data);
 			return;
 
 		case 0xa8044:
-	//	case 0xa8045:
-//			VezSetIRQLineAndVector(NEC_INPUT_LINE_INTP1, 0xff/*default*/, VEZ_IRQSTATUS_NONE);
+			//VezSetIRQLineAndVector(NEC_INPUT_LINE_INTP1, 0xff/*default*/, CPU_IRQSTATUS_NONE);
 			return;
 
 		case 0xa8046:
-	//	case 0xa8047:
 			sound_status[0] = data;
 			VezClose();
 			VezOpen(0);
-			VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 12)/4, VEZ_IRQSTATUS_ACK);
+			VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 12)/4, CPU_IRQSTATUS_ACK);
 			VezClose();
 			VezOpen(1);
 			return;
@@ -1539,6 +1534,7 @@ static INT32 DrvDoReset()
 
 	if (m92_kludge == 1) sound_status[0] = 0x80;
 
+	m92_irq_vectorbase = 0;
 	m92_sprite_buffer_busy = 0x80;
 	m92_sprite_buffer_timer = 0;
 	PalBank	= 0;
@@ -1684,7 +1680,7 @@ static INT32 RomLoad(INT32 v33off, INT32 gfxlen0, INT32 gfxlen1, INT32 gfxtype1,
 	return 0;
 }
 
-static INT32 DrvInit(INT32 (*pRomLoadCallback)(), const UINT8 *sound_decrypt_table, INT32 type, INT32 vectorbase, INT32 gfxlen1, INT32 gfxlen2)
+static INT32 DrvInit(INT32 (*pRomLoadCallback)(), const UINT8 *sound_decrypt_table, INT32 type, INT32 gfxlen1, INT32 gfxlen2)
 {
 	Mem = NULL;
 	MemIndex(gfxlen1, gfxlen2);
@@ -1751,7 +1747,7 @@ static INT32 DrvInit(INT32 (*pRomLoadCallback)(), const UINT8 *sound_decrypt_tab
 	graphics_mask[0] = ((gfxlen1 * 2) - 1) / (8 * 8);
 	graphics_mask[1] = ((gfxlen2 * 2) - 1) / (16 * 16);
 
-	m92_irq_vectorbase = vectorbase;
+	m92_irq_vectorbase = 0x00;
 
 	BurnYM2151Init(3579545);
 	YM2151SetIrqHandler(0, &m92YM2151IRQHandler);
@@ -1784,6 +1780,7 @@ static INT32 DrvExit()
 	
 	nPrevScreenPos = 0;
 	m92_kludge = 0;
+	m92_raster_irq_position = 0;
 	nScreenOffsets[0] = nScreenOffsets[1] = 0;
 
 	return 0;
@@ -1890,7 +1887,7 @@ static void draw_layer_byline(INT32 start, INT32 finish, INT32 layer, INT32 forc
 		UINT8  *pri  = RamPrioBitmap + (sy * nScreenWidth);
 
 		INT32 scrollx_1 = scrollx;
-		if (ptr->enable_rowscroll) scrollx_1 += BURN_ENDIAN_SWAP_INT16(ptr->scroll[(sy+scrolly)&0x1ff]);
+		if (ptr->enable_rowscroll) scrollx_1 += BURN_ENDIAN_SWAP_INT16(ptr->scroll[(sy+scrolly)&0x1ff]) - ((m92_kludge==4) ? 24 : 0);
 		INT32 scrolly_1 = (scrolly + sy) & 0x1ff;
 		INT32 romoff_1 = (scrolly_1 & 0x07) << 3;
 
@@ -2017,9 +2014,9 @@ static void scanline_interrupts(INT32 prev, INT32 segment, INT32 scanline)
 		memcpy (DrvSprBuf, DrvSprRAM, 0x800);
 		if (m92_kludge != 4) nCyclesDone[0] += VezRun(347); // nbbatman: fix for random lockups during gameplay
 		m92_sprite_buffer_busy = 0x80;
-		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 4)/4, VEZ_IRQSTATUS_ACK);
+		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 4)/4, CPU_IRQSTATUS_ACK);
 		nCyclesDone[0] += VezRun(10);
-		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 4)/4, VEZ_IRQSTATUS_NONE);
+		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 4)/4, CPU_IRQSTATUS_NONE);
 		if (m92_kludge != 4) nCyclesDone[0] += VezRun(segment - (VezTotalCycles() - prev));
 
 		m92_sprite_buffer_timer = 0;
@@ -2033,9 +2030,9 @@ static void scanline_interrupts(INT32 prev, INT32 segment, INT32 scanline)
 			nPrevScreenPos = (scanline-8)+1;
 		}
 
-		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 8)/4, VEZ_IRQSTATUS_ACK);
+		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 8)/4, CPU_IRQSTATUS_ACK);
 		nCyclesDone[0] += VezRun((m92_kludge == 4) ? 20 : 10); // nbbatman: gets rid of flashes in intro sequence
-		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 8)/4, VEZ_IRQSTATUS_NONE);
+		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 8)/4, CPU_IRQSTATUS_NONE);
 
 	}
 	else if (scanline == 248) // vblank
@@ -2050,10 +2047,9 @@ static void scanline_interrupts(INT32 prev, INT32 segment, INT32 scanline)
 		}
 
 		if (m92_kludge == 4) nCyclesDone[0] += VezRun(1200); // nbbatman: gets rid of flash after IREM logo fades out
-		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 0)/4, VEZ_IRQSTATUS_ACK);
+		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 0)/4, CPU_IRQSTATUS_ACK);
 		nCyclesDone[0] += VezRun(10);
-		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 0)/4, VEZ_IRQSTATUS_NONE);
-
+		VezSetIRQLineAndVector(0, (m92_irq_vectorbase + 0)/4, CPU_IRQSTATUS_NONE);
 	}
 }
 
@@ -2067,7 +2063,7 @@ static INT32 DrvFrame()
 
 	compile_inputs();
 
-	INT32 multiplier=3;
+	INT32 multiplier=8;
 	nInterleave = 256*multiplier;
 
 	// overclocking...
@@ -2075,10 +2071,6 @@ static INT32 DrvFrame()
 	nCyclesTotal[0] = (INT32)((INT64)(9000000 / 60) * nBurnCPUSpeedAdjust / 0x0100);
 	nCyclesTotal[1] = (INT32)((INT64)(7159090 / 60) * nBurnCPUSpeedAdjust / 0x0100);
 	nCyclesDone[0] = nCyclesDone[1] = 0;
-
-	if (pBurnSoundOut) {
-		memset (pBurnSoundOut, 0, nBurnSoundLen * 2 * sizeof(INT16));
-	}
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
@@ -2163,7 +2155,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 {
 	if (pnMin)
 	{
-		*pnMin =  0x029671;
+		*pnMin =  0x029737;
 	}
 
 	struct BurnArea ba;
@@ -2205,6 +2197,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		SCAN_VAR(m92_sprite_list);
 		SCAN_VAR(m92_sprite_buffer_busy);
 		SCAN_VAR(m92_sprite_buffer_timer);
+		SCAN_VAR(m92_irq_vectorbase);
 
 		if (nAction & ACB_WRITE) {
 			VezOpen(1);
@@ -2264,7 +2257,7 @@ static INT32 hookRomLoad()
 
 static INT32 hookInit()
 {
-	return DrvInit(hookRomLoad, hook_decryption_table, 1, 0x80, 0x100000, 0x400000);
+	return DrvInit(hookRomLoad, hook_decryption_table, 1, 0x100000, 0x400000);
 }
 
 struct BurnDriver BurnDrvHook = {
@@ -2423,7 +2416,7 @@ static INT32 PpanInit()
 {
 	m92_kludge = 3;
 	nScreenOffsets[1] = 120; // ?
-	return DrvInit(ppanRomLoad, NULL, 1, 0x80, 0x100000, 0x400000);
+	return DrvInit(ppanRomLoad, NULL, 1, 0x100000, 0x400000);
 }
 
 struct BurnDriver BurnDrvPpan = {
@@ -2471,7 +2464,7 @@ static INT32 inthuntRomLoad()
 
 static INT32 inthuntInit()
 {
-	return DrvInit(inthuntRomLoad, inthunt_decryption_table, 1, 0x80, 0x200000, 0x400000);
+	return DrvInit(inthuntRomLoad, inthunt_decryption_table, 1, 0x200000, 0x400000);
 }
 
 struct BurnDriver BurnDrvInthunt = {
@@ -2595,7 +2588,7 @@ static INT32 rtypeleoRomLoad()
 
 static INT32 rtypeleoInit()
 {
-	return DrvInit(rtypeleoRomLoad, rtypeleo_decryption_table, 1, 0x20, 0x200000, 0x400000);
+	return DrvInit(rtypeleoRomLoad, rtypeleo_decryption_table, 1, 0x200000, 0x400000);
 }
 
 struct BurnDriver BurnDrvRtypeleo = {
@@ -2681,7 +2674,7 @@ static INT32 bmasterRomLoad()
 
 static INT32 bmasterInit()
 {
-	return DrvInit(bmasterRomLoad, bomberman_decryption_table, 1, 0x80, 0x100000, 0x200000);
+	return DrvInit(bmasterRomLoad, bomberman_decryption_table, 1, 0x100000, 0x200000);
 }
 
 struct BurnDriver BurnDrvBmaster = {
@@ -2762,7 +2755,7 @@ STD_ROM_FN(mysticri)
 
 static INT32 mysticriInit()
 {
-	return DrvInit(bmasterRomLoad, mysticri_decryption_table, 1, 0x80, 0x100000, 0x200000);
+	return DrvInit(bmasterRomLoad, mysticri_decryption_table, 1, 0x100000, 0x200000);
 }
 
 struct BurnDriver BurnDrvMysticri = {
@@ -2817,13 +2810,13 @@ struct BurnDriver BurnDrvGunhohki = {
 // Mystic Riders (bootleg?)
 
 static struct BurnRomInfo mysticribRomDesc[] = {
-	{ "h0",			0x040000, 0xe38c1f56, 1 | BRF_PRG | BRF_ESS }, //  0 V33 Code
-	{ "l0",			0x040000, 0x77846e48, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "h1",			0x010000, 0x4dcb085b, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "l1",			0x010000, 0x88df4f70, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "h0",				0x040000, 0xe38c1f56, 1 | BRF_PRG | BRF_ESS }, //  0 V33 Code
+	{ "l0",				0x040000, 0x77846e48, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "h1",				0x010000, 0x4dcb085b, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "l1",				0x010000, 0x88df4f70, 1 | BRF_PRG | BRF_ESS }, //  3
 
-	{ "sh0",		0x010000, 0xfc7221ee, 2 | BRF_PRG | BRF_ESS }, //  4 V30 Code
-	{ "sl0",		0x010000, 0x65c809e6, 2 | BRF_PRG | BRF_ESS }, //  5
+	{ "sh0",			0x010000, 0xfc7221ee, 2 | BRF_PRG | BRF_ESS }, //  4 V30 Code
+	{ "sl0",			0x010000, 0x65c809e6, 2 | BRF_PRG | BRF_ESS }, //  5
 
 	{ "mr-c0.bin",		0x040000, 0x872a8fad, 3 | BRF_GRA },           //  6 Background Tiles
 	{ "mr-c1.bin",		0x040000, 0xd2ffb27a, 3 | BRF_GRA },           //  7
@@ -2886,7 +2879,7 @@ static INT32 gunforceRomLoad()
 
 static INT32 gunforceInit()
 {
-	return DrvInit(gunforceRomLoad, gunforce_decryption_table, 1, 0x80, 0x100000, 0x100000);
+	return DrvInit(gunforceRomLoad, gunforce_decryption_table, 1, 0x100000, 0x100000);
 }
 
 struct BurnDriver BurnDrvGunforce = {
@@ -3010,7 +3003,7 @@ static INT32 uccopsRomLoad()
 
 static INT32 uccopsInit()
 {
-	return DrvInit(uccopsRomLoad, dynablaster_decryption_table, 1, 0x80, 0x200000, 0x400000);
+	return DrvInit(uccopsRomLoad, dynablaster_decryption_table, 1, 0x200000, 0x400000);
 }
 
 struct BurnDriver BurnDrvUccops = {
@@ -3174,7 +3167,7 @@ static INT32 gunforc2Init()
 {
 	INT32 nRet;
 
-	nRet = DrvInit(gunforc2RomLoad, lethalth_decryption_table, 1, 0x80, 0x200000, 0x400000);
+	nRet = DrvInit(gunforc2RomLoad, lethalth_decryption_table, 1, 0x200000, 0x400000);
 
 	if (nRet == 0) {
 		memcpy (DrvV33ROM + 0x80000, DrvV33ROM + 0x100000, 0x20000);
@@ -3264,7 +3257,8 @@ static INT32 nbbatmanInit()
 	INT32 nRet;
 
 	m92_kludge = 4;
-	nRet = DrvInit(gunforc2RomLoad, leagueman_decryption_table, 1, 0x80, 0x200000, 0x400000);
+
+	nRet = DrvInit(gunforc2RomLoad, leagueman_decryption_table, 1, 0x200000, 0x400000);
 
 	if (nRet == 0) {
 		memcpy (DrvV33ROM + 0x80000, DrvV33ROM + 0x100000, 0x20000);
@@ -3395,7 +3389,7 @@ static INT32 lethalthRomLoad()
 
 static INT32 lethalthInit()
 {
-	return DrvInit(lethalthRomLoad, lethalth_decryption_table, 0, 0x20, 0x100000, 0x100000);
+	return DrvInit(lethalthRomLoad, lethalth_decryption_table, 0, 0x100000, 0x100000);
 }
 
 struct BurnDriver BurnDrvLethalth = {
@@ -3485,7 +3479,7 @@ static INT32 dsoccr94jRomLoad()
 
 static INT32 dsoccr94jInit()
 {
-	return DrvInit(dsoccr94jRomLoad, dsoccr94_decryption_table, 1, 0x80, 0x400000, 0x400000);
+	return DrvInit(dsoccr94jRomLoad, dsoccr94_decryption_table, 1, 0x400000, 0x400000);
 }
 
 struct BurnDriver BurnDrvDsoccr94j = {
@@ -3539,7 +3533,7 @@ static INT32 ssoldierInit()
 {
 	m92_kludge = 1;
 
-	return DrvInit(ssoldierRomLoad, psoldier_decryption_table, 1, 0x20, 0x100000, 0x800000);
+	return DrvInit(ssoldierRomLoad, psoldier_decryption_table, 1, 0x100000, 0x800000);
 }
 
 struct BurnDriver BurnDrvSsoldier = {
@@ -3595,7 +3589,7 @@ struct BurnDriver BurnDrvPsoldier = {
 };
 
 
-// Major Title 2 (World)
+// Major Title 2 (World, set 1)
 
 static struct BurnRomInfo majtitl2RomDesc[] = {
 	{ "mt2-h0-b.5m",	0x040000, 0xb163b12e, 1 | BRF_PRG | BRF_ESS }, //  0 V33 Code
@@ -3603,22 +3597,22 @@ static struct BurnRomInfo majtitl2RomDesc[] = {
 	{ "is-h1.5l",		0x040000, 0x9ba8e1f2, 1 | BRF_PRG | BRF_ESS }, //  2
 	{ "is-l1.5j",		0x040000, 0xe4e00626, 1 | BRF_PRG | BRF_ESS }, //  3
 
-	{ "mt2sh0",		0x010000, 0x1ecbea43, 2 | BRF_PRG | BRF_ESS }, //  4 V30 Code
-	{ "mt2sl0",		0x010000, 0x8fd5b531, 2 | BRF_PRG | BRF_ESS }, //  5
+	{ "mt2-sh0-.ic14",	0x010000, 0x1ecbea43, 2 | BRF_PRG | BRF_ESS }, //  4 V30 Code
+	{ "mt2-sl0-.ic17",	0x010000, 0x8fd5b531, 2 | BRF_PRG | BRF_ESS }, //  5
 
-	{ "c0",			0x040000, 0x7e61e4b5, 3 | BRF_GRA },           //  6 Background Tiles
-	{ "c1",			0x040000, 0x0a667564, 3 | BRF_GRA },           //  7
-	{ "c2",			0x040000, 0x5eb44312, 3 | BRF_GRA },           //  8
-	{ "c3",			0x040000, 0xf2866294, 3 | BRF_GRA },           //  9
+	{ "hr0.ic9",		0x040000, 0x7e61e4b5, 3 | BRF_GRA },           //  6 Background Tiles
+	{ "hr1.ic10",		0x040000, 0x0a667564, 3 | BRF_GRA },           //  7
+	{ "hr2.ic11",		0x040000, 0x5eb44312, 3 | BRF_GRA },           //  8
+	{ "hr3.ic12",		0x040000, 0xf2866294, 3 | BRF_GRA },           //  9
 
-	{ "k30",		0x100000, 0x8c9a2678, 4 | BRF_GRA },           // 10 Sprites
-	{ "k31",		0x100000, 0x5455df78, 4 | BRF_GRA },           // 11
-	{ "k32",		0x100000, 0x3a258c41, 4 | BRF_GRA },           // 12
-	{ "k33",		0x100000, 0xc1e91a14, 4 | BRF_GRA },           // 13
+	{ "k30.ic42",		0x100000, 0x8c9a2678, 4 | BRF_GRA },           // 10 Sprites
+	{ "k31.ic43",		0x100000, 0x5455df78, 4 | BRF_GRA },           // 11
+	{ "k32.ic44",		0x100000, 0x3a258c41, 4 | BRF_GRA },           // 12
+	{ "k33.ic45",		0x100000, 0xc1e91a14, 4 | BRF_GRA },           // 13
 
-	{ "da",			0x080000, 0x713b9e9f, 5 | BRF_SND },           // 14 Irem GA20 Samples
+	{ "k0d.ic8",		0x080000, 0x713b9e9f, 5 | BRF_SND },           // 14 Irem GA20 Samples
 
-	{ "mt2eep",		0x000800, 0x208af971, 6 | BRF_PRG | BRF_ESS }, // 15 EEPROM data
+	{ "mt2eep",			0x000800, 0x208af971, 6 | BRF_PRG | BRF_ESS }, // 15 EEPROM data
 
 	{ "pal16l8-m92-a-3m.ic11",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 16 plds
 	{ "pal16l8-m92-a-7j.ic41",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 17
@@ -3638,7 +3632,7 @@ static INT32 majtitl2RomLoad()
 static INT32 majtitl2Init()
 {
 	m92_kludge = 2;
-	return DrvInit(majtitl2RomLoad, majtitl2_decryption_table, 1, 0x80, 0x100000, 0x400000);
+	return DrvInit(majtitl2RomLoad, majtitl2_decryption_table, 1, 0x100000, 0x400000);
 }
 
 struct BurnDriver BurnDrvMajtitl2 = {
@@ -3652,30 +3646,129 @@ struct BurnDriver BurnDrvMajtitl2 = {
 };
 
 
+// Major Title 2 (World, set 2)
+
+static struct BurnRomInfo majtitl2bRomDesc[] = {
+	{ "mt2-h0-e.ic34",	0x040000, 0xf6c3a28c, 1 | BRF_PRG | BRF_ESS }, //  0 V33 Code
+	{ "mt2-l0-e.ic31",	0x040000, 0x0a061384, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "mt2-h1-.ic33",	0x040000, 0x9ba8e1f2, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "mt2-l1-.ic32",	0x040000, 0xe4e00626, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "mt2-sh0-.ic14",	0x010000, 0x1ecbea43, 2 | BRF_PRG | BRF_ESS }, //  4 V30 Code
+	{ "mt2-sl0-.ic17",	0x010000, 0x8fd5b531, 2 | BRF_PRG | BRF_ESS }, //  5
+
+	{ "hr0.ic9",		0x040000, 0x7e61e4b5, 3 | BRF_GRA },           //  6 Background Tiles
+	{ "hr1.ic10",		0x040000, 0x0a667564, 3 | BRF_GRA },           //  7
+	{ "hr2.ic11",		0x040000, 0x5eb44312, 3 | BRF_GRA },           //  8
+	{ "hr3.ic12",		0x040000, 0xf2866294, 3 | BRF_GRA },           //  9
+
+	{ "k30.ic42",		0x100000, 0x8c9a2678, 4 | BRF_GRA },           // 10 Sprites
+	{ "k31.ic43",		0x100000, 0x5455df78, 4 | BRF_GRA },           // 11
+	{ "k32.ic44",		0x100000, 0x3a258c41, 4 | BRF_GRA },           // 12
+	{ "k33.ic45",		0x100000, 0xc1e91a14, 4 | BRF_GRA },           // 13
+
+	{ "k0d.ic8",		0x080000, 0x713b9e9f, 5 | BRF_SND },           // 14 Irem GA20 Samples
+
+	{ "mt2eep",			0x000800, 0x208af971, 6 | BRF_PRG | BRF_ESS }, // 15 EEPROM data
+
+	{ "pal16l8-m92-a-3m.ic11",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 16 plds
+	{ "pal16l8-m92-a-7j.ic41",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 17
+	{ "pal16l8-m92-a-9j.ic51",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 18
+	{ "pal16l8-m92-b-2l.ic7",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 19
+	{ "pal16l8-m92-b-7h.ic47",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 20
+};
+
+STD_ROM_PICK(majtitl2b)
+STD_ROM_FN(majtitl2b)
+
+struct BurnDriver BurnDrvMajtitl2b = {
+	"majtitl2b", "majtitl2", NULL, NULL, "1992",
+	"Major Title 2 (World, set 2)\0", NULL, "Irem", "M92",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_SPORTSMISC, 0,
+	NULL, majtitl2bRomInfo, majtitl2bRomName, NULL, NULL, p4CommonInputInfo, Majtitl2DIPInfo,
+	majtitl2Init, DrvExit, DrvFrame, DrvReDraw, DrvScan, &bRecalcPalette, 0x800,
+	320, 240, 4, 3
+};
+
+
+// Major Title 2 (World, set 1, alt sound CPU)
+// this set matches the 'majtitl2' except for the soundcpu roms, which are for a different CPU
+
+static struct BurnRomInfo majtitl2aRomDesc[] = {
+	{ "mt2-h0-.5m",		0x040000, 0xb163b12e, 1 | BRF_PRG | BRF_ESS }, //  0 V33 Code
+	{ "mt2-l0-.5f",		0x040000, 0x6f3b5d9d, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "mt2-h1-.5l",		0x040000, 0x9ba8e1f2, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "mt2-l1-.5j",		0x040000, 0xe4e00626, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "mt2sh0-a",		0x010000, 0x50f076e5, 2 | BRF_PRG | BRF_ESS }, //  4 V30 Code
+	{ "mt2sl0-a",		0x010000, 0xf4ecd7b5, 2 | BRF_PRG | BRF_ESS }, //  5
+
+	{ "hr0.ic9",		0x040000, 0x7e61e4b5, 3 | BRF_GRA },           //  6 Background Tiles
+	{ "hr1.ic10",		0x040000, 0x0a667564, 3 | BRF_GRA },           //  7
+	{ "hr2.ic11",		0x040000, 0x5eb44312, 3 | BRF_GRA },           //  8
+	{ "hr3.ic12",		0x040000, 0xf2866294, 3 | BRF_GRA },           //  9
+
+	{ "k30.ic42",		0x100000, 0x8c9a2678, 4 | BRF_GRA },           // 10 Sprites
+	{ "k31.ic43",		0x100000, 0x5455df78, 4 | BRF_GRA },           // 11
+	{ "k32.ic44",		0x100000, 0x3a258c41, 4 | BRF_GRA },           // 12
+	{ "k33.ic45",		0x100000, 0xc1e91a14, 4 | BRF_GRA },           // 13
+
+	{ "k0d.ic8",		0x080000, 0x713b9e9f, 5 | BRF_SND },           // 14 Irem GA20 Samples
+
+	{ "mt2eep",			0x000800, 0x208af971, 6 | BRF_PRG | BRF_ESS }, // 15 EEPROM data
+
+	{ "pal16l8-m92-a-3m.ic11",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 16 plds
+	{ "pal16l8-m92-a-7j.ic41",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 17
+	{ "pal16l8-m92-a-9j.ic51",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 18
+	{ "pal16l8-m92-b-2l.ic7",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 19
+	{ "pal16l8-m92-b-7h.ic47",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 20
+};
+
+STD_ROM_PICK(majtitl2a)
+STD_ROM_FN(majtitl2a)
+
+static INT32 majtitl2aInit()
+{
+	m92_kludge = 2;
+	return DrvInit(majtitl2RomLoad, mysticri_decryption_table, 1, 0x100000, 0x400000);
+}
+
+struct BurnDriver BurnDrvMajtitl2a = {
+	"majtitl2a", "majtitl2", NULL, NULL, "1992",
+	"Major Title 2 (World, set 1, alt sound CPU)\0", NULL, "Irem", "M92",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M92, GBF_SPORTSMISC, 0,
+	NULL, majtitl2aRomInfo, majtitl2aRomName, NULL, NULL, p4CommonInputInfo, Majtitl2DIPInfo,
+	majtitl2aInit, DrvExit, DrvFrame, DrvReDraw, DrvScan, &bRecalcPalette, 0x800,
+	320, 240, 4, 3
+};
+
+
 // Major Title 2 (Japan)
 
 static struct BurnRomInfo majtitl2jRomDesc[] = {
-	{ "mt2-h0",		0x040000, 0x8a8d71ad, 1 | BRF_PRG | BRF_ESS }, //  0 V33 Code
-	{ "mt2-l1",		0x040000, 0xdd4fff51, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "mt2-h0",			0x040000, 0x8a8d71ad, 1 | BRF_PRG | BRF_ESS }, //  0 V33 Code
+	{ "mt2-l1",			0x040000, 0xdd4fff51, 1 | BRF_PRG | BRF_ESS }, //  1
 	{ "is-h1.5l",		0x040000, 0x9ba8e1f2, 1 | BRF_PRG | BRF_ESS }, //  2
 	{ "is-l1.5j",		0x040000, 0xe4e00626, 1 | BRF_PRG | BRF_ESS }, //  3
 
-	{ "mt2sh0",		0x010000, 0x1ecbea43, 2 | BRF_PRG | BRF_ESS }, //  4 V30 Code
-	{ "mt2sl0",		0x010000, 0x8fd5b531, 2 | BRF_PRG | BRF_ESS }, //  5
+	{ "mt2-sh0-.ic14",	0x010000, 0x1ecbea43, 2 | BRF_PRG | BRF_ESS }, //  4 V30 Code
+	{ "mt2-sl0-.ic17",	0x010000, 0x8fd5b531, 2 | BRF_PRG | BRF_ESS }, //  5
 
-	{ "c0",			0x040000, 0x7e61e4b5, 3 | BRF_GRA },           //  6 Background Tiles
-	{ "c1",			0x040000, 0x0a667564, 3 | BRF_GRA },           //  7
-	{ "c2",			0x040000, 0x5eb44312, 3 | BRF_GRA },           //  8
-	{ "c3",			0x040000, 0xf2866294, 3 | BRF_GRA },           //  9
+	{ "hr0.ic9",		0x040000, 0x7e61e4b5, 3 | BRF_GRA },           //  6 Background Tiles
+	{ "hr1.ic10",		0x040000, 0x0a667564, 3 | BRF_GRA },           //  7
+	{ "hr2.ic11",		0x040000, 0x5eb44312, 3 | BRF_GRA },           //  8
+	{ "hr3.ic12",		0x040000, 0xf2866294, 3 | BRF_GRA },           //  9
 
-	{ "k30",		0x100000, 0x8c9a2678, 4 | BRF_GRA },           // 10 Sprites
-	{ "k31",		0x100000, 0x5455df78, 4 | BRF_GRA },           // 11
-	{ "k32",		0x100000, 0x3a258c41, 4 | BRF_GRA },           // 12
-	{ "k33",		0x100000, 0xc1e91a14, 4 | BRF_GRA },           // 13
+	{ "k30.ic42",		0x100000, 0x8c9a2678, 4 | BRF_GRA },           // 10 Sprites
+	{ "k31.ic43",		0x100000, 0x5455df78, 4 | BRF_GRA },           // 11
+	{ "k32.ic44",		0x100000, 0x3a258c41, 4 | BRF_GRA },           // 12
+	{ "k33.ic45",		0x100000, 0xc1e91a14, 4 | BRF_GRA },           // 13
 
-	{ "da",			0x080000, 0x713b9e9f, 5 | BRF_SND },           // 14 Irem GA20 Samples
+	{ "k0d.ic8",		0x080000, 0x713b9e9f, 5 | BRF_SND },           // 14 Irem GA20 Samples
 
-	{ "mt2eep",		0x000800, 0x208af971, 6 | BRF_PRG | BRF_ESS }, // 15 EEPROM data
+	{ "mt2eep",			0x000800, 0x208af971, 6 | BRF_PRG | BRF_ESS }, // 15 EEPROM data
 
 	{ "pal16l8-m92-a-3m.ic11",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 16 plds
 	{ "pal16l8-m92-a-7j.ic41",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 17
@@ -3706,22 +3799,22 @@ static struct BurnRomInfo skingameRomDesc[] = {
 	{ "is-h1.5l",		0x040000, 0x9ba8e1f2, 1 | BRF_PRG | BRF_ESS }, //  2
 	{ "is-l1.5j",		0x040000, 0xe4e00626, 1 | BRF_PRG | BRF_ESS }, //  3
 
-	{ "mt2sh0",		0x010000, 0x1ecbea43, 2 | BRF_PRG | BRF_ESS }, //  4 V30 Code
-	{ "mt2sl0",		0x010000, 0x8fd5b531, 2 | BRF_PRG | BRF_ESS }, //  5
+	{ "mt2-sh0-.ic14",	0x010000, 0x1ecbea43, 2 | BRF_PRG | BRF_ESS }, //  4 V30 Code
+	{ "mt2-sl0-.ic17",	0x010000, 0x8fd5b531, 2 | BRF_PRG | BRF_ESS }, //  5
 
-	{ "c0",			0x040000, 0x7e61e4b5, 3 | BRF_GRA },           //  6 Background Tiles
-	{ "c1",			0x040000, 0x0a667564, 3 | BRF_GRA },           //  7
-	{ "c2",			0x040000, 0x5eb44312, 3 | BRF_GRA },           //  8
-	{ "c3",			0x040000, 0xf2866294, 3 | BRF_GRA },           //  9
+	{ "hr0.ic9",		0x040000, 0x7e61e4b5, 3 | BRF_GRA },           //  6 Background Tiles
+	{ "hr1.ic10",		0x040000, 0x0a667564, 3 | BRF_GRA },           //  7
+	{ "hr2.ic11",		0x040000, 0x5eb44312, 3 | BRF_GRA },           //  8
+	{ "hr3.ic12",		0x040000, 0xf2866294, 3 | BRF_GRA },           //  9
 
-	{ "k30",		0x100000, 0x8c9a2678, 4 | BRF_GRA },           // 10 Sprites
-	{ "k31",		0x100000, 0x5455df78, 4 | BRF_GRA },           // 11
-	{ "k32",		0x100000, 0x3a258c41, 4 | BRF_GRA },           // 12
-	{ "k33",		0x100000, 0xc1e91a14, 4 | BRF_GRA },           // 13
+	{ "k30.ic42",		0x100000, 0x8c9a2678, 4 | BRF_GRA },           // 10 Sprites
+	{ "k31.ic43",		0x100000, 0x5455df78, 4 | BRF_GRA },           // 11
+	{ "k32.ic44",		0x100000, 0x3a258c41, 4 | BRF_GRA },           // 12
+	{ "k33.ic45",		0x100000, 0xc1e91a14, 4 | BRF_GRA },           // 13
 
-	{ "da",			0x080000, 0x713b9e9f, 5 | BRF_SND },           // 14 Irem GA20 Samples
+	{ "k0d.ic8",		0x080000, 0x713b9e9f, 5 | BRF_SND },           // 14 Irem GA20 Samples
 
-	{ "mt2eep",		0x000800, 0x208af971, 6 | BRF_PRG | BRF_ESS }, // 15 EEPROM data
+	{ "mt2eep",			0x000800, 0x208af971, 6 | BRF_PRG | BRF_ESS }, // 15 EEPROM data
 
 	{ "pal16l8-m92-a-3m.ic11",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 16 plds
 	{ "pal16l8-m92-a-7j.ic41",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 17
@@ -3752,22 +3845,22 @@ static struct BurnRomInfo skingame2RomDesc[] = {
 	{ "is-h1.5l",		0x040000, 0x9ba8e1f2, 1 | BRF_PRG | BRF_ESS }, //  2
 	{ "is-l1.5j",		0x040000, 0xe4e00626, 1 | BRF_PRG | BRF_ESS }, //  3
 
-	{ "mt2sh0",		0x010000, 0x1ecbea43, 2 | BRF_PRG | BRF_ESS }, //  4 V30 Code
-	{ "mt2sl0",		0x010000, 0x8fd5b531, 2 | BRF_PRG | BRF_ESS }, //  5
+	{ "mt2-sh0-.ic14",	0x010000, 0x1ecbea43, 2 | BRF_PRG | BRF_ESS }, //  4 V30 Code
+	{ "mt2-sl0-.ic17",	0x010000, 0x8fd5b531, 2 | BRF_PRG | BRF_ESS }, //  5
 
-	{ "c0",			0x040000, 0x7e61e4b5, 3 | BRF_GRA },           //  6 Background Tiles
-	{ "c1",			0x040000, 0x0a667564, 3 | BRF_GRA },           //  7
-	{ "c2",			0x040000, 0x5eb44312, 3 | BRF_GRA },           //  8
-	{ "c3",			0x040000, 0xf2866294, 3 | BRF_GRA },           //  9
+	{ "hr0.ic9",		0x040000, 0x7e61e4b5, 3 | BRF_GRA },           //  6 Background Tiles
+	{ "hr1.ic10",		0x040000, 0x0a667564, 3 | BRF_GRA },           //  7
+	{ "hr2.ic11",		0x040000, 0x5eb44312, 3 | BRF_GRA },           //  8
+	{ "hr3.ic12",		0x040000, 0xf2866294, 3 | BRF_GRA },           //  9
 
-	{ "k30",		0x100000, 0x8c9a2678, 4 | BRF_GRA },           // 10 Sprites
-	{ "k31",		0x100000, 0x5455df78, 4 | BRF_GRA },           // 11
-	{ "k32",		0x100000, 0x3a258c41, 4 | BRF_GRA },           // 12
-	{ "k33",		0x100000, 0xc1e91a14, 4 | BRF_GRA },           // 13
+	{ "k30.ic42",		0x100000, 0x8c9a2678, 4 | BRF_GRA },           // 10 Sprites
+	{ "k31.ic43",		0x100000, 0x5455df78, 4 | BRF_GRA },           // 11
+	{ "k32.ic44",		0x100000, 0x3a258c41, 4 | BRF_GRA },           // 12
+	{ "k33.ic45",		0x100000, 0xc1e91a14, 4 | BRF_GRA },           // 13
 
-	{ "da",			0x080000, 0x713b9e9f, 5 | BRF_SND },           // 14 Irem GA20 Samples
+	{ "k0d.ic8",		0x080000, 0x713b9e9f, 5 | BRF_SND },           // 14 Irem GA20 Samples
 
-	{ "mt2eep",		0x000800, 0x208af971, 6 | BRF_PRG | BRF_ESS }, // 15 EEPROM data
+	{ "mt2eep",			0x000800, 0x208af971, 6 | BRF_PRG | BRF_ESS }, // 15 EEPROM data
 
 	{ "pal16l8-m92-a-3m.ic11",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 16 plds
 	{ "pal16l8-m92-a-7j.ic41",	0x000104, 0x00000000, 7 | BRF_NODUMP }, // 17

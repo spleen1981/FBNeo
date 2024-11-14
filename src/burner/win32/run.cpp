@@ -150,8 +150,11 @@ static int RunFrame(int bDraw, int bPause)
 				if (ReplayInput()) {			// Read input from file
 					bAltPause = 1;
 					bRunPause = 1;
+					// clear audio buffer here. -dink
+					AudBlankSound();
 					MenuEnableItems();
 					InputSetCooperativeLevel(false, false);
+					return 0;
 				}
 			} else {
 				GetInput(true);					// Update inputs
@@ -179,6 +182,14 @@ static int RunFrame(int bDraw, int bPause)
 				nDoFPS = nFramesRendered + 30;
 			}
 		}
+
+#ifdef INCLUDE_AVI_RECORDING
+		if (nAviStatus) {
+			if (AviRecordFrame(bDraw)) {
+				AviStop();
+			}
+		}
+#endif
 	}
 
 	bPrevPause = bPause;

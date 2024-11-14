@@ -1,7 +1,7 @@
 #===============================================================================
 #                           FINAL BURN ALPHA QT
 #===============================================================================
-QT += widgets multimedia
+QT += widgets multimedia opengl
 TARGET = fbaqt
 
 linux:QT += x11extras
@@ -28,6 +28,7 @@ DRV_SNES        = true
 DRV_TAITO       = true
 DRV_TOAPLAN     = true
 DRV_PSIKYO      = true
+DRV_MIDWAY      = true
 
 #===============================================================================
 #                             DEPENDENCIES
@@ -43,6 +44,11 @@ GEN = $$SRC/dep/generated
 # We need ld
 FBA_LD = ld
 DEFINES += FBA_DEBUG
+
+#-------------------------------------------------------------------------------
+# Dynamic recompilers
+#-------------------------------------------------------------------------------
+DRC_MIPS3_X64   = true
 
 #-------------------------------------------------------------------------------
 # Additional include paths
@@ -96,15 +102,9 @@ QMAKE_CFLAGS += -w
 
 
 #-------------------------------------------------------------------------------
-# C++11, OpenMP (software image flip/rotation)
+# C++11
 #-------------------------------------------------------------------------------
 CONFIG += c++11
-
-ENABLE_OPENMP = false
-$${ENABLE_OPENMP} {
-    QMAKE_CXXFLAGS += -fopenmp
-    QMAKE_LFLAGS += -fopenmp
-}
 
 #-------------------------------------------------------------------------------
 # src/dep/generated
@@ -192,33 +192,16 @@ M68K_MAKE.target = $$GEN/m68kmake
 M68K_MAKE.depends = $$SRC/cpu/m68k/m68kmake.c GENERATED
 M68K_MAKE.commands = \
     @echo "Compiling Musashi MC680x0 core: m68kmake.c...";     \
-    $$QMAKE_CC $$SRC/cpu/m68k/m68kmake.c -o $$M68K_MAKE.target; \
+    $$QMAKE_CC $$SRC/cpu/m68k/m68kmake.c -I$$SRC/burn -o $$M68K_MAKE.target; \
     $$M68K_MAKE.target $$GEN/ $$SRC/cpu/m68k/m68k_in.c;
 
 # objects
-M68K_OPAC.target = $$GEN/m68kopac.o
-M68K_OPAC.depends = M68K_MAKE
-M68K_OPAC.commands = \
-    @echo "Compiling Musashi MC680x0 core: m68kopac.c...";     \
-    $$QMAKE_CC $$QMAKE_CFLAGS -I$$SRC/cpu/m68k $$GEN/m68kopac.c -c -o $$M68K_OPAC.target;
-
-M68K_OPDM.target = $$GEN/m68kopdm.o
-M68K_OPDM.depends = M68K_MAKE
-M68K_OPDM.commands = \
-    @echo "Compiling Musashi MC680x0 core: m68kopdm.c...";     \
-    $$QMAKE_CC $$QMAKE_CFLAGS -I$$SRC/cpu/m68k $$GEN/m68kopdm.c -c -o $$M68K_OPDM.target;
-
-M68K_OPNZ.target = $$GEN/m68kopnz.o
-M68K_OPNZ.depends = M68K_MAKE
-M68K_OPNZ.commands = \
-    @echo "Compiling Musashi MC680x0 core: m68kopnz.c...";     \
-    $$QMAKE_CC $$QMAKE_CFLAGS -I$$SRC/cpu/m68k $$GEN/m68kopnz.c -c -o $$M68K_OPNZ.target;
 
 M68K_OPS.target = $$GEN/m68kops.o
 M68K_OPS.depends = M68K_MAKE
 M68K_OPS.commands = \
     @echo "Compiling Musashi MC680x0 core: m68kops.c...";     \
-    $$QMAKE_CC $$QMAKE_CFLAGS -I$$SRC/cpu/m68k $$GEN/m68kops.c -c -o $$M68K_OPS.target;
+    $$QMAKE_CC $$QMAKE_CFLAGS -I$$SRC/cpu/m68k -I$$SRC/burn $$GEN/m68kops.c -c -o $$M68K_OPS.target;
 
 M68K_OPS_HEADER.target = $$GEN/m68kops.h
 M68K_OPS_HEADER.depends = M68K_MAKE
@@ -226,11 +209,10 @@ M68K_OPS_HEADER.commands = \
     $$M68K_MAKE.target $$GEN/ $$SRC/cpu/m68k/m68k_in.c;
 
 M68K_LIB.target = $$GEN/libm68kops.o
-M68K_LIB.depends = M68K_MAKE M68K_OPAC M68K_OPDM M68K_OPNZ M68K_OPS M68K_OPS_HEADER
+M68K_LIB.depends = M68K_MAKE M68K_OPS M68K_OPS_HEADER
 M68K_LIB.commands = \
     @echo "Partially linking Musashi MC680x0 core: libm68kops.o...";  \
-    $$FBA_LD -r $$M68K_OPAC.target $$M68K_OPDM.target \
-                $$M68K_OPNZ.target $$M68K_OPS.target -o $$M68K_LIB.target
+    $$FBA_LD -r $$M68K_OPS.target -o $$M68K_LIB.target
 
 
 OBJECTS += $$M68K_LIB.target
@@ -261,73 +243,29 @@ $$DRV_TOAPLAN:DRIVERLIST_PATHS += $$SRC/burn/drv/toaplan
 $$DRV_DATAEAST:DRIVERLIST_PATHS += $$SRC/burn/drv/dataeast
 $$DRV_GALAXIAN:DRIVERLIST_PATHS += $$SRC/burn/drv/galaxian
 $$DRV_MEGADRIVE:DRIVERLIST_PATHS += $$SRC/burn/drv/megadrive
+$$DRV_MIDWAY:DRIVERLIST_PATHS += $$SRC/burn/drv/midway
 
 DRIVERLIST.commands = \
     @echo "Generating driverlist.h";                                \
     perl $$SCRIPTS/gamelist.pl -o $$DRIVERLIST.target $$DRIVERLIST_PATHS;
 
 #===============================================================================
-#                              RUBY CONFIG
+#                              OPENGL DEPS
 #===============================================================================
-LINUX_VIDEO_XV = true
-LINUX_VIDEO_SDL = true
-LINUX_VIDEO_XSHM = true
-LINUX_VIDEO_GLX = true
 
+LINUX_VIDEO_GLX = true
 MACX_VIDEO_CGL = true
-MACX_VIDEO_SDL = true
 
 linux {
-    DEFINES += PLATFORM_X
-
-    $${LINUX_VIDEO_XV} {
-        DEFINES += VIDEO_XV
-        SOURCES += $$SRC/burner/qt/ruby/video/xv.cpp
-        LIBS += -lX11 -lXext -lXv
-    }
-
-    $${LINUX_VIDEO_SDL} {
-        DEFINES += VIDEO_SDL
-        SOURCES += $$SRC/burner/qt/ruby/video/sdl.cpp
-        LIBS *= -lSDL
-    }
-
-    $${LINUX_VIDEO_XSHM} {
-        DEFINES += VIDEO_XSHM
-        SOURCES += $$SRC/burner/qt/ruby/video/xshm.cpp
-        LIBS += -lX11 -lXext
-    }
 
     $${LINUX_VIDEO_GLX} {
-        DEFINES += VIDEO_GLX
-        SOURCES +=  $$SRC/burner/qt/ruby/video/glx.cpp
-        LIBS += -lX11 -lXext -lGL
+        LIBS += -lX11 -lXext -lGLEW -lGL
     }
 }
 
 macx {
-    DEFINES += PLATFORM_MACOSX
-    $${MACX_VIDEO_CGL} {
-        SOURCES +=  $$SRC/burner/qt/ruby/video/cgl.cpp
-        # LIBS +=
-    }
-
-    $${MACX_VIDEO_SDL} {
-        DEFINES += VIDEO_SDL
-        SOURCES += $$SRC/burner/qt/ruby/video/sdl.cpp
-    }
 }
 
-$${LINUX_VIDEO_GLX} | $${MACX_VIDEO_CGL} {
-        HEADERS +=  $$SRC/burner/qt/ruby/video/opengl/bind.hpp \
-                    $$SRC/burner/qt/ruby/video/opengl/main.hpp \
-                    $$SRC/burner/qt/ruby/video/opengl/opengl.hpp \
-                    $$SRC/burner/qt/ruby/video/opengl/program.hpp \
-                    $$SRC/burner/qt/ruby/video/opengl/shaders.hpp \
-                    $$SRC/burner/qt/ruby/video/opengl/surface.hpp \
-                    $$SRC/burner/qt/ruby/video/opengl/texture.hpp \
-                    $$SRC/burner/qt/ruby/video/opengl/utility.hpp
-}
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -571,6 +509,15 @@ $$DRV_TOAPLAN {
         SOURCES += $$files(../../src/burn/drv/toaplan/*.cpp)
 }
 
+#===============================================================================
+#                                MIDWAY DRIVERS
+#===============================================================================
+$$DRV_MIDWAY {
+        message("Midway drivers enabled")
+        HEADERS += $$files(../../src/burn/drv/midway/*.h)
+        SOURCES += $$files(../../src/burn/drv/midway/*.cpp)
+}
+
 SOURCES += \
     ../../src/burn/devices/8255ppi.cpp \
     ../../src/burn/devices/8257dma.cpp \
@@ -627,6 +574,7 @@ SOURCES += \
     ../../src/burn/snd/ym2413.c \
     ../../src/burn/snd/ymdeltat.c \
     ../../src/burn/snd/ymf278b.c \
+    ../../src/burn/snd/pokey.cpp \
     ../../src/burn/burn_sound.cpp \
     ../../src/burn/burn.cpp \
     ../../src/burn/cheat.cpp \
@@ -738,7 +686,6 @@ SOURCES += \
     ../../src/burner/qt/progress.cpp \
     ../../src/burner/qt/qaudiointerface.cpp \
     ../../src/burner/qt/qinputinterface.cpp \
-    ../../src/burner/qt/qrubyviewport.cpp \
     ../../src/burner/qt/qutil.cpp \
     ../../src/burner/qt/romdirsdialog.cpp \
     ../../src/burner/qt/rominfodialog.cpp \
@@ -746,8 +693,6 @@ SOURCES += \
     ../../src/burner/qt/selectdialog.cpp \
     ../../src/burner/qt/stringset.cpp \
     ../../src/burner/qt/supportdirsdialog.cpp \
-    ../../src/burner/qt/ruby/implementation.cpp \
-    ../../src/burner/qt/ruby/ruby.cpp \
     ../../src/dep/libs/zlib/adler32.c \
     ../../src/dep/libs/zlib/compress.c \
     ../../src/dep/libs/zlib/crc32.c \
@@ -769,7 +714,20 @@ SOURCES += \
     ../../src/burn/devices/kaneko_tmap.cpp \
     ../../src/burner/qt/inputdialog.cpp \
     ../../src/burner/qt/widgets/hexspinbox.cpp \
-    ../../src/burner/qt/logdialog.cpp
+    ../../src/burner/qt/logdialog.cpp \
+    ../../src/burner/qt/inputsetdialog.cpp \
+    ../../src/burner/qt/oglviewport.cpp \
+    ../../src/intf/video/opengl/vid_opengl.cpp \
+    ../../src/intf/video/opengl/shader.cpp  \
+    ../../src/cpu/mips3/cop0.cpp \
+    ../../src/cpu/mips3/cop1.cpp \
+    ../../src/cpu/mips3/mips3_dasm.cpp \
+    ../../src/cpu/mips3/mips3.cpp \
+    ../../src/cpu/mips3_intf.cpp \
+    ../../src/cpu/adsp2100_intf.cpp \
+    ../../src/cpu/adsp2100/adsp2100.cpp \
+    ../../src/cpu/adsp2100/2100dasm.cpp
+
 
 
 HEADERS += \
@@ -830,6 +788,7 @@ HEADERS += \
     ../../src/burn/snd/ymdeltat.h \
     ../../src/burn/snd/ymf278b.h \
     ../../src/burn/snd/ymz280b.h \
+    ../../src/burn/snd/pokey.h \
     ../../src/burn/burn_sound.h \
     ../../src/burn/burn.h \
     ../../src/burn/burnint.h \
@@ -915,7 +874,6 @@ HEADERS += \
     ../../src/burner/qt/mainwindow.h \
     ../../src/burner/qt/qaudiointerface.h \
     ../../src/burner/qt/qinputinterface.h \
-    ../../src/burner/qt/qrubyviewport.h \
     ../../src/burner/qt/qutil.h \
     ../../src/burner/qt/romdirsdialog.h \
     ../../src/burner/qt/rominfodialog.h \
@@ -923,10 +881,6 @@ HEADERS += \
     ../../src/burner/qt/selectdialog.h \
     ../../src/burner/qt/supportdirsdialog.h \
     ../../src/burner/qt/tchar.h \
-    ../../src/burner/qt/ruby/audio.hpp \
-    ../../src/burner/qt/ruby/input.hpp \
-    ../../src/burner/qt/ruby/ruby.hpp \
-    ../../src/burner/qt/ruby/video.hpp \
     ../../src/dep/libs/zlib/crc32.h \
     ../../src/dep/libs/zlib/deflate.h \
     ../../src/dep/libs/zlib/gzguts.h \
@@ -943,7 +897,57 @@ HEADERS += \
     ../../src/burn/devices/kaneko_tmap.h \
     ../../src/burner/qt/inputdialog.h \
     ../../src/burner/qt/widgets/hexspinbox.h \
-    ../../src/burner/qt/logdialog.h
+    ../../src/burner/qt/logdialog.h \
+    ../../src/burner/qt/inputsetdialog.h \
+    ../../src/burner/qt/oglviewport.h \
+    ../../src/intf/video/opengl/shader.h \
+    ../../src/cpu/mips3/mips3_common.h \
+    ../../src/cpu/mips3/mips3_memory.h \
+    ../../src/cpu/mips3/mips3.h \
+    ../../src/cpu/mips3/mips3_arithm.h \
+    ../../src/cpu/mips3/mips3_bitops.h \
+    ../../src/cpu/mips3/mips3_branch.h \
+    ../../src/cpu/mips3/mips3_misc.h \
+    ../../src/cpu/mips3/mips3_rw.h \
+    ../../src/cpu/mips3/mips3_shift.h \
+    ../../src/cpu/mips3/mipsdef.h \
+    ../../src/cpu/mips3_intf.h \
+    ../../src/cpu/adsp2100_intf.h \
+    ../../src/cpu/adsp2100/adsp2100.h \
+    ../../src/cpu/adsp2100/adsp2100_defs.h \
+    ../../src/cpu/adsp2100/cpuintrf.h
+
+
+#-------------------------------------------------------------------------------
+# MIPS3 x64 recompiler
+#-------------------------------------------------------------------------------
+
+$$DRC_MIPS3_X64 {
+        message("MIPS3 x64 dynarec enabled")
+        DEFINES += \
+            XBYAK_NO_OP_NAMES \
+            MIPS3_X64_DRC
+
+        HEADERS += \
+            ../../src/cpu/mips3/x64/mips3_x64.h \
+            ../../src/cpu/mips3/x64/mips3_x64_arithm.h \
+            ../../src/cpu/mips3/x64/mips3_x64_bitops.h \
+            ../../src/cpu/mips3/x64/mips3_x64_branch.h \
+            ../../src/cpu/mips3/x64/mips3_x64_cop0.h \
+            ../../src/cpu/mips3/x64/mips3_x64_cop1.h \
+            ../../src/cpu/mips3/x64/mips3_x64_defs.h \
+            ../../src/cpu/mips3/x64/mips3_x64_misc.h \
+            ../../src/cpu/mips3/x64/mips3_x64_rw.h \
+            ../../src/cpu/mips3/x64/mips3_x64_shift.h \
+            ../../src/cpu/mips3/x64/xbyak/xbyak.h \
+            ../../src/cpu/mips3/x64/xbyak/xbyak_bin2hex.h \
+            ../../src/cpu/mips3/x64/xbyak/xbyak_mnemonic.h \
+            ../../src/cpu/mips3/x64/xbyak/xbyak_util.h
+
+        SOURCES += \
+            ../../src/cpu/mips3/x64/mips3_x64.cpp
+}
+
 
 #-------------------------------------------------------------------------------
 # Linux only drivers
@@ -965,4 +969,5 @@ FORMS += \
     ../../src/burner/qt/selectdialog.ui \
     ../../src/burner/qt/supportdirsdialog.ui \
     ../../src/burner/qt/inputdialog.ui \
-    ../../src/burner/qt/logdialog.ui
+    ../../src/burner/qt/logdialog.ui \
+    ../../src/burner/qt/inputsetdialog.ui \

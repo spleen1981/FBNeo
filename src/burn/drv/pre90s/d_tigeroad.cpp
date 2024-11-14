@@ -536,9 +536,9 @@ UINT8 __fastcall tigeroad_sample_in(UINT16 port)
 static void TigeroadIRQHandler(INT32, INT32 nStatus)
 {
 	if (nStatus & 1) {
-		ZetSetIRQLine(0xff, ZET_IRQSTATUS_ACK);
+		ZetSetIRQLine(0xff, CPU_IRQSTATUS_ACK);
 	} else {
-		ZetSetIRQLine(0,    ZET_IRQSTATUS_NONE);
+		ZetSetIRQLine(0,    CPU_IRQSTATUS_NONE);
 	}
 }
 
@@ -584,6 +584,8 @@ static INT32 DrvDoReset()
 	if (pBurnSoundOut) { // fix ym2203 junk..
 		memset (pBurnSoundOut, 0, nBurnSoundLen);
 	}
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -692,11 +694,11 @@ static INT32 DrvInit(INT32 (*pInitCallback)())
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
-	SekMapMemory(Drv68KROM,		0x000000, 0x03ffff, SM_ROM);
-	SekMapMemory(DrvSprRAM,		0xfe0800, 0xfe1bff, SM_RAM);
-	SekMapMemory(DrvVidRAM,		0xfec000, 0xfec7ff, SM_RAM);
-	SekMapMemory(DrvPalRAM,		0xff8000, 0xff87ff, SM_ROM);
-	SekMapMemory(Drv68KRAM,		0xffc000, 0xffffff, SM_RAM);
+	SekMapMemory(Drv68KROM,		0x000000, 0x03ffff, MAP_ROM);
+	SekMapMemory(DrvSprRAM,		0xfe0800, 0xfe1bff, MAP_RAM);
+	SekMapMemory(DrvVidRAM,		0xfec000, 0xfec7ff, MAP_RAM);
+	SekMapMemory(DrvPalRAM,		0xff8000, 0xff87ff, MAP_ROM);
+	SekMapMemory(Drv68KRAM,		0xffc000, 0xffffff, MAP_RAM);
 	SekSetWriteByteHandler(0,	tigeroad_write_byte);
 	SekSetWriteWordHandler(0,	tigeroad_write_word);
 	SekSetReadByteHandler(0,	tigeroad_read_byte);
@@ -730,7 +732,11 @@ static INT32 DrvInit(INT32 (*pInitCallback)())
 	BurnTimerAttachZet(3579545);
 	BurnYM2203SetAllRoutes(0, 0.25, BURN_SND_ROUTE_BOTH);
 	BurnYM2203SetAllRoutes(1, 0.25, BURN_SND_ROUTE_BOTH);
-	
+	if (!toramich) { // toramich has a low psg volume by default
+		BurnYM2203SetPSGVolume(0, 0.11);
+		BurnYM2203SetPSGVolume(1, 0.11);
+	}
+
 	if (toramich) {
 		MSM5205Init(0, DrvMSM5205SynchroniseStream, 384000, NULL, MSM5205_SEX_4B, 1);
 		MSM5205SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
@@ -767,12 +773,12 @@ static void draw_sprites()
 
 	for (INT32 offs = (0x500 - 8) / 2; offs >= 0; offs -=4)
 	{
-		INT32 tile_number = source[offs + 0];
+		INT32 tile_number = BURN_ENDIAN_SWAP_INT16(source[offs + 0]);
 
 		if (tile_number != 0xfff) {
-			INT32 attr = source[offs + 1];
-			INT32 sy = source[offs + 2] & 0x1ff;
-			INT32 sx = source[offs + 3] & 0x1ff;
+			INT32 attr = BURN_ENDIAN_SWAP_INT16(source[offs + 1]);
+			INT32 sy = BURN_ENDIAN_SWAP_INT16(source[offs + 2]) & 0x1ff;
+			INT32 sx = BURN_ENDIAN_SWAP_INT16(source[offs + 3]) & 0x1ff;
 
 			INT32 flipx = attr & 0x02;
 			INT32 flipy = attr & 0x01;
@@ -861,8 +867,8 @@ static void draw_background(INT32 priority)
 	{
 		for (INT32 x = 0; x < 8+1; x++)
 		{
-			INT32 sx = x + (scrollx >> 5);
-			INT32 sy = y + (scrolly >> 5);
+			INT32 sx = (x + (scrollx >> 5)) & 0x7f;
+			INT32 sy = (y + (scrolly >> 5)) & 0x7f;
 
 			INT32 ofst = ((sx & 7) << 1) + (((127 - sy) & 7) << 4) + ((sx >> 3) << 7) + (((127 - sy) >> 3) << 11);
 
@@ -917,7 +923,7 @@ static void draw_text_layer()
 		INT32 sx = (offs & 0x1f) << 3;
 		INT32 sy = (offs >> 5) << 3;
 
-		INT32 data = vram[offs];
+		INT32 data = BURN_ENDIAN_SWAP_INT16(vram[offs]);
 		INT32 attr = data >> 8;
 		INT32 code = (data & 0xff) + ((attr & 0xc0) << 2) + ((attr & 0x20) << 5);
 		if (code == 0x400) continue;
@@ -954,8 +960,8 @@ static INT32 DrvDraw()
 	if (DrvRecalc) {
 		for (INT32 i = 0; i < 0x240 * 2; i+=2) {
 			palette_write(i);
-                }
-                DrvRecalc = 0;
+		}
+		DrvRecalc = 0;
 	}
 
 	memset (pTransDraw, 0, nScreenWidth * nScreenHeight * 2);
@@ -1014,7 +1020,7 @@ static INT32 DrvFrame()
 		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
 		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		if (i == (nInterleave - 1)) SekSetIRQLine(2, SEK_IRQSTATUS_AUTO);
+		if (i == (nInterleave - 1)) SekSetIRQLine(2, CPU_IRQSTATUS_AUTO);
 		if (toramich) MSM5205Update();
 		SekClose();
 		
@@ -1030,7 +1036,7 @@ static INT32 DrvFrame()
 			nCyclesDone[nCurrentCPU] += ZetRun(nCyclesSegment);
 			for (INT32 j = 0; j < 67; j++) {
 				if (i == MSMIRQSlice[j]) {
-					ZetSetIRQLine(0, ZET_IRQSTATUS_AUTO);
+					ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 					nCyclesDone[nCurrentCPU] += ZetRun(1000);
 				}
 			}
@@ -1080,9 +1086,9 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		ZetScan(nAction);
 
 		BurnYM2203Scan(nAction, pnMin);
-                if (toramich) {
-                    MSM5205Scan(nAction, pnMin);
-                }
+		if (toramich) {
+			MSM5205Scan(nAction, pnMin);
+		}
 	}
 
 	return 0;
@@ -1154,7 +1160,7 @@ struct BurnDriver BurnDrvTigeroad = {
 	"tigeroad", NULL, NULL, NULL, "1987",
 	"Tiger Road (US)\0", NULL, "Capcom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARWARE_CAPCOM_MISC, GBF_SCRFIGHT | GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_SCRFIGHT | GBF_PLATFORM, 0,
 	NULL, tigeroadRomInfo, tigeroadRomName, NULL, NULL, TigeroadInputInfo, TigeroadDIPInfo,
 	TigeroadInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x240,
 	256, 224, 4, 3
@@ -1197,7 +1203,7 @@ struct BurnDriver BurnDrvTigeroadu = {
 	"tigeroadu", "tigeroad", NULL, NULL, "1987",
 	"Tiger Road (US, Romstar license)\0", NULL, "Capcom (Romstar license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARWARE_CAPCOM_MISC, GBF_SCRFIGHT | GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_SCRFIGHT | GBF_PLATFORM, 0,
 	NULL, tigeroaduRomInfo, tigeroaduRomName, NULL, NULL, TigeroadInputInfo, TigeroadDIPInfo,
 	TigeroadInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x240,
 	256, 224, 4, 3
@@ -1249,7 +1255,7 @@ struct BurnDriver BurnDrvToramich = {
 	"toramich", "tigeroad", NULL, NULL, "1987",
 	"Tora e no Michi (Japan)\0", NULL, "Capcom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARWARE_CAPCOM_MISC, GBF_SCRFIGHT | GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_SCRFIGHT | GBF_PLATFORM, 0,
 	NULL, toramichRomInfo, toramichRomName, NULL, NULL, TigeroadInputInfo, ToramichDIPInfo,
 	ToramichInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x240,
 	256, 224, 4, 3
@@ -1326,7 +1332,7 @@ struct BurnDriver BurnDrvTigeroadb = {
 	"tigeroadb", "tigeroad", NULL, NULL, "1987",
 	"Tiger Road (US bootleg, set 1)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARWARE_CAPCOM_MISC, GBF_SCRFIGHT | GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_SCRFIGHT | GBF_PLATFORM, 0,
 	NULL, tigeroadbRomInfo, tigeroadbRomName, NULL, NULL, TigeroadInputInfo, TigeroadDIPInfo,
 	TigeroadbInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x240,
 	256, 224, 4, 3
@@ -1412,7 +1418,7 @@ struct BurnDriver BurnDrvTigeroadb2 = {
 	"tigeroadb2", "tigeroad", NULL, NULL, "1987",
 	"Tiger Road (US bootleg, set 2)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARWARE_CAPCOM_MISC, GBF_SCRFIGHT | GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_SCRFIGHT | GBF_PLATFORM, 0,
 	NULL, tigeroadb2RomInfo, tigeroadb2RomName, NULL, NULL, TigeroadInputInfo, TigeroadDIPInfo,
 	Tigeroadb2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x240,
 	256, 224, 4, 3
@@ -1483,9 +1489,9 @@ static INT32 F1dreamInit()
 
 struct BurnDriver BurnDrvF1dream = {
 	"f1dream", NULL, NULL, NULL, "1988",
-	"F-1 Dream\0", NULL, "Capcom (Romstar license)", "Miscellaneous",
+	"F-1 Dream\0", "Game is bugged, use the bootleg instead.", "Capcom (Romstar license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARWARE_CAPCOM_MISC, GBF_RACING, 0,
+	0, 2, HARWARE_CAPCOM_MISC, GBF_RACING, 0,
 	NULL, f1dreamRomInfo, f1dreamRomName, NULL, NULL, TigeroadInputInfo, F1dreamDIPInfo,
 	F1dreamInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x240,
 	256, 224, 4, 3
@@ -1558,7 +1564,7 @@ struct BurnDriver BurnDrvF1dreamb = {
 	"f1dreamb", "f1dream", NULL, NULL, "1988",
 	"F-1 Dream (bootleg, set 1)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARWARE_CAPCOM_MISC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_RACING, 0,
 	NULL, f1dreambRomInfo, f1dreambRomName, NULL, NULL, TigeroadInputInfo, F1dreamDIPInfo,
 	F1dreambInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x240,
 	256, 224, 4, 3
@@ -1601,7 +1607,7 @@ struct BurnDriver BurnDrvF1dreamba = {
 	"f1dreamba", "f1dream", NULL, NULL, "1988",
 	"F-1 Dream (bootleg, set 2)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARWARE_CAPCOM_MISC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_RACING, 0,
 	NULL, f1dreambaRomInfo, f1dreambaRomName, NULL, NULL, TigeroadInputInfo, F1dreamDIPInfo,
 	F1dreambInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x240,
 	256, 224, 4, 3

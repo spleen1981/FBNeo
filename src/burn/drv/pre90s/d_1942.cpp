@@ -443,6 +443,8 @@ static INT32 DrvDoReset()
 	DrvSoundLatch = 0;
 	DrvRomBank = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -626,8 +628,8 @@ static void MachineInit()
 
 	AY8910Init(0, 1500000, nBurnSoundRate, NULL, NULL, NULL, NULL);
 	AY8910Init(1, 1500000, nBurnSoundRate, NULL, NULL, NULL, NULL);
-	AY8910SetAllRoutes(0, 0.25, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(1, 0.25, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(0, 0.25, BURN_SND_ROUTE_BOTH); // Plane Noise/Bass/Shot
+	AY8910SetAllRoutes(1, 0.25, BURN_SND_ROUTE_BOTH); // Whistle/Snare
 
 	GenericTilesInit();
 	
@@ -943,7 +945,7 @@ static void DrvDraw()
 
 static INT32 DrvFrame()
 {
-	INT32 nInterleave = 4;
+	INT32 nInterleave = 8;
 	INT32 nSoundBufferPos = 0;
 
 	if (DrvReset) DrvDoReset();
@@ -954,8 +956,6 @@ static INT32 DrvFrame()
 	nCyclesTotal[1] = 3000000 / 60;
 	nCyclesDone[0] = nCyclesDone[1] = 0;
 	
-//	ZetNewFrame();
-
 	for (INT32 i = 0; i < nInterleave; i++) {
 		INT32 nCurrentCPU, nNext;
 
@@ -965,13 +965,9 @@ static INT32 DrvFrame()
 		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
 		nCyclesDone[nCurrentCPU] += ZetRun(nCyclesSegment);
-		if (i == 1) {
-			ZetSetVector(0xcf);
-			ZetRaiseIrq(0);
-		}
-		if (i == 3) {
-			ZetSetVector(0xd7);
-			ZetRaiseIrq(0);
+		if (i == 0 || i == 7) {
+			ZetSetVector((i == 0) ? 0xcf : 0xd7);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		}
 		ZetClose();
 
@@ -982,7 +978,9 @@ static INT32 DrvFrame()
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
 		nCyclesSegment = ZetRun(nCyclesSegment);
 		nCyclesDone[nCurrentCPU] += nCyclesSegment;
-		ZetRaiseIrq(0);
+		if (i & 1) { // 4 times per frame
+			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
+		}
 		ZetClose();
 		
 		// Render Sound Segment
@@ -1054,7 +1052,7 @@ struct BurnDriver BurnDrvNineteen42 = {
 	"1942", NULL, NULL, NULL, "1984",
 	"1942 (Revision B)\0", NULL, "Capcom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARWARE_CAPCOM_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_VERSHOOT, 0,
 	NULL, DrvRomInfo, DrvRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, NULL, DrvScan,
 	NULL, 0x600, 224, 256, 3, 4
@@ -1064,7 +1062,7 @@ struct BurnDriver BurnDrvNineteen42a = {
 	"1942a", "1942", NULL, NULL, "1984",
 	"1942 (Revision A)\0", NULL, "Capcom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARWARE_CAPCOM_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_VERSHOOT, 0,
 	NULL, DrvaRomInfo, DrvaRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, NULL, DrvScan,
 	NULL, 0x600, 224, 256, 3, 4
@@ -1074,7 +1072,7 @@ struct BurnDriver BurnDrvNineteen42abl = {
 	"1942abl", "1942", NULL, NULL, "1984",
 	"1942 (Revision A, bootleg)\0", NULL, "Capcom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG, 2, HARWARE_CAPCOM_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_VERSHOOT, 0,
 	NULL, DrvablRomInfo, DrvablRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvablInit, DrvExit, DrvFrame, NULL, DrvScan,
 	NULL, 0x600, 224, 256, 3, 4
@@ -1084,7 +1082,7 @@ struct BurnDriver BurnDrvNineteen42b = {
 	"1942b", "1942", NULL, NULL, "1984",
 	"1942 (First Version)\0", NULL, "Capcom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARWARE_CAPCOM_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_VERSHOOT, 0,
 	NULL, DrvbRomInfo, DrvbRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, NULL, DrvScan,
 	NULL, 0x600, 224, 256, 3, 4
@@ -1094,7 +1092,7 @@ struct BurnDriver BurnDrvNineteen42w = {
 	"1942w", "1942", NULL, NULL, "1985",
 	"1942 (Williams Electronics license)\0", NULL, "Capcom (Williams Electronics license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARWARE_CAPCOM_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_VERSHOOT, 0,
 	NULL, DrvwRomInfo, DrvwRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, NULL, DrvScan,
 	NULL, 0x600, 224, 256, 3, 4
@@ -1104,7 +1102,7 @@ struct BurnDriver BurnDrvNineteen42h = {
 	"1942h", "1942", NULL, NULL, "1984",
 	"42 (Screamware bootleg, hack)\0", NULL, "Capcom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARWARE_CAPCOM_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARWARE_CAPCOM_MISC, GBF_VERSHOOT, 0,
 	NULL, DrvhRomInfo, DrvhRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, NULL, DrvScan,
 	NULL, 0x600, 224, 256, 3, 4

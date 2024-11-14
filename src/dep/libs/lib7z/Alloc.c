@@ -1,8 +1,11 @@
 /* Alloc.c -- Memory allocation functions
-2008-09-24
-Igor Pavlov
-Public domain */
+2015-02-21 : Igor Pavlov : Public domain */
 
+#include "Precomp.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <stdlib.h>
 
 #include "Alloc.h"
@@ -122,3 +125,12 @@ void BigFree(void *address)
 }
 
 #endif
+
+
+static void *SzAlloc(void *p, size_t size) { UNUSED_VAR(p); return MyAlloc(size); }
+static void SzFree(void *p, void *address) { UNUSED_VAR(p); MyFree(address); }
+ISzAlloc g_Alloc = { SzAlloc, SzFree };
+
+static void *SzBigAlloc(void *p, size_t size) { UNUSED_VAR(p); return BigAlloc(size); }
+static void SzBigFree(void *p, void *address) { UNUSED_VAR(p); BigFree(address); }
+ISzAlloc g_BigAlloc = { SzBigAlloc, SzBigFree };

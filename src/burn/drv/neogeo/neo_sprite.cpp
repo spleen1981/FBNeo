@@ -194,10 +194,12 @@ static void NeoBlendInit(INT32 nSlot)
 		}
 
 		for (k = min; k <= max; k++) {
-			if (NeoTileAttrib[nSlot][k] != 1) 	// ?
+			if (k < nNeoTileMask[nSlot] + 1 && NeoTileAttrib[nSlot][k] != 1) 	// ?
 				NeoTileAttrib[nSlot][k] = table[type&3];
 		}
 	}
+
+	fclose (fa);
 }
 
 INT32 NeoInitSprites(INT32 nSlot)

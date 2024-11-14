@@ -161,6 +161,8 @@ int PrintOSInfo()
 		GetVersionEx((OSVERSIONINFO*)&osvi);
 	}
 	
+	bprintf(PRINT_NORMAL, _T("%i, %i\n"), osvi.dwMajorVersion, osvi.dwMinorVersion);
+	
 	AddText(_T("OS:  "));
 	{
 		if (osvi.dwPlatformId == VER_PLATFORM_WIN32_NT) {
@@ -181,25 +183,31 @@ int PrintOSInfo()
 				AddText(_T("Microsoft Windows Vista "));
 			}
 			if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 0 && osvi.wProductType != VER_NT_WORKSTATION) {
-				AddText(_T("Microsoft Server 2008 "));
+				AddText(_T("Microsoft Windows Server 2008 "));
 			}
 			if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 1 && osvi.wProductType != VER_NT_WORKSTATION) {
-				AddText(_T("Microsoft Server 2008 R2 "));
+				AddText(_T("Microsoft Windows Server 2008 R2 "));
 			}
 			if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 1 && osvi.wProductType == VER_NT_WORKSTATION) {
 				AddText(_T("Microsoft Windows 7 "));
 			}
 			if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 2 && osvi.wProductType != VER_NT_WORKSTATION) {
-				AddText(_T("Microsoft Server 2012 "));
+				AddText(_T("Microsoft Windows Server 2012 "));
 			}
 			if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 2 && osvi.wProductType == VER_NT_WORKSTATION) {
 				AddText(_T("Microsoft Windows 8 "));
 			}
 			if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 3 && osvi.wProductType != VER_NT_WORKSTATION) {
-				AddText(_T("Microsoft Server 2012 R2 "));
+				AddText(_T("Microsoft Windows Server 2012 R2 "));
 			}
 			if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 3 && osvi.wProductType == VER_NT_WORKSTATION) {
 				AddText(_T("Microsoft Windows 8.1 "));
+			}
+			if (osvi.dwMajorVersion == 10 && osvi.dwMinorVersion == 0 && osvi.wProductType != VER_NT_WORKSTATION) {
+				AddText(_T("Microsoft Windows Server Technical Preview "));
+			}
+			if (osvi.dwMajorVersion == 10 && osvi.dwMinorVersion == 0 && osvi.wProductType == VER_NT_WORKSTATION) {
+				AddText(_T("Microsoft Windows 10 "));
 			}
 
 			if (osvi.dwMajorVersion == 5) {
@@ -999,7 +1007,7 @@ static INT_PTR CALLBACK SysInfoProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM l
 
 					WndInMid(hDlg, hScrnWnd);
 				}
-				if (LOWORD(wParam) == IDC_SYSINFO_LOG) {
+				if (LOWORD(wParam) == IDC_SYSINFO_LOG_SAVE) {
 					FILE* fp = NULL;
 
 					SendMessage(hDlg, WM_NEXTDLGCTL, (WPARAM)GetDlgItem(hDlg, IDOK), TRUE);
@@ -1009,7 +1017,7 @@ static INT_PTR CALLBACK SysInfoProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM l
 						_stprintf(szLogName, _T("config/%s.error.log"), szAppExeName);
 						fp = _tfopen(szLogName, _T("ab"));
 
-						EnableWindow(GetDlgItem(hDlg, IDC_SYSINFO_LOG), FALSE);
+						EnableWindow(GetDlgItem(hDlg, IDC_SYSINFO_LOG_SAVE), FALSE);
 					} else {
 						TCHAR szFilter[1024];
 

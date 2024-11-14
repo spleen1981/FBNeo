@@ -183,7 +183,11 @@ static struct BurnRomInfo emptyRomDesc[] = {
 };
 
 static struct BurnRomInfo Ym2608RomDesc[] = {
+#if !defined (ROM_VERIFY)
 	{ "ym2608_adpcm_rom.bin",  0x002000, 0x23c9e0d8, BRF_ESS | BRF_PRG | BRF_BIOS },
+#else
+	{ "",  0x000000, 0x00000000, BRF_ESS | BRF_PRG | BRF_BIOS },
+#endif
 };
 
 STD_ROM_PICK(Ym2608)
@@ -313,9 +317,9 @@ static INT32 Wc90DoReset()
 static void wc90FMIRQHandler(INT32, INT32 nStatus)
 {
 	if (nStatus & 1) {
-		ZetSetIRQLine(0xFF, ZET_IRQSTATUS_ACK);
+		ZetSetIRQLine(0xFF, CPU_IRQSTATUS_ACK);
 	} else {
-		ZetSetIRQLine(0,    ZET_IRQSTATUS_NONE);
+		ZetSetIRQLine(0,    CPU_IRQSTATUS_NONE);
 	}
 }
 
@@ -1013,7 +1017,7 @@ static INT32 Wc90Frame()
 		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
 		nCyclesDone[nCurrentCPU] += ZetRun(nCyclesSegment);
-		if (i == 261) ZetSetIRQLine(0, ZET_IRQSTATUS_AUTO);
+		if (i == 261) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		ZetClose();
 
 		nCurrentCPU = 1;
@@ -1021,7 +1025,7 @@ static INT32 Wc90Frame()
 		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
 		nCyclesDone[nCurrentCPU] += ZetRun(nCyclesSegment);
-		if (i == 261) ZetSetIRQLine(0, ZET_IRQSTATUS_AUTO);
+		if (i == 261) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		ZetClose();
 		
 		nCurrentCPU = 2;

@@ -204,7 +204,7 @@ void baraduke_main_write(UINT16 address, UINT8 data)
 		return;
 
 		case 0x8800:
-			M6809SetIRQLine(0, M6809_IRQSTATUS_NONE);
+			M6809SetIRQLine(0, CPU_IRQSTATUS_NONE);
 		return;
 
 		case 0xb000:
@@ -327,6 +327,8 @@ static INT32 DrvDoReset(INT32 ClearRAM)
 	BurnLEDSetFlipscreen(1);
 
 	watchdog = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -488,20 +490,20 @@ static INT32 DrvInit(INT32 type)
 
 	M6809Init(1);
 	M6809Open(0);
-	M6809MapMemory(DrvSprRAM,			0x0000, 0x1fff, M6809_READ | M6809_FETCH);
-	M6809MapMemory(DrvSprRAM,			0x0000, 0x1eff, M6809_WRITE);
-	M6809MapMemory(DrvVidRAM,			0x2000, 0x3fff, M6809_RAM);
-	M6809MapMemory(DrvTxtRAM,			0x4800, 0x4fff, M6809_RAM);
-	M6809MapMemory(DrvM6809ROM + 0x06000,		0x6000, 0xffff, M6809_ROM);
+	M6809MapMemory(DrvSprRAM,			0x0000, 0x1fff, MAP_READ | MAP_FETCH);
+	M6809MapMemory(DrvSprRAM,			0x0000, 0x1eff, MAP_WRITE);
+	M6809MapMemory(DrvVidRAM,			0x2000, 0x3fff, MAP_RAM);
+	M6809MapMemory(DrvTxtRAM,			0x4800, 0x4fff, MAP_RAM);
+	M6809MapMemory(DrvM6809ROM + 0x06000,		0x6000, 0xffff, MAP_ROM);
 	M6809SetWriteHandler(baraduke_main_write);
 	M6809SetReadHandler(baraduke_main_read);
 	M6809Close();
 
 	HD63701Init(1);
 //	HD63701Open(0);
-	HD63701MapMemory(DrvHD63701ROM + 0x8000,	0x8000, 0xbfff, HD63701_ROM);
-	HD63701MapMemory(DrvHD63701RAM,			0xc000, 0xc7ff, HD63701_RAM);
-	HD63701MapMemory(DrvHD63701ROM + 0xf000,	0xf000, 0xffff, HD63701_ROM);
+	HD63701MapMemory(DrvHD63701ROM + 0x8000,	0x8000, 0xbfff, MAP_ROM);
+	HD63701MapMemory(DrvHD63701RAM,			0xc000, 0xc7ff, MAP_RAM);
+	HD63701MapMemory(DrvHD63701ROM + 0xf000,	0xf000, 0xffff, MAP_ROM);
 	HD63701SetReadHandler(baraduke_mcu_read);
 	HD63701SetWriteHandler(baraduke_mcu_write);
 	HD63701SetReadPortHandler(baraduke_mcu_read_port);
@@ -746,7 +748,7 @@ static INT32 DrvFrame()
 		nNext = (i + 1) * nCyclesTotal[0] / nInterleave;
 		nCyclesDone[0] += M6809Run(nNext - nCyclesDone[0]);
 		if (i == (nInterleave - 1)) {
-			M6809SetIRQLine(0, M6809_IRQSTATUS_ACK);
+			M6809SetIRQLine(0, CPU_IRQSTATUS_ACK);
 		}
 		M6809Close();
 
@@ -754,7 +756,7 @@ static INT32 DrvFrame()
 		nNext = (i + 1) * nCyclesTotal[1] / nInterleave;
 		nCyclesDone[1] += HD63701Run(nNext - nCyclesDone[1]);
 		if (i == (nInterleave - 1)) {
-			HD63701SetIRQLine(0, M6800_IRQSTATUS_AUTO);
+			HD63701SetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		}
 	//	HD63701Close();
 	}
@@ -837,7 +839,7 @@ struct BurnDriver BurnDrvAliensec = {
 	"aliensec", NULL, NULL, NULL, "1985",
 	"Alien Sector\0", NULL, "Namco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, aliensecRomInfo, aliensecRomName, NULL, NULL, BaradukeInputInfo, BaradukeDIPInfo,
 	AlienInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
@@ -876,7 +878,7 @@ struct BurnDriver BurnDrvBaraduke = {
 	"baraduke", "aliensec", NULL, NULL, "1985",
 	"Baraduke\0", NULL, "Namco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, baradukeRomInfo, baradukeRomName, NULL, NULL, BaradukeInputInfo, BaradukeDIPInfo,
 	AlienInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
@@ -917,7 +919,7 @@ struct BurnDriver BurnDrvMetrocrs = {
 	"metrocrs", NULL, NULL, NULL, "1985",
 	"Metro-Cross (set 1)\0", NULL, "Namco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, metrocrsRomInfo, metrocrsRomName, NULL, NULL, BaradukeInputInfo, MetrocrsDIPInfo,
 	MetroInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
@@ -953,7 +955,7 @@ struct BurnDriver BurnDrvMetrocrsa = {
 	"metrocrsa", "metrocrs", NULL, NULL, "1985",
 	"Metro-Cross (set 2)\0", NULL, "Namco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, metrocrsaRomInfo, metrocrsaRomName, NULL, NULL, BaradukeInputInfo, MetrocrsDIPInfo,
 	MetroInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
