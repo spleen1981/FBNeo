@@ -13,6 +13,7 @@ extern INT32 nPGMSPRMaskMaskLen;
 extern INT32 nPGMTileROMLen;
 extern INT32 nPGMExternalARMLen;
 
+extern UINT8 *PGM68KBIOS;
 extern UINT8 *PGM68KRAM;
 extern UINT8 *PGM68KROM;
 extern UINT8 *PGMTileROM;
@@ -50,10 +51,13 @@ extern void (*pPgmInitCallback)();
 extern void (*pPgmResetCallback)();
 extern INT32 (*pPgmScanCallback)(INT32, INT32*);
 extern void (*pPgmProtCallback)();
+extern void (*pPgmTileDecryptCallback)(UINT8 *gfx, INT32 len);
+extern void (*pPgmColorDataDecryptcallback)(UINT8 *gfx, INT32 len);
 
 extern INT32 nPGMDisableIRQ4;
 extern INT32 nPGMArm7Type;
 extern UINT32 nPgmAsicRegionHackAddress;
+extern INT32 pgm_cave_refresh;
 
 INT32 pgmInit();
 INT32 pgmExit();
@@ -96,6 +100,7 @@ void pgm_decrypt_killbld();
 void pgm_decrypt_dfront();
 void pgm_decrypt_ddp2();
 void pgm_decrypt_martmast();
+void pgm_decrypt_dwpc();
 void pgm_decrypt_kov2();
 void pgm_decrypt_kov2p();
 void pgm_decrypt_theglad();
@@ -110,10 +115,10 @@ void pgm_decrypt_espgaluda();
 void pgm_decrypt_ketsui();
 void pgm_decrypt_pgm3in1();
 
-void pgm_decode_kovqhsgs_gfx_block(UINT8 *src);
-void pgm_decode_kovqhsgs_tile_data(UINT8 *source);
+void pgm_decode_kovqhsgs_gfx(UINT8 *gfx, INT32 len);
+void pgm_decode_kovqhsgs_tile_data(UINT8 *gfx, INT32 len);
 void pgm_decrypt_kovqhsgs();
 void pgm_decrypt_kovlsqh2();
 void pgm_decrypt_kovassg();
 
-void pgm_descramble_happy6_data(UINT8 *src, INT32 len);
+void pgm_descramble_happy6_data(UINT8 *gfx, INT32 len);

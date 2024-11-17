@@ -15,10 +15,6 @@ struct HD6309Ext {
 	pWriteByteHandler WriteByte;
 	pReadOpHandler ReadOp;
 	pReadOpArgHandler ReadOpArg;
-	
-	INT32 nCyclesTotal;
-	INT32 nCyclesSegment;
-	INT32 nCyclesLeft;
 };
 
 extern INT32 nHD6309Count;
@@ -26,6 +22,9 @@ extern INT32 nHD6309Count;
 extern INT32 nHD6309CyclesTotal;
 
 void HD6309Reset();
+void HD6309Reset(INT32 nCPU);
+INT32 HD6309TotalCycles();
+INT32 HD6309TotalCycles(INT32 nCPU);
 void HD6309NewFrame();
 INT32 HD6309Init(INT32 nCPU);
 void HD6309Exit();
@@ -33,8 +32,12 @@ void HD6309Open(INT32 num);
 void HD6309Close();
 INT32 HD6309GetActive();
 void HD6309SetIRQLine(INT32 vector, INT32 status);
+void HD6309SetIRQLine(INT32 nCPU, const INT32 line, const INT32 status);
 INT32 HD6309Run(INT32 cycles);
+INT32 HD6309Run(INT32 nCPU, INT32 nCycles);
 void HD6309RunEnd();
+INT32 HD6309Idle(INT32 cycles);
+INT32 HD6309Idle(INT32 nCPU, INT32 nCycles);
 UINT32 HD6309GetPC(INT32);
 INT32 HD6309MapMemory(UINT8* pMemory, UINT16 nStart, UINT16 nEnd, INT32 nType);
 INT32 HD6309MemCallback(UINT16 nStart, UINT16 nEnd, INT32 nType);
@@ -46,11 +49,11 @@ INT32 HD6309Scan(INT32 nAction);
 
 void HD6309WriteRom(UINT16 Address, UINT8 Data);
 
-inline static INT32 HD6309TotalCycles()
-{
-#if defined FBA_DEBUG
-	if (!DebugCPU_HD6309Initted) bprintf(PRINT_ERROR, _T("HD6309TotalCycles called without init\n"));
-#endif
+void HD6309CheatWriteRom(UINT32 a, UINT8 d); // cheat core
+UINT8 HD6309CheatRead(UINT32 a); // cheat core
 
-	return nHD6309CyclesTotal;
-}
+extern struct cpu_core_config HD6309Config;
+
+// depreciate this and use BurnTimerAttach directly!
+#define BurnTimerAttachHD6309(clock)	\
+	BurnTimerAttach(&HD6309Config, clock)

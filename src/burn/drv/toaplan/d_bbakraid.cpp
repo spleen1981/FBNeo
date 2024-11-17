@@ -1,3 +1,6 @@
+// FB Alpha Battle Bakraid driver module
+// Driver and emulation by Jan Klaassen
+
 #include "toaplan.h"
 #include "ymz280b.h"
 #include "eeprom.h"
@@ -17,8 +20,6 @@ static UINT8 *DefaultEEPROM = NULL;
 static UINT8 DrvRegion = 0;
 
 static UINT8 DrvReset = 0;
-static UINT8 bDrawScreen;
-static bool bVBlank;
 
 static UINT8 nIRQPending;
 
@@ -31,7 +32,9 @@ static INT32 nCycles68KSync;
 
 static INT32 nTextROMStatus;
 
+#ifdef BUILD_A68K
 static bool bUseAsm68KCoreOldValue = false;
+#endif
 
 // Rom information
 static struct BurnRomInfo bkraiduRomDesc[] = {
@@ -131,35 +134,35 @@ STD_ROM_PICK(bkraiduj)
 STD_ROM_FN(bkraiduj)
 
 static struct BurnInputInfo bbakraidInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvButton + 3,	"p1 coin"},
-	{"P1 Start",	BIT_DIGITAL,	DrvButton + 5,	"p1 start"},
+	{"P1 Coin",		BIT_DIGITAL,	DrvButton + 3,	"p1 coin"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvButton + 5,	"p1 start"	},
 
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"},
-	{"P1 Right",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"},
-	{"P1 Shoot 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
-	{"P1 Shoot 2",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"},
-	{"P1 Shoot 3",	BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"},
+	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
+	{"P1 Shoot 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Shoot 2",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
+	{"P1 Shoot 3",	BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvButton + 4,	"p2 coin"},
-	{"P2 Start",	BIT_DIGITAL,	DrvButton + 6,	"p2 start"},
+	{"P2 Coin",		BIT_DIGITAL,	DrvButton + 4,	"p2 coin"	},
+	{"P2 Start",	BIT_DIGITAL,	DrvButton + 6,	"p2 start"	},
 
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"},
-	{"P2 Right",	BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"},
-	{"P2 Shoot 1",	BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"},
-	{"P2 Shoot 2",	BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"},
-	{"P2 Shoot 3",	BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"},
+	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",	BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
+	{"P2 Shoot 1",	BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Shoot 2",	BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
+	{"P2 Shoot 3",	BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	  &DrvReset,		"reset"},
-	{"Test",	  BIT_DIGITAL,	 DrvButton + 2,	"diag"},
-	{"Service",	BIT_DIGITAL,	 DrvButton + 0,	"service"},
-	{"Dip 1",		BIT_DIPSWITCH,	DrvInput + 3,	"dip"},
-	{"Dip 2",		BIT_DIPSWITCH,	DrvInput + 4,	"dip"},
-	{"Dip 3",		BIT_DIPSWITCH,	DrvInput + 5,	"dip"},
-	{"Region",  BIT_DIPSWITCH,	&DrvRegion  ,	"dip"},
+	{"Reset",		BIT_DIGITAL,	  &DrvReset,	"reset"		},
+	{"Test",	  	BIT_DIGITAL,	 DrvButton + 2,	"diag"		},
+	{"Service",		BIT_DIGITAL,	 DrvButton + 0,	"service"	},
+	{"Dip 1",		BIT_DIPSWITCH,	DrvInput + 3,	"dip"		},
+	{"Dip 2",		BIT_DIPSWITCH,	DrvInput + 4,	"dip"		},
+	{"Dip 3",		BIT_DIPSWITCH,	DrvInput + 5,	"dip"		},
+	{"Region",  	BIT_DIPSWITCH,	&DrvRegion  ,	"dip"		},
 };
 
 STDINPUTINFO(bbakraid)
@@ -250,10 +253,10 @@ static struct BurnDIPInfo bbakraidDIPList[] = {
 	{0x16,	0x01, 0x30, 0x20, "2"},
 	{0x16,	0x01, 0x30, 0x30, "1"},
 	{0,		0xFE, 0,	4,	  "Extra player"},
-  {0x16,	0x01, 0xC0, 0x00, "2000000 each"},
-  {0x16,	0x01, 0xC0, 0x40, "3000000 each"},
-  {0x16,	0x01, 0xC0, 0x80, "4000000 each"},
-  {0x16,	0x01, 0xC0, 0xC0, "No extra player"},
+	{0x16,	0x01, 0xC0, 0x00, "2000000 each"},
+	{0x16,	0x01, 0xC0, 0x40, "3000000 each"},
+	{0x16,	0x01, 0xC0, 0x80, "4000000 each"},
+	{0x16,	0x01, 0xC0, 0xC0, "No extra player"},
 
 	// DIP 3
 	{0,		0xFE, 0,	2,	  "Screen flip"},
@@ -361,6 +364,7 @@ static INT32 MemIndex()
 	GP9001ROM[0]= Next; Next += nGP9001ROMSize[0];	// GP9001 tile data
 	YMZ280BROM	= Next;	Next += 0xC00000;
 	DefaultEEPROM = Next; Next += 0x000200;
+
 	RamStart	= Next;
 	ExtraTROM	= Next; Next += 0x008000;			// Extra Text layer tile data
 	ExtraTRAM	= Next; Next += 0x002000;			// Extra tile layer
@@ -371,46 +375,12 @@ static INT32 MemIndex()
 	GP9001RAM[0]= Next; Next += 0x004000;
 	GP9001Reg[0]= (UINT16*)Next; Next += 0x0100 * sizeof(UINT16);
 	RamEnd		= Next;
+
 	ToaPalette	= (UINT32 *)Next; Next += nColCount * sizeof(UINT32);
 	MemEnd		= Next;
 
  	ExtraTSelect= Ram01;							// Extra text layer scroll
 	ExtraTScroll= Ram01 + 0x000200;					// Extra text layer offset
-	return 0;
-}
-
-// Scan ram
-static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
-{
-	struct BurnArea ba;
-
-	if (pnMin) {						// Return minimum compatible version
-		*pnMin =  0x029521;
-	}
-
-	EEPROMScan(nAction, pnMin);			// Scan EEPROM
-
-	if (nAction & ACB_VOLATILE) {		// Scan volatile ram
-		memset(&ba, 0, sizeof(ba));
-    ba.Data		= RamStart;
-		ba.nLen		= RamEnd - RamStart;
-		ba.szName	= "RAM";
-		BurnAcb(&ba);
-
-		SekScan(nAction);				// scan 68000 states
-		ZetScan(nAction);				// Scan Z80
-
-		YMZ280BScan();
-		BurnTimerScan(nAction, pnMin);
-
-		ToaScanGP9001(nAction, pnMin);
-
-		SCAN_VAR(DrvInput);
-		SCAN_VAR(nSoundData);
-		SCAN_VAR(Z80BusRQ);
-		SCAN_VAR(nIRQPending);
-	}
-
 	return 0;
 }
 
@@ -457,12 +427,12 @@ static inline void bbakraidSynchroniseZ80(INT32 nExtraCycles)
 static INT32 bbakraidTimerOver(INT32, INT32)
 {
 //	bprintf(PRINT_NORMAL, _T("  - IRQ -> 1.\n"));
-	ZetSetIRQLine(0xFF, CPU_IRQSTATUS_AUTO);
+	ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 
 	return 0;
 }
 
-UINT8 __fastcall bbakraidZIn(UINT16 nAddress)
+static UINT8 __fastcall bbakraidZIn(UINT16 nAddress)
 {
 	nAddress &= 0xFF;
 	switch (nAddress) {
@@ -481,7 +451,7 @@ UINT8 __fastcall bbakraidZIn(UINT16 nAddress)
 	return 0;
 }
 
-void __fastcall bbakraidZOut(UINT16 nAddress, UINT8 nValue)
+static void __fastcall bbakraidZOut(UINT16 nAddress, UINT8 nValue)
 {
 	nAddress &= 0xFF;
 	switch (nAddress) {
@@ -559,7 +529,7 @@ static void Map68KTextROM(bool bMapTextROM)
 	}
 }
 
-UINT8 __fastcall bbakraidReadByte(UINT32 sekAddress)
+static UINT8 __fastcall bbakraidReadByte(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 
@@ -593,7 +563,7 @@ UINT8 __fastcall bbakraidReadByte(UINT32 sekAddress)
 	return 0;
 }
 
-UINT16 __fastcall bbakraidReadWord(UINT32 sekAddress)
+static UINT16 __fastcall bbakraidReadWord(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 
@@ -626,7 +596,7 @@ UINT16 __fastcall bbakraidReadWord(UINT32 sekAddress)
 	return 0;
 }
 
-void __fastcall bbakraidWriteByte(UINT32 sekAddress, UINT8 byteValue)
+static void __fastcall bbakraidWriteByte(UINT32 sekAddress, UINT8 byteValue)
 {
 	switch (sekAddress) {
 
@@ -643,22 +613,24 @@ void __fastcall bbakraidWriteByte(UINT32 sekAddress, UINT8 byteValue)
 	}
 }
 
-void __fastcall bbakraidWriteWord(UINT32 sekAddress, UINT16 wordValue)
+static void __fastcall bbakraidWriteWord(UINT32 sekAddress, UINT16 wordValue)
 {
 	switch (sekAddress) {
 		case 0x500014:
+			bbakraidSynchroniseZ80(0);
 			nSoundlatchAck &= ~1;
 			nSoundData[0] = wordValue;
+			ZetNmi();
 			return;
 		case 0x500016:
+			bbakraidSynchroniseZ80(0);
 			nSoundlatchAck &= ~2;
 			nSoundData[1] = wordValue;
+			ZetNmi();
 			return;
 
-		// This register is always written to after writing (sound) commands for the Z80
+		// This register is always written to after [~10 cycles] writing (sound) commands for the Z80
 		case 0x50001A:
-			bbakraidSynchroniseZ80(0);
-			ZetNmi();
 			return;
 
 		// Serial EEPROM command
@@ -702,7 +674,7 @@ void __fastcall bbakraidWriteWord(UINT32 sekAddress, UINT16 wordValue)
 	}
 }
 
-UINT16 __fastcall bbakraidReadWordGP9001(UINT32 sekAddress)
+static UINT16 __fastcall bbakraidReadWordGP9001(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 		case 0x400008:
@@ -715,7 +687,7 @@ UINT16 __fastcall bbakraidReadWordGP9001(UINT32 sekAddress)
 	return 0;
 }
 
-void __fastcall bbakraidWriteWordGP9001(UINT32 sekAddress, UINT16 wordValue)
+static void __fastcall bbakraidWriteWordGP9001(UINT32 sekAddress, UINT16 wordValue)
 {
 	switch (sekAddress) {
 
@@ -738,12 +710,12 @@ void __fastcall bbakraidWriteWordGP9001(UINT32 sekAddress, UINT16 wordValue)
 	}
 }
 
-UINT8 __fastcall bbakraidReadByteZ80ROM(UINT32 sekAddress)
+static UINT8 __fastcall bbakraidReadByteZ80ROM(UINT32 sekAddress)
 {
 	return RomZ80[(sekAddress & 0x7FFFF) >> 1];
 }
 
-UINT16 __fastcall bbakraidReadWordZ80ROM(UINT32 sekAddress)
+static UINT16 __fastcall bbakraidReadWordZ80ROM(UINT32 sekAddress)
 {
 	return RomZ80[(sekAddress & 0x7FFFF) >> 1];
 }
@@ -827,14 +799,16 @@ static INT32 bbakraidInit()
 
 	EEPROMInit(&eeprom_interface_93C66);
 
+#ifdef BUILD_A68K
 		// Make sure we use Musashi
 		if (bBurnUseASMCPUEmulation) {
-#if 1 && defined FBA_DEBUG
+#if 1 && defined FBNEO_DEBUG
 			bprintf(PRINT_NORMAL, _T("Switching to Musashi 68000 core\n"));
 #endif
 			bUseAsm68KCoreOldValue = bBurnUseASMCPUEmulation;
 			bBurnUseASMCPUEmulation = false;
 		}
+#endif
 
 //	if (strcmp("bbakraid", BurnDrvGetTextA(DRV_NAME)) == 0 || strcmp("bbakraidj", BurnDrvGetTextA(DRV_NAME)) == 0) {
 //		if (!EEPROMAvailable()) EEPROMFill(bbakraid_unlimited_nvram, 0, sizeof(bbakraid_unlimited_nvram));
@@ -894,7 +868,6 @@ static INT32 bbakraidInit()
 	ToaPalInit();
 
 	nTextROMStatus = -1;
-	bDrawScreen = true;
 
 	DrvDoReset(); 				// Reset machine
 
@@ -913,13 +886,15 @@ static INT32 DrvExit()
 
 	EEPROMExit();
 
+#ifdef BUILD_A68K
 		if (bUseAsm68KCoreOldValue) {
-#if 1 && defined FBA_DEBUG
+#if 1 && defined FBNEO_DEBUG
 			bprintf(PRINT_NORMAL, _T("Switching back to A68K core\n"));
 #endif
 			bUseAsm68KCoreOldValue = false;
 			bBurnUseASMCPUEmulation = true;
 		}
+#endif
 
 	BurnFree(Mem);
 
@@ -930,19 +905,12 @@ static INT32 DrvDraw()
 {
 	ToaClearScreen(0);
 
-	if (bDrawScreen) {
-		ToaGetBitmap();
-		ToaRenderGP9001();					// Render GP9001 graphics
-		ToaExtraTextLayer();				// Render extra text layer
-	}
+	ToaGetBitmap();
+	ToaRenderGP9001();						// Render GP9001 graphics
+	ToaExtraTextLayer();					// Render extra text layer
 
 	ToaPalUpdate();							// Update the palette
 
-	return 0;
-}
-
-inline static INT32 CheckSleep(INT32)
-{
 	return 0;
 }
 
@@ -981,7 +949,7 @@ static INT32 DrvFrame()
 	SekSetCyclesScanline(nCyclesTotal[0] / 262);
 	nToaCyclesDisplayStart = nCyclesTotal[0] - ((nCyclesTotal[0] * (TOA_VBLANK_LINES + 240)) / 262);
 	nToaCyclesVBlankStart = nCyclesTotal[0] - ((nCyclesTotal[0] * TOA_VBLANK_LINES) / 262);
-	bVBlank = false;
+	bool bVBlank = false;
 
 	INT32 nSoundBufferPos = 0;
 
@@ -1001,11 +969,7 @@ static INT32 DrvFrame()
 		if (!bVBlank && nNext > nToaCyclesVBlankStart) {
 			if (SekTotalCycles() < nToaCyclesVBlankStart) {
 				nCyclesSegment = nToaCyclesVBlankStart - SekTotalCycles();
-				if (!CheckSleep(0)) {
-					SekRun(nCyclesSegment);
-				} else {
-					SekIdle(nCyclesSegment);
-				}
+				SekRun(nCyclesSegment);
 			}
 
 			nIRQPending = 1;
@@ -1021,11 +985,7 @@ static INT32 DrvFrame()
 		}
 
 		nCyclesSegment = nNext - SekTotalCycles();
-		if (!CheckSleep(0)) {											// See if this CPU is busywaiting
-			SekRun(nCyclesSegment);
-		} else {
-			SekIdle(nCyclesSegment);
-		}
+		SekRun(nCyclesSegment);
 
 		if ((i & 1) == 0) {
 			// Render sound segment
@@ -1062,12 +1022,57 @@ static INT32 DrvFrame()
 	return 0;
 }
 
+// Scan ram
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
+{
+	struct BurnArea ba;
+
+	if (pnMin) {						// Return minimum compatible version
+		*pnMin =  0x029521;
+	}
+
+	EEPROMScan(nAction, pnMin);			// Scan EEPROM
+
+	if (nAction & ACB_VOLATILE) {		// Scan volatile ram
+		memset(&ba, 0, sizeof(ba));
+		ba.Data		= RamStart;
+		ba.nLen		= RamEnd - RamStart;
+		ba.szName	= "RAM";
+		BurnAcb(&ba);
+
+		SekScan(nAction);				// scan 68000 states
+		ZetScan(nAction);				// Scan Z80
+
+		YMZ280BScan(nAction, pnMin);
+		BurnTimerScan(nAction, pnMin);
+
+		ToaScanGP9001(nAction, pnMin);
+
+		SCAN_VAR(nSoundData);
+		SCAN_VAR(nSoundlatchAck);
+		SCAN_VAR(nCyclesDone);			// used as rollover cycles
+		SCAN_VAR(Z80BusRQ);
+		SCAN_VAR(nIRQPending);
+		SCAN_VAR(nTextROMStatus);
+
+		if (nAction & ACB_WRITE) {
+			INT32 n = nTextROMStatus;
+			nTextROMStatus = -1;
+			SekOpen(0);
+			Map68KTextROM(n);
+			SekClose();
+		}
+	}
+
+	return 0;
+}
+
 struct BurnDriver BurnDrvBattleBkraidu = {
 	"bbakraid", NULL, NULL, NULL, "1999",
 	"Battle Bakraid - Unlimited Version (U.S.A.) (Tue Jun 8 1999)\0", NULL, "Eighting", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, bkraiduRomInfo, bkraiduRomName, NULL, NULL, bbakraidInputInfo, bkraiduDIPInfo,
+	NULL, bkraiduRomInfo, bkraiduRomName, NULL, NULL, NULL, NULL, bbakraidInputInfo, bkraiduDIPInfo,
 	bbakraidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1077,7 +1082,7 @@ struct BurnDriver BurnDrvBattleBkraidc = {
 	"Battle Bakraid - Unlimited Version (China) (Tue Jun 8 1999)\0", NULL, "Eighting", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, bkraidcRomInfo, bkraidcRomName, NULL, NULL, bbakraidInputInfo, bbakraidDIPInfo,
+	NULL, bkraidcRomInfo, bkraidcRomName, NULL, NULL, NULL, NULL, bbakraidInputInfo, bbakraidDIPInfo,
 	bbakraidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1087,7 +1092,7 @@ struct BurnDriver BurnDrvBattleBkraiduj = {
 	"Battle Bakraid - Unlimited Version (Japan) (Tue Jun 8 1999)\0", NULL, "Eighting", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, bkraidujRomInfo, bkraidujRomName, NULL, NULL, bbakraidInputInfo, bbakraidDIPInfo,
+	NULL, bkraidujRomInfo, bkraidujRomName, NULL, NULL, NULL, NULL, bbakraidInputInfo, bbakraidDIPInfo,
 	bbakraidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1097,7 +1102,7 @@ struct BurnDriver BurnDrvBattleBkraidj = {
 	"Battle Bakraid (Japan) (Wed Apr 7 1999)\0", NULL, "Eighting", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, bkraidjRomInfo, bkraidjRomName, NULL, NULL, bbakraidInputInfo, bbakraidDIPInfo,
+	NULL, bkraidjRomInfo, bkraidjRomName, NULL, NULL, NULL, NULL, bbakraidInputInfo, bbakraidDIPInfo,
 	bbakraidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };

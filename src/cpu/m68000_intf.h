@@ -11,7 +11,7 @@
 
 #define EMU_M68K								// Use Musashi 68000 emulator
 
-#define SEK_MAX	(4)								// Maximum number of CPUs supported
+#define SEK_MAX	(5)								// Maximum number of CPUs supported
 
 #if defined EMU_M68K
  #include "m68k/m68k.h"
@@ -134,22 +134,41 @@ void SekSetCyclesScanline(INT32 nCycles);
 void SekClose();
 void SekOpen(const INT32 i);
 INT32 SekGetActive();
-INT32 SekShouldInterrupt(void);
+INT32 SekShouldInterrupt();
+void SekBurnUntilInt();
 
-#define SEK_IRQSTATUS_NONE (0x0000)
-#define SEK_IRQSTATUS_AUTO (0x2000)
-#define SEK_IRQSTATUS_ACK  (0x1000)
+#define SEK_IRQSTATUS_NONE  (0x0000)
+#define SEK_IRQSTATUS_VAUTO (0x4000)
+#define SEK_IRQSTATUS_AUTO  (0x2000)
+#define SEK_IRQSTATUS_ACK   (0x1000)
 
-void SekSetIRQLine(const INT32 line, const INT32 status);
+void SekSetIRQLine(const INT32 line, INT32 status);
+void SekSetIRQLine(INT32 nCPU, const INT32 line, INT32 status);
+void SekSetVIRQLine(const INT32 line, INT32 nstatus);
+void SekSetVIRQLine(INT32 nCPU, const INT32 line, INT32 status);
+
 void SekReset();
+void SekReset(INT32 nCPU);
 
 void SekRunEnd();
 void SekRunAdjust(const INT32 nCycles);
 INT32 SekRun(const INT32 nCycles);
+INT32 SekRun(INT32 nCPU, INT32 nCycles);
+void SekSetRESETLine(INT32 nStatus);
+void SekSetRESETLine(INT32 nCPU, INT32 nStatus);
+INT32 SekGetRESETLine();
+INT32 SekGetRESETLine(INT32 nCPU);
+
+void SekSetHALT(INT32 nStatus);
+void SekSetHALT(INT32 nCPU, INT32 nStatus);
+INT32 SekGetHALT();
+INT32 SekGetHALT(INT32 nCPU);
+
+INT32 SekIdle(INT32 nCPU, INT32 nCycles);
 
 inline static INT32 SekIdle(INT32 nCycles)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	extern UINT8 DebugCPU_SekInitted;
 	if (!DebugCPU_SekInitted) bprintf(PRINT_ERROR, (TCHAR*)_T("SekIdle called without init\n"));
 	if (nSekActive == -1) bprintf(PRINT_ERROR, (TCHAR*)_T("SekIdle called when no CPU open\n"));
@@ -162,7 +181,7 @@ inline static INT32 SekIdle(INT32 nCycles)
 
 inline static INT32 SekSegmentCycles()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	extern UINT8 DebugCPU_SekInitted;
 	if (!DebugCPU_SekInitted) bprintf(PRINT_ERROR, (TCHAR*)_T("SekSegmentCycles called without init\n"));
 	if (nSekActive == -1) bprintf(PRINT_ERROR, (TCHAR*)_T("SekSegmentCycles called when no CPU open\n"));
@@ -175,13 +194,15 @@ inline static INT32 SekSegmentCycles()
 #endif
 }
 
-#if defined FBA_DEBUG
+INT32 SekTotalCycles(INT32 nCPU);
+
+#if defined FBNEO_DEBUG
 static INT32 SekTotalCycles()
 #else
 inline static INT32 SekTotalCycles()
 #endif
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	extern UINT8 DebugCPU_SekInitted;
 	if (!DebugCPU_SekInitted) bprintf(PRINT_ERROR, (TCHAR*)_T("SekTotalCycles called without init\n"));
 	if (nSekActive == -1) bprintf(PRINT_ERROR, (TCHAR*)_T("SekTotalCycles called when no CPU open\n"));
@@ -196,7 +217,7 @@ inline static INT32 SekTotalCycles()
 
 inline static INT32 SekCurrentScanline()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	extern UINT8 DebugCPU_SekInitted;
 	if (!DebugCPU_SekInitted) bprintf(PRINT_ERROR, (TCHAR*)_T("SekCurrentScanline called without init\n"));
 	if (nSekActive == -1) bprintf(PRINT_ERROR, (TCHAR*)_T("SekCurrentScanline called when no CPU open\n"));
@@ -205,6 +226,8 @@ inline static INT32 SekCurrentScanline()
 	return SekTotalCycles() / nSekCyclesScanline;
 }
 
+// Mask off address bits (usually top, default is 0xffffff)
+void SekSetAddressMask(UINT32 nAddressMask);
 
 // Map areas of memory
 INT32 SekMapMemory(UINT8* pMemory, UINT32 nStart, UINT32 nEnd, INT32 nType);
@@ -227,5 +250,15 @@ INT32 SekSetTASCallback(pSekTASCallback pCallback);
 
 // Get a CPU's PC
 UINT32 SekGetPC(INT32 n);
+UINT32 SekGetPPC(INT32);
 
 INT32 SekScan(INT32 nAction);
+
+
+UINT8 SekCheatRead(UINT32 a); // cheat core
+
+extern struct cpu_core_config SekConfig;
+
+// depreciate this and use BurnTimerAttach directly!
+#define BurnTimerAttachSek(clock)	\
+	BurnTimerAttach(&SekConfig, clock)

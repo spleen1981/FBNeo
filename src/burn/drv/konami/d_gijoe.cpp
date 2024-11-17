@@ -1,7 +1,8 @@
 // FB Alpha GI Joe driver module
+// Based on MAME driver by Olivier Galibert
 
 #include "tiles_generic.h"
-#include "m68000_intf.h" 
+#include "m68000_intf.h"
 #include "z80_intf.h"
 #include "konamiic.h"
 #include "burn_ym2151.h"
@@ -41,7 +42,7 @@ static UINT8 DrvJoy3[16];
 static UINT8 DrvJoy4[16];
 static UINT8 DrvReset;
 static UINT16 DrvInputs[4];
-static UINT8 DrvDips[4];
+static UINT8 DrvDips[3];
 
 static INT32 avac_bits[4];
 static INT32 avac_occupancy[4];
@@ -52,81 +53,76 @@ static INT32 irq6_timer;
 static UINT16 control_data;
 
 static struct BurnInputInfo GijoeInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy3 + 2,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy3 + 3,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy3 + 1,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p1 fire 2"},
-	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy3 + 6,	"p1 fire 3"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy3 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy3 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy3 + 1,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p1 fire 2"	},
+	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy3 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 coin"},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 start"},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 10,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 11,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 8,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 9,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 12,	"p2 fire 1"},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 13,	"p2 fire 2"},
-	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy3 + 14,	"p2 fire 3"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 10,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 11,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 8,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 9,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 12,	"p2 fire 1"	},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 13,	"p2 fire 2"	},
+	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy3 + 14,	"p2 fire 3"	},
 
-	{"P3 Coin",		BIT_DIGITAL,	DrvJoy2 + 2,	"p3 coin"},
-	{"P3 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p3 start"},
-	{"P3 Up",		BIT_DIGITAL,	DrvJoy4 + 2,	"p3 up"},
-	{"P3 Down",		BIT_DIGITAL,	DrvJoy4 + 3,	"p3 down"},
-	{"P3 Left",		BIT_DIGITAL,	DrvJoy4 + 0,	"p3 left"},
-	{"P3 Right",		BIT_DIGITAL,	DrvJoy4 + 1,	"p3 right"},
-	{"P3 Button 1",		BIT_DIGITAL,	DrvJoy4 + 4,	"p3 fire 1"},
-	{"P3 Button 2",		BIT_DIGITAL,	DrvJoy4 + 5,	"p3 fire 2"},
-	{"P3 Button 3",		BIT_DIGITAL,	DrvJoy4 + 6,	"p3 fire 3"},
+	{"P3 Coin",			BIT_DIGITAL,	DrvJoy2 + 2,	"p3 coin"	},
+	{"P3 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p3 start"	},
+	{"P3 Up",			BIT_DIGITAL,	DrvJoy4 + 2,	"p3 up"		},
+	{"P3 Down",			BIT_DIGITAL,	DrvJoy4 + 3,	"p3 down"	},
+	{"P3 Left",			BIT_DIGITAL,	DrvJoy4 + 0,	"p3 left"	},
+	{"P3 Right",		BIT_DIGITAL,	DrvJoy4 + 1,	"p3 right"	},
+	{"P3 Button 1",		BIT_DIGITAL,	DrvJoy4 + 4,	"p3 fire 1"	},
+	{"P3 Button 2",		BIT_DIGITAL,	DrvJoy4 + 5,	"p3 fire 2"	},
+	{"P3 Button 3",		BIT_DIGITAL,	DrvJoy4 + 6,	"p3 fire 3"	},
 
-	{"P4 Coin",		BIT_DIGITAL,	DrvJoy2 + 3,	"p4 coin"},
-	{"P4 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p4 start"},
-	{"P4 Up",		BIT_DIGITAL,	DrvJoy4 + 10,	"p4 up"},
-	{"P4 Down",		BIT_DIGITAL,	DrvJoy4 + 11,	"p4 down"},
-	{"P4 Left",		BIT_DIGITAL,	DrvJoy4 + 8,	"p4 left"},
-	{"P4 Right",		BIT_DIGITAL,	DrvJoy4 + 9,	"p4 right"},
-	{"P4 Button 1",		BIT_DIGITAL,	DrvJoy4 + 12,	"p4 fire 1"},
-	{"P4 Button 2",		BIT_DIGITAL,	DrvJoy4 + 13,	"p4 fire 2"},
-	{"P4 Button 3",		BIT_DIGITAL,	DrvJoy4 + 14,	"p4 fire 3"},
+	{"P4 Coin",			BIT_DIGITAL,	DrvJoy2 + 3,	"p4 coin"	},
+	{"P4 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p4 start"	},
+	{"P4 Up",			BIT_DIGITAL,	DrvJoy4 + 10,	"p4 up"		},
+	{"P4 Down",			BIT_DIGITAL,	DrvJoy4 + 11,	"p4 down"	},
+	{"P4 Left",			BIT_DIGITAL,	DrvJoy4 + 8,	"p4 left"	},
+	{"P4 Right",		BIT_DIGITAL,	DrvJoy4 + 9,	"p4 right"	},
+	{"P4 Button 1",		BIT_DIGITAL,	DrvJoy4 + 12,	"p4 fire 1"	},
+	{"P4 Button 2",		BIT_DIGITAL,	DrvJoy4 + 13,	"p4 fire 2"	},
+	{"P4 Button 3",		BIT_DIGITAL,	DrvJoy4 + 14,	"p4 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Service 1",		BIT_DIGITAL,	DrvJoy2 + 8,	"service"},
-	{"Service 2",		BIT_DIGITAL,	DrvJoy2 + 9,	"service"},
-	{"Service 3",		BIT_DIGITAL,	DrvJoy2 + 10,	"service"},
-	{"Service 4",		BIT_DIGITAL,	DrvJoy2 + 11,	"service"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"},
-	{"Dip D",		BIT_DIPSWITCH,	DrvDips + 3,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service 1",		BIT_DIGITAL,	DrvJoy2 + 8,	"service"	},
+	{"Service 2",		BIT_DIGITAL,	DrvJoy2 + 9,	"service"	},
+	{"Service 3",		BIT_DIGITAL,	DrvJoy2 + 10,	"service"	},
+	{"Service 4",		BIT_DIGITAL,	DrvJoy2 + 11,	"service"	},
+	{"Service Mode",	BIT_DIGITAL,	DrvJoy1 + 11,	"diag"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Gijoe)
 
 static struct BurnDIPInfo GijoeDIPList[]=
 {
-	{0x29, 0xff, 0xff, 0x08, NULL			},
-	{0x2a, 0xff, 0xff, 0x80, NULL			},
-	{0x2b, 0xff, 0xff, 0x80, NULL			},
-	{0x2c, 0xff, 0xff, 0x80, NULL			},
+	{0x2a, 0xff, 0xff, 0x00, NULL				},
+	{0x2b, 0xff, 0xff, 0x80, NULL				},
+	{0x2c, 0xff, 0xff, 0x80, NULL				},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"		},
-	{0x29, 0x01, 0x08, 0x08, "Off"			},
-	{0x29, 0x01, 0x08, 0x00, "On"			},
-
-	{0   , 0xfe, 0   ,    2, "Sound"		},
-	{0x2a, 0x01, 0x80, 0x80, "Mono"			},
-	{0x2a, 0x01, 0x80, 0x00, "Stereo"		},
+	{0   , 0xfe, 0   ,    2, "Sound"			},
+	{0x2a, 0x01, 0x80, 0x80, "Mono"				},
+	{0x2a, 0x01, 0x80, 0x00, "Stereo"			},
 
 	{0   , 0xfe, 0   ,    2, "Coin mechanism"	},
-	{0x2b, 0x01, 0x80, 0x80, "Common"		},
+	{0x2b, 0x01, 0x80, 0x80, "Common"			},
 	{0x2b, 0x01, 0x80, 0x00, "Independent"		},
 
-	{0   , 0xfe, 0   ,    2, "Players"		},
-	{0x2c, 0x01, 0x80, 0x80, "2"			},
-	{0x2c, 0x01, 0x80, 0x00, "4"			},
+	{0   , 0xfe, 0   ,    2, "Number of Players"},
+	{0x2c, 0x01, 0x80, 0x80, "2"				},
+	{0x2c, 0x01, 0x80, 0x00, "4"				},
 };
 
 STDDIPINFO(Gijoe)
@@ -142,7 +138,7 @@ static void gijoe_objdma()
 
 	for (; src_head <= src_tail; src_head += 8)
 	{
-		if (*src_head & 0x8000)
+		if (BURN_ENDIAN_SWAP_INT16(*src_head) & 0x8000)
 		{
 			memcpy(dst_head, src_head, 0x10);
 			dst_head += 8;
@@ -155,7 +151,7 @@ static void gijoe_objdma()
 	}
 }
 
-static void _fastcall gijoe_main_write_word(UINT32 address, UINT16 data)
+static void __fastcall gijoe_main_write_word(UINT32 address, UINT16 data)
 {
 	if ((address & 0xfffff8) == 0x110000) {
 		K053246Write((address & 0x06) + 0, data >> 8);
@@ -189,7 +185,7 @@ static void _fastcall gijoe_main_write_word(UINT32 address, UINT16 data)
 	}
 }
 
-static void _fastcall gijoe_main_write_byte(UINT32 address, UINT8 data)
+static void __fastcall gijoe_main_write_byte(UINT32 address, UINT8 data)
 {
 	if ((address & 0xfffff8) == 0x110000) {
 		K053246Write((address & 0x07) ^ 0, data);
@@ -239,7 +235,7 @@ static void _fastcall gijoe_main_write_byte(UINT32 address, UINT8 data)
 	}
 }
 
-static UINT16 _fastcall gijoe_main_read_word(UINT32 address)
+static UINT16 __fastcall gijoe_main_read_word(UINT32 address)
 {
 	if ((address & 0xffc000) == 0x120000) {
 		return K056832RamReadWord(address & 0x1fff);
@@ -273,7 +269,7 @@ static UINT16 _fastcall gijoe_main_read_word(UINT32 address)
 	return 0;
 }
 
-static UINT8 _fastcall gijoe_main_read_byte(UINT32 address)
+static UINT8 __fastcall gijoe_main_read_byte(UINT32 address)
 {
 	if ((address & 0xffc000) == 0x120000) {
 		return K056832RamReadByte(address & 0x1fff);
@@ -315,7 +311,7 @@ static UINT8 _fastcall gijoe_main_read_byte(UINT32 address)
 
 		case 0x1f0000:
 		case 0x1f0001:
-			return K053246Read((address & 1)); // ^ 1? ??
+			return K053246Read((address & 1));
 	}
 
 	return 0;
@@ -355,20 +351,20 @@ static UINT8 __fastcall gijoe_sound_read(UINT16 address)
 
 static void gijoe_sprite_callback(INT32 */*code*/, INT32 *color, INT32 *priority)
 {
-	int pri = (*color & 0x03e0) >> 4;
+	INT32 pri = (*color & 0x03e0) >> 4;
 
-	if (pri <= layerpri[3])					*priority = 0x0000;
+	if (pri <= layerpri[3])								*priority = 0x0000;
 	else if (pri > layerpri[3] && pri <= layerpri[2])	*priority = 0xff00;
 	else if (pri > layerpri[2] && pri <= layerpri[1])	*priority = 0xfff0;
 	else if (pri > layerpri[1] && pri <= layerpri[0])	*priority = 0xfffc;
-	else							*priority = 0xfffe;
+	else												*priority = 0xfffe;
 
 	*color = sprite_colorbase | (*color & 0x001f);
 }
 
-static void gijoe_tile_callback(int layer, int *code, int *color, int */*flags*/)
+static void gijoe_tile_callback(INT32 layer, INT32 *code, INT32 *color, INT32 */*flags*/)
 {
-	int tile = *code;
+	INT32 tile = *code;
 
 	if (tile >= 0xf000 && tile <= 0xf4ff)
 	{
@@ -442,6 +438,8 @@ static INT32 DrvDoReset()
 	avac_vrc = 0xffff;
 	sound_nmi_enable = 0;
 
+	irq6_timer = -1;
+
 	return 0;
 }
 
@@ -453,15 +451,15 @@ static INT32 MemIndex()
 	DrvZ80ROM		= Next; Next += 0x010000;
 
 	DrvGfxROM0		= Next; Next += 0x200000;
-	DrvGfxROMExp0		= Next; Next += 0x400000;
+	DrvGfxROMExp0	= Next; Next += 0x400000;
 	DrvGfxROM1		= Next; Next += 0x400000;
-	DrvGfxROMExp1		= Next; Next += 0x800000;
+	DrvGfxROMExp1	= Next; Next += 0x800000;
 
 	DrvSndROM		= Next; Next += 0x200000;
 
 	DrvEeprom		= Next; Next += 0x000080;
 
-	konami_palette32	= (UINT32*)Next;
+	konami_palette32= (UINT32*)Next;
 	DrvPalette		= (UINT32*)Next; Next += 0x0800 * sizeof(UINT32);
 
 	AllRam			= Next;
@@ -540,13 +538,14 @@ static INT32 DrvInit()
 
 	K056832Init(DrvGfxROM0, DrvGfxROMExp0, 0x200000, gijoe_tile_callback);
 	K056832SetGlobalOffsets(24, 16);
+	K056832SetLinemap();
 
 	K053247Init(DrvGfxROM1, DrvGfxROMExp1, 0x3fffff, gijoe_sprite_callback, 1);
-	K053247SetSpriteOffset(-61, -46);
+	K053247SetSpriteOffset(-61, -46+10);
 
 	K054539Init(0, 48000, DrvSndROM, 0x200000);
-	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
-	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
+	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 2.10, BURN_SND_ROUTE_LEFT);
+	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 2.10, BURN_SND_ROUTE_RIGHT);
 
 	DrvDoReset();
 
@@ -577,13 +576,13 @@ static void DrvPaletteRecalc()
 
 	for (INT32 i = 0; i < 0x1000/2; i++)
 	{
-		INT32 r = (pal[i] & 0x1f);
-		INT32 g = (pal[i] >> 5) & 0x1f;
-		INT32 b = (pal[i] >> 10) & 0x1f;
+		INT32 r = (BURN_ENDIAN_SWAP_INT16(pal[i]) & 0x1f);
+		INT32 g = (BURN_ENDIAN_SWAP_INT16(pal[i]) >> 5) & 0x1f;
+		INT32 b = (BURN_ENDIAN_SWAP_INT16(pal[i]) >> 10) & 0x1f;
 
 		r = (r << 3) | (r >> 2);
 		g = (g << 3) | (g >> 2);
-		b = (b << 3) | (b >> 2); 
+		b = (b << 3) | (b >> 2);
 
 		DrvPalette[i] = (r << 16) + (g << 8) + b;
 	}
@@ -593,16 +592,12 @@ static INT32 DrvDraw()
 {
 	DrvPaletteRecalc();
 
-	int layers[4], dirty, mask, vrc_mode, vrc_new;
+	INT32 layers[4], vrc_mode, vrc_new;
 
 	K056832ReadAvac(&vrc_mode, &vrc_new);
 
 	if (vrc_mode)
 	{
-		for (dirty = 0xf000; dirty; dirty >>= 4)
-			if ((avac_vrc & dirty) != (vrc_new & dirty))
-				mask |= dirty;
-
 		avac_vrc = vrc_new;
 		avac_bits[0] = vrc_new << 4  & 0xf000;
 		avac_bits[1] = vrc_new       & 0xf000;
@@ -633,7 +628,7 @@ static INT32 DrvDraw()
 		K056832SetLayerOffsets(3, 16, 0);
 	}
 
-	KonamiClearBitmaps(0);
+	KonamiClearBitmaps(DrvPalette[0]);
 
 	layers[0] = 0;
 	layerpri[0] = 0; // not sure
@@ -645,6 +640,13 @@ static INT32 DrvDraw()
 	layerpri[3] = K053251GetPriority(4);
 
 	konami_sortlayers4(layers, layerpri);
+
+	// find layer 3's pri, tell renderer to inhibit shadows on that pri
+	for (INT32 i = 0; i < 4; i++) {
+		if (layers[i] == 3) {
+			konami_set_layer_shadow_inhibit_mode(1 << i);
+		}
+	}
 
 	if (nBurnLayer & 1) K056832Draw(layers[0], K056832_DRAW_FLAG_MIRROR, 1);
 	if (nBurnLayer & 2) K056832Draw(layers[1], K056832_DRAW_FLAG_MIRROR, 2);
@@ -673,15 +675,13 @@ static INT32 DrvFrame()
 			DrvInputs[3] ^= (DrvJoy4[i] & 1) << i;
 		}
 
-		DrvInputs[0] = (DrvInputs[0] & 0xfff7) | (DrvDips[0] & 0x08);
-		DrvInputs[2] = (DrvInputs[2] & 0x7f7f) | (DrvDips[1] & 0x80) | ((DrvDips[2] & 0x80) << 8);
-		DrvInputs[3] = (DrvInputs[3] & 0xff7f) | (DrvDips[3] & 0x80);
-		DrvInputs[0] &= 0x0fff;
+		DrvInputs[0] = (DrvInputs[0] & 0x0fff);
+		DrvInputs[2] = (DrvInputs[2] & 0x7f7f) | (DrvDips[0] & 0x80) | ((DrvDips[1] & 0x80) << 8);
+		DrvInputs[3] = (DrvInputs[3] & 0xff7f) | (DrvDips[2] & 0x80);
 		DrvInputs[1] &= 0x0fff;
 	}
 
-	INT32 nInterleave = nBurnSoundLen;
-	INT32 nSoundBufferPos = 0;
+	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[2] = { 16000000 / 60, 8000000 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
@@ -689,66 +689,48 @@ static INT32 DrvFrame()
 	ZetOpen(0);
 
 	for (INT32 i = 0; i < nInterleave; i++) {
-		INT32 nNext, nCyclesSegment;
+		CPU_RUN(0, Sek);
 
-		nNext = (i + 1) * nCyclesTotal[0] / nInterleave;
-		nCyclesSegment = nNext - nCyclesDone[0];
-		nCyclesSegment = SekRun(nCyclesSegment);
-		nCyclesDone[0] += nCyclesSegment;
-
-		if (control_data & 0x20 && irq6_timer > 0) {
+		if (control_data & 0x20 && irq6_timer == 0) {
 			SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
-		}
-		irq6_timer--;
+			irq6_timer = -1;
+		} else if (irq6_timer != -1) irq6_timer--;
 
-		nNext = (i + 1) * nCyclesTotal[1] / nInterleave;
-		nCyclesSegment = nNext - nCyclesDone[1];
-		nCyclesSegment = ZetRun(nCyclesSegment);
-		nCyclesDone[1] += nCyclesSegment;
+		CPU_RUN(1, Zet);
 		if ((i % (nInterleave / 8)) == ((nInterleave / 8) - 1) && sound_nmi_enable) {
 			ZetNmi();
 		}
 
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			memset (pSoundBuf, 0, nSegmentLength * 2 * 2);
-			K054539Update(0, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
-	}
+		if (i == 240) {
+			if (K056832IsIrqEnabled()) {
+				if (K053246_is_IRQ_enabled()) {
+					gijoe_objdma();
+					irq6_timer = 1; // guess
+				}
 
-	if (K056832IsIrqEnabled()) {
-		if (K053246_is_IRQ_enabled()) {
-			gijoe_objdma();
-			irq6_timer = 10; // guess
-		}
+				if (control_data & 0x80) {
+					SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
+				}
+			}
 
-		if (control_data & 0x80) {
-			SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
+			if (pBurnDraw) { // draw at vblank (or linemapping flickers @ elevator level)
+				DrvDraw();
+			}
 		}
 	}
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		if (nSegmentLength) {
-			memset (pSoundBuf, 0, nSegmentLength * 2 * 2);
-			K054539Update(0, pSoundBuf, nSegmentLength);
-		}
+		BurnSoundClear();
+		K054539Update(0, pBurnSoundOut, nBurnSoundLen);
 	}
 
 	ZetClose();
 	SekClose();
 
-	if (pBurnDraw) {
-		DrvDraw();
-	}
-
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -756,7 +738,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		*pnMin = 0x029732;
 	}
 
-	if (nAction & ACB_VOLATILE) {		
+	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
 
 		ba.Data	  = AllRam;
@@ -767,20 +749,20 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		SekScan(nAction);
 		ZetScan(nAction);
 
-		K054539Scan(nAction);
+		K054539Scan(nAction, pnMin);
 
 		KonamiICScan(nAction);
 
 		SCAN_VAR(avac_vrc);
+		SCAN_VAR(avac_bits);
+		SCAN_VAR(avac_occupancy);
 		SCAN_VAR(sound_nmi_enable);
 		SCAN_VAR(control_data);
-		SCAN_VAR(sound_nmi_enable);
 		SCAN_VAR(irq6_timer);
 
-		for (INT32 i = 0; i < 4; i++) {
-			SCAN_VAR(avac_bits[i]);
-			SCAN_VAR(avac_occupancy[i]);
-		}
+		SCAN_VAR(layerpri);
+		SCAN_VAR(layer_colorbase);
+		SCAN_VAR(sprite_colorbase);
 	}
 
 	return 0;
@@ -817,8 +799,8 @@ struct BurnDriver BurnDrvGijoe = {
 	"gijoe", NULL, NULL, NULL, "1992",
 	"G.I. Joe (World, EAB, set 1)\0", NULL, "Konami", "GX069",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_KONAMI, GBF_MISC, 0,
-	NULL, gijoeRomInfo, gijoeRomName, NULL, NULL, GijoeInputInfo, GijoeDIPInfo,
+	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, gijoeRomInfo, gijoeRomName, NULL, NULL, NULL, NULL, GijoeInputInfo, GijoeDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
 };
@@ -826,7 +808,7 @@ struct BurnDriver BurnDrvGijoe = {
 
 // G.I. Joe (World, EB8, prototype?)
 
-static struct BurnRomInfo gijoeaRomDesc[] = {
+static struct BurnRomInfo gijoeeaRomDesc[] = {
 	{ "rom3.14e",		0x040000, 0x0a11f63a, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
 	{ "rom2.18e",		0x040000, 0x8313c559, 1 | BRF_PRG | BRF_ESS }, //  1
 	{ "069a12.13e",		0x040000, 0x75a7585c, 1 | BRF_PRG | BRF_ESS }, //  2
@@ -847,15 +829,15 @@ static struct BurnRomInfo gijoeaRomDesc[] = {
 	{ "er5911.7d",		0x000080, 0x64f5c87b, 6 | BRF_OPT },           // 12 eeprom data
 };
 
-STD_ROM_PICK(gijoea)
-STD_ROM_FN(gijoea)
+STD_ROM_PICK(gijoeea)
+STD_ROM_FN(gijoeea)
 
-struct BurnDriver BurnDrvGijoea = {
-	"gijoea", "gijoe", NULL, NULL, "1992",
+struct BurnDriver BurnDrvGijoeea = {
+	"gijoeea", "gijoe", NULL, NULL, "1992",
 	"G.I. Joe (World, EB8, prototype?)\0", NULL, "Konami", "GX069",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
-	NULL, gijoeaRomInfo, gijoeaRomName, NULL, NULL, GijoeInputInfo, GijoeDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, gijoeeaRomInfo, gijoeeaRomName, NULL, NULL, NULL, NULL, GijoeInputInfo, GijoeDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
 };
@@ -891,8 +873,82 @@ struct BurnDriver BurnDrvGijoeu = {
 	"gijoeu", "gijoe", NULL, NULL, "1992",
 	"G.I. Joe (US, UAB)\0", NULL, "Konami", "GX069",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
-	NULL, gijoeuRomInfo, gijoeuRomName, NULL, NULL, GijoeInputInfo, GijoeDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, gijoeuRomInfo, gijoeuRomName, NULL, NULL, NULL, NULL, GijoeInputInfo, GijoeDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
+	288, 224, 4, 3
+};
+
+
+// G.I. Joe (US, UAA)
+
+static struct BurnRomInfo gijoeuaRomDesc[] = {
+	{ "069uaa03.14e",	0x040000, 0xcfb1af44, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
+	{ "069uaa02.18e",	0x040000, 0x3e6a56cd, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "069a12.13e",		0x040000, 0x75a7585c, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "069a11.16e",		0x040000, 0x3153e788, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "069a01.7c",		0x010000, 0x74172b99, 2 | BRF_PRG | BRF_ESS }, //  4 Z80 Code
+
+// the GFX ROMs are smaller and believed to have the same content as the other sets, in fact the game runs fine. Still better to have them dumped
+// only 4 GFX ROMs were dumped from this PCB because the others are soldered ant the dumper didn't want to risk damage
+//	{ "069a10al.d7",	0x040000, 0x00000000, 3 | BRF_GRA | BRF_NODUMP }, //  5 K056832 Characters
+//	{ "069a10ah.d9",	0x040000, 0x00000000, 3 | BRF_GRA | BRF_NODUMP }, //  6
+//	{ "069a09al.d3",	0x040000, 0x00000000, 3 | BRF_GRA | BRF_NODUMP }, //  7
+//	{ "069a09ah.d5",	0x040000, 0x00000000, 3 | BRF_GRA | BRF_NODUMP }, //  8
+//	{ "069a10bl.j7",	0x040000, 0x087d8e25, 3 | BRF_GRA }, 			  //  9
+//	{ "069a10bh.j9",	0x040000, 0xfc7ad198, 3 | BRF_GRA }, 			  // 10
+//	{ "069a09bl.j3",	0x040000, 0x385217cc, 3 | BRF_GRA }, 			  // 11
+//	{ "069a09bh.j5",	0x040000, 0xc6d43c8a, 3 | BRF_GRA }, 			  // 12
+// 	overlay standard ROMs for now
+	{ "069a10.18j",		0x100000, 0x4c6743ee, 3 | BRF_GRA },           //  5 K056832 Characters
+	{ "069a09.16j",		0x100000, 0xe6e36b05, 3 | BRF_GRA },           //  6
+
+//	{ "069a08al.k3",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 13 K053246 Sprites
+//	{ "069a08ah.n3",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 14
+//	{ "069a05al.k5",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 15
+//	{ "069a05ah.n5",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 16
+//	{ "069a07al.k7",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 15
+//	{ "069a07ah.n7",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 16
+//	{ "069a06al.k9",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 17
+//	{ "069a06ah.n9",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 18
+//	{ "069a08bl.l3",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 19
+//	{ "069a08bh.p3",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 20
+//	{ "069a05bl.l5",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 21
+//	{ "069a05bh.p5",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 22
+//	{ "069a07bl.l7",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 23
+//	{ "069a07bh.p7",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 24
+//	{ "069a06bl.l9",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 25
+//	{ "069a06bh.p9",	0x040000, 0x00000000, 4 | BRF_GRA | BRF_NODUMP }, // 26
+// 	overlay standard ROMs for now
+	{ "069a08.6h",		0x100000, 0x325477d4, 4 | BRF_GRA },           //  7 K053247 Sprites
+	{ "069a05.1h",		0x100000, 0xc4ab07ed, 4 | BRF_GRA },           //  8
+	{ "069a07.4h",		0x100000, 0xccaa3971, 4 | BRF_GRA },           //  9
+	{ "069a06.2h",		0x100000, 0x63eba8e1, 4 | BRF_GRA },           // 10
+	
+//	{ "069a04a.g2",		0x040000, 0x00000000, 5 | BRF_SND | BRF_NODUMP }, // 27 k054539
+//	{ "069a04b.j2",		0x040000, 0x00000000, 5 | BRF_SND | BRF_NODUMP }, // 28
+//	{ "069a04c.k2",		0x040000, 0x00000000, 5 | BRF_SND | BRF_NODUMP }, // 29
+//	{ "069a04d.l2",		0x040000, 0x00000000, 5 | BRF_SND | BRF_NODUMP }, // 30
+//	{ "069a04e.n2",		0x040000, 0x00000000, 5 | BRF_SND | BRF_NODUMP }, // 31
+//	{ "069a04f.p2",		0x040000, 0x00000000, 5 | BRF_SND | BRF_NODUMP }, // 32
+//	{ "069a04g.r2",		0x040000, 0x00000000, 5 | BRF_SND | BRF_NODUMP }, // 33
+//	{ "069a04h.s2",		0x040000, 0x00000000, 5 | BRF_SND | BRF_NODUMP }, // 34
+// 	overlay standard ROMs for now
+	{ "069a04a.1e",		0x200000, 0x11d6dcd6, 5 | BRF_SND },           // 11 k054539
+
+	{ "er5911.7d",		0x000080, 0x33b07813, 6 | BRF_OPT },           // 12 eeprom data
+};
+
+STD_ROM_PICK(gijoeua)
+STD_ROM_FN(gijoeua)
+
+struct BurnDriver BurnDrvGijoeua = {
+	"gijoeua", "gijoe", NULL, NULL, "1992",
+	"G.I. Joe (US, UAA)\0", NULL, "Konami", "GX069",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, gijoeuaRomInfo, gijoeuaRomName, NULL, NULL, NULL, NULL, GijoeInputInfo, GijoeDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
 };
@@ -928,8 +984,45 @@ struct BurnDriver BurnDrvGijoej = {
 	"gijoej", "gijoe", NULL, NULL, "1992",
 	"G.I. Joe (Japan, JAA)\0", NULL, "Konami", "GX069",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
-	NULL, gijoejRomInfo, gijoejRomName, NULL, NULL, GijoeInputInfo, GijoeDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, gijoejRomInfo, gijoejRomName, NULL, NULL, NULL, NULL, GijoeInputInfo, GijoeDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
+	288, 224, 4, 3
+};
+
+
+// G.I. Joe (Asia, AA)
+
+static struct BurnRomInfo gijoeaRomDesc[] = {
+	{ "069aa03.14e",	0x040000, 0x74355c6e, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
+	{ "069aa02.18e",	0x040000, 0xd3dd0397, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "069a12.13e",		0x040000, 0x75a7585c, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "069a11.16e",		0x040000, 0x3153e788, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "069a01.7c",		0x010000, 0x74172b99, 2 | BRF_PRG | BRF_ESS }, //  4 Z80 Code
+
+	{ "069a10.18j",		0x100000, 0x4c6743ee, 3 | BRF_GRA },           //  5 K056832 Characters
+	{ "069a09.16j",		0x100000, 0xe6e36b05, 3 | BRF_GRA },           //  6
+
+	{ "069a08.6h",		0x100000, 0x325477d4, 4 | BRF_GRA },           //  7 K053247 Sprites
+	{ "069a05.1h",		0x100000, 0xc4ab07ed, 4 | BRF_GRA },           //  8
+	{ "069a07.4h",		0x100000, 0xccaa3971, 4 | BRF_GRA },           //  9
+	{ "069a06.2h",		0x100000, 0x63eba8e1, 4 | BRF_GRA },           // 10
+
+	{ "069a04.1e",		0x200000, 0x11d6dcd6, 5 | BRF_SND },           // 11 k054539
+
+	{ "er5911.7d",		0x000080, 0x6363513c, 6 | BRF_OPT },           // 12 eeprom data
+};
+
+STD_ROM_PICK(gijoea)
+STD_ROM_FN(gijoea)
+
+struct BurnDriver BurnDrvGijoea = {
+	"gijoea", "gijoe", NULL, NULL, "1992",
+	"G.I. Joe (Asia, AA)\0", NULL, "Konami", "GX069",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, gijoeaRomInfo, gijoeaRomName, NULL, NULL, NULL, NULL, GijoeInputInfo, GijoeDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
 };

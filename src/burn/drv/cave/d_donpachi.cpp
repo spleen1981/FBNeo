@@ -1,6 +1,7 @@
 // Donpachi
 #include "cave.h"
 #include "msm6295.h"
+#include "nmk112.h"
 
 #define USE_SAMPLE_HACK // allow use of high quality music samples.
 
@@ -22,10 +23,7 @@ static UINT8 *Ram01;
 static UINT8 *DefaultEEPROM = NULL;
 
 static UINT8 DrvReset = 0;
-static UINT8 bDrawScreen;
 static bool bVBlank;
-
-static INT32 nBankSize[2] = {0x200000, 0x300000};
 
 static INT8 nVideoIRQ;
 static INT8 nSoundIRQ;
@@ -35,6 +33,8 @@ static INT8 nIRQPending;
 
 static UINT8 bHasSamples = 0;
 static UINT8 bLastSampleDIPMode = 0;
+
+static INT32 nCyclesExtra;
 
 #ifdef USE_SAMPLE_HACK
 static UINT8 previous_sound_write[3] = { 0, 0, 0 };
@@ -124,9 +124,9 @@ UINT8 __fastcall donpachiReadByte(UINT32 sekAddress)
 		}
 
 		case 0xB00001:
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 		case 0xB00011:
-			return MSM6295ReadStatus(1);
+			return MSM6295Read(1);
 
 		case 0xC00000:
 			return (DrvInput[0] >> 8) ^ 0xFF;
@@ -167,9 +167,9 @@ UINT16 __fastcall donpachiReadWord(UINT32 sekAddress)
 		}
 
 		case 0xB00000:
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 		case 0xB00010:
-			return MSM6295ReadStatus(1);
+			return MSM6295Read(1);
 
 		case 0xC00000:
 			return DrvInput[0] ^ 0xFFFF;
@@ -191,13 +191,13 @@ void __fastcall donpachiWriteByte(UINT32 sekAddress, UINT8 byteValue)
 		case 0xB00001:
 		case 0xB00002:
 		case 0xB00003:
-			MSM6295Command(0, byteValue);
+			MSM6295Write(0, byteValue);
 			break;
 		case 0xB00010:
 		case 0xB00011:
 		case 0xB00012:
 		case 0xB00013:
-			MSM6295Command(1, byteValue);
+			MSM6295Write(1, byteValue);
 			break;
 
 		case 0xB00020:
@@ -216,25 +216,7 @@ void __fastcall donpachiWriteByte(UINT32 sekAddress, UINT8 byteValue)
 		case 0xB0002D:
 		case 0xB0002E:
 		case 0xB0002F: {
-			INT32 nBank = (sekAddress >> 1) & 3;
-			INT32 nChip = (sekAddress >> 3) & 1;
-			INT32 nAddress = byteValue << 16;
-			while (nAddress > nBankSize[nChip]) {
-				nAddress -= nBankSize[nChip];
-			}
-
-			if (nChip == 1) {
-				MSM6295SampleData[1][nBank] = MSM6295ROM + nAddress;
-				MSM6295SampleInfo[1][nBank] = MSM6295ROM + nAddress + (nBank << 8);
-			} else {
-				MSM6295SampleData[0][nBank] = MSM6295ROM + 0x100000 + nAddress;
-				if (nBank == 0) {
-					MSM6295SampleInfo[0][0] = MSM6295ROM + 0x100000 + nAddress + 0x0000;
-					MSM6295SampleInfo[0][1] = MSM6295ROM + 0x100000 + nAddress + 0x0100;
-					MSM6295SampleInfo[0][2] = MSM6295ROM + 0x100000 + nAddress + 0x0200;
-					MSM6295SampleInfo[0][3] = MSM6295ROM + 0x100000 + nAddress + 0x0300;
-				}
-			}
+			NMK112_okibank_write((sekAddress / 2) & 0x07, byteValue);
 			break;
 		}
 
@@ -288,7 +270,6 @@ void __fastcall donpachiWriteWord(UINT32 sekAddress, UINT16 wordValue)
 			nCaveYOffset = wordValue;
 			return;
 		case 0x900008:
-			CaveSpriteBuffer();
 			nCaveSpriteBank = wordValue;
 			return;
 
@@ -336,11 +317,11 @@ void __fastcall donpachiWriteWord(UINT32 sekAddress, UINT16 wordValue)
 				}
 			}
 #endif
-			MSM6295Command(0, wordValue);
+			MSM6295Write(0, wordValue);
 			break;
 		case 0xB00010:
 		case 0xB00012:
-			MSM6295Command(1, wordValue);
+			MSM6295Write(1, wordValue);
 			break;
 
 		case 0xB00020:
@@ -359,26 +340,7 @@ void __fastcall donpachiWriteWord(UINT32 sekAddress, UINT16 wordValue)
 		case 0xB0002D:
 		case 0xB0002E:
 		case 0xB0002F: {
-			INT32 nBank = (sekAddress >> 1) & 3;
-			INT32 nChip = (sekAddress >> 3) & 1;
-			INT32 nAddress = wordValue << 16;
-
-			while (nAddress > nBankSize[nChip]) {
-				nAddress -= nBankSize[nChip];
-			}
-
-			if (nChip == 1) {
-				MSM6295SampleData[1][nBank] = MSM6295ROM + nAddress;
-				MSM6295SampleInfo[1][nBank] = MSM6295ROM + nAddress + (nBank << 8);
-			} else {
-				MSM6295SampleData[0][nBank] = MSM6295ROM + 0x100000 + nAddress;
-				if (nBank == 0) {
-					MSM6295SampleInfo[0][0] = MSM6295ROM + 0x100000 + nAddress + 0x0000;
-					MSM6295SampleInfo[0][1] = MSM6295ROM + 0x100000 + nAddress + 0x0100;
-					MSM6295SampleInfo[0][2] = MSM6295ROM + 0x100000 + nAddress + 0x0200;
-					MSM6295SampleInfo[0][3] = MSM6295ROM + 0x100000 + nAddress + 0x0300;
-				}
-			}
+			NMK112_okibank_write((sekAddress / 2) & 0x07, wordValue & 0xff);
 			break;
 		}
 
@@ -398,15 +360,14 @@ static INT32 DrvExit()
 {
 	EEPROMExit();
 	
-	MSM6295Exit(0);
-	MSM6295Exit(1);
+	MSM6295Exit();
 #ifdef USE_SAMPLE_HACK
 	BurnSampleExit();
 #endif
 
 	CaveTileExit();
 	CaveSpriteExit();
-    CavePalExit();
+	CavePalExit();
 
 	SekExit();				// Deallocate 68000s
 
@@ -429,8 +390,10 @@ static INT32 DrvDoReset()
 
 	nIRQPending = 0;
 
-	MSM6295Reset(0);
-	MSM6295Reset(1);
+	nCyclesExtra = 0;
+
+	MSM6295Reset();
+	NMK112Reset();
 #ifdef USE_SAMPLE_HACK
 	DrvSampleReset();
 	memset (previous_sound_write, 0, 3);
@@ -444,11 +407,7 @@ static INT32 DrvDraw()
 	CavePalUpdate4Bit(0, 128);				// Update the palette
 	CaveClearScreen(CavePalette[0x7F00]);
 
-	if (bDrawScreen) {
-//		CaveGetBitmap();
-
-		CaveTileRender(1);					// Render tiles
-	}
+	CaveTileRender(1);					    // Render tiles
 
 	return 0;
 }
@@ -462,18 +421,12 @@ static void CheckDIP()
 		MSM6295SetRoute(0, (bLastSampleDIPMode == 8) ? 0.00 : 1.60, BURN_SND_ROUTE_BOTH);
 		BurnSampleSetAllRoutesAllSamples((bLastSampleDIPMode == 8) ? 0.40 : 0.00, BURN_SND_ROUTE_BOTH);
 	}
-
-}
-
-inline static INT32 CheckSleep(INT32)
-{
-	return 0;
 }
 
 static INT32 DrvFrame()
 {
 	INT32 nCyclesVBlank;
-	INT32 nInterleave = 8;
+	INT32 nInterleave = 32;
 
 	INT32 nCyclesTotal[2];
 	INT32 nCyclesDone[2];
@@ -501,7 +454,8 @@ static INT32 DrvFrame()
 	nCyclesTotal[0] = (INT32)((INT64)16000000 * nBurnCPUSpeedAdjust / (0x0100 * CAVE_REFRESHRATE));
 	nCyclesDone[0] = 0;
 
-	nCyclesVBlank = nCyclesTotal[0] - (INT32)((nCyclesTotal[0] * CAVE_VBLANK_LINES) / 271.5);
+	// this vbl timing gives 2 frames response time
+	nCyclesVBlank = nCyclesTotal[0] - 1300; //(INT32)((nCyclesTotal[0] * CAVE_VBLANK_LINES) / 271.5);
 	bVBlank = false;
 
 	INT32 nSoundBufferPos = 0;
@@ -515,31 +469,22 @@ static INT32 DrvFrame()
 		// Run 68000
 
 		// See if we need to trigger the VBlank interrupt
-		if (!bVBlank && nNext > nCyclesVBlank) {
+		if (!bVBlank && nNext >= nCyclesVBlank) {
 			if (nCyclesDone[nCurrentCPU] < nCyclesVBlank) {
 				nCyclesSegment = nCyclesVBlank - nCyclesDone[nCurrentCPU];
-				if (!CheckSleep(nCurrentCPU)) {							// See if this CPU is busywaiting
-					nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-				} else {
-					nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-				}
-			}
-
-			if (pBurnDraw != NULL) {
-				DrvDraw();												// Draw screen if needed
+				nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 			}
 
 			bVBlank = true;
 			nVideoIRQ = 0;
 			UpdateIRQStatus();
+
+			CaveSpriteBuffer();
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		if (!CheckSleep(nCurrentCPU)) {									// See if this CPU is busywaiting
-			nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		} else {
-			nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-		}
+		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment - nCyclesExtra);
+		nCyclesExtra = 0;
 	}
 
 	// Make sure the buffer is entirely filled.
@@ -548,8 +493,7 @@ static INT32 DrvFrame()
 			INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
 			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 			if (nSegmentLength) {
-				MSM6295Render(0, pSoundBuf, nSegmentLength);
-				MSM6295Render(1, pSoundBuf, nSegmentLength);
+				MSM6295Render(pSoundBuf, nSegmentLength);
 #ifdef USE_SAMPLE_HACK
 				BurnSampleRender(pSoundBuf, nSegmentLength);
 #endif
@@ -557,7 +501,12 @@ static INT32 DrvFrame()
 		}
 	}
 
+	nCyclesExtra = SekTotalCycles() - nCyclesTotal[0];
 	SekClose();
+
+	if (pBurnDraw != NULL) {
+		DrvDraw();												// Draw screen if needed
+	}
 
 	return 0;
 }
@@ -618,8 +567,8 @@ static INT32 LoadRoms()
 	NibbleSwap2(CaveTileROM[2], 0x040000);
 
 	// Load MSM6295 ADPCM data
-	BurnLoadRom(MSM6295ROM, 6, 1);
-	BurnLoadRom(MSM6295ROM + 0x100000, 7, 1);
+	BurnLoadRom(MSM6295ROM + 0x000000, 6, 1); // OKI #1 ONLY
+	BurnLoadRom(MSM6295ROM + 0x100000, 7, 1); // OKI #0 & #1
 	
 	BurnLoadRom(DefaultEEPROM, 8, 1);
 
@@ -640,15 +589,15 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 	if (nAction & ACB_VOLATILE) {		// Scan volatile ram
 
 		memset(&ba, 0, sizeof(ba));
-    	ba.Data		= RamStart;
+		ba.Data		= RamStart;
 		ba.nLen		= RamEnd - RamStart;
 		ba.szName	= "RAM";
 		BurnAcb(&ba);
 
 		SekScan(nAction);				// scan 68000 states
 
-		MSM6295Scan(0, nAction);
-		MSM6295Scan(1, nAction);
+		MSM6295Scan(nAction, pnMin);
+		NMK112_Scan(nAction);
 
 		SCAN_VAR(nVideoIRQ);
 		SCAN_VAR(nSoundIRQ);
@@ -697,7 +646,7 @@ static INT32 DrvInit()
 
 	{
 		SekInit(0, 0x68000);													// Allocate 68000
-	    SekOpen(0);
+		SekOpen(0);
 
 		// Map 68000 memory:
 		SekMapMemory(Rom01,						0x000000, 0x07FFFF, MAP_ROM);	// CPU 0 ROM
@@ -733,14 +682,8 @@ static INT32 DrvInit()
 #endif
 	MSM6295SetRoute(1, 1.00, BURN_SND_ROUTE_BOTH);
 
-	MSM6295SampleData[0][0] = MSM6295ROM + 0x100000;
-	MSM6295SampleInfo[0][0] = MSM6295ROM + 0x100000 + 0x0000;
-	MSM6295SampleData[0][1] = MSM6295ROM + 0x100000;
-	MSM6295SampleInfo[0][1] = MSM6295ROM + 0x100000 + 0x0100;
-	MSM6295SampleData[0][2] = MSM6295ROM + 0x100000;
-	MSM6295SampleInfo[0][2] = MSM6295ROM + 0x100000 + 0x0200;
-	MSM6295SampleData[0][3] = MSM6295ROM + 0x100000;
-	MSM6295SampleInfo[0][3] = MSM6295ROM + 0x100000 + 0x0300;
+	NMK112_init(1 << 0, MSM6295ROM + 0x100000, MSM6295ROM, 0x200000, 0x300000);
+
 
 #ifdef USE_SAMPLE_HACK
 	BurnUpdateProgress(0.0, _T("Loading samples..."), 0);
@@ -756,8 +699,6 @@ static INT32 DrvInit()
 	}
 #endif
 
-	bDrawScreen = true;
-
 	DrvDoReset(); // Reset machine
 
 	return 0;
@@ -765,17 +706,17 @@ static INT32 DrvInit()
 
 // Rom information
 static struct BurnRomInfo donpachiRomDesc[] = {
-	{ "prgu.u29",     0x080000, 0x89C36802, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
+	{ "prgu.u29",     0x080000, 0x89c36802, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
 
-	{ "atdp.u44",     0x200000, 0x7189E953, BRF_GRA },			 //  1 Sprite data
-	{ "atdp.u45",     0x200000, 0x6984173F, BRF_GRA },			 //  2
+	{ "atdp.u44",     0x200000, 0x7189e953, BRF_GRA },			 //  1 Sprite data
+	{ "atdp.u45",     0x200000, 0x6984173f, BRF_GRA },			 //  2
 
-	{ "atdp.u54",     0x100000, 0x6BDA6B66, BRF_GRA },			 //  3 Layer 0 Tile data
-	{ "atdp.u57",     0x100000, 0x0A0E72B9, BRF_GRA },			 //  4 Layer 1 Tile data
-	{ "text.u58",     0x040000, 0x5DBA06E7, BRF_GRA },			 //  5 Layer 2 Tile data
+	{ "atdp.u54",     0x100000, 0x6bda6b66, BRF_GRA },			 //  3 Layer 0 Tile data
+	{ "atdp.u57",     0x100000, 0x0a0e72b9, BRF_GRA },			 //  4 Layer 1 Tile data
+	{ "text.u58",     0x040000, 0x5dba06e7, BRF_GRA },			 //  5 Layer 2 Tile data
 
-	{ "atdp.u32",     0x100000, 0x0D89FCCA, BRF_SND },			 //  6 MSM6295 #1 ADPCM data
-	{ "atdp.u33",     0x200000, 0xD749DE00, BRF_SND },			 //  7 MSM6295 #0/1 ADPCM data
+	{ "atdp.u32",     0x100000, 0x0d89fcca, BRF_SND },			 //  6 MSM6295 #1 ADPCM data
+	{ "atdp.u33",     0x200000, 0xd749de00, BRF_SND },			 //  7 MSM6295 #0/1 ADPCM data
 	
 	{ "eeprom-donpachi.u10", 0x0080, 0x315fb546, BRF_ESS | BRF_PRG },
 	
@@ -787,17 +728,17 @@ STD_ROM_PICK(donpachi)
 STD_ROM_FN(donpachi)
 
 static struct BurnRomInfo donpachijRomDesc[] = {
-	{ "prg.u29",      0x080000, 0x6BE14AF6, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
+	{ "prg.u29",      0x080000, 0x6be14af6, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
 
-	{ "atdp.u44",     0x200000, 0x7189E953, BRF_GRA },			 //  1 Sprite data
-	{ "atdp.u45",     0x200000, 0x6984173F, BRF_GRA },			 //  2
+	{ "atdp.u44",     0x200000, 0x7189e953, BRF_GRA },			 //  1 Sprite data
+	{ "atdp.u45",     0x200000, 0x6984173f, BRF_GRA },			 //  2
 
-	{ "atdp.u54",     0x100000, 0x6BDA6B66, BRF_GRA },			 //  3 Layer 0 Tile data
-	{ "atdp.u57",     0x100000, 0x0A0E72B9, BRF_GRA },			 //  4 Layer 1 Tile data
-	{ "u58.bin",      0x040000, 0x285379FF, BRF_GRA },			 //  5 Layer 2 Tile data
+	{ "atdp.u54",     0x100000, 0x6bda6b66, BRF_GRA },			 //  3 Layer 0 Tile data
+	{ "atdp.u57",     0x100000, 0x0a0e72b9, BRF_GRA },			 //  4 Layer 1 Tile data
+	{ "u58.bin",      0x040000, 0x285379ff, BRF_GRA },			 //  5 Layer 2 Tile data
 
-	{ "atdp.u32",     0x100000, 0x0D89FCCA, BRF_SND },			 //  6 MSM6295 #1 ADPCM data
-	{ "atdp.u33",     0x200000, 0xD749DE00, BRF_SND },			 //  7 MSM6295 #0/1 ADPCM data
+	{ "atdp.u32",     0x100000, 0x0d89fcca, BRF_SND },			 //  6 MSM6295 #1 ADPCM data
+	{ "atdp.u33",     0x200000, 0xd749de00, BRF_SND },			 //  7 MSM6295 #0/1 ADPCM data
 	
 	{ "eeprom-donpachi.bin", 0x0080, 0x315fb546, BRF_ESS | BRF_PRG },
 	
@@ -808,18 +749,46 @@ static struct BurnRomInfo donpachijRomDesc[] = {
 STD_ROM_PICK(donpachij)
 STD_ROM_FN(donpachij)
 
+/* When pressing the 2p start button, it pauses the game (music still plays). 
+Pressing the 1p start button unpauses the game. If you press both 1p start and 2p start at the same time, 
+the game lets you play in "edusword mode", aka slow motion (music still plays normally).*/
+
+static struct BurnRomInfo donpachijsRomDesc[] = {
+	{ "prg.u29",      0x080000, 0x810dbd42, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
+	// This was on the label of the ROM chip: 国内撮影用 
+	// kokunai satsueiyou (for domestic screenshot only)
+
+	{ "atdp.u44",     0x200000, 0x7189e953, BRF_GRA },			 //  1 Sprite data
+	{ "atdp.u45",     0x200000, 0x6984173f, BRF_GRA },			 //  2
+
+	{ "atdp.u54",     0x100000, 0x6bda6b66, BRF_GRA },			 //  3 Layer 0 Tile data
+	{ "atdp.u57",     0x100000, 0x0a0e72b9, BRF_GRA },			 //  4 Layer 1 Tile data
+	{ "u58.bin",      0x040000, 0x285379ff, BRF_GRA },			 //  5 Layer 2 Tile data
+
+	{ "atdp.u32",     0x100000, 0x0d89fcca, BRF_SND },			 //  6 MSM6295 #1 ADPCM data
+	{ "atdp.u33",     0x200000, 0xd749de00, BRF_SND },			 //  7 MSM6295 #0/1 ADPCM data
+	
+	{ "eeprom-donpachi.u10", 0x0080, 0x315fb546, BRF_ESS | BRF_PRG },
+	
+	{ "peel18cv8p-15.u18", 0x0155, 0x3f4787e9, BRF_OPT },
+};
+
+
+STD_ROM_PICK(donpachijs)
+STD_ROM_FN(donpachijs)
+
 static struct BurnRomInfo donpachikrRomDesc[] = {
-	{ "prgk.u26",     0x080000, 0xBBAF4C8B, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
+	{ "prgk.u26",     0x080000, 0xbbaf4c8b, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
 
-	{ "atdp.u44",     0x200000, 0x7189E953, BRF_GRA },			 //  1 Sprite data
-	{ "atdp.u45",     0x200000, 0x6984173F, BRF_GRA },			 //  2
+	{ "atdp.u44",     0x200000, 0x7189e953, BRF_GRA },			 //  1 Sprite data
+	{ "atdp.u45",     0x200000, 0x6984173f, BRF_GRA },			 //  2
 
-	{ "atdp.u54",     0x100000, 0x6BDA6B66, BRF_GRA },			 //  3 Layer 0 Tile data
-	{ "atdp.u57",     0x100000, 0x0A0E72B9, BRF_GRA },			 //  4 Layer 1 Tile data
-	{ "u58.bin",      0x040000, 0x285379FF, BRF_GRA },			 //  5 Layer 2 Tile data
+	{ "atdp.u54",     0x100000, 0x6bda6b66, BRF_GRA },			 //  3 Layer 0 Tile data
+	{ "atdp.u57",     0x100000, 0x0a0e72b9, BRF_GRA },			 //  4 Layer 1 Tile data
+	{ "u58.bin",      0x040000, 0x285379ff, BRF_GRA },			 //  5 Layer 2 Tile data
 
-	{ "atdp.u32",     0x100000, 0x0D89FCCA, BRF_SND },			 //  6 MSM6295 #1 ADPCM data
-	{ "atdp.u33",     0x200000, 0xD749DE00, BRF_SND },			 //  7 MSM6295 #0/1 ADPCM data
+	{ "atdp.u32",     0x100000, 0x0d89fcca, BRF_SND },			 //  6 MSM6295 #1 ADPCM data
+	{ "atdp.u33",     0x200000, 0xd749de00, BRF_SND },			 //  7 MSM6295 #0/1 ADPCM data
 	
 	{ "eeprom-donpachi.bin", 0x0080, 0x315fb546, BRF_ESS | BRF_PRG },
 	
@@ -833,15 +802,15 @@ STD_ROM_FN(donpachikr)
 static struct BurnRomInfo donpachihkRomDesc[] = {
 	{ "37.u29",       0x080000, 0x71f39f30, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
 
-	{ "atdp.u44",     0x200000, 0x7189E953, BRF_GRA },			 //  1 Sprite data
-	{ "atdp.u45",     0x200000, 0x6984173F, BRF_GRA },			 //  2
+	{ "atdp.u44",     0x200000, 0x7189e953, BRF_GRA },			 //  1 Sprite data
+	{ "atdp.u45",     0x200000, 0x6984173f, BRF_GRA },			 //  2
 
-	{ "atdp.u54",     0x100000, 0x6BDA6B66, BRF_GRA },			 //  3 Layer 0 Tile data
-	{ "atdp.u57",     0x100000, 0x0A0E72B9, BRF_GRA },			 //  4 Layer 1 Tile data
+	{ "atdp.u54",     0x100000, 0x6bda6b66, BRF_GRA },			 //  3 Layer 0 Tile data
+	{ "atdp.u57",     0x100000, 0x0a0e72b9, BRF_GRA },			 //  4 Layer 1 Tile data
 	{ "u58.bin",      0x040000, 0x285379ff, BRF_GRA },			 //  5 Layer 2 Tile data
 
-	{ "atdp.u32",     0x100000, 0x0D89FCCA, BRF_SND },			 //  6 MSM6295 #1 ADPCM data
-	{ "atdp.u33",     0x200000, 0xD749DE00, BRF_SND },			 //  7 MSM6295 #0/1 ADPCM data
+	{ "atdp.u32",     0x100000, 0x0d89fcca, BRF_SND },			 //  6 MSM6295 #1 ADPCM data
+	{ "atdp.u33",     0x200000, 0xd749de00, BRF_SND },			 //  7 MSM6295 #0/1 ADPCM data
 	
 	{ "eeprom-donpachi.bin", 0x0080, 0x315fb546, BRF_ESS | BRF_PRG },
 	
@@ -880,8 +849,8 @@ struct BurnDriver BurnDrvDonpachi = {
 	"donpachi", NULL, NULL, "donpachi", "1995",
 	"DonPachi (USA, ver. 1.12, 95/05/2x)\0", NULL, "Atlus / Cave", "Cave",
 	L"\u9996\u9818\u8702 DonPachi (USA, ver. 1.12, 95/05/2x)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY | HARDWARE_CAVE_M6295, GBF_VERSHOOT, 0,
-	NULL, donpachiRomInfo, donpachiRomName, DonpachiSampleInfo, DonpachiSampleName, donpachiInputInfo, donpachiDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY | HARDWARE_CAVE_M6295, GBF_VERSHOOT, FBF_DONPACHI,
+	NULL, donpachiRomInfo, donpachiRomName, NULL, NULL, DonpachiSampleInfo, DonpachiSampleName, donpachiInputInfo, donpachiDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
 };
@@ -890,8 +859,18 @@ struct BurnDriver BurnDrvDonpachij = {
 	"donpachij", "donpachi", NULL, "donpachi", "1995",
 	"DonPachi (Japan, ver. 1.01, 95/05/11)\0", NULL, "Atlus / Cave", "Cave",
 	L"\u9996\u9818\u8702 DonPachi (Japan, ver. 1.01, 95/05/11)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY | HARDWARE_CAVE_M6295, GBF_VERSHOOT, 0,
-	NULL, donpachijRomInfo, donpachijRomName, DonpachiSampleInfo, DonpachiSampleName, donpachiInputInfo, donpachiDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY | HARDWARE_CAVE_M6295, GBF_VERSHOOT, FBF_DONPACHI,
+	NULL, donpachijRomInfo, donpachijRomName, NULL, NULL, DonpachiSampleInfo, DonpachiSampleName, donpachiInputInfo, donpachiDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
+	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
+};
+
+struct BurnDriver BurnDrvDonpachijs = {
+	"donpachijs", "donpachi", NULL, "donpachi", "1995",
+	"DonPachi (Japan, ver. 1.01, 95/05/11 satsuei)\0", NULL, "Atlus / Cave", "Cave",
+	L"\u9996\u9818\u8702 DonPachi (Japan, ver. 1.01, 95/05/11 satsuei)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY | HARDWARE_CAVE_M6295, GBF_VERSHOOT, FBF_DONPACHI,
+	NULL, donpachijsRomInfo, donpachijsRomName, NULL, NULL, DonpachiSampleInfo, DonpachiSampleName, donpachiInputInfo, donpachiDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
 };
@@ -900,8 +879,8 @@ struct BurnDriver BurnDrvDonpachikr = {
 	"donpachikr", "donpachi", NULL, "donpachi", "1995",
 	"DonPachi (Korea, ver. 1.12, 95/05/2x)\0", NULL, "Atlus / Cave", "Cave",
 	L"\u9996\u9818\u8702 DonPachi (Korea, ver. 1.12, 95/05/2x)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY | HARDWARE_CAVE_M6295, GBF_VERSHOOT, 0,
-	NULL, donpachikrRomInfo, donpachikrRomName, DonpachiSampleInfo, DonpachiSampleName, donpachiInputInfo, donpachiDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY | HARDWARE_CAVE_M6295, GBF_VERSHOOT, FBF_DONPACHI,
+	NULL, donpachikrRomInfo, donpachikrRomName, NULL, NULL, DonpachiSampleInfo, DonpachiSampleName, donpachiInputInfo, donpachiDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
 };
@@ -910,8 +889,8 @@ struct BurnDriver BurnDrvDonpachihk = {
 	"donpachihk", "donpachi", NULL, "donpachi", "1995",
 	"DonPachi (Hong Kong, ver. 1.10, 95/05/17)\0", NULL, "Atlus / Cave", "Cave",
 	L"\u9996\u9818\u8702 DonPachi (Hong Kong, ver. 1.10, 95/05/17)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY | HARDWARE_CAVE_M6295, GBF_VERSHOOT, 0,
-	NULL, donpachihkRomInfo, donpachihkRomName, DonpachiSampleInfo, DonpachiSampleName, donpachiInputInfo, donpachiDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY | HARDWARE_CAVE_M6295, GBF_VERSHOOT, FBF_DONPACHI,
+	NULL, donpachihkRomInfo, donpachihkRomName, NULL, NULL, DonpachiSampleInfo, DonpachiSampleName, donpachiInputInfo, donpachiDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
 };

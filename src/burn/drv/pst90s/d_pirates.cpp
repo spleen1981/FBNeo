@@ -103,8 +103,6 @@ static void set_oki_bank(INT32 data)
 {
 	*DrvOkiBank = data;
 	memcpy (MSM6295ROM, DrvSndROM + (data << 12), 0x40000);
-
-bprintf (PRINT_NORMAL, _T("%2.2x\n"), data);
 }
 
 void __fastcall pirates_write_byte(UINT32 address, UINT8 data)
@@ -122,8 +120,6 @@ void __fastcall pirates_write_byte(UINT32 address, UINT8 data)
 		return;
 	}
 
-//bprintf (PRINT_NORMAL, _T("%5.5x, %2.2x\n"), address, data);
-
 	switch (address)
 	{
 		case 0x600000:
@@ -134,7 +130,7 @@ void __fastcall pirates_write_byte(UINT32 address, UINT8 data)
 
 		case 0xa00000:
 		case 0xa00001:
-			MSM6295Command(0, data);
+			MSM6295Write(0, data);
 		return;
 	}
 }
@@ -154,8 +150,6 @@ void __fastcall pirates_write_word(UINT32 address, UINT16 data)
 		return;
 	}
 
-//bprintf (PRINT_NORMAL, _T("%5.5x, %4.4x\n"), address, data);
-
 	switch (address)
 	{
 		case 0x600000:
@@ -168,7 +162,7 @@ void __fastcall pirates_write_word(UINT32 address, UINT16 data)
 		return;
 
 		case 0xa00000:
-			MSM6295Command(0, data & 0xff);
+			MSM6295Write(0, data & 0xff);
 		return;
 	}
 }
@@ -176,8 +170,6 @@ void __fastcall pirates_write_word(UINT32 address, UINT16 data)
 UINT8 __fastcall pirates_read_byte(UINT32 address)
 {
 	genix_hack();
-//bprintf (PRINT_NORMAL, _T("%5.5x, b\n"), address);
-
 
 	switch (address)
 	{
@@ -190,7 +182,7 @@ UINT8 __fastcall pirates_read_byte(UINT32 address)
 			return DrvInputs[1] >> ((~address & 1) << 3);
 
 		case 0xa00001:
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 	}
 
 	return 0;
@@ -199,7 +191,6 @@ UINT8 __fastcall pirates_read_byte(UINT32 address)
 UINT16 __fastcall pirates_read_word(UINT32 address)
 {
 	genix_hack();
-//bprintf (PRINT_NORMAL, _T("%5.5x, w\n"), address);
 
 	switch (address)
 	{
@@ -413,8 +404,8 @@ static INT32 DrvInit()
 	SekSetReadWordHandler(0,	 pirates_read_word);
 	SekClose();
 
-	MSM6295Init(0, 1333333 / (132 + 39), 0); // otherwise too fast!
-	MSM6295SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
+	MSM6295Init(0, 1333333 / MSM6295_PIN7_LOW, 0);
+	MSM6295SetRoute(0, 0.80, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
 
@@ -536,7 +527,7 @@ static INT32 DrvDraw()
 	if (nBurnLayer & 1)
 		draw_layer(0x2a80, 0x100, 0);
 	else
-		memset (pTransDraw, 0, nScreenWidth * nScreenHeight * 2);
+		BurnTransferClear();
 
 	if (nBurnLayer & 2) draw_layer(0x1380, 0x080, 1);
 
@@ -598,7 +589,7 @@ static INT32 DrvFrame()
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -606,7 +597,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		*pnMin = 0x029698;
 	}
 
-	if (nAction & ACB_MEMORY_RAM) {	
+	if (nAction & ACB_MEMORY_RAM) {
 		memset(&ba, 0, sizeof(ba));
 
 		ba.Data	  = AllRam;
@@ -618,10 +609,12 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 	if (nAction & ACB_DRIVER_DATA) {
 		SekScan(nAction);
 
-		MSM6295Scan(0, nAction);
+		MSM6295Scan(nAction, pnMin);
 	}
 
-	set_oki_bank(*DrvOkiBank);
+	if (nAction & ACB_WRITE) {
+		set_oki_bank(*DrvOkiBank);
+	}
 
 	return 0;
 }
@@ -653,8 +646,8 @@ struct BurnDriver BurnDrvPirates = {
 	"pirates", NULL, NULL, NULL, "1994",
 	"Pirates (set 1)\0", NULL, "NIX", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
-	NULL, piratesRomInfo, piratesRomName, NULL, NULL, PiratesInputInfo, PiratesDIPInfo,
+	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
+	NULL, piratesRomInfo, piratesRomName, NULL, NULL, NULL, NULL, PiratesInputInfo, PiratesDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	288, 224, 4, 3
 };
@@ -664,20 +657,20 @@ struct BurnDriver BurnDrvPirates = {
 // shows 'Copyright 1995' instead of (c)1994 Nix, but isn't unprotected, various changes to the names in the credis + a few other minor alterations
 
 static struct BurnRomInfo piratesbRomDesc[] = {
-	{ "U15",			0x80000, 0x0cfd6415, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "U16",			0x80000, 0x98cece02, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "u15",			0x80000, 0x0cfd6415, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "u16",			0x80000, 0x98cece02, 1 | BRF_PRG | BRF_ESS }, //  1
 
-	{ "U34",			0x80000, 0x89fda216, 2 | BRF_GRA },           //  2 Tiles
-	{ "U35",			0x80000, 0x40e069b4, 2 | BRF_GRA },           //  3
-	{ "U48",			0x80000, 0x26d78518, 2 | BRF_GRA },           //  4
-	{ "U49",			0x80000, 0xf31696ea, 2 | BRF_GRA },           //  5
+	{ "u34",			0x80000, 0x89fda216, 2 | BRF_GRA },           //  2 Tiles
+	{ "u35",			0x80000, 0x40e069b4, 2 | BRF_GRA },           //  3
+	{ "u48",			0x80000, 0x26d78518, 2 | BRF_GRA },           //  4
+	{ "u49",			0x80000, 0xf31696ea, 2 | BRF_GRA },           //  5
 
-	{ "U69",			0x80000, 0xc78a276f, 3 | BRF_GRA },           //  6 Sprites
-	{ "U70",			0x80000, 0x9f0bad96, 3 | BRF_GRA },           //  7
-	{ "U71",			0x80000, 0x0bb7c816, 3 | BRF_GRA },           //  8
-	{ "U72",			0x80000, 0x1c41bd2c, 3 | BRF_GRA },           //  9
+	{ "u69",			0x80000, 0xc78a276f, 3 | BRF_GRA },           //  6 Sprites
+	{ "u70",			0x80000, 0x9f0bad96, 3 | BRF_GRA },           //  7
+	{ "u71",			0x80000, 0x0bb7c816, 3 | BRF_GRA },           //  8
+	{ "u72",			0x80000, 0x1c41bd2c, 3 | BRF_GRA },           //  9
 
-	{ "U31",			0x80000, 0x63a739ec, 4 | BRF_SND },           // 10 Oki Samples
+	{ "u31",			0x80000, 0x63a739ec, 4 | BRF_SND },           // 10 Oki Samples
 };
 
 STD_ROM_PICK(piratesb)
@@ -687,8 +680,8 @@ struct BurnDriver BurnDrvPiratesb = {
 	"piratesb", "pirates", NULL, NULL, "1995",
 	"Pirates (set 2)\0", NULL, "NIX", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
-	NULL, piratesbRomInfo, piratesbRomName, NULL, NULL, PiratesInputInfo, PiratesDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
+	NULL, piratesbRomInfo, piratesbRomName, NULL, NULL, NULL, NULL, PiratesInputInfo, PiratesDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	288, 224, 4, 3
 };
@@ -697,20 +690,20 @@ struct BurnDriver BurnDrvPiratesb = {
 // Genix Family
 
 static struct BurnRomInfo genixRomDesc[] = {
-	{ "1.15",	0x80000, 0xd26abfb0, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "2.16",	0x80000, 0xa14a25b4, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "11.u15.15c",	0x80000, 0xd26abfb0, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "12.u16.16c",	0x80000, 0xa14a25b4, 1 | BRF_PRG | BRF_ESS }, //  1
 
-	{ "7.34",	0x40000, 0x58da8aac, 2 | BRF_GRA },           //  2 Tiles
-	{ "9.35",	0x40000, 0x96bad9a8, 2 | BRF_GRA },           //  3
-	{ "8.48",	0x40000, 0x0ddc58b6, 2 | BRF_GRA },           //  4
-	{ "10.49",	0x40000, 0x2be308c5, 2 | BRF_GRA },           //  5
+	{ "17.u34.12g",	0x40000, 0x58da8aac, 2 | BRF_GRA },           //  2 Tiles
+	{ "19.u35.12h",	0x40000, 0x96bad9a8, 2 | BRF_GRA },           //  3
+	{ "18.u48.13g",	0x40000, 0x0ddc58b6, 2 | BRF_GRA },           //  4
+	{ "20.u49.13h",	0x40000, 0x2be308c5, 2 | BRF_GRA },           //  5
 
-	{ "6.69",	0x40000, 0xb8422af7, 3 | BRF_GRA },           //  6 Sprites
-	{ "5.70",	0x40000, 0xe46125c5, 3 | BRF_GRA },           //  7
-	{ "4.71",	0x40000, 0x7a8ed21b, 3 | BRF_GRA },           //  8
-	{ "3.72",	0x40000, 0xf78bd6ca, 3 | BRF_GRA },           //  9
+	{ "16.u69.6g",	0x40000, 0xb8422af7, 3 | BRF_GRA },           //  6 Sprites
+	{ "15.u70.4g",	0x40000, 0xe46125c5, 3 | BRF_GRA },           //  7
+	{ "14.u71.3g",	0x40000, 0x7a8ed21b, 3 | BRF_GRA },           //  8
+	{ "13.u72.1g",	0x40000, 0xf78bd6ca, 3 | BRF_GRA },           //  9
 
-	{ "0.31",	0x80000, 0x80d087bc, 4 | BRF_SND },           // 10 Oki Samples
+	{ "10.u31.1b",	0x80000, 0x80d087bc, 4 | BRF_SND },           // 10 Oki Samples
 };
 
 STD_ROM_PICK(genix)
@@ -720,8 +713,8 @@ struct BurnDriver BurnDrvGenix = {
 	"genix", NULL, NULL, NULL, "1994",
 	"Genix Family\0", NULL, "NIX", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
-	NULL, genixRomInfo, genixRomName, NULL, NULL, PiratesInputInfo, PiratesDIPInfo,
+	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
+	NULL, genixRomInfo, genixRomName, NULL, NULL, NULL, NULL, PiratesInputInfo, PiratesDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	288, 224, 4, 3
 };

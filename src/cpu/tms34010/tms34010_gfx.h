@@ -5,7 +5,6 @@
 #ifndef TMS34010_GFX_H
 #define TMS34010_GFX_H
 
-#include <iostream>
 #include "tms34010.h"
 #include "tms34010_defs.h"
 #include "tms34010_memacc.h"
@@ -19,7 +18,7 @@
 
 #define DEBUG_GSP   0
 
-#define DXYTOL(r)  (((r.y * cpu->convdp) | (r.x << cpu->pshift)) + OFFSET)
+#define DXYTOL(r)  (((r.datavalue.y * cpu->convdp) | (r.datavalue.x << cpu->pshift)) + OFFSET)
 
 namespace tms { namespace ops {
 

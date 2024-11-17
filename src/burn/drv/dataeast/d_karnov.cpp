@@ -4,6 +4,7 @@
 #include "tiles_generic.h"
 #include "m68000_intf.h"
 #include "m6502_intf.h"
+#include "mcs51.h"
 #include "burn_ym2203.h"
 #include "burn_ym3526.h"
 
@@ -13,6 +14,7 @@ static UINT8 *RamEnd;
 static UINT8 *MemEnd;
 static UINT8 *Drv68KROM;
 static UINT8 *Drv6502ROM;
+static UINT8 *DrvMCUROM;
 static UINT8 *DrvGfxROM0;
 static UINT8 *DrvGfxROM1;
 static UINT8 *DrvGfxROM2;
@@ -33,11 +35,19 @@ static UINT16 *DrvScroll;
 static UINT8 *soundlatch;
 static UINT8 *flipscreen;
 
+// i8751 MCU emulation (karnov, chelnov)
+static INT32 realMCU = 0;
+static UINT16 i8751RetVal;
+static UINT16 i8751Command;
+static UINT8 i8751PortData[4] = { 0, 0, 0, 0 };
+
+// mcu sim (wndrplnt)
 static UINT16 i8751_return;
 static UINT16 i8751_needs_ack;
 static UINT16 i8751_coin_pending;
 static UINT16 i8751_command_queue;
 static INT32 i8751_level;
+static INT32 i8751_reset;
 
 static UINT8 DrvJoy1[16];
 static UINT8 DrvJoy2[16];
@@ -46,306 +56,396 @@ static UINT16 DrvInput[3];
 static UINT8 DrvDip[2];
 static UINT8 DrvReset;
 
+#ifdef BUILD_A68K
 static bool bUseAsm68KCoreOldValue = false;
+#endif
 
-enum { KARNOV=0, KARNOVJ, CHELNOV, CHELNOVJ, CHELNOVW, WNDRPLNT };
+enum { KARNOV=0, CHELNOV, WNDRPLNT };
 static INT32 microcontroller_id;
 static INT32 coin_mask;
 static INT32 vblank;
 
 static struct BurnInputInfo KarnovInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 5,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 6,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy1 + 14,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 0,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDip + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 7,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDip + 0,		"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDip + 1,		"dip"		},
 };
 
 STDINPUTINFO(Karnov)
 
-static struct BurnInputInfo ChelnovInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 6,	"p1 coin"	},
+static struct BurnInputInfo WndrplntInputList[] = {
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy1 + 14,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 7,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDip + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 0,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDip + 0,		"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDip + 1,		"dip"		},
 };
 
-STDINPUTINFO(Chelnov)
+STDINPUTINFO(Wndrplnt)
 
 static struct BurnDIPInfo KarnovDIPList[]=
 {
-	{0x14, 0xff, 0xff, 0xaf, NULL			},
-	{0x15, 0xff, 0xff, 0xff, NULL			},
+	{0x14, 0xff, 0xff, 0xaf, NULL					},
+	{0x15, 0xff, 0xff, 0xff, NULL					},
 
-	{0   , 0xfe, 0   ,    4, "Coin B"		},
+	{0   , 0xfe, 0   ,    4, "Coin A"				},
 	{0x14, 0x01, 0x03, 0x00, "2 Coins 1 Credits"	},
 	{0x14, 0x01, 0x03, 0x03, "1 Coin  1 Credits"	},
 	{0x14, 0x01, 0x03, 0x02, "1 Coin  2 Credits"	},
 	{0x14, 0x01, 0x03, 0x01, "1 Coin  3 Credits"	},
 
-	{0   , 0xfe, 0   ,    4, "Coin A"		},
+	{0   , 0xfe, 0   ,    4, "Coin B"				},
 	{0x14, 0x01, 0x0c, 0x00, "2 Coins 1 Credits"	},
 	{0x14, 0x01, 0x0c, 0x0c, "1 Coin  1 Credits"	},
 	{0x14, 0x01, 0x0c, 0x08, "1 Coin  2 Credits"	},
 	{0x14, 0x01, 0x0c, 0x04, "1 Coin  3 Credits"	},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
-	{0x14, 0x01, 0x20, 0x20, "Off"			},
-	{0x14, 0x01, 0x20, 0x00, "On"			},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"			},
+	{0x14, 0x01, 0x20, 0x20, "Off"					},
+	{0x14, 0x01, 0x20, 0x00, "On"					},
 
-	{0   , 0xfe, 0   ,    2, "Cabinet"		},
-	{0x14, 0x01, 0x40, 0x00, "Upright"		},
-	{0x14, 0x01, 0x40, 0x40, "Cocktail"		},
+	{0   , 0xfe, 0   ,    2, "Cabinet"				},
+	{0x14, 0x01, 0x40, 0x00, "Upright"				},
+	{0x14, 0x01, 0x40, 0x40, "Cocktail"				},
 
-	{0   , 0xfe, 0   ,    4, "Lives"		},
-	{0x15, 0x01, 0x03, 0x01, "1"			},
-	{0x15, 0x01, 0x03, 0x03, "3"			},
-	{0x15, 0x01, 0x03, 0x02, "5"			},
-	{0x15, 0x01, 0x03, 0x00, "Infinite (Cheat)"	},
+	{0   , 0xfe, 0   ,    4, "Lives"				},
+	{0x15, 0x01, 0x03, 0x01, "1"					},
+	{0x15, 0x01, 0x03, 0x03, "3"					},
+	{0x15, 0x01, 0x03, 0x02, "5"					},
+	{0x15, 0x01, 0x03, 0x00, "Infinite (Cheat)"		},
 
-	{0   , 0xfe, 0   ,    4, "Bonus Life"		},
-	{0x15, 0x01, 0x0c, 0x0c, "50 K"			},
-	{0x15, 0x01, 0x0c, 0x08, "70 K"			},
-	{0x15, 0x01, 0x0c, 0x04, "90 K"			},
-	{0x15, 0x01, 0x0c, 0x00, "100 K"		},
+	{0   , 0xfe, 0   ,    4, "Bonus Life"			},
+	{0x15, 0x01, 0x0c, 0x0c, "50 K"					},
+	{0x15, 0x01, 0x0c, 0x08, "70 K"					},
+	{0x15, 0x01, 0x0c, 0x04, "90 K"					},
+	{0x15, 0x01, 0x0c, 0x00, "100 K"				},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"		},
-	{0x15, 0x01, 0x30, 0x30, "Easy"			},
-	{0x15, 0x01, 0x30, 0x10, "Normal"		},
-	{0x15, 0x01, 0x30, 0x20, "Hard"			},
-	{0x15, 0x01, 0x30, 0x00, "Very Hard"		},
+	{0   , 0xfe, 0   ,    4, "Difficulty"			},
+	{0x15, 0x01, 0x30, 0x20, "Easy"					},
+	{0x15, 0x01, 0x30, 0x30, "Normal"				},
+	{0x15, 0x01, 0x30, 0x10, "Hard"					},
+	{0x15, 0x01, 0x30, 0x00, "Very Hard"			},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x15, 0x01, 0x40, 0x00, "Off"			},
-	{0x15, 0x01, 0x40, 0x40, "On"			},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"			},
+	{0x15, 0x01, 0x40, 0x00, "Off"					},
+	{0x15, 0x01, 0x40, 0x40, "On"					},
 
-	{0   , 0xfe, 0   ,    2, "Timer Speed"		},
-	{0x15, 0x01, 0x80, 0x80, "Normal"		},
-	{0x15, 0x01, 0x80, 0x00, "Fast"			},
+	{0   , 0xfe, 0   ,    2, "Timer Speed"			},
+	{0x15, 0x01, 0x80, 0x80, "Normal"				},
+	{0x15, 0x01, 0x80, 0x00, "Fast"					},
 };
 
 STDDIPINFO(Karnov)
 
 static struct BurnDIPInfo WndrplntDIPList[]=
 {
-	{0x14, 0xff, 0xff, 0x6f, NULL			},
-	{0x15, 0xff, 0xff, 0xd3, NULL			},
+	{0x14, 0xff, 0xff, 0x6f, NULL					},
+	{0x15, 0xff, 0xff, 0xd3, NULL					},
 
-	{0   , 0xfe, 0   ,    4, "Coin B"		},
+	{0   , 0xfe, 0   ,    4, "Coin A"				},
 	{0x14, 0x01, 0x03, 0x00, "2 Coins 1 Credits"	},
 	{0x14, 0x01, 0x03, 0x03, "1 Coin  1 Credits"	},
 	{0x14, 0x01, 0x03, 0x02, "1 Coin  2 Credits"	},
 	{0x14, 0x01, 0x03, 0x01, "1 Coin  3 Credits"	},
 
-	{0   , 0xfe, 0   ,    4, "Coin A"		},
+	{0   , 0xfe, 0   ,    4, "Coin B"				},
 	{0x14, 0x01, 0x0c, 0x00, "2 Coins 1 Credits"	},
 	{0x14, 0x01, 0x0c, 0x0c, "1 Coin  1 Credits"	},
 	{0x14, 0x01, 0x0c, 0x08, "1 Coin  2 Credits"	},
 	{0x14, 0x01, 0x0c, 0x04, "1 Coin  3 Credits"	},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x14, 0x01, 0x20, 0x00, "Off"			},
-	{0x14, 0x01, 0x20, 0x20, "On"			},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"			},
+	{0x14, 0x01, 0x20, 0x00, "Off"					},
+	{0x14, 0x01, 0x20, 0x20, "On"					},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
-	{0x14, 0x01, 0x40, 0x40, "Off"			},
-	{0x14, 0x01, 0x40, 0x00, "On"			},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"			},
+	{0x14, 0x01, 0x40, 0x40, "Off"					},
+	{0x14, 0x01, 0x40, 0x00, "On"					},
 
-	{0   , 0xfe, 0   ,    2, "Cabinet"		},
-	{0x14, 0x01, 0x80, 0x00, "Upright"		},
-	{0x14, 0x01, 0x80, 0x80, "Cocktail"		},
+	{0   , 0xfe, 0   ,    2, "Cabinet"				},
+	{0x14, 0x01, 0x80, 0x00, "Upright"				},
+	{0x14, 0x01, 0x80, 0x80, "Cocktail"				},
 
-	{0   , 0xfe, 0   ,    4, "Lives"		},
-	{0x15, 0x01, 0x03, 0x01, "1"			},
-	{0x15, 0x01, 0x03, 0x03, "3"			},
-	{0x15, 0x01, 0x03, 0x02, "5"			},
-	{0x15, 0x01, 0x03, 0x00, "Infinite (Cheat)"	},
+	{0   , 0xfe, 0   ,    4, "Lives"				},
+	{0x15, 0x01, 0x03, 0x01, "1"					},
+	{0x15, 0x01, 0x03, 0x03, "3"					},
+	{0x15, 0x01, 0x03, 0x02, "5"					},
+	{0x15, 0x01, 0x03, 0x00, "Infinite (Cheat)"		},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"	},
-	{0x15, 0x01, 0x10, 0x00, "No"			},
-	{0x15, 0x01, 0x10, 0x10, "Yes"			},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"		},
+	{0x15, 0x01, 0x10, 0x00, "No"					},
+	{0x15, 0x01, 0x10, 0x10, "Yes"					},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"		},
-	{0x15, 0x01, 0xc0, 0x80, "Easy"			},
-	{0x15, 0x01, 0xc0, 0xc0, "Normal"		},
-	{0x15, 0x01, 0xc0, 0x40, "Hard"			},
-	{0x15, 0x01, 0xc0, 0x00, "Hardest"		},
+	{0   , 0xfe, 0   ,    4, "Difficulty"			},
+	{0x15, 0x01, 0xc0, 0x80, "Easy"					},
+	{0x15, 0x01, 0xc0, 0xc0, "Normal"				},
+	{0x15, 0x01, 0xc0, 0x40, "Hard"					},
+	{0x15, 0x01, 0xc0, 0x00, "Hardest"				},
 };
 
 STDDIPINFO(Wndrplnt)
 
 static struct BurnDIPInfo ChelnovDIPList[]=
 {
-	{0x14, 0xff, 0xff, 0x6f, NULL			},
-	{0x15, 0xff, 0xff, 0xdf, NULL			},
+	{0x14, 0xff, 0xff, 0x6f, NULL					},
+	{0x15, 0xff, 0xff, 0xdf, NULL					},
 
-	{0   , 0xfe, 0   ,    4, "Coin A"		},
-	{0x14, 0x01, 0x03, 0x03, "1 Coin 2 Credits"	},
-	{0x14, 0x01, 0x03, 0x02, "1 Coin 3 Credits"	},
-	{0x14, 0x01, 0x03, 0x01, "1 Coin 4 Credits"	},
-	{0x14, 0x01, 0x03, 0x00, "1 Coin 6 Credits"	},
+	{0   , 0xfe, 0   ,    4, "Coin A"				},
+	{0x14, 0x01, 0x03, 0x03, "1 Coin 2 Credits"		},
+	{0x14, 0x01, 0x03, 0x02, "1 Coin 3 Credits"		},
+	{0x14, 0x01, 0x03, 0x01, "1 Coin 4 Credits"		},
+	{0x14, 0x01, 0x03, 0x00, "1 Coin 6 Credits"		},
 
-	{0   , 0xfe, 0   ,    4, "Coin B"		},
+	{0   , 0xfe, 0   ,    4, "Coin B"				},
 	{0x14, 0x01, 0x0c, 0x00, "4 Coins 1 Credits"	},
 	{0x14, 0x01, 0x0c, 0x04, "3 Coins 1 Credits"	},
 	{0x14, 0x01, 0x0c, 0x08, "2 Coins 1 Credits"	},
 	{0x14, 0x01, 0x0c, 0x0c, "1 Coin  1 Credits"	},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x14, 0x01, 0x20, 0x00, "Off"			},
-	{0x14, 0x01, 0x20, 0x20, "On"			},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"			},
+	{0x14, 0x01, 0x20, 0x00, "Off"					},
+	{0x14, 0x01, 0x20, 0x20, "On"					},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
-	{0x14, 0x01, 0x40, 0x40, "Off"			},
-	{0x14, 0x01, 0x40, 0x00, "On"			},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"			},
+	{0x14, 0x01, 0x40, 0x40, "Off"					},
+	{0x14, 0x01, 0x40, 0x00, "On"					},
 
-	{0   , 0xfe, 0   ,    2, "Cabinet"		},
-	{0x14, 0x01, 0x80, 0x00, "Upright"		},
-	{0x14, 0x01, 0x80, 0x80, "Cocktail"		},
+	{0   , 0xfe, 0   ,    2, "Cabinet"				},
+	{0x14, 0x01, 0x80, 0x00, "Upright"				},
+	{0x14, 0x01, 0x80, 0x80, "Cocktail"				},
 
-	{0   , 0xfe, 0   ,    4, "Lives"		},
-	{0x15, 0x01, 0x03, 0x01, "1"			},
-	{0x15, 0x01, 0x03, 0x03, "3"			},
-	{0x15, 0x01, 0x03, 0x02, "5"			},
-	{0x15, 0x01, 0x03, 0x00, "Infinite (Cheat)"	},
+	{0   , 0xfe, 0   ,    4, "Lives"				},
+	{0x15, 0x01, 0x03, 0x01, "1"					},
+	{0x15, 0x01, 0x03, 0x03, "3"					},
+	{0x15, 0x01, 0x03, 0x02, "5"					},
+	{0x15, 0x01, 0x03, 0x00, "Infinite (Cheat)"		},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"		},
-	{0x15, 0x01, 0x0c, 0x04, "Easy"			},
-	{0x15, 0x01, 0x0c, 0x0c, "Normal"		},
-	{0x15, 0x01, 0x0c, 0x08, "Hard"			},
-	{0x15, 0x01, 0x0c, 0x00, "Hardest"		},
+	{0   , 0xfe, 0   ,    4, "Difficulty"			},
+	{0x15, 0x01, 0x0c, 0x08, "Easy"					},
+	{0x15, 0x01, 0x0c, 0x0c, "Normal"				},
+	{0x15, 0x01, 0x0c, 0x04, "Hard"					},
+	{0x15, 0x01, 0x0c, 0x00, "Hardest"				},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"	},
-	{0x15, 0x01, 0x10, 0x00, "No"			},
-	{0x15, 0x01, 0x10, 0x10, "Yes"			},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"		},
+	{0x15, 0x01, 0x10, 0x00, "No"					},
+	{0x15, 0x01, 0x10, 0x10, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Freeze"		},
-	{0x15, 0x01, 0x40, 0x40, "Off"			},
-	{0x15, 0x01, 0x40, 0x00, "On"			},
+	{0   , 0xfe, 0   ,    2, "Freeze"				},
+	{0x15, 0x01, 0x40, 0x40, "Off"					},
+	{0x15, 0x01, 0x40, 0x00, "On"					},
 };
 
 STDDIPINFO(Chelnov)
 
 static struct BurnDIPInfo ChelnovuDIPList[]=
 {
-	{0x14, 0xff, 0xff, 0x6f, NULL			},
-	{0x15, 0xff, 0xff, 0xdf, NULL			},
+	{0x14, 0xff, 0xff, 0x6f, NULL					},
+	{0x15, 0xff, 0xff, 0xdf, NULL					},
 
-	{0   , 0xfe, 0   ,    4, "Coin B"		},
+	{0   , 0xfe, 0   ,    4, "Coin A"				},
 	{0x14, 0x01, 0x03, 0x00, "2 Coins 1 Credits"	},
 	{0x14, 0x01, 0x03, 0x03, "1 Coin  1 Credits"	},
 	{0x14, 0x01, 0x03, 0x02, "1 Coin  2 Credits"	},
 	{0x14, 0x01, 0x03, 0x01, "1 Coin  3 Credits"	},
 
-	{0   , 0xfe, 0   ,    4, "Coin A"		},
+	{0   , 0xfe, 0   ,    4, "Coin B"				},
 	{0x14, 0x01, 0x0c, 0x00, "2 Coins 1 Credits"	},
 	{0x14, 0x01, 0x0c, 0x0c, "1 Coin  1 Credits"	},
 	{0x14, 0x01, 0x0c, 0x08, "1 Coin  2 Credits"	},
 	{0x14, 0x01, 0x0c, 0x04, "1 Coin  3 Credits"	},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x14, 0x01, 0x20, 0x00, "Off"			},
-	{0x14, 0x01, 0x20, 0x20, "On"			},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"			},
+	{0x14, 0x01, 0x20, 0x00, "Off"					},
+	{0x14, 0x01, 0x20, 0x20, "On"					},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
-	{0x14, 0x01, 0x40, 0x40, "Off"			},
-	{0x14, 0x01, 0x40, 0x00, "On"			},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"			},
+	{0x14, 0x01, 0x40, 0x40, "Off"					},
+	{0x14, 0x01, 0x40, 0x00, "On"					},
 
-	{0   , 0xfe, 0   ,    2, "Cabinet"		},
-	{0x14, 0x01, 0x80, 0x00, "Upright"		},
-	{0x14, 0x01, 0x80, 0x80, "Cocktail"		},
+	{0   , 0xfe, 0   ,    2, "Cabinet"				},
+	{0x14, 0x01, 0x80, 0x00, "Upright"				},
+	{0x14, 0x01, 0x80, 0x80, "Cocktail"				},
 
-	{0   , 0xfe, 0   ,    4, "Lives"		},
-	{0x15, 0x01, 0x03, 0x01, "1"			},
-	{0x15, 0x01, 0x03, 0x03, "3"			},
-	{0x15, 0x01, 0x03, 0x02, "5"			},
-	{0x15, 0x01, 0x03, 0x00, "Infinite (Cheat)"	},
+	{0   , 0xfe, 0   ,    4, "Lives"				},
+	{0x15, 0x01, 0x03, 0x01, "1"					},
+	{0x15, 0x01, 0x03, 0x03, "3"					},
+	{0x15, 0x01, 0x03, 0x02, "5"					},
+	{0x15, 0x01, 0x03, 0x00, "Infinite (Cheat)"		},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"		},
-	{0x15, 0x01, 0x0c, 0x04, "Easy"			},
-	{0x15, 0x01, 0x0c, 0x0c, "Normal"		},
-	{0x15, 0x01, 0x0c, 0x08, "Hard"			},
-	{0x15, 0x01, 0x0c, 0x00, "Hardest"		},
+	{0   , 0xfe, 0   ,    4, "Difficulty"			},
+	{0x15, 0x01, 0x0c, 0x08, "Easy"					},
+	{0x15, 0x01, 0x0c, 0x0c, "Normal"				},
+	{0x15, 0x01, 0x0c, 0x04, "Hard"					},
+	{0x15, 0x01, 0x0c, 0x00, "Hardest"				},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"	},
-	{0x15, 0x01, 0x10, 0x00, "No"			},
-	{0x15, 0x01, 0x10, 0x10, "Yes"			},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"		},
+	{0x15, 0x01, 0x10, 0x00, "No"					},
+	{0x15, 0x01, 0x10, 0x10, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Freeze"		},
-	{0x15, 0x01, 0x40, 0x40, "Off"			},
-	{0x15, 0x01, 0x40, 0x00, "On"			},
+	{0   , 0xfe, 0   ,    2, "Freeze"				},
+	{0x15, 0x01, 0x40, 0x40, "Off"					},
+	{0x15, 0x01, 0x40, 0x00, "On"					},
 };
 
 STDDIPINFO(Chelnovu)
 
-//------------------------------------------------------------------------------------------------
-// These are pretty much ripped straight from MAME
+// i8751 MCU (karnov, chelnov)
+static void DrvMCUReset(); // forward
+static void DrvMCUSync(); // ""
 
-static void karnov_i8751_w(INT32 data)
+static UINT8 mcu_read_port(INT32 port)
 {
-	if (i8751_needs_ack)
-	{
-		i8751_command_queue=data;
-		return;
+	if (!(port >= MCS51_PORT_P0 && port <= MCS51_PORT_P3))
+		return 0xff;
+
+	switch (port & 0x3) {
+		case 0: return i8751PortData[0];
+		case 1: return i8751PortData[1];
+		case 3: return DrvInput[2];
 	}
 
-	i8751_return=0;
-	if (data==0x100 && microcontroller_id==KARNOVJ) i8751_return=0x56a; /* Japan version */
-	if (data==0x100 && microcontroller_id==KARNOV) i8751_return=0x56b; /* USA version */
-	if ((data&0xf00)==0x300) i8751_return=(data&0xff)*0x12; /* Player sprite mapping */
-
-	if (data==0x400) i8751_return=0x4000; /* Get The Map... */
-	if (data==0x402) i8751_return=0x40a6; /* Ancient Ruins */
-	if (data==0x403) i8751_return=0x4054; /* Forest... */
-	if (data==0x404) i8751_return=0x40de; /* ^Rocky hills */
-	if (data==0x405) i8751_return=0x4182; /* Sea */
-	if (data==0x406) i8751_return=0x41ca; /* Town */
-	if (data==0x407) i8751_return=0x421e; /* Desert */
-	if (data==0x401) i8751_return=0x4138; /* ^Whistling wind */
-	if (data==0x408) i8751_return=0x4276; /* ^Heavy Gates */
-	
-	SekSetIRQLine(6, CPU_IRQSTATUS_AUTO); /* Signal main cpu task is complete */
-	i8751_needs_ack=1;
+	return 0xff;
 }
+
+static void mcu_write_port(INT32 port, UINT8 data)
+{
+	if (!(port >= MCS51_PORT_P0 && port <= MCS51_PORT_P3))
+		return;
+
+	port &= 0x3;
+
+	if (port == 2)
+	{
+		if (~data & 0x1 && i8751PortData[2] & 0x1) {
+			mcs51_set_irq_line(MCS51_INT0_LINE, CPU_IRQSTATUS_NONE);
+		}
+
+		if (~data & 0x2 && i8751PortData[2] & 0x2) {
+			mcs51_set_irq_line(MCS51_INT1_LINE, CPU_IRQSTATUS_NONE);
+		}
+
+		if (~data & 0x4 && i8751PortData[2] & 0x4) {
+			SekSetIRQLine(6, CPU_IRQSTATUS_ACK);
+		}
+
+		if (~data & 0x10 && i8751PortData[2] & 0x10) {
+			i8751PortData[0] = i8751Command;
+		}
+
+		if (~data & 0x20 && i8751PortData[2] & 0x20) {
+			i8751PortData[1] = i8751Command >> 8;
+		}
+
+		if (~data & 0x40 && i8751PortData[2] & 0x40) {
+			i8751RetVal = (i8751RetVal & 0xff00) | (i8751PortData[0]);
+		}
+
+		if (~data & 0x80 && i8751PortData[2] & 0x80) {
+			i8751RetVal = (i8751RetVal & 0xff) | (i8751PortData[1] << 8);
+		}
+	}
+
+	i8751PortData[port] = data;
+}
+
+static void DrvMCUInit()
+{
+	mcs51_init();
+	mcs51_set_program_data(DrvMCUROM);
+	mcs51_set_write_handler(mcu_write_port);
+	mcs51_set_read_handler(mcu_read_port);
+
+	DrvMCUReset();
+}
+
+static void DrvMCUExit() {
+	mcs51_exit();
+	realMCU = 0;
+}
+
+static INT32 DrvMCURun(INT32 cycles)
+{
+	return mcs51Run(cycles);
+}
+
+static INT32 DrvMCUScan(INT32 nAction)
+{
+	mcs51_scan(nAction);
+
+	SCAN_VAR(i8751RetVal);
+	SCAN_VAR(i8751Command);
+	SCAN_VAR(i8751PortData);
+
+	return 0;
+}
+
+static void DrvMCUWrite(UINT16 data)
+{
+	DrvMCUSync();
+
+	i8751Command = data;
+
+	mcs51_set_irq_line(MCS51_INT1_LINE, CPU_IRQSTATUS_HOLD);
+}
+
+static void DrvMCUSync()
+{
+	INT32 todo = ((double)SekTotalCycles() * (8000000/12) / 10000000) - mcs51TotalCycles();
+
+	if (todo > 0) {
+		DrvMCURun(todo);
+	}
+}
+
+static void DrvMCUReset()
+{
+	i8751RetVal = i8751Command = 0;
+	memset(&i8751PortData, 0, sizeof(i8751PortData));
+	mcs51_reset();
+}
+
+//------------------------------------------------------------------------------------------------
+// wndrplnt_i8751_w() from MAME.
 
 static void wndrplnt_i8751_w(INT32 data)
 {
@@ -398,125 +498,6 @@ static void wndrplnt_i8751_w(INT32 data)
 	i8751_needs_ack=1;
 }
 
-static void chelnov_i8751_w(INT32 data)
-{
-	if (i8751_needs_ack)
-	{
-		i8751_command_queue=data;
-		return;
-	}
-
-	i8751_return=0;
-	if (data==0x200 && microcontroller_id==CHELNOVJ) i8751_return=0x7734; /* Japan version */
-	if (data==0x200 && microcontroller_id==CHELNOV)  i8751_return=0x783e; /* USA version */
-	if (data==0x200 && microcontroller_id==CHELNOVW)  i8751_return=0x7736; /* World version */
-	if (data==0x100 && microcontroller_id==CHELNOVJ) i8751_return=0x71a; /* Japan version */
-	if (data==0x100 && microcontroller_id==CHELNOV)  i8751_return=0x71b; /* USA version */
-	if (data==0x100 && microcontroller_id==CHELNOVW)  i8751_return=0x71c; /* World version */
-
-	if ((data & 0xe000) == 0x6000) {
-		if (data & 0x1000) {
-			i8751_return = ((data & 0x0f) + ((data >> 4) & 0x0f)) * ((data >> 8) & 0x0f);
-		} else {
-			i8751_return = (data & 0x0f) * (((data >> 8) & 0x0f) + ((data >> 4) & 0x0f));
-		}
-	}
-
-	if ((data&0xf000)==0x1000) i8751_level=1; /* Level 1 */
-	if ((data&0xf000)==0x2000) i8751_level++; /* Level Increment */
-
-	if ((data&0xf000)==0x3000)
-	{        /* Sprite table mapping */
-		INT32 b=data&0xff;
-		switch (i8751_level)
-		{
-			case 1: /* Level 1, Sprite mapping tables */
-				if (microcontroller_id==CHELNOV)
-				{ /* USA */
-					if (b<2) i8751_return=0;
-					else if (b<6) i8751_return=1;
-					else if (b<0xb) i8751_return=2;
-					else if (b<0xf) i8751_return=3;
-					else if (b<0x13) i8751_return=4;
-					else i8751_return=5;
-				}
-				else
-				{ /* Japan, World */
-					if (b<3) i8751_return=0;
-					else if (b<8) i8751_return=1;
-					else if (b<0x0c) i8751_return=2;
-					else if (b<0x10) i8751_return=3;
-					else if (b<0x19) i8751_return=4;
-					else if (b<0x1b) i8751_return=5;
-					else if (b<0x22) i8751_return=6;
-					else if (b<0x28) i8751_return=7;
-					else i8751_return=8;
-				}
-				break;
-			case 2: /* Level 2, Sprite mapping tables, USA & Japan are the same */
-				if (b<3) i8751_return=0;
-				else if (b<9) i8751_return=1;
-				else if (b<0x11) i8751_return=2;
-				else if (b<0x1b) i8751_return=3;
-				else if (b<0x21) i8751_return=4;
-				else if (b<0x28) i8751_return=5;
-				else i8751_return=6;
-				break;
-			case 3: /* Level 3, Sprite mapping tables, USA & Japan are the same */
-				if (b<5) i8751_return=0;
-				else if (b<9) i8751_return=1;
-				else if (b<0x0d) i8751_return=2;
-				else if (b<0x11) i8751_return=3;
-				else if (b<0x1b) i8751_return=4;
-				else if (b<0x1c) i8751_return=5;
-				else if (b<0x22) i8751_return=6;
-				else if (b<0x27) i8751_return=7;
-				else i8751_return=8;
-				break;
-			case 4: /* Level 4, Sprite mapping tables, USA & Japan are the same */
-				if (b<4) i8751_return=0;
-				else if (b<0x0c) i8751_return=1;
-				else if (b<0x0f) i8751_return=2;
-				else if (b<0x19) i8751_return=3;
-				else if (b<0x1c) i8751_return=4;
-				else if (b<0x22) i8751_return=5;
-				else if (b<0x29) i8751_return=6;
-				else i8751_return=7;
-				break;
-			case 5: /* Level 5, Sprite mapping tables */
-				if (b<7) i8751_return=0;
-				else if (b<0x0e) i8751_return=1;
-				else if (b<0x14) i8751_return=2;
-				else if (b<0x1a) i8751_return=3;
-				else if (b<0x23) i8751_return=4;
-				else if (b<0x27) i8751_return=5;
-				else i8751_return=6;
-				break;
-			case 6: /* Level 6, Sprite mapping tables */
-				if (b<3) i8751_return=0;
-				else if (b<0x0b) i8751_return=1;
-				else if (b<0x11) i8751_return=2;
-				else if (b<0x17) i8751_return=3;
-				else if (b<0x1d) i8751_return=4;
-				else if (b<0x24) i8751_return=5;
-				else i8751_return=6;
-				break;
-			case 7: /* Level 7, Sprite mapping tables */
-				if (b<5) i8751_return=0;
-				else if (b<0x0b) i8751_return=1;
-				else if (b<0x11) i8751_return=2;
-				else if (b<0x1a) i8751_return=3;
-				else if (b<0x21) i8751_return=4;
-				else if (b<0x27) i8751_return=5;
-				else i8751_return=6;
-				break;
-		}
-	}
-
-	SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
-	i8751_needs_ack=1;
-}
-
 static void karnov_control_w(INT32 offset, INT32 data)
 {
 	switch (offset<<1)
@@ -524,40 +505,45 @@ static void karnov_control_w(INT32 offset, INT32 data)
 		case 0:
 			SekSetIRQLine(6, CPU_IRQSTATUS_NONE);
 
-			if (i8751_needs_ack)
+			if (microcontroller_id==WNDRPLNT)
 			{
-				if (i8751_coin_pending)
+				if (i8751_needs_ack)
 				{
-					i8751_return=i8751_coin_pending;
-					SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
-					i8751_coin_pending=0;
-				}
-				else if (i8751_command_queue)
-				{
-					i8751_needs_ack=0;
-					karnov_control_w(3,i8751_command_queue);
-					i8751_command_queue=0;
-				}
-				else
-				{
-					i8751_needs_ack=0;
+					if (i8751_coin_pending)
+					{
+						i8751_return=i8751_coin_pending;
+						SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
+						i8751_coin_pending=0;
+					}
+					else if (i8751_command_queue)
+					{
+						i8751_needs_ack=0;
+						karnov_control_w(3,i8751_command_queue);
+						i8751_command_queue=0;
+					}
+					else
+					{
+						i8751_needs_ack=0;
+					}
 				}
 			}
 			return;
 
 		case 2:
 			*soundlatch = data;
-			M6502SetIRQLine(M6502_INPUT_LINE_NMI, CPU_IRQSTATUS_AUTO);			
+			M6502SetIRQLine(M6502_INPUT_LINE_NMI, CPU_IRQSTATUS_AUTO);
 			break;
 
 		case 4:
-			memcpy (DrvSprBuf, DrvSprRAM, 0x1000); 
+			memcpy (DrvSprBuf, DrvSprRAM, 0x1000);
 			break;
 
 		case 6:
-			if (microcontroller_id==KARNOV  || microcontroller_id==KARNOVJ) karnov_i8751_w(data);
-			if (microcontroller_id==CHELNOV || microcontroller_id==CHELNOVJ || microcontroller_id==CHELNOVW) chelnov_i8751_w(data);
-			if (microcontroller_id==WNDRPLNT) wndrplnt_i8751_w(data);
+			if (microcontroller_id==WNDRPLNT) {
+				wndrplnt_i8751_w(data);
+			} else {
+				DrvMCUWrite(data);
+			}
 			break;
 
 		case 8:
@@ -569,7 +555,7 @@ static void karnov_control_w(INT32 offset, INT32 data)
 			DrvScroll[1] = data;
 			break;
 
-		case 0xc:
+		case 0xc: // for wndrplnt
 			i8751_needs_ack=0;
 			i8751_coin_pending=0;
 			i8751_command_queue=0;
@@ -592,8 +578,14 @@ static UINT16 karnov_control_r(INT32 offset)
 			return DrvInput[1] ^ vblank;
 		case 4:
 			return (DrvDip[1] << 8) | DrvDip[0];
-		case 6:
-			return i8751_return;
+		case 6: {
+			if (microcontroller_id==WNDRPLNT) {
+				return i8751_return;
+			} else {
+				DrvMCUSync();
+				return i8751RetVal;
+			}
+		}
 	}
 
 	return ~0;
@@ -601,7 +593,7 @@ static UINT16 karnov_control_r(INT32 offset)
 
 //------------------------------------------------------------------------------------------
 
-void __fastcall karnov_main_write_word(UINT32 address, UINT16 data)
+static void __fastcall karnov_main_write_word(UINT32 address, UINT16 data)
 {
 	if ((address & 0xfff800) == 0x0a1800) {
 		UINT16 *ptr = (UINT16*)DrvPfRAM;
@@ -619,7 +611,7 @@ void __fastcall karnov_main_write_word(UINT32 address, UINT16 data)
 	}
 }
 
-void __fastcall karnov_main_write_byte(UINT32 address, UINT8 data)
+static void __fastcall karnov_main_write_byte(UINT32 address, UINT8 data)
 {
 	if ((address & 0xfff800) == 0x0a1800) {
 		INT32 offset = (address >> 1) & 0x3ff;
@@ -635,7 +627,7 @@ void __fastcall karnov_main_write_byte(UINT32 address, UINT8 data)
 	}
 }
 
-UINT16 __fastcall karnov_main_read_word(UINT32 address)
+static UINT16 __fastcall karnov_main_read_word(UINT32 address)
 {
 	if ((address & 0xfffff0) == 0x0c0000) {
 		return karnov_control_r((address >> 1) & 7);
@@ -644,7 +636,7 @@ UINT16 __fastcall karnov_main_read_word(UINT32 address)
 	return 0;
 }
 
-UINT8 __fastcall karnov_main_read_byte(UINT32 address)
+static UINT8 __fastcall karnov_main_read_byte(UINT32 address)
 {
 	if ((address & 0xfffff0) == 0x0c0000) {
 		return karnov_control_r((address >> 1) & 7) >> ((~address & 1) << 3);
@@ -653,7 +645,7 @@ UINT8 __fastcall karnov_main_read_byte(UINT32 address)
 	return 0;
 }
 
-void karnov_sound_write(UINT16 address, UINT8 data)
+static void karnov_sound_write(UINT16 address, UINT8 data)
 {
 	switch (address)
 	{
@@ -674,7 +666,6 @@ UINT8 karnov_sound_read(UINT16 address)
 	switch (address)
 	{
 		case 0x0800:
-//			m6502SetIRQ(M6502_CLEAR);
 			return *soundlatch;
 	}
 
@@ -682,27 +673,8 @@ UINT8 karnov_sound_read(UINT16 address)
 }
 
 static void DrvYM3526FMIRQHandler(INT32, INT32 nStatus)
-{	
-	if (nStatus) {
-		M6502SetIRQLine(M6502_IRQ_LINE, CPU_IRQSTATUS_ACK);
-	} else {
-		M6502SetIRQLine(M6502_IRQ_LINE, CPU_IRQSTATUS_NONE);
-	}
-}
-
-static INT32 DrvYM3526SynchroniseStream(INT32 nSoundRate)
 {
-	return (INT64)M6502TotalCycles() * nSoundRate / 1500000;
-}
-
-static INT32 DrvYM2203SynchroniseStream(INT32 nSoundRate)
-{
-	return (INT64)SekTotalCycles() * nSoundRate / 10000000;
-}
-
-static double DrvYM2203GetTime()
-{
-	return (double)SekTotalCycles() / 10000000;
+	M6502SetIRQLine(M6502_IRQ_LINE, (nStatus) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 }
 
 static INT32 DrvDoReset()
@@ -717,6 +689,10 @@ static INT32 DrvDoReset()
 	SekReset();
 	M6502Reset();
 
+	if (realMCU) {
+		DrvMCUReset();
+	}
+
 	BurnYM3526Reset();
 	BurnYM2203Reset();
 
@@ -730,6 +706,7 @@ static INT32 DrvDoReset()
 	i8751_coin_pending = 0;
 	i8751_command_queue = 0;
 	i8751_level = 0;
+	i8751_reset = 0;
 
 	return 0;
 }
@@ -740,6 +717,7 @@ static INT32 MemIndex()
 
 	Drv68KROM		= Next; Next += 0x060000;
 	Drv6502ROM		= Next; Next += 0x010000;
+	DrvMCUROM       = Next; Next += 0x001000;
 
 	DrvGfxROM0		= Next; Next += 0x020000;
 	DrvGfxROM1		= Next; Next += 0x080000;
@@ -854,18 +832,19 @@ static INT32 DrvInit()
 		if (BurnLoadRom(DrvGfxROM1 + 0x40000, 10, 1)) return 1;
 		if (BurnLoadRom(DrvGfxROM1 + 0x60000, 11, 1)) return 1;
 
-		if (microcontroller_id == CHELNOVJ || microcontroller_id == CHELNOVW || microcontroller_id == CHELNOV) {
+		if (microcontroller_id == CHELNOV) {
 			if (BurnLoadRom(DrvGfxROM2 + 0x00000, 12, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM2 + 0x20000, 13, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM2 + 0x40000, 14, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM2 + 0x60000, 15, 1)) return 1;
-	
+
 			if (BurnLoadRom(DrvColPROM + 0x00000, 16, 1)) return 1;
 			if (BurnLoadRom(DrvColPROM + 0x00400, 17, 1)) return 1;
 
-			// hack to bypass infinite loop waiting for mcu response
-			*((UINT16*)(Drv68KROM + 0x062a)) = BURN_ENDIAN_SWAP_INT16(0x4E71);
-		} else {
+			if (BurnLoadRom(DrvMCUROM  + 0x00000, 18, 1)) return 1;
+
+			realMCU = 1;
+		} else { // karnov, wndrplnt
 			if (BurnLoadRom(DrvGfxROM2 + 0x00000, 12, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM2 + 0x10000, 13, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM2 + 0x20000, 14, 1)) return 1;
@@ -874,21 +853,29 @@ static INT32 DrvInit()
 			if (BurnLoadRom(DrvGfxROM2 + 0x50000, 17, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM2 + 0x60000, 18, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM2 + 0x70000, 19, 1)) return 1;
-	
+
 			if (BurnLoadRom(DrvColPROM + 0x00000, 20, 1)) return 1;
 			if (BurnLoadRom(DrvColPROM + 0x00400, 21, 1)) return 1;
+
+			if (microcontroller_id != WNDRPLNT) { // WNDRPLNT still mcusim (no dump yet)
+				if (BurnLoadRom(DrvMCUROM  + 0x00000, 22, 1)) return 1;
+
+				realMCU = 1;
+			}
 		}
 
 		DrvPaletteInit();
 		DrvGfxDecode();
 	}
 
+#ifdef BUILD_A68K
 	// These games really don't like the ASM core, so disable it for now
 	// and restore it on exit.
 	if (bBurnUseASMCPUEmulation) {
 		bUseAsm68KCoreOldValue = bBurnUseASMCPUEmulation;
 		bBurnUseASMCPUEmulation = false;
 	}
+#endif
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
@@ -912,11 +899,15 @@ static INT32 DrvInit()
 	M6502SetWriteHandler(karnov_sound_write);
 	M6502Close();
 
-	BurnYM3526Init(3000000, &DrvYM3526FMIRQHandler, &DrvYM3526SynchroniseStream, 0);
-	BurnTimerAttachM6502YM3526(1500000);
+	if (realMCU) {
+		DrvMCUInit();
+	}
+
+	BurnYM3526Init(3000000, &DrvYM3526FMIRQHandler, 0);
+	BurnTimerAttachYM3526(&M6502Config, 1500000);
 	BurnYM3526SetRoute(BURN_SND_YM3526_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
-	BurnYM2203Init(1, 1500000, NULL, DrvYM2203SynchroniseStream, DrvYM2203GetTime, 1);
+	BurnYM2203Init(1, 1500000, NULL, 1);
 	BurnTimerAttachSek(10000000);
 	BurnYM2203SetAllRoutes(0, 0.25, BURN_SND_ROUTE_BOTH);
 
@@ -934,14 +925,20 @@ static INT32 DrvExit()
 	SekExit();
 	M6502Exit();
 
+	if (realMCU) {
+		DrvMCUExit();
+	}
+
 	BurnYM3526Exit();
 	BurnYM2203Exit();
 
 	BurnFree (AllMem);
 
+#ifdef BUILD_A68K
 	if (bUseAsm68KCoreOldValue) {
 		bBurnUseASMCPUEmulation = true;
 	}
+#endif
 
 	return 0;
 }
@@ -974,11 +971,7 @@ static void draw_txt_layer(INT32 swap)
 
 		if (code == 0) continue;
 
-		if (*flipscreen) {
-			Render8x8Tile_Mask_FlipXY(pTransDraw, code, sx, sy, color, 3, 0, 0, DrvGfxROM0);
-		} else {
-			Render8x8Tile_Mask(pTransDraw, code, sx, sy, color, 3, 0, 0, DrvGfxROM0);
-		}
+		Draw8x8MaskTile(pTransDraw, code, sx, sy, *flipscreen, *flipscreen, color, 3, 0, 0, DrvGfxROM0);
 	}
 }
 
@@ -1003,7 +996,7 @@ static void draw_bg_layer()
 
 		INT32 attr = BURN_ENDIAN_SWAP_INT16(vram[offs]);
 		INT32 code = attr & 0x7ff;
-		INT32 color= attr >> 12;	
+		INT32 color= attr >> 12;
 
 		if (*flipscreen) {
 			Render16x16Tile_FlipXY_Clip(pTransDraw, code, 240 - sx, (240 - sy) - 8, color, 4, 0x200, DrvGfxROM1);
@@ -1015,19 +1008,7 @@ static void draw_bg_layer()
 
 static inline void sprite_routine(INT32 code, INT32 sx, INT32 sy, INT32 color, INT32 fy, INT32 fx)
 {
-	if (fy) {
-		if (fx) {
-			Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, sx, sy, color, 4, 0, 0x100, DrvGfxROM2);
-		} else {
-			Render16x16Tile_Mask_FlipY_Clip(pTransDraw, code, sx, sy, color, 4, 0, 0x100, DrvGfxROM2);
-		}
-	} else {
-		if (fx) {
-			Render16x16Tile_Mask_FlipX_Clip(pTransDraw, code, sx, sy, color, 4, 0, 0x100, DrvGfxROM2);
-		} else {
-			Render16x16Tile_Mask_Clip(pTransDraw, code, sx, sy, color, 4, 0, 0x100, DrvGfxROM2);
-		}
-	}
+	Draw16x16MaskTile(pTransDraw, code, sx, sy, fx, fy, color, 4, 0, 0x100, DrvGfxROM2);
 }
 
 static void draw_sprites()
@@ -1103,23 +1084,26 @@ static INT32 DrvDraw()
 
 static void DrvInterrupt()
 {
-	static INT32 latch = 0;
-
-	if (DrvInput[2] == coin_mask) latch=1;
-	if (DrvInput[2] != coin_mask && latch)
+	if (microcontroller_id == WNDRPLNT)
 	{
-		if (i8751_needs_ack)
+		static INT32 latch = 0;
+
+		if (DrvInput[2] == coin_mask) latch=1;
+		if (DrvInput[2] != coin_mask && latch)
 		{
-			i8751_coin_pending = DrvInput[2] | 0x8000;
+			if (i8751_needs_ack)
+			{
+				i8751_coin_pending = DrvInput[2] | 0x8000;
+			}
+			else
+			{
+				i8751_return = DrvInput[2] | 0x8000;
+				SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
+				SekRun(100);
+				i8751_needs_ack=1;
+			}
+			latch=0;
 		}
-		else
-		{
-			i8751_return = DrvInput[2] | 0x8000;
-			SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
-			SekRun(100);
-			i8751_needs_ack=1;
-		}
-		latch=0;
 	}
 
 	SekSetIRQLine(7, CPU_IRQSTATUS_AUTO);
@@ -1133,19 +1117,29 @@ static INT32 DrvFrame()
 
 	SekNewFrame();
 	M6502NewFrame();
+	mcs51NewFrame();
 
 	{
-		memset (DrvInput, 0xff, 2 * sizeof(INT16));
+		UINT16 prev_coin = DrvInput[2];
+		memset (DrvInput, 0xff, sizeof(DrvInput));
 		DrvInput[2] = coin_mask;
 		for (INT32 i = 0; i < 16; i++) {
 			DrvInput[0] ^= (DrvJoy1[i] & 1) << i;
 			DrvInput[1] ^= (DrvJoy2[i] & 1) << i;
 			DrvInput[2] ^= (DrvJoy3[i] & 1) << i;
 		}
+
+		if (realMCU) {
+			if ((DrvInput[2] ^ prev_coin) & 0xe0 && DrvInput[2] != coin_mask) {
+				// signal coin -> mcu
+				mcs51_set_irq_line(MCS51_INT0_LINE, CPU_IRQSTATUS_ACK);
+			}
+		}
 	}
 
 	INT32 nInterleave = 256;
-	INT32 nCyclesTotal[2] = { 10000000 / 60, 1500000 / 60 };
+	INT32 nCyclesTotal[3] = { 10000000 / 60, 1500000 / 60, 8000000 / 60 / 12 };
+	INT32 nCyclesDone[3] = { 0, 0, 0 };
 
 	M6502Open(0);
 	SekOpen(0);
@@ -1160,13 +1154,17 @@ static INT32 DrvFrame()
 		}
 
 		BurnTimerUpdate((i + 1) * (nCyclesTotal[0] / nInterleave));
-		
+
 		BurnTimerUpdateYM3526((i + 1) * (nCyclesTotal[1] / nInterleave));
+
+		if (realMCU) {
+			CPU_RUN(2, DrvMCU);
+		}
 	}
 
 	BurnTimerEndFrame(nCyclesTotal[0]);
 	BurnTimerEndFrameYM3526(nCyclesTotal[1]);
-	
+
 	if (pBurnSoundOut) {
 		BurnYM3526Update(pBurnSoundOut, nBurnSoundLen);
 		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
@@ -1185,7 +1183,7 @@ static INT32 DrvFrame()
 static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
-	
+
 	if (pnMin != NULL) {
 		*pnMin = 0x029707;
 	}
@@ -1202,6 +1200,10 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SekScan(nAction);
 		M6502Scan(nAction);
 
+		if (realMCU) {
+			DrvMCUScan(nAction);
+		}
+
 		SekOpen(0);
 		M6502Open(0);
 		BurnYM3526Scan(nAction, pnMin);
@@ -1209,15 +1211,23 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		M6502Close();
 		SekClose();
 
+#if 0
+		// This problem no longer happens w/ Prot. MCU
 		if (nAction & ACB_WRITE) {
-			BurnYM2203Reset(); // Prevent hung sounds on savestate load (weird!) - dink
+			// Prevent hung sounds on savestate load (weird!) - dink
+			// Explanation: Karnov level #3(?) - a snakey-thing that snakes through
+			// the air; if you die while this thing is still alive, the sound
+			// will never stop.  Even after game over.
+			BurnYM2203Reset();
 		}
+#endif
 
 		SCAN_VAR(i8751_return);
 		SCAN_VAR(i8751_needs_ack);
 		SCAN_VAR(i8751_coin_pending);
 		SCAN_VAR(i8751_command_queue);
 		SCAN_VAR(i8751_level);
+		SCAN_VAR(i8751_reset);
 	}
 
 	return 0;
@@ -1225,37 +1235,38 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 
 // Karnov (US, rev 6)
+/* DE-0248-3 main board, DE-259-0 sub/rom board */
 
 static struct BurnRomInfo karnovRomDesc[] = {
-	{ "dn08-6",		0x10000, 0x4c60837f, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "dn11-6",		0x10000, 0xcd4abb99, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "dn07-",		0x10000, 0xfc14291b, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "dn10-",		0x10000, 0xa4a34e37, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "dn06-5",		0x10000, 0x29d64e42, 1 | BRF_PRG | BRF_ESS }, //  4
-	{ "dn09-5",		0x10000, 0x072d7c49, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "dn08-6.j15",		0x10000, 0x4c60837f, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "dn11-6.j20",		0x10000, 0xcd4abb99, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "dn07-.j14",		0x10000, 0xfc14291b, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "dn10-.j18",		0x10000, 0xa4a34e37, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "dn06-5.j13",		0x10000, 0x29d64e42, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "dn09-5.j17",		0x10000, 0x072d7c49, 1 | BRF_PRG | BRF_ESS }, //  5
 
-	{ "dn05-5",		0x08000, 0xfa1a31a8, 2 | BRF_PRG | BRF_ESS }, //  6 m6502 Code
+	{ "dn05-5.f3",		0x08000, 0xfa1a31a8, 2 | BRF_PRG | BRF_ESS }, //  6 m6502 Code
 
-	{ "dn00-",		0x08000, 0x0ed77c6d, 3 | BRF_GRA},            //  7 Characters
+	{ "dn00-.c5",		0x08000, 0x0ed77c6d, 3 | BRF_GRA },           //  7 Characters
 
-	{ "dn04-",		0x10000, 0xa9121653, 4 | BRF_GRA},            //  8 Tiles
-	{ "dn01-",		0x10000, 0x18697c9e, 4 | BRF_GRA},            //  9
-	{ "dn03-",		0x10000, 0x90d9dd9c, 4 | BRF_GRA},            // 10
-	{ "dn02-",		0x10000, 0x1e04d7b9, 4 | BRF_GRA},            // 11
+	{ "dn04-.d18",		0x10000, 0xa9121653, 4 | BRF_GRA },           //  8 Tiles
+	{ "dn01-.c15",		0x10000, 0x18697c9e, 4 | BRF_GRA },           //  9
+	{ "dn03-.d15",		0x10000, 0x90d9dd9c, 4 | BRF_GRA },           // 10
+	{ "dn02-.c18",		0x10000, 0x1e04d7b9, 4 | BRF_GRA },           // 11
 
-	{ "dn12-",		0x10000, 0x9806772c, 5 | BRF_GRA},            // 12 Sprites
-	{ "dn14-5",		0x08000, 0xac9e6732, 5 | BRF_GRA},            // 13
-	{ "dn13-",		0x10000, 0xa03308f9, 5 | BRF_GRA},            // 14
-	{ "dn15-5",		0x08000, 0x8933fcb8, 5 | BRF_GRA},            // 15
-	{ "dn16-",		0x10000, 0x55e63a11, 5 | BRF_GRA},            // 16
-	{ "dn17-5",		0x08000, 0xb70ae950, 5 | BRF_GRA},            // 17
-	{ "dn18-",		0x10000, 0x2ad53213, 5 | BRF_GRA},            // 18
-	{ "dn19-5",		0x08000, 0x8fd4fa40, 5 | BRF_GRA},            // 19
+	{ "dn12-.f8",		0x10000, 0x9806772c, 5 | BRF_GRA },           // 12 Sprites
+	{ "dn14-5.f11",		0x08000, 0xac9e6732, 5 | BRF_GRA },           // 13
+	{ "dn13-.f9",		0x10000, 0xa03308f9, 5 | BRF_GRA },           // 14
+	{ "dn15-5.f12",		0x08000, 0x8933fcb8, 5 | BRF_GRA },           // 15
+	{ "dn16-.f13",		0x10000, 0x55e63a11, 5 | BRF_GRA },           // 16
+	{ "dn17-5.f15",		0x08000, 0xb70ae950, 5 | BRF_GRA },           // 17
+	{ "dn18-.f16",		0x10000, 0x2ad53213, 5 | BRF_GRA },           // 18
+	{ "dn19-5.f18",		0x08000, 0x8fd4fa40, 5 | BRF_GRA },           // 19
 
-	{ "karnprom.21",	0x00400, 0xaab0bb93, 6 | BRF_GRA},            // 20 Color Color Proms
-	{ "karnprom.20",	0x00400, 0x02f78ffb, 6 | BRF_GRA},            // 21
-	
-	{ "karnov_i8751",  0x01000, 0x00000000, BRF_OPT | BRF_NODUMP},
+	{ "dn-21.k8",		0x00400, 0xaab0bb93, 6 | BRF_GRA },           // 20 Color Color Proms
+	{ "dn-20.l6",		0x00400, 0x02f78ffb, 6 | BRF_GRA },           // 21
+
+	{ "dn-5.k14",  		0x01000, 0xd056de4e, 7 | BRF_PRG }, 		  // 22 i8751 microcontroller
 };
 
 STD_ROM_PICK(karnov)
@@ -1264,7 +1275,7 @@ STD_ROM_FN(karnov)
 static INT32 KarnovInit()
 {
 	microcontroller_id = KARNOV;
-	coin_mask = 0;
+	coin_mask = 0xff;
 
 	return DrvInit();
 }
@@ -1273,45 +1284,46 @@ struct BurnDriver BurnDrvKarnov = {
 	"karnov", NULL, NULL, NULL, "1987",
 	"Karnov (US, rev 6)\0", NULL, "Data East USA", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_HORSHOOT, 0,
-	NULL, karnovRomInfo, karnovRomName, NULL, NULL, KarnovInputInfo, KarnovDIPInfo,
-	KarnovInit, DrvExit, DrvFrame, DrvDraw, DrvScan, 
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_RUNGUN, 0,
+	NULL, karnovRomInfo, karnovRomName, NULL, NULL, NULL, NULL, KarnovInputInfo, KarnovDIPInfo,
+	KarnovInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x300, 256, 248, 4, 3
 };
 
 
 // Karnov (US, rev 5)
+/* DE-0248-3 main board, DE-259-0 sub/rom board */
 
 static struct BurnRomInfo karnovaRomDesc[] = {
-	{ "dn08-5",		0x10000, 0xdb92c264, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "dn11-5",		0x10000, 0x05669b4b, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "dn07-",		0x10000, 0xfc14291b, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "dn10-",		0x10000, 0xa4a34e37, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "dn06-5",		0x10000, 0x29d64e42, 1 | BRF_PRG | BRF_ESS }, //  4
-	{ "dn09-5",		0x10000, 0x072d7c49, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "dn08-5.j15",		0x10000, 0xdb92c264, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "dn11-5.j20",		0x10000, 0x05669b4b, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "dn07-.j14",		0x10000, 0xfc14291b, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "dn10-.j18",		0x10000, 0xa4a34e37, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "dn06-5.j13",		0x10000, 0x29d64e42, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "dn09-5.j17",		0x10000, 0x072d7c49, 1 | BRF_PRG | BRF_ESS }, //  5
 
-	{ "dn05-5",		0x08000, 0xfa1a31a8, 2 | BRF_PRG | BRF_ESS }, //  6 m6502 Code
+	{ "dn05-5.f3",		0x08000, 0xfa1a31a8, 2 | BRF_PRG | BRF_ESS }, //  6 m6502 Code
 
-	{ "dn00-",		0x08000, 0x0ed77c6d, 3 | BRF_GRA},            //  7 Characters
+	{ "dn00-.c5",		0x08000, 0x0ed77c6d, 3 | BRF_GRA },           //  7 Characters
 
-	{ "dn04-",		0x10000, 0xa9121653, 4 | BRF_GRA},            //  8 Tiles
-	{ "dn01-",		0x10000, 0x18697c9e, 4 | BRF_GRA},            //  9
-	{ "dn03-",		0x10000, 0x90d9dd9c, 4 | BRF_GRA},            // 10
-	{ "dn02-",		0x10000, 0x1e04d7b9, 4 | BRF_GRA},            // 11
+	{ "dn04-.d18",		0x10000, 0xa9121653, 4 | BRF_GRA },           //  8 Tiles
+	{ "dn01-.c15",		0x10000, 0x18697c9e, 4 | BRF_GRA },           //  9
+	{ "dn03-.d15",		0x10000, 0x90d9dd9c, 4 | BRF_GRA },           // 10
+	{ "dn02-.c18",		0x10000, 0x1e04d7b9, 4 | BRF_GRA },           // 11
 
-	{ "dn12-",		0x10000, 0x9806772c, 5 | BRF_GRA},            // 12 Sprites
-	{ "dn14-5",		0x08000, 0xac9e6732, 5 | BRF_GRA},            // 13
-	{ "dn13-",		0x10000, 0xa03308f9, 5 | BRF_GRA},            // 14
-	{ "dn15-5",		0x08000, 0x8933fcb8, 5 | BRF_GRA},            // 15
-	{ "dn16-",		0x10000, 0x55e63a11, 5 | BRF_GRA},            // 16
-	{ "dn17-5",		0x08000, 0xb70ae950, 5 | BRF_GRA},            // 17
-	{ "dn18-",		0x10000, 0x2ad53213, 5 | BRF_GRA},            // 18
-	{ "dn19-5",		0x08000, 0x8fd4fa40, 5 | BRF_GRA},            // 19
+	{ "dn12-.f8",		0x10000, 0x9806772c, 5 | BRF_GRA },           // 12 Sprites
+	{ "dn14-5.f11",		0x08000, 0xac9e6732, 5 | BRF_GRA },           // 13
+	{ "dn13-.f9",		0x10000, 0xa03308f9, 5 | BRF_GRA },           // 14
+	{ "dn15-5.f12",		0x08000, 0x8933fcb8, 5 | BRF_GRA },           // 15
+	{ "dn16-.f13",		0x10000, 0x55e63a11, 5 | BRF_GRA },           // 16
+	{ "dn17-5.f15",		0x08000, 0xb70ae950, 5 | BRF_GRA },           // 17
+	{ "dn18-.f16",		0x10000, 0x2ad53213, 5 | BRF_GRA },           // 18
+	{ "dn19-5.f18",		0x08000, 0x8fd4fa40, 5 | BRF_GRA },           // 19
 
-	{ "karnprom.21",	0x00400, 0xaab0bb93, 6 | BRF_GRA},            // 20 Color Color Proms
-	{ "karnprom.20",	0x00400, 0x02f78ffb, 6 | BRF_GRA},            // 21
-	
-	{ "karnov_i8751",  0x01000, 0x00000000, BRF_OPT | BRF_NODUMP},
+	{ "dn-21.k8",		0x00400, 0xaab0bb93, 6 | BRF_GRA },           // 20 Color Color Proms
+	{ "dn-20.l6",		0x00400, 0x02f78ffb, 6 | BRF_GRA },           // 21
+
+	{ "dn-5.k14",  		0x01000, 0xd056de4e, 7 | BRF_PRG }, 		  // 22 i8751 microcontroller
 };
 
 STD_ROM_PICK(karnova)
@@ -1321,45 +1333,46 @@ struct BurnDriver BurnDrvKarnova = {
 	"karnova", "karnov", NULL, NULL, "1987",
 	"Karnov (US, rev 5)\0", NULL, "Data East USA", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_HORSHOOT, 0,
-	NULL, karnovaRomInfo, karnovaRomName, NULL, NULL, KarnovInputInfo, KarnovDIPInfo,
-	KarnovInit, DrvExit, DrvFrame, DrvDraw, DrvScan, 
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_RUNGUN, 0,
+	NULL, karnovaRomInfo, karnovaRomName, NULL, NULL, NULL, NULL, KarnovInputInfo, KarnovDIPInfo,
+	KarnovInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x300, 256, 248, 4, 3
 };
 
 
 // Karnov (Japan)
+/* DE-0248-3 main board, DE-259-0 sub/rom board */
 
 static struct BurnRomInfo karnovjRomDesc[] = {
-	{ "kar8",		0x10000, 0x3e17e268, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "kar11",		0x10000, 0x417c936d, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "dn07-",		0x10000, 0xfc14291b, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "dn10-",		0x10000, 0xa4a34e37, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "kar6",		0x10000, 0xc641e195, 1 | BRF_PRG | BRF_ESS }, //  4
-	{ "kar9",		0x10000, 0xd420658d, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "kar8.j15",		0x10000, 0x3e17e268, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "kar11.j20",		0x10000, 0x417c936d, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "dn07-.j14",		0x10000, 0xfc14291b, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "dn10-.j18",		0x10000, 0xa4a34e37, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "kar6.j13",		0x10000, 0xc641e195, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "kar9.j17",		0x10000, 0xd420658d, 1 | BRF_PRG | BRF_ESS }, //  5
 
-	{ "kar5",		0x08000, 0x7c9158f1, 2 | BRF_PRG | BRF_ESS }, //  6 m6502 Code
+	{ "kar5.f3",		0x08000, 0x7c9158f1, 2 | BRF_PRG | BRF_ESS }, //  6 m6502 Code
 
-	{ "dn00-",		0x08000, 0x0ed77c6d, 3 | BRF_GRA},            //  7 Characters
+	{ "dn00-.c5",		0x08000, 0x0ed77c6d, 3 | BRF_GRA },           //  7 Characters
 
-	{ "dn04-",		0x10000, 0xa9121653, 4 | BRF_GRA},            //  8 Tiles
-	{ "dn01-",		0x10000, 0x18697c9e, 4 | BRF_GRA},            //  9
-	{ "dn03-",		0x10000, 0x90d9dd9c, 4 | BRF_GRA},            // 10
-	{ "dn02-",		0x10000, 0x1e04d7b9, 4 | BRF_GRA},            // 11
+	{ "dn04-.d18",		0x10000, 0xa9121653, 4 | BRF_GRA },           //  8 Tiles
+	{ "dn01-.c15",		0x10000, 0x18697c9e, 4 | BRF_GRA },           //  9
+	{ "dn03-.d15",		0x10000, 0x90d9dd9c, 4 | BRF_GRA },           // 10
+	{ "dn02-.c18",		0x10000, 0x1e04d7b9, 4 | BRF_GRA },           // 11
 
-	{ "dn12-",		0x10000, 0x9806772c, 5 | BRF_GRA},            // 12 Sprites
-	{ "kar14",		0x08000, 0xc6b39595, 5 | BRF_GRA},            // 13
-	{ "dn13-",		0x10000, 0xa03308f9, 5 | BRF_GRA},            // 14
-	{ "kar15",		0x08000, 0x2f72cac0, 5 | BRF_GRA},            // 15
-	{ "dn16-",		0x10000, 0x55e63a11, 5 | BRF_GRA},            // 16
-	{ "kar17",		0x08000, 0x7851c70f, 5 | BRF_GRA},            // 17
-	{ "dn18-",		0x10000, 0x2ad53213, 5 | BRF_GRA},            // 18
-	{ "kar19",		0x08000, 0x7bc174bb, 5 | BRF_GRA},            // 19
+	{ "dn12-.f8",		0x10000, 0x9806772c, 5 | BRF_GRA },           // 12 Sprites
+	{ "kar14.f11",		0x08000, 0xc6b39595, 5 | BRF_GRA },           // 13
+	{ "dn13-.f9",		0x10000, 0xa03308f9, 5 | BRF_GRA },           // 14
+	{ "kar15.f12",		0x08000, 0x2f72cac0, 5 | BRF_GRA },           // 15
+	{ "dn16-.f13",		0x10000, 0x55e63a11, 5 | BRF_GRA },           // 16
+	{ "kar17.f15",		0x08000, 0x7851c70f, 5 | BRF_GRA },           // 17
+	{ "dn18-.f16",		0x10000, 0x2ad53213, 5 | BRF_GRA },           // 18
+	{ "kar19.f18",		0x08000, 0x7bc174bb, 5 | BRF_GRA },           // 19
 
-	{ "karnprom.21",	0x00400, 0xaab0bb93, 6 | BRF_GRA},            // 20 Color Proms
-	{ "karnprom.20",	0x00400, 0x02f78ffb, 6 | BRF_GRA},            // 21
-	
-	{ "karnovj_i8751",  0x01000, 0x00000000, BRF_OPT | BRF_NODUMP},
+	{ "dn-21.k8",		0x00400, 0xaab0bb93, 6 | BRF_GRA },           // 20 Color Proms
+	{ "dn-20.l6",		0x00400, 0x02f78ffb, 6 | BRF_GRA },           // 21
+
+	{ "karnovj_i8751.k14",  0x01000, 0x5a8c4d28,  7 | BRF_PRG }, 	  // 22 i8751 microcontroller
 };
 
 STD_ROM_PICK(karnovj)
@@ -1367,8 +1380,8 @@ STD_ROM_FN(karnovj)
 
 static INT32 KarnovjInit()
 {
-	microcontroller_id = KARNOVJ;
-	coin_mask = 0;
+	microcontroller_id = KARNOV;
+	coin_mask = 0xff;
 
 	return DrvInit();
 }
@@ -1377,9 +1390,9 @@ struct BurnDriver BurnDrvKarnovj = {
 	"karnovj", "karnov", NULL, NULL, "1987",
 	"Karnov (Japan)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_HORSHOOT, 0,
-	NULL, karnovjRomInfo, karnovjRomName, NULL, NULL, KarnovInputInfo, KarnovDIPInfo,
-	KarnovjInit, DrvExit, DrvFrame, DrvDraw, DrvScan, 
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_RUNGUN, 0,
+	NULL, karnovjRomInfo, karnovjRomName, NULL, NULL, NULL, NULL, KarnovInputInfo, KarnovDIPInfo,
+	KarnovjInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x300, 256, 248, 4, 3
 };
 
@@ -1387,35 +1400,35 @@ struct BurnDriver BurnDrvKarnovj = {
 // Wonder Planet (Japan)
 
 static struct BurnRomInfo wndrplntRomDesc[] = {
-	{ "ea08.bin",		0x10000, 0xb0578a14, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "ea11.bin",		0x10000, 0x271edc6c, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "ea07.bin",		0x10000, 0x7095a7d5, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "ea10.bin",		0x10000, 0x81a96475, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "ea06.bin",		0x10000, 0x5951add3, 1 | BRF_PRG | BRF_ESS }, //  4
-	{ "ea09.bin",		0x10000, 0xc4b3cb1e, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "ea08.j16",		0x10000, 0xb0578a14, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "ea11.j19",		0x10000, 0x271edc6c, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ea07.j14",		0x10000, 0x7095a7d5, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ea10.j18",		0x10000, 0x81a96475, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "ea06.j13",		0x10000, 0x5951add3, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "ea09.j17",		0x10000, 0xc4b3cb1e, 1 | BRF_PRG | BRF_ESS }, //  5
 
-	{ "ea05.bin",		0x08000, 0x8dbb6231, 2 | BRF_PRG | BRF_ESS }, //  6 m6502 Code
+	{ "ea05.f3",		0x08000, 0x8dbb6231, 2 | BRF_PRG | BRF_ESS }, //  6 m6502 Code
 
-	{ "ea00.bin",		0x08000, 0x9f3cac4c, 3 | BRF_GRA},            //  7 Characters
+	{ "ea00.c5",		0x08000, 0x9f3cac4c, 3 | BRF_GRA },           //  7 Characters
 
-	{ "ea04.bin",		0x10000, 0x7d701344, 4 | BRF_GRA},            //  8 Tiles
-	{ "ea01.bin",		0x10000, 0x18df55fb, 4 | BRF_GRA},            //  9
-	{ "ea03.bin",		0x10000, 0x922ef050, 4 | BRF_GRA},            // 10
-	{ "ea02.bin",		0x10000, 0x700fde70, 4 | BRF_GRA},            // 11
+	{ "ea04.d18",		0x10000, 0x7d701344, 4 | BRF_GRA },           //  8 Tiles
+	{ "ea01.c18",		0x10000, 0x18df55fb, 4 | BRF_GRA },           //  9
+	{ "ea03.d15",		0x10000, 0x922ef050, 4 | BRF_GRA },           // 10
+	{ "ea02.c18",		0x10000, 0x700fde70, 4 | BRF_GRA },           // 11
 
-	{ "ea12.bin",		0x10000, 0xa6d4e99d, 5 | BRF_GRA},            // 12 Sprites
-	{ "ea14.bin",		0x10000, 0x915ffdc9, 5 | BRF_GRA},            // 13
-	{ "ea13.bin",		0x10000, 0xcd839f3a, 5 | BRF_GRA},            // 14
-	{ "ea15.bin",		0x10000, 0xa1f14f16, 5 | BRF_GRA},            // 15
-	{ "ea16.bin",		0x10000, 0x7a1d8a9c, 5 | BRF_GRA},            // 16
-	{ "ea17.bin",		0x10000, 0x21a3223d, 5 | BRF_GRA},            // 17
-	{ "ea18.bin",		0x10000, 0x3fb2cec7, 5 | BRF_GRA},            // 18
-	{ "ea19.bin",		0x10000, 0x87cf03b5, 5 | BRF_GRA},            // 19
+	{ "ea12.f8",		0x10000, 0xa6d4e99d, 5 | BRF_GRA },           // 12 Sprites
+	{ "ea14.f9",		0x10000, 0x915ffdc9, 5 | BRF_GRA },           // 13
+	{ "ea13.f13",		0x10000, 0xcd839f3a, 5 | BRF_GRA },           // 14
+	{ "ea15.f15",		0x10000, 0xa1f14f16, 5 | BRF_GRA },           // 15
+	{ "ea16.bin",		0x10000, 0x7a1d8a9c, 5 | BRF_GRA },           // 16
+	{ "ea17.bin",		0x10000, 0x21a3223d, 5 | BRF_GRA },           // 17
+	{ "ea18.bin",		0x10000, 0x3fb2cec7, 5 | BRF_GRA },           // 18
+	{ "ea19.bin",		0x10000, 0x87cf03b5, 5 | BRF_GRA },           // 19
 
-	{ "ea21.prm",		0x00400, 0xc8beab49, 6 | BRF_GRA},            // 20 Color Proms
-	{ "ea20.prm",		0x00400, 0x619f9d1e, 6 | BRF_GRA},            // 21
-	
-	{ "wndrplnt_i8751",  0x01000, 0x00000000, BRF_OPT | BRF_NODUMP},
+	{ "ea-21.k8",		0x00400, 0xc8beab49, 6 | BRF_GRA },           // 20 Color Proms
+	{ "ea-20.l6",		0x00400, 0x619f9d1e, 6 | BRF_GRA },           // 21
+
+	{ "wndrplnt_i8751.k14",  0x01000, 0x00000000, BRF_OPT | BRF_NODUMP }, // 22 i8751 microcontroller
 };
 
 STD_ROM_PICK(wndrplnt)
@@ -1434,40 +1447,41 @@ struct BurnDriver BurnDrvWndrplnt = {
 	"Wonder Planet (Japan)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
-	NULL, wndrplntRomInfo, wndrplntRomName, NULL, NULL, KarnovInputInfo, WndrplntDIPInfo,
-	WndrplntInit, DrvExit, DrvFrame, DrvDraw, DrvScan, 
+	NULL, wndrplntRomInfo, wndrplntRomName, NULL, NULL, NULL, NULL, WndrplntInputInfo, WndrplntDIPInfo,
+	WndrplntInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x300, 248, 256, 3, 4
 };
 
 
 // Chelnov - Atomic Runner (World)
+/* DE-0248-1 main board, DE-259-0 sub/rom board */
 
 static struct BurnRomInfo chelnovRomDesc[] = {
 	{ "ee08-e.j16",		0x10000, 0x8275cc3a, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
 	{ "ee11-e.j19",		0x10000, 0x889e40a0, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "a-j14.bin",		0x10000, 0x51465486, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "a-j18.bin",		0x10000, 0xd09dda33, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "ee07.j14",		0x10000, 0x51465486, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ee10.j18",		0x10000, 0xd09dda33, 1 | BRF_PRG | BRF_ESS }, //  3
 	{ "ee06-e.j13",		0x10000, 0x55acafdb, 1 | BRF_PRG | BRF_ESS }, //  4
 	{ "ee09-e.j17",		0x10000, 0x303e252c, 1 | BRF_PRG | BRF_ESS }, //  5
 
 	{ "ee05-.f3",		0x08000, 0x6a8936b4, 2 | BRF_PRG | BRF_ESS }, //  6 m6502 Code
 
-	{ "ee00-e.c5",		0x08000, 0xe06e5c6b, 3 | BRF_GRA},            //  7 Characters
+	{ "ee00-e.c5",		0x08000, 0xe06e5c6b, 3 | BRF_GRA },           //  7 Characters
 
-	{ "ee04-.d18",		0x10000, 0x96884f95, 4 | BRF_GRA},            //  8 Tiles
-	{ "ee01-.c15",		0x10000, 0xf4b54057, 4 | BRF_GRA},            //  9
-	{ "ee03-.d15",		0x10000, 0x7178e182, 4 | BRF_GRA},            // 10
-	{ "ee02-.c18",		0x10000, 0x9d7c45ae, 4 | BRF_GRA},            // 11
+	{ "ee04-.d18",		0x10000, 0x96884f95, 4 | BRF_GRA },           //  8 Tiles
+	{ "ee01-.c15",		0x10000, 0xf4b54057, 4 | BRF_GRA },           //  9
+	{ "ee03-.d15",		0x10000, 0x7178e182, 4 | BRF_GRA },           // 10
+	{ "ee02-.c18",		0x10000, 0x9d7c45ae, 4 | BRF_GRA },           // 11
 
-	{ "ee12-.f8",		0x10000, 0x9b1c53a5, 5 | BRF_GRA},            // 12 Sprites
-	{ "ee13-.f9",		0x10000, 0x72b8ae3e, 5 | BRF_GRA},            // 13
-	{ "ee14-.f13",		0x10000, 0xd8f4bbde, 5 | BRF_GRA},            // 14
-	{ "ee15-.f15",		0x10000, 0x81e3e68b, 5 | BRF_GRA},            // 15
+	{ "ee12-.f8",		0x10000, 0x9b1c53a5, 5 | BRF_GRA },           // 12 Sprites
+	{ "ee13-.f9",		0x10000, 0x72b8ae3e, 5 | BRF_GRA },           // 13
+	{ "ee14-.f13",		0x10000, 0xd8f4bbde, 5 | BRF_GRA },           // 14
+	{ "ee15-.f15",		0x10000, 0x81e3e68b, 5 | BRF_GRA },           // 15
 
-	{ "ee21.k8",		0x00400, 0xb1db6586, 6 | BRF_GRA},            // 16 Color Proms
-	{ "ee20.l6",		0x00400, 0x41816132, 6 | BRF_GRA},            // 17
-	
-	{ "chelnov_i8751",  0x01000, 0x00000000, BRF_OPT | BRF_NODUMP},
+	{ "ee-17.k8",		0x00400, 0xb1db6586, 6 | BRF_GRA },           // 16 Color Proms
+	{ "ee-16.l6",		0x00400, 0x41816132, 6 | BRF_GRA },           // 17
+
+	{ "ee-e.k14",  		0x01000, 0xb7045395, 7 | BRF_PRG },			  // 18 i8751 microcontroller
 };
 
 STD_ROM_PICK(chelnov)
@@ -1475,8 +1489,8 @@ STD_ROM_FN(chelnov)
 
 static INT32 ChelnovInit()
 {
-	microcontroller_id = CHELNOVW;
-	coin_mask = 0xe0;
+	microcontroller_id = CHELNOV;
+	coin_mask = 0xff;
 
 	return DrvInit();
 }
@@ -1485,14 +1499,15 @@ struct BurnDriver BurnDrvChelnov = {
 	"chelnov", NULL, NULL, NULL, "1988",
 	"Chelnov - Atomic Runner (World)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_HORSHOOT, 0,
-	NULL, chelnovRomInfo, chelnovRomName, NULL, NULL, ChelnovInputInfo, ChelnovDIPInfo,
-	ChelnovInit, DrvExit, DrvFrame, DrvDraw, DrvScan, 
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_RUNGUN, 0,
+	NULL, chelnovRomInfo, chelnovRomName, NULL, NULL, NULL, NULL, KarnovInputInfo, ChelnovDIPInfo,
+	ChelnovInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x300, 256, 248, 4, 3
 };
 
 
 // Chelnov - Atomic Runner (US)
+/* DE-0248-1 main board, DE-259-0 sub/rom board */
 
 static struct BurnRomInfo chelnovuRomDesc[] = {
 	{ "ee08-a.j15",		0x10000, 0x2f2fb37b, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
@@ -1504,22 +1519,22 @@ static struct BurnRomInfo chelnovuRomDesc[] = {
 
 	{ "ee05-.f3",		0x08000, 0x6a8936b4, 2 | BRF_PRG | BRF_ESS }, //  6 m6502 Code
 
-	{ "ee00-e.c5",		0x08000, 0xe06e5c6b, 3 | BRF_GRA},            //  7 Characters
+	{ "ee00-e.c5",		0x08000, 0xe06e5c6b, 3 | BRF_GRA },           //  7 Characters
 
-	{ "ee04-.d18",		0x10000, 0x96884f95, 4 | BRF_GRA},            //  8 Tiles
-	{ "ee01-.c15",		0x10000, 0xf4b54057, 4 | BRF_GRA},            //  9
-	{ "ee03-.d15",		0x10000, 0x7178e182, 4 | BRF_GRA},            // 10
-	{ "ee02-.c18",		0x10000, 0x9d7c45ae, 4 | BRF_GRA},            // 11
+	{ "ee04-.d18",		0x10000, 0x96884f95, 4 | BRF_GRA },           //  8 Tiles
+	{ "ee01-.c15",		0x10000, 0xf4b54057, 4 | BRF_GRA },           //  9
+	{ "ee03-.d15",		0x10000, 0x7178e182, 4 | BRF_GRA },           // 10
+	{ "ee02-.c18",		0x10000, 0x9d7c45ae, 4 | BRF_GRA },           // 11
 
-	{ "ee12-.f8",		0x10000, 0x9b1c53a5, 5 | BRF_GRA},            // 12 Sprites
-	{ "ee13-.f9",		0x10000, 0x72b8ae3e, 5 | BRF_GRA},            // 13
-	{ "ee14-.f13",		0x10000, 0xd8f4bbde, 5 | BRF_GRA},            // 14
-	{ "ee15-.f15",		0x10000, 0x81e3e68b, 5 | BRF_GRA},            // 15
+	{ "ee12-.f8",		0x10000, 0x9b1c53a5, 5 | BRF_GRA },           // 12 Sprites
+	{ "ee13-.f9",		0x10000, 0x72b8ae3e, 5 | BRF_GRA },           // 13
+	{ "ee14-.f13",		0x10000, 0xd8f4bbde, 5 | BRF_GRA },           // 14
+	{ "ee15-.f15",		0x10000, 0x81e3e68b, 5 | BRF_GRA },           // 15
 
-	{ "ee21.k8",		0x00400, 0xb1db6586, 6 | BRF_GRA},            // 16 Color Proms
-	{ "ee20.l6",		0x00400, 0x41816132, 6 | BRF_GRA},            // 17
-	
-	{ "chelnovu_i8751",  0x01000, 0x00000000, BRF_OPT | BRF_NODUMP},
+	{ "ee-17.k8",		0x00400, 0xb1db6586, 6 | BRF_GRA },           // 16 Color Proms
+	{ "ee-16.l6",		0x00400, 0x41816132, 6 | BRF_GRA },           // 17
+
+	{ "ee-a.k14",  		0x01000, 0x95ea1e7b, 7 | BRF_PRG },			  // 18 i8751 microcontroller
 };
 
 STD_ROM_PICK(chelnovu)
@@ -1528,7 +1543,7 @@ STD_ROM_FN(chelnovu)
 static INT32 ChelnovuInit()
 {
 	microcontroller_id = CHELNOV;
-	coin_mask = 0xe0;
+	coin_mask = 0xff;
 
 	return DrvInit();
 }
@@ -1537,41 +1552,42 @@ struct BurnDriver BurnDrvChelnovu = {
 	"chelnovu", "chelnov", NULL, NULL, "1988",
 	"Chelnov - Atomic Runner (US)\0", NULL, "Data East USA", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_HORSHOOT, 0,
-	NULL, chelnovuRomInfo, chelnovuRomName, NULL, NULL, ChelnovInputInfo, ChelnovuDIPInfo,
-	ChelnovuInit, DrvExit, DrvFrame, DrvDraw, DrvScan, 
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_RUNGUN, 0,
+	NULL, chelnovuRomInfo, chelnovuRomName, NULL, NULL, NULL, NULL, KarnovInputInfo, ChelnovuDIPInfo,
+	ChelnovuInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x300, 256, 248, 4, 3
 };
 
 
 // Chelnov - Atomic Runner (Japan)
+/* DE-0248-1 main board, DE-259-0 sub/rom board */
 
 static struct BurnRomInfo chelnovjRomDesc[] = {
-	{ "a-j15.bin",		0x10000, 0x1978cb52, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "a-j20.bin",		0x10000, 0xe0ed3d99, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "a-j14.bin",		0x10000, 0x51465486, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "a-j18.bin",		0x10000, 0xd09dda33, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "a-j13.bin",		0x10000, 0xcd991507, 1 | BRF_PRG | BRF_ESS }, //  4
-	{ "a-j17.bin",		0x10000, 0x977f601c, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "ee08-1.j15",		0x10000, 0x1978cb52, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "ee11-1.j20",		0x10000, 0xe0ed3d99, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ee07.j14",		0x10000, 0x51465486, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ee10.j18",		0x10000, 0xd09dda33, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "ee06.j13",		0x10000, 0xcd991507, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "ee09.j17",		0x10000, 0x977f601c, 1 | BRF_PRG | BRF_ESS }, //  5
 
-	{ "ee05-.f3",		0x08000, 0x6a8936b4, 2 | BRF_PRG | BRF_ESS }, //  6 m6502 Code
+	{ "ee05.f3",		0x08000, 0x6a8936b4, 2 | BRF_PRG | BRF_ESS }, //  6 m6502 Code
 
-	{ "a-c5.bin",		0x08000, 0x1abf2c6d, 3 | BRF_GRA},            //  7 Characters
+	{ "ee00.c5",		0x08000, 0x1abf2c6d, 3 | BRF_GRA },           //  7 Characters
 
-	{ "ee04-.d18",		0x10000, 0x96884f95, 4 | BRF_GRA},            //  8 Tiles
-	{ "ee01-.c15",		0x10000, 0xf4b54057, 4 | BRF_GRA},            //  9
-	{ "ee03-.d15",		0x10000, 0x7178e182, 4 | BRF_GRA},            // 10
-	{ "ee02-.c18",		0x10000, 0x9d7c45ae, 4 | BRF_GRA},            // 11
+	{ "ee04-.d18",		0x10000, 0x96884f95, 4 | BRF_GRA },           //  8 Tiles
+	{ "ee01-.c15",		0x10000, 0xf4b54057, 4 | BRF_GRA },           //  9
+	{ "ee03-.d15",		0x10000, 0x7178e182, 4 | BRF_GRA },           // 10
+	{ "ee02-.c18",		0x10000, 0x9d7c45ae, 4 | BRF_GRA },           // 11
 
-	{ "ee12-.f8",		0x10000, 0x9b1c53a5, 5 | BRF_GRA},            // 12 Sprites
-	{ "ee13-.f9",		0x10000, 0x72b8ae3e, 5 | BRF_GRA},            // 13
-	{ "ee14-.f13",		0x10000, 0xd8f4bbde, 5 | BRF_GRA},            // 14
-	{ "ee15-.f15",		0x10000, 0x81e3e68b, 5 | BRF_GRA},            // 15
+	{ "ee12-.f8",		0x10000, 0x9b1c53a5, 5 | BRF_GRA },           // 12 Sprites
+	{ "ee13-.f9",		0x10000, 0x72b8ae3e, 5 | BRF_GRA },           // 13
+	{ "ee14-.f13",		0x10000, 0xd8f4bbde, 5 | BRF_GRA },           // 14
+	{ "ee15-.f15",		0x10000, 0x81e3e68b, 5 | BRF_GRA },           // 15
 
-	{ "a-k7.bin",		0x00400, 0x309c49d8, 6 | BRF_GRA},            // 16 Color Proms
-	{ "ee20.l6",		0x00400, 0x41816132, 6 | BRF_GRA},            // 17
-	
-	{ "chelnovj_i8751",  0x01000, 0x00000000, BRF_OPT | BRF_NODUMP},
+	{ "ee-17.k8",		0x00400, 0xb1db6586, 6 | BRF_GRA },           // 16 Color Proms
+	{ "ee-16.l6",		0x00400, 0x41816132, 6 | BRF_GRA },           // 17
+
+	{ "ee.k14",  		0x01000, 0xb3dc380c, 7 | BRF_PRG },			  // 18 i8751 microcontroller
 };
 
 STD_ROM_PICK(chelnovj)
@@ -1579,8 +1595,8 @@ STD_ROM_FN(chelnovj)
 
 static INT32 ChelnovjInit()
 {
-	microcontroller_id = CHELNOVJ;
-	coin_mask = 0xe0;
+	microcontroller_id = CHELNOV;
+	coin_mask = 0xff;
 
 	return DrvInit();
 }
@@ -1589,8 +1605,8 @@ struct BurnDriver BurnDrvChelnovj = {
 	"chelnovj", "chelnov", NULL, NULL, "1988",
 	"Chelnov - Atomic Runner (Japan)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_HORSHOOT, 0,
-	NULL, chelnovjRomInfo, chelnovjRomName, NULL, NULL, ChelnovInputInfo, ChelnovuDIPInfo,
-	ChelnovjInit, DrvExit, DrvFrame, DrvDraw, DrvScan, 
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_RUNGUN, 0,
+	NULL, chelnovjRomInfo, chelnovjRomName, NULL, NULL, NULL, NULL, KarnovInputInfo, ChelnovuDIPInfo,
+	ChelnovjInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x300, 256, 248, 4, 3
 };

@@ -35,31 +35,31 @@ static UINT8 DrvReset;
 static UINT8 sn76496_latch;
 
 static struct BurnInputInfo YiearInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 0,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Yiear)
@@ -304,7 +304,8 @@ static void DrvPaletteInit()
 
 static INT32 DrvInit()
 {
-//	BurnSetRefreshRate(60.58);
+	//setting refresh above 60 causes clicky audio on some systems!
+	//BurnSetRefreshRate(60.58);
 
 	AllMem = NULL;
 	MemIndex();
@@ -333,7 +334,7 @@ static INT32 DrvInit()
 		DrvPaletteInit();
 	}
 
-	M6809Init(1);
+	M6809Init(0);
 	M6809Open(0);
 	M6809MapMemory(DrvM6809RAM,	0x5000, 0x57ff, MAP_RAM);
 	M6809MapMemory(DrvVidRAM,	0x5800, 0x5fff, MAP_RAM);
@@ -343,7 +344,8 @@ static INT32 DrvInit()
 	M6809Close();
 
 	SN76489AInit(0, 1536000, 0);
-	SN76496SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
+    SN76496SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
+    SN76496SetBuffered(M6809TotalCycles, 1536000);
 
 	vlm5030Init(0, 3579545, vlm_sync, DrvVLMROM, 0x2000, 1);
 	vlm5030SetAllRoutes(0, 1.00, BURN_SND_ROUTE_BOTH);
@@ -438,8 +440,10 @@ static INT32 DrvDraw()
 		DrvRecalc = 0;
 	}
 
-	draw_layer();
-	draw_sprites();
+	BurnTransferClear();
+
+	if (nBurnLayer & 1) draw_layer();
+	if (nSpriteEnable & 1) draw_sprites();
 
 	BurnTransferCopy(DrvPalette);
 
@@ -466,36 +470,21 @@ static INT32 DrvFrame()
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[1] = { 1536000 / 60 };
 	INT32 nCyclesDone[1] = { 0 };
-	INT32 nSoundBufferPos = 0;
 
 	M6809Open(0);
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += M6809Run(nCyclesTotal[0] / nInterleave);
+		nCyclesDone[0] += M6809Run(((i + 1) * nCyclesTotal[0] / nInterleave) - nCyclesDone[0]);
 
 		if (*nmi_enable && (i & 0x1f) == 0) // copy shao-lin's road
 			M6809SetIRQLine(0x20, CPU_IRQSTATUS_AUTO); // 480x/second (8x/frame)
 
-		if (i == 240 && *irq_enable) M6809SetIRQLine(0, CPU_IRQSTATUS_AUTO);
-
-		// Render Sound Segment
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			SN76496Update(0, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
+		if (i == 240 && *irq_enable) M6809SetIRQLine(0, CPU_IRQSTATUS_HOLD);
 	}
 
-	// Make sure the buffer is entirely filled.
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		if (nSegmentLength) {
-			SN76496Update(0, pSoundBuf, nSegmentLength);
-		}
-		// vlm5030 won't interlace, so just run it at the end of the frame..
+        SN76496Update(pBurnSoundOut, nBurnSoundLen);
 		vlm5030Update(0, pBurnSoundOut, nBurnSoundLen);
 	}
 
@@ -508,7 +497,7 @@ static INT32 DrvFrame()
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -516,7 +505,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		*pnMin = 0x029705;
 	}
 
-	if (nAction & ACB_VOLATILE) {		
+	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
 		ba.Data	  = AllRam;
 		ba.nLen	  = RamEnd - AllRam;
@@ -525,7 +514,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 
 		M6809Scan(nAction);
 
-		vlm5030Scan(nAction);
+		vlm5030Scan(nAction, pnMin);
 		SN76496Scan(nAction, pnMin);
 
 		SCAN_VAR(sn76496_latch);
@@ -562,7 +551,7 @@ struct BurnDriver BurnDrvYiear = {
 	"Yie Ar Kung-Fu (program code I)\0", NULL, "Konami", "GX407",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
-	NULL, yiearRomInfo, yiearRomName, NULL, NULL, YiearInputInfo, YiearDIPInfo,
+	NULL, yiearRomInfo, yiearRomName, NULL, NULL, NULL, NULL, YiearInputInfo, YiearDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x20,
 	256, 224, 4, 3
 };
@@ -595,7 +584,7 @@ struct BurnDriver BurnDrvYiear2 = {
 	"Yie Ar Kung-Fu (program code G)\0", NULL, "Konami", "GX407",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_VSFIGHT, 0,
-	NULL, yiear2RomInfo, yiear2RomName, NULL, NULL, YiearInputInfo, YiearDIPInfo,
+	NULL, yiear2RomInfo, yiear2RomName, NULL, NULL, NULL, NULL, YiearInputInfo, YiearDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x20,
 	256, 224, 4, 3
 };

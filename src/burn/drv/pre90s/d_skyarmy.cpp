@@ -7,17 +7,13 @@
 // I have tried to document as many lines as possible, and given hopefully enough details
 // 
 // original source:
-//	src\mame\drivers\skyarmy.c
+//	src\mame\drivers\skyarmy.c   (circa mame ~0.110)
 //
 
 #include "tiles_generic.h" // either this or burnint.h is required, but not both
 #include "z80_intf.h"
 #include "bitswap.h" // using bitswap functions in this driver...
-
-#include "driver.h" // all part of the ay8910 header
-extern "C" {
 #include "ay8910.h"
-}
 
 // define variables, most of these can be gotten from memindex
 
@@ -38,8 +34,6 @@ static UINT32 *Palette;
 static UINT32 *DrvPalette;
 
 static UINT8 DrvRecalc;
-
-static INT16 *pAY8910Buffer[3];
 
 static UINT8 DrvInputs[3];
 static UINT8 DrvDips[1];
@@ -217,7 +211,7 @@ static INT32 DrvDoReset()
 	ZetReset(); // reset it
 	ZetClose(); // close it
 
-	AY8910Reset(0); // reset ay8910 sound cpu
+	AY8910Reset(0); // reset ay8910 sound core
 
 	HiscoreReset();
 
@@ -307,7 +301,7 @@ GFXDECODE_END
 	INT32 YOffs[16] = { 0*8, 1*8, 2*8, 3*8, 4*8, 5*8, 6*8, 7*8,// <--- 0 - 7 is used for both types, so we can repeat this and save a few lines
 	 16*8,17*8,18*8,19*8,20*8,21*8,22*8,23*8 };
 
-	UINT8 *tmp = (UINT8*)malloc(0x1000); // ROM_REGION( 0x1000, "gfx1", 0 ), ROM_REGION( 0x1000, "gfx2", 0 ) whichever is larger...
+	UINT8 *tmp = (UINT8*)BurnMalloc(0x1000); // ROM_REGION( 0x1000, "gfx1", 0 ), ROM_REGION( 0x1000, "gfx2", 0 ) whichever is larger...
 	if (tmp == NULL) {
 		return 1;
 	}
@@ -322,8 +316,7 @@ GFXDECODE_END
 
 	GfxDecode(32*2, 2, 16, 16, Plane, XOffs, YOffs, 32 * 8, tmp, DrvGfxROM1);
 
-
-	free (tmp);
+	BurnFree (tmp);
 
 	return 0;
 }
@@ -353,17 +346,12 @@ static INT32 MemIndex()
 
 	AllRam			= Next;
 
-	DrvZ80RAM		= Next; Next += 0x000800; // ZetMapArea(0x8000, 0x87ff, 0, DrvZ80RAM); <-- (0x87ff+1) - 0x8000
-	DrvVidRAM		= Next; Next += 0x000800; // ZetMapArea(0x8800, 0x8fff, 0, DrvVidRAM); <-- (0x8fff+1) - 0x8800
-	DrvColRAM		= Next; Next += 0x000400; // ZetMapArea(0x9000, 0x93ff, 2, DrvColRAM); <-- (0x93ff+1) - 0x9000
-	DrvSprRAM		= Next; Next += 0x000100; // ZetMapArea(0x9800, 0x98ff, 0, DrvSprRAM); <-- (0x98ff+1) - 0x9800
+	DrvZ80RAM		= Next; Next += 0x000800; // ZetMapMemory(DrvZ80RAM, 0x8000, 0x87ff, MAP_RAM); <-- (0x87ff+1) - 0x8000
+	DrvVidRAM		= Next; Next += 0x000800; // ZetMapMemory(DrvVidRAM, 0x8800, 0x8fff, MAP_RAM); <-- (0x8fff+1) - 0x8800
+	DrvColRAM		= Next; Next += 0x000400; // ZetMapMemory(DrvColRAM, 0x9000, 0x93ff, MAP_RAM); <-- (0x93ff+1) - 0x9000
+	DrvSprRAM		= Next; Next += 0x000100; // ZetMapMemory(DrvSprRAM, 0x9800, 0x98ff, MAP_RAM); <-- (0x98ff+1) - 0x9800
 
 	RamEnd			= Next;
-
-	pAY8910Buffer[0]	= (INT16 *)Next; Next += nBurnSoundLen * sizeof(INT16); // allocate ram for sound output
-	pAY8910Buffer[1]	= (INT16 *)Next; Next += nBurnSoundLen * sizeof(INT16); // only really necessary for ay8910
-	pAY8910Buffer[2]	= (INT16 *)Next; Next += nBurnSoundLen * sizeof(INT16);
-
 
 	MemEnd			= Next;
 
@@ -388,7 +376,7 @@ static INT32 DrvInit()
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -435,24 +423,17 @@ static INT32 DrvInit()
 
 	ZetOpen(0); // open cpu #0 for modification
 
-	ZetMapArea(0x0000, 0x7fff, 0, DrvZ80ROM); //	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	ZetMapArea(0x0000, 0x7fff, 2, DrvZ80ROM);
+	ZetMapMemory(DrvZ80ROM, 0x0000, 0x7fff, MAP_ROM); //	AM_RANGE(0x0000, 0x7fff) AM_ROM
 
-	ZetMapArea(0x8000, 0x87ff, 0, DrvZ80RAM); // 	AM_RANGE(0x8000, 0x87ff) AM_RAM
-	ZetMapArea(0x8000, 0x87ff, 1, DrvZ80RAM);
-	ZetMapArea(0x8000, 0x87ff, 2, DrvZ80RAM);
+	ZetMapMemory(DrvZ80RAM, 0x8000, 0x87ff, MAP_RAM); // 	AM_RANGE(0x8000, 0x87ff) AM_RAM
 
-	ZetMapArea(0x8800, 0x8fff, 0, DrvVidRAM); //	AM_RANGE(0x8800, 0x8fff) AM_RAM_WRITE(skyarmy_videoram_w) < -- skyarmy_videoram_w does't do anything useful
-	ZetMapArea(0x8800, 0x8fff, 1, DrvVidRAM);
-	ZetMapArea(0x8800, 0x8fff, 2, DrvVidRAM);
+	ZetMapMemory(DrvVidRAM, 0x8800, 0x8fff, MAP_RAM); //	AM_RANGE(0x8800, 0x8fff) AM_RAM_WRITE(skyarmy_videoram_w) < -- skyarmy_videoram_w does't do anything useful
 
-	ZetMapArea(0x9000, 0x93ff, 0, DrvColRAM); //	AM_RANGE(0x9000, 0x93ff) AM_RAM_WRITE(skyarmy_colorram_w) < -- skyarmy_colorram_w doesn't do anything useful
-	ZetMapArea(0x9000, 0x93ff, 1, DrvColRAM);
-	ZetMapArea(0x9000, 0x93ff, 2, DrvColRAM);
+	ZetMapMemory(DrvColRAM, 0x9000, 0x93ff, MAP_RAM); //	AM_RANGE(0x9000, 0x93ff) AM_RAM_WRITE(skyarmy_colorram_w) < -- skyarmy_colorram_w doesn't do anything useful
 
-	ZetMapArea(0x9800, 0x98ff, 0, DrvSprRAM); // 	AM_RANGE(0x9800, 0x983f) AM_RAM AM_BASE_MEMBER(skyarmy_state,spriteram)
-	ZetMapArea(0x9800, 0x98ff, 1, DrvSprRAM); // 	AM_RANGE(0x9840, 0x985f) AM_RAM AM_BASE_MEMBER(skyarmy_state,scrollram)
-	ZetMapArea(0x9800, 0x98ff, 2, DrvSprRAM); // ZetMapArea( can only handle 0-ff sized areas, so we must combine these two writes scrollram = sprram + 0x40
+	ZetMapMemory(DrvSprRAM, 0x9800, 0x98ff, MAP_RAM); // 	AM_RANGE(0x9800, 0x983f) AM_RAM AM_BASE_MEMBER(skyarmy_state,spriteram)
+													  // 	AM_RANGE(0x9840, 0x985f) AM_RAM AM_BASE_MEMBER(skyarmy_state,scrollram)
+													  //	ZetMapMemory( can only handle 0-ff sized areas, so we must combine these two writes scrollram = sprram + 0x40
 
 	ZetSetWriteHandler(skyarmy_write);  // handle writes for skyarmy_map that aren't ram / rom
 	ZetSetReadHandler(skyarmy_read);    // handle reads for skyarmy_map that aren't ram / rom
@@ -462,8 +443,9 @@ static INT32 DrvInit()
 
 	ZetClose(); // close cpu to further modifications
 
-	AY8910Init(0, 2500000, nBurnSoundRate, NULL, NULL, NULL, NULL); // MDRV_SOUND_ADD("aysnd", AY8910, 2500000)
+	AY8910Init(0, 2500000, 0); // MDRV_SOUND_ADD("aysnd", AY8910, 2500000)
 	AY8910SetAllRoutes(0, 0.15, BURN_SND_ROUTE_BOTH);
+    AY8910SetBuffered(ZetTotalCycles, 4000000);
 
 	GenericTilesInit(); // this must be called for generic tile handling
 
@@ -484,8 +466,7 @@ static INT32 DrvExit()
 
 	AY8910Exit(0); // exit ay8910 cpu
 
-	free (AllMem); // Free all RAM
-	AllMem = NULL;
+	BurnFree (AllMem); // Free all RAM
 
 	return 0;
 }
@@ -605,17 +586,15 @@ static INT32 DrvFrame()
 	// MDRV_SCREEN_REFRESH_RATE(60) ! 60!!
 
 	INT32 nInterleave = 102/8; // MDRV_CPU_PERIODIC_INT(skyarmy_nmi_source,650) -> 4000000 / 60 -> 66666.67 / 650 -> 102 (add /8 to get the right timing -dink)
-	INT32 nCyclesTotal = 4000000 / 60; // MDRV_CPU_ADD("maincpu", Z80,4000000)
-	INT32 nCyclesDone  = 0;
-	INT32 nSoundBufferPos = 0;
+	INT32 nCyclesTotal[1] = { 4000000 / 60 }; // MDRV_CPU_ADD("maincpu", Z80,4000000)
+	INT32 nCyclesDone[1]  = { 0 };
 
+    ZetNewFrame(); // Needed when using buffered soundcores
 	ZetOpen(0); // open cpu for modification
 
 	for (INT32 i = 0; i < nInterleave; i++) // split the amount of cpu the z80 is running in 1/60th of a second into slices
 	{
-		INT32 nSegment = nCyclesTotal / nInterleave;
-
-		nCyclesDone += ZetRun(nSegment); // actually run the cpu
+		CPU_RUN(0, Zet); // run the cpu.  0 = index in nCyclesTotal/nCyclesDone, Zet = Z80 cpu
 
 		if (i == (nInterleave - 1)) {
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD); // MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
@@ -623,28 +602,13 @@ static INT32 DrvFrame()
 		// don't call if the irq above is triggered...
 		// static INTERRUPT_GEN( skyarmy_nmi_source )
 		if (i != (nInterleave - 1) && nmi_enable) ZetNmi(); //if(state->nmi) cpu_set_input_line(device,INPUT_LINE_NMI, PULSE_LINE);
-
-		// Render Sound Segment
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			AY8910Render(&pAY8910Buffer[0], pSoundBuf, nSegmentLength, 0);
-			nSoundBufferPos += nSegmentLength;
-		}
 	}
 
 	ZetClose(); // close the cpu to modifications
 
-// output the sound -- ay8910 is more complex than most
-// you can pretty much just copy and paste this from other drivers (this blob is from d_4enraya.cpp)
-
-	// Make sure the buffer is entirely filled.
+	// output the sound
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		if (nSegmentLength) {
-			AY8910Render(&pAY8910Buffer[0], pSoundBuf, nSegmentLength, 0);
-		}
+        AY8910Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	// make sure the drawing surface is allocated and then draw!
@@ -672,7 +636,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		*pnMin = 0x029708; // use current version number
 	}
 
-	if (nAction & ACB_VOLATILE) {		
+	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));	// save all ram
 		ba.Data	  = AllRam;
 		ba.nLen	  = RamEnd - AllRam;
@@ -694,7 +658,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 static struct BurnRomInfo skyarmyRomDesc[] = {
 //	ROM_REGION( 0x10000, "maincpu", 0 )
 //	ROM_LOAD( "a1h.bin", 0x0000, 0x2000, CRC(e3fb9d70) SHA1(b8e3a6d7d6ef30c1397f9b741132c5257c16be2d) )
-	{ "a1h.bin",	0x2000, 0xe3fb9d70, 1 }, //  0 maincpu
+	{ "a1h.bin",	0x2000, 0x46507488, 1 }, //  0 maincpu
 //	ROM_LOAD( "a2h.bin", 0x2000, 0x2000, CRC(0417653e) SHA1(4f6ad7335b5b7e85b4e16cce3c127488c02401b2) )
 	{ "a2h.bin",	0x2000, 0x0417653e, 1 }, //  1
 //	ROM_LOAD( "a3h.bin", 0x4000, 0x2000, CRC(95485e56) SHA1(c4cbcd31ba68769d2d0d0875e2a92982265339ae) )
@@ -728,8 +692,8 @@ struct BurnDriver BurnDrvSkyarmy = {
 	"skyarmy", NULL, NULL, NULL, "1982", // set name, parent name, bios name, publish date
 	"Sky Army\0", NULL, "Shoei", "Miscellaneous", // title, notes, developer, hardware name 
 	NULL, NULL, NULL, NULL, // unicode title, unicode notes, unicode developer, unicode hardware name
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0, // orientation vertical | flipped -> ROT90, number of players, hardware type, game category, series?
-	NULL, skyarmyRomInfo, skyarmyRomName, NULL, NULL, SkyarmyInputInfo, SkyarmyDIPInfo, // extra rom load routine (usually not used), rom info, rom name, input def, dip def
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_ACTION, 0, // orientation vertical | flipped -> ROT90, number of players, hardware type, game category, series?
+	NULL, skyarmyRomInfo, skyarmyRomName, NULL, NULL, NULL, NULL, SkyarmyInputInfo, SkyarmyDIPInfo, // extra rom load routine (usually not used), rom info, rom name, input def, dip def
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 32, // 32 = palette size // pointers to init, exit, frame, draw, savestate, jukebox, drvrecalc (palette), number of palette colors
 	240, 256, 3, 4 // MDRV_SCREEN_VISIBLE_AREA(0*8,32*8-1,1*8,31*8-1) switch x & y because of ROT90 // screen width, screen width, aspect ration x, y
 };

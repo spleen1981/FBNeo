@@ -6,11 +6,7 @@
 #include "s2650_intf.h"
 #include "sn76496.h"
 #include "flt_rc.h"
-
-#include "driver.h"
-extern "C" {
- #include "ay8910.h"
-}
+#include "ay8910.h"
 
 // ROM types
 #define GAL_ROM_Z80_PROG1				1
@@ -62,6 +58,8 @@ extern "C" {
 #define GAL_PALETTE_STARS_OFFSET			GAL_PALETTE_NUM_COLOURS_PROM
 #define GAL_PALETTE_BULLETS_OFFSET			GAL_PALETTE_NUM_COLOURS_PROM + GAL_PALETTE_NUM_COLOURS_STARS
 #define GAL_PALETTE_BACKGROUND_OFFSET			GAL_PALETTE_NUM_COLOURS_PROM + GAL_PALETTE_NUM_COLOURS_STARS + GAL_PALETTE_NUM_COLOURS_BULLETS
+
+extern INT32 GalScreenUnflipper; // for coctail!
 
 // gal_gfx.cpp
 extern UINT8 GalFlipScreenX;
@@ -169,7 +167,7 @@ void MoonwarDrawBullets(INT32, INT32 x, INT32 y);
 void MshuttleDrawBullets(INT32, INT32 x, INT32 y);
 void DarkplntDrawBullets(INT32, INT32 x, INT32 y);
 void DambustrDrawBullets(INT32 Offs, INT32 x, INT32 y);
-void GalDraw();
+INT32 GalDraw();
 void DkongjrmRenderFrame();
 void DambustrRenderFrame();
 void FantastcRenderFrame();
@@ -182,8 +180,9 @@ extern UINT8 GalInputPort0[8];
 extern UINT8 GalInputPort1[8];
 extern UINT8 GalInputPort2[8];
 extern UINT8 GalInputPort3[8];
+extern UINT8 GalInputPort4[8];
 extern UINT8 GalDip[7];
-extern UINT8 GalInput[4];
+extern UINT8 GalInput[5];
 extern UINT8 GalReset;
 extern UINT8 GalFakeDip;
 extern INT32           GalAnalogPort0;
@@ -246,11 +245,13 @@ extern UINT8 KingballSpeechDip;
 extern UINT16 ScrambleProtectionState;
 extern UINT8 ScrambleProtectionResult;
 extern UINT8 MoonwarPortSelect;
+extern UINT8 MoonwarDialX[2];
 extern UINT8 MshuttleAY8910CS;
 extern UINT8 GmgalaxSelectedGame;
 extern UINT8 Fourin1Bank;
 extern UINT8 GameIsGmgalax;
 extern UINT8 GameIsBagmanmc;
+extern UINT8 GameIsMoonwar;
 extern UINT8 CavelonBankSwitch;
 extern UINT8 GalVBlank;
 
@@ -272,9 +273,8 @@ INT32 GalFrame();
 INT32 GalScan(INT32 nAction, INT32 *pnMin);
 
 // gal_sound.cpp
-extern INT16* pFMBuffer;
-extern INT16* pAY8910Buffer[9];
 extern UINT8 GalSoundType;
+extern UINT8 GalSoundSubType;
 extern UINT8 HunchbksSoundIrqFire;
 extern UINT8 GalLastPort2;
 extern UINT8 GalShootEnable;
@@ -316,6 +316,9 @@ void GalRenderSoundSamples(INT16 *pSoundBuf, INT32 nLength);
 void GalaxianSoundWrite(UINT32 Offset, UINT8 d);
 void GalaxianLfoFreqWrite(UINT32 Offset, UINT8 d);
 void GalaxianSoundUpdateTimers();
+void cclimber_sample_render(INT16 *buffer, INT32 nLen);
+void cclimber_sample_scan();
+void cclimber_sample_num(UINT32, UINT32 data);
 
 // gal_stars.cpp
 extern INT32 GalStarsEnable;

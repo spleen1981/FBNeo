@@ -201,7 +201,7 @@ static int BlitFXInit()
 	RECT rect = { 0, 0, 0, 0 };
 	GetClientScreenRect(hVidWnd, &rect);
 	if (!nVidFullscreen) {
-		rect.top += 0 /*nMenuHeight*/;
+		rect.top += nMenuHeight;
 	}
 
 	if (nUseBlitter >= FILTER_SUPEREAGLE && nUseBlitter <= FILTER_SUPER_2XSAI) {
@@ -256,7 +256,7 @@ static int Init()
 		return 1;
 	}
 
-	hVidWnd = nVidFullscreen ? hScrnWnd : hVideoWindow;								// Use Screen window for video
+	hVidWnd = hScrnWnd;								// Use Screen window for video
 
 	nUseBlitter = nVidBlitterOpt[nVidSelect] & 0xFF;
 
@@ -446,6 +446,9 @@ static int Frame(bool bRedraw)								// bRedraw = 0
 		} else {
 			BurnDrvFrame();							// Run one frame and draw the screen
 		}
+
+		if ((BurnDrvGetFlags() & BDF_16BIT_ONLY) && pVidTransCallback)
+			pVidTransCallback();
 	}
 
 	MemToSurf();									// Copy the memory buffer to the directdraw buffer for later blitting
@@ -468,7 +471,7 @@ static int Paint(int bValidate)
 
 	GetClientScreenRect(hVidWnd, &Dest);
 	if (!nVidFullscreen) {
-		Dest.top += 0 /*nMenuHeight*/;
+		Dest.top += nMenuHeight;
 	}
 
 	if (bVidArcaderes && nVidFullscreen) {
@@ -496,8 +499,6 @@ static int Paint(int bValidate)
 	// Display OSD text message
 	VidSDisplayOSD(pddsBlitFX[nUseSys], &rect, 0);
 
-	if (bVidVSync && !nVidFullscreen) { BlitFXDD->WaitForVerticalBlank(DDWAITVB_BLOCKEND, NULL); }
-
 	if (BlitFXBack != NULL) {
 		// Triple bufferring
 		if (BlitFXBack->Blt(&Dest, pddsBlitFX[nUseSys], NULL, DDBLT_WAIT, NULL) < 0) {
@@ -506,6 +507,8 @@ static int Paint(int bValidate)
 		BlitFXPrim->Flip(NULL, DDFLIP_WAIT);
 	} else {
 		// Normal
+		if (bVidVSync && !nVidFullscreen) { BlitFXDD->WaitForVerticalBlank(DDWAITVB_BLOCKBEGIN, NULL); }
+
 		if (BlitFXPrim->Blt(&Dest, pddsBlitFX[nUseSys], NULL, DDBLT_WAIT, NULL) < 0) {
 			return 1;
 		}

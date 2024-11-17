@@ -10,7 +10,7 @@
 #include <InitGuid.h>
 #include "vid_softfx.h"
 
-// #define ENABLE_PROFILING FBA_DEBUG
+// #define ENABLE_PROFILING FBNEO_DEBUG
 
 #define DIRECT3D_VERSION 0x0700							// Use this Direct3D version
 #define D3D_OVERLOADS
@@ -1136,7 +1136,7 @@ static int vidInitBuffers(bool bTriple)
 		ddsd.dwBackBufferCount = bVidTripleBuffer ? 2 : 1;
 	} else {
 		ddsd.dwFlags = DDSD_CAPS;
-		ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE | DDSCAPS_VIDEOMEMORY | DDSCAPS_3DDEVICE;
+		ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE | DDSCAPS_VIDEOMEMORY; // | DDSCAPS_3DDEVICE;
 	}
 
 	if (FAILED(pDD->CreateSurface(&ddsd, &pPrimarySurf, NULL))) {
@@ -1233,7 +1233,7 @@ static int vidInit()
 
 	bUseTriplebuffer = false;
 
-	hVidWnd = nVidFullscreen ? hScrnWnd : hVideoWindow;								// Use Screen window for video
+	hVidWnd = hScrnWnd;								// Use Screen window for video
 
 	nWantDriver = 0;
 #if 1 && defined(PRINT_DEBUG_INFO)
@@ -1319,6 +1319,14 @@ static int vidInit()
 		RECT rect;
 
 		SystemParametersInfo(SPI_GETWORKAREA, 0, &rect, 0);
+		HMONITOR monitor = MonitorFromRect(&rect, MONITOR_DEFAULTTOPRIMARY);
+		MONITORINFO mi;
+
+		memset(&mi, 0, sizeof(mi));
+		mi.cbSize = sizeof(mi);
+		GetMonitorInfo(monitor, &mi);
+		rect = mi.rcMonitor; // needs to be set to monitor's resolution for proper aspect calculation
+
 		nVidScrnWidth = rect.right - rect.left;
 		nVidScrnHeight = rect.bottom - rect.top;
 
@@ -1402,7 +1410,7 @@ static int vidInit()
 
 			GetClientScreenRect(hVidWnd, &rect);
 			if (!nVidFullscreen) {
-				rect.top += 0 /*nMenuHeight*/;
+				rect.top += nMenuHeight;
 			}
 			VidImageSize(&rect, nGameWidth, nGameHeight);
 
@@ -1735,7 +1743,7 @@ static int vidRenderImageA()
 	GetClientScreenRect(hVidWnd, &Dest);
 
 	if (nVidFullscreen == 0) {
-		Dest.top += 0 /*nMenuHeight*/;
+		Dest.top += nMenuHeight;
 	}
 
 	if (bVidArcaderes && nVidFullscreen) {
@@ -2180,6 +2188,9 @@ static int vidBurnToSurf()
 	return 0;
 }
 
+INT32 VidDoFrameCallback();
+
+
 // Run one frame and render the screen
 static int vidFrame(bool bRedraw)			// bRedraw = 0
 {
@@ -2255,10 +2266,12 @@ static int vidFrame(bool bRedraw)			// bRedraw = 0
 		} else {
 			BurnDrvFrame();					// Run one frame and draw the screen
 		}
+
+		if ((BurnDrvGetFlags() & BDF_16BIT_ONLY) && pVidTransCallback)
+			pVidTransCallback();
 	}
 #ifdef ENABLE_PROFILING
 	ProfileProfileEnd(0);
-
 	ProfileProfileStart(1);
 #endif
 
@@ -2311,7 +2324,7 @@ int vidPaint(int bValidate)
 
 	if (!bUsePageflip) {
 		GetClientScreenRect(hVidWnd, &rect);
-		rect.top += 0 /*nMenuHeight*/;
+		rect.top += nMenuHeight;
 
 		vidScale(&rect, nGameWidth, nGameHeight);
 
@@ -2328,10 +2341,10 @@ int vidPaint(int bValidate)
 	// Display OSD text message
 	VidSDisplayOSD(pBackbuffer, &Render, 0);
 
-	if(bVidVSync && !nVidFullscreen) { pDD->WaitForVerticalBlank(DDWAITVB_BLOCKEND, NULL); }
+//	if(bVidVSync && !nVidFullscreen) { pDD->WaitForVerticalBlank(DDWAITVB_BLOCKEND, NULL); }
 
 	// Display final image
-	if (bUsePageflip) {
+	if (bUsePageflip && !bRunPause) { // Ignore flipping when paused / frame advance (prevents jitter)
 		if (bUseTriplebuffer) {
 			if (FAILED(pPrimarySurf->Flip(NULL, DDFLIP_WAIT))) {
 				return 1;
@@ -2350,12 +2363,29 @@ int vidPaint(int bValidate)
 		} else {
 			RECT RGBDest = {0, 0, Dest.right - Dest.left, Dest.bottom - Dest.top};
 
+			if (bVidVSync)
+			{
+				pDD->WaitForVerticalBlank(DDWAITVB_BLOCKBEGIN, NULL);
+#if 0
+				GetClientScreenRect(hVidWnd, &rect);
+				rect.top += nMenuHeight;
+
+				vidScale(&rect, nGameImageWidth, nGameImageHeight);
+#endif
+				if (FAILED(pPrimarySurf->Blt(&rect, pBackbuffer, &RGBDest, DDBLT_ASYNC, NULL)))
+					if (FAILED(pPrimarySurf->Blt(&rect, pBackbuffer, &RGBDest, DDBLT_WAIT, NULL)))
+						return 1;
+		   }
+			else
+				if (FAILED(pPrimarySurf->Blt(&rect, pBackbuffer, &RGBDest, DDBLT_WAIT, NULL)))
+					return 1;
+#if 0
 			if (FAILED(pPrimarySurf->Blt(&rect, pBackbuffer, &RGBDest, DDBLT_ASYNC, NULL))) {
 				if (FAILED(pPrimarySurf->Blt(&rect, pBackbuffer, &RGBDest, DDBLT_WAIT, NULL))) {
 					return 1;
 				}
 			}
-			//if(bVidVSync && !nVidFullscreen) { pDD->WaitForVerticalBlank(DDWAITVB_BLOCKEND, NULL); }
+#endif
 			
 		}
 
@@ -2433,7 +2463,7 @@ static int vidGetSettings(InterfaceInfo* pInfo)
 	if (nVidTransferMethod > 0) {
 		TCHAR szString[MAX_PATH] = _T("");
 
-		_sntprintf(szString, MAX_PATH, _T("Using Direct3D texture management"), VidSoftFXGetEffect(nPreScaleEffect), nPreScaleZoom);
+		_sntprintf(szString, MAX_PATH, _T("Using Direct3D texture management %s (%ix zoom)"), VidSoftFXGetEffect(nPreScaleEffect), nPreScaleZoom);
 		IntInfoAddStringModule(pInfo, szString);
 	}
 

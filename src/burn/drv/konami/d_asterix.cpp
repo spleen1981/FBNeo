@@ -1,4 +1,5 @@
-// FB Alpha Asterix drier module
+// FB Alpha Asterix driver module
+// Based on MAME driver by Olivier Galibert
 
 #include "tiles_generic.h"
 #include "m68000_intf.h"
@@ -40,47 +41,36 @@ static UINT8 DrvJoy1[16];
 static UINT8 DrvJoy2[16];
 static UINT8 DrvReset;
 static UINT16 DrvInputs[2];
-static UINT8 DrvDips[1];
 
 static INT32 nCyclesDone[2];
 
 static UINT16 prot[2];
 
 static struct BurnInputInfo AsterixInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 8,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 8,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 coin"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 left"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 10,	"service"	},
-	{"Dip",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 10,	"service"	},
+	{"Service Mode",	BIT_DIGITAL,	DrvJoy2 + 10,	"diag"		},
 };
 
 STDINPUTINFO(Asterix)
-
-static struct BurnDIPInfo AsterixDIPList[]=
-{
-	{0x11, 0xff, 0xff, 0x04, NULL		},
-
-	{0   , 0xfe, 0   ,    2, "Service Mode"	},
-	{0x11, 0x01, 0x04, 0x04, "Off"		},
-	{0x11, 0x01, 0x04, 0x00, "On"		},
-};
-
-STDDIPINFO(Asterix)
 
 static void protection_write(UINT8 offset, UINT16 data)
 {
@@ -98,7 +88,7 @@ static void protection_write(UINT8 offset, UINT16 data)
 			{
 				UINT32 param1 = (SekReadWord((cmd & 0xffffff) + 0) << 16) | SekReadWord((cmd & 0xffffff) + 2);
 				UINT32 param2 = (SekReadWord((cmd & 0xffffff) + 4) << 16) | SekReadWord((cmd & 0xffffff) + 6);
-	
+
 				switch (param1 >> 24)
 				{
 					case 0x22:
@@ -132,10 +122,8 @@ static void reset_spritebank()
 	spritebanks[3] = (spritebank <<  3) & 0x7000;
 }
 
-static void _fastcall asterix_main_write_word(UINT32 address, UINT16 data)
+static void __fastcall asterix_main_write_word(UINT32 address, UINT16 data)
 {
-//bprintf (0, _T("WW %5.5x, %4.4x\n"), address, data);
-
 	if ((address & 0xfff000) == 0x400000) {
 		K056832HalfRamWriteWord(address & 0xfff, data);
 		return;
@@ -148,7 +136,7 @@ static void _fastcall asterix_main_write_word(UINT32 address, UINT16 data)
 	}
 
 	if ((address & 0xffffe0) == 0x300000) {
-		K053244Write(0, (address & 0xe) / 2, data & 0xff);
+		K053244Write(0, (address & 0x1f) / 2, data & 0xff);
 		return;
 	}
 
@@ -184,7 +172,7 @@ static void _fastcall asterix_main_write_word(UINT32 address, UINT16 data)
 	}
 }
 
-static void _fastcall asterix_main_write_byte(UINT32 address, UINT8 data)
+static void __fastcall asterix_main_write_byte(UINT32 address, UINT8 data)
 {
 	if ((address & 0xfff000) == 0x400000) {
 		K056832HalfRamWriteByte(address & 0xfff, data);
@@ -197,7 +185,7 @@ static void _fastcall asterix_main_write_byte(UINT32 address, UINT8 data)
 	}
 
 	if ((address & 0xffffe1) == 0x300001) {
-		K053244Write(0, (address & 0xe) / 2, data);
+		K053244Write(0, (address & 0x1f) / 2, data);
 		return;
 	}
 
@@ -228,7 +216,7 @@ static void _fastcall asterix_main_write_byte(UINT32 address, UINT8 data)
 		return;
 
 		case 0x380301:
-			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		return;
 
 		case 0x380601:
@@ -236,14 +224,14 @@ static void _fastcall asterix_main_write_byte(UINT32 address, UINT8 data)
 	}
 }
 
-static UINT16 _fastcall asterix_main_read_word(UINT32 address)
+static UINT16 __fastcall asterix_main_read_word(UINT32 address)
 {
 	if ((address & 0xfffff0) == 0x200000) {
 		return (K053244Read(0, address & 0xe) << 8) | K053244Read(0, (address & 0xe) + 1);
 	}
 
 	if ((address & 0xffffe0) == 0x300000) {
-		return K053244Read(0, (address & 0xe)/2);
+		return K053244Read(0, (address & 0x1f)/2);
 	}
 
 	if ((address & 0xfff000) == 0x400000) {
@@ -266,14 +254,14 @@ static UINT16 _fastcall asterix_main_read_word(UINT32 address)
 	return 0;
 }
 
-static UINT8 _fastcall asterix_main_read_byte(UINT32 address)
+static UINT8 __fastcall asterix_main_read_byte(UINT32 address)
 {
 	if ((address & 0xfffff0) == 0x200000) {
 		return K053244Read(0, address & 0xf);
 	}
 
 	if ((address & 0xffffe0) == 0x300000) {
-		return K053244Read(0, (address & 0xe)/2);
+		return K053244Read(0, (address & 0x1f)/2);
 	}
 
 	if ((address & 0xfff000) == 0x400000) {
@@ -338,24 +326,24 @@ static UINT8 __fastcall asterix_sound_read(UINT16 address)
 	switch (address)
 	{
 		case 0xf801:
-			return BurnYM2151ReadStatus();
+			return BurnYM2151Read();
 	}
 
 	if (address >= 0xfa00 && address <= 0xfa2f) {
-		if ((address & 0x3e) == 0x00) ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
-
 		return K053260Read(0, address & 0x3f);
 	}
 
 	return 0;
 }
+
 static void asterix_sprite_callback(INT32 *code, INT32 *color, INT32 *priority)
 {
 	INT32 pri = (*color & 0x00e0) >> 2;
-	if (pri <= layerpri[2])					*priority = 0;
-	else if (pri > layerpri[2] && pri <= layerpri[1])	*priority = 0xf0;
-	else if (pri > layerpri[1] && pri <= layerpri[0])	*priority = 0xfc;
-	else							*priority = 0xfe;
+	if (pri <= layerpri[2])								*priority = 0x0000;
+	else if (pri > layerpri[2] && pri <= layerpri[1])	*priority = 0xfff0;
+	else if (pri > layerpri[1] && pri <= layerpri[0])	*priority = 0xfffc;
+	else												*priority = 0xfffe;
+
 	*color = sprite_colorbase | (*color & 0x001f);
 	*code = (*code & 0xfff) | spritebanks[(*code >> 12) & 3];
 }
@@ -415,15 +403,15 @@ static INT32 MemIndex()
 	DrvZ80ROM		= Next; Next += 0x010000;
 
 	DrvGfxROM0		= Next; Next += 0x100000;
-	DrvGfxROMExp0		= Next; Next += 0x200000;
+	DrvGfxROMExp0	= Next; Next += 0x200000;
 	DrvGfxROM1		= Next; Next += 0x400000;
-	DrvGfxROMExp1		= Next; Next += 0x800000;
+	DrvGfxROMExp1	= Next; Next += 0x800000;
 
 	DrvSndROM		= Next; Next += 0x200000;
 
 	DrvEeprom		= Next; Next += 0x000080;
 
-	konami_palette32	= (UINT32*)Next;
+	konami_palette32= (UINT32*)Next;
 	DrvPalette		= (UINT32*)Next; Next += 0x800 * sizeof(UINT32);
 
 	AllRam			= Next;
@@ -553,13 +541,13 @@ static void DrvPaletteRecalc()
 
 	for (INT32 i = 0; i < 0x1000/2; i++)
 	{
-		INT32 r = (pal[i] & 0x1f);
-		INT32 g = (pal[i] >> 5) & 0x1f;
-		INT32 b = (pal[i] >> 10) & 0x1f;
+		INT32 r = (BURN_ENDIAN_SWAP_INT16(pal[i]) & 0x1f);
+		INT32 g = (BURN_ENDIAN_SWAP_INT16(pal[i]) >> 5) & 0x1f;
+		INT32 b = (BURN_ENDIAN_SWAP_INT16(pal[i]) >> 10) & 0x1f;
 
 		r = (r << 3) | (r >> 2);
 		g = (g << 3) | (g >> 2);
-		b = (b << 3) | (b >> 2); 
+		b = (b << 3) | (b >> 2);
 
 		DrvPalette[i] = (r << 16) + (g << 8) + b;
 	}
@@ -589,14 +577,14 @@ static INT32 DrvDraw()
 	{
 		K056832SetLayerOffsets(0, 89 - 176, 0);
 		K056832SetLayerOffsets(1, 91 - 176, 0);
-		K056832SetLayerOffsets(2, 89 - 176, 0);
+		K056832SetLayerOffsets(2, 93 - 176, 0);
 		K056832SetLayerOffsets(3, 95 - 176, 0);
 	}
 	else
 	{
 		K056832SetLayerOffsets(0, 89, 0);
 		K056832SetLayerOffsets(1, 91, 0);
-		K056832SetLayerOffsets(2, 89, 0);
+		K056832SetLayerOffsets(2, 93, 0);
 		K056832SetLayerOffsets(3, 95, 0);
 	}
 
@@ -630,14 +618,14 @@ static INT32 DrvFrame()
 
 	{
 		DrvInputs[0] = 0x07ff;
-		DrvInputs[1] = ((DrvDips[0] & 0x04) << 8) | 0x02ff;
+		DrvInputs[1] = 0x06ff;
 		for (INT32 i = 0; i < 16; i++) {
 			DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;
 			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
 		}
 	}
 
-	INT32 nInterleave = nBurnSoundLen;
+	INT32 nInterleave = 120;
 	INT32 nSoundBufferPos = 0;
 	INT32 nCyclesTotal[2] = { 12000000 / 60, 8000000 / 60 };
 	nCyclesDone[0] = nCyclesDone[1] = 0;
@@ -646,17 +634,8 @@ static INT32 DrvFrame()
 	ZetOpen(0);
 
 	for (INT32 i = 0; i < nInterleave; i++) {
-		INT32 nNext, nCyclesSegment;
-
-		nNext = (i + 1) * nCyclesTotal[0] / nInterleave;
-		nCyclesSegment = nNext - nCyclesDone[0];
-		nCyclesSegment = SekRun(nCyclesSegment);
-		nCyclesDone[0] += nCyclesSegment;
-
-		nNext = (i + 1) * nCyclesTotal[1] / nInterleave;
-		nCyclesSegment = nNext - nCyclesDone[1];
-		nCyclesSegment = ZetRun(nCyclesSegment);
-		nCyclesDone[1] += nCyclesSegment;
+		CPU_RUN(0, Sek);
+		CPU_RUN(1, Zet);
 
 		if (pBurnSoundOut) {
 			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
@@ -688,7 +667,7 @@ static INT32 DrvFrame()
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -696,7 +675,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		*pnMin = 0x029732;
 	}
 
-	if (nAction & ACB_VOLATILE) {		
+	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
 
 		ba.Data	  = AllRam;
@@ -707,8 +686,8 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		SekScan(nAction);
 		ZetScan(nAction);
 
-		BurnYM2151Scan(nAction);
-		K053260Scan(nAction);
+		BurnYM2151Scan(nAction, pnMin);
+		K053260Scan(nAction, pnMin);
 
 		KonamiICScan(nAction);
 
@@ -757,7 +736,7 @@ struct BurnDriver BurnDrvAsterix = {
 	"Asterix (ver EAD)\0", NULL, "Konami", "GX068",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, asterixRomInfo, asterixRomName, NULL, NULL, AsterixInputInfo, AsterixDIPInfo,
+	NULL, asterixRomInfo, asterixRomName, NULL, NULL, NULL, NULL, AsterixInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
 };
@@ -792,7 +771,7 @@ struct BurnDriver BurnDrvAsterixeac = {
 	"Asterix (ver EAC)\0", NULL, "Konami", "GX068",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, asterixeacRomInfo, asterixeacRomName, NULL, NULL, AsterixInputInfo, AsterixDIPInfo,
+	NULL, asterixeacRomInfo, asterixeacRomName, NULL, NULL, NULL, NULL, AsterixInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
 };
@@ -827,7 +806,7 @@ struct BurnDriver BurnDrvAsterixeaa = {
 	"Asterix (ver EAA)\0", NULL, "Konami", "GX068",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, asterixeaaRomInfo, asterixeaaRomName, NULL, NULL, AsterixInputInfo, AsterixDIPInfo,
+	NULL, asterixeaaRomInfo, asterixeaaRomName, NULL, NULL, NULL, NULL, AsterixInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
 };
@@ -862,7 +841,7 @@ struct BurnDriver BurnDrvAsterixaad = {
 	"Asterix (ver AAD)\0", NULL, "Konami", "GX068",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, asterixaadRomInfo, asterixaadRomName, NULL, NULL, AsterixInputInfo, AsterixDIPInfo,
+	NULL, asterixaadRomInfo, asterixaadRomName, NULL, NULL, NULL, NULL, AsterixInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
 };
@@ -897,7 +876,7 @@ struct BurnDriver BurnDrvAsterixj = {
 	"Asterix (ver JAD)\0", NULL, "Konami", "GX068",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, asterixjRomInfo, asterixjRomName, NULL, NULL, AsterixInputInfo, AsterixDIPInfo,
+	NULL, asterixjRomInfo, asterixjRomName, NULL, NULL, NULL, NULL, AsterixInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
 };

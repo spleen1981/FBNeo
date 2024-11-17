@@ -1,12 +1,14 @@
 // FB Alpha Caveman Ninja driver module
 // Based on MAME driver by Bryan McPhail
 
+// TOFIX: cninjabl backgrounds won't display
+
 #include "tiles_generic.h"
 #include "m68000_intf.h"
 #include "z80_intf.h"
 #include "h6280_intf.h"
-#include "bitswap.h"
 #include "deco16ic.h"
+#include "deco146.h"
 #include "burn_ym2203.h"
 #include "burn_ym2151.h"
 #include "msm6295.h"
@@ -33,13 +35,10 @@ static UINT8 *DrvSprRAM;
 static UINT8 *DrvSprRAM1;
 static UINT8 *DrvSprBuf;
 static UINT8 *DrvSprBuf1;
-static UINT8 *DrvPrtRAM;
 static UINT8 *DrvZ80RAM;
 
 static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
-
-static INT16 *SoundBuffer;
 
 static UINT8 *soundlatch;
 static UINT8 *flipscreen;
@@ -58,61 +57,59 @@ static INT32 DrvOkiBank;
 
 static INT32 has_z80 = 0;
 
-static INT32 global_scanline = 0;
-
 static struct BurnInputInfo DrvInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 15,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Drv)
 
 static struct BurnInputInfo Robocop2InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 15,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy1 + 14,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Robocop2)
@@ -484,7 +481,7 @@ static struct BurnDIPInfo Robocop2DIPList[]=
 
 STDDIPINFO(Robocop2)
 
-void __fastcall cninja_main_write_word(UINT32 address, UINT16 data)
+static void __fastcall cninja_main_write_word(UINT32 address, UINT16 data)
 {
 	deco16_write_control_word(0, address, 0x140000, data)
 	deco16_write_control_word(1, address, 0x150000, data)
@@ -496,14 +493,12 @@ void __fastcall cninja_main_write_word(UINT32 address, UINT16 data)
 			irq_mask = data & 0xff;
 		return;
 
-		case 0x190002:	// to do - get actual timing right, is this what's wrong with edrandy?
+		case 0x190002:
 		case 0x1a4002:
 		{
 			scanline = data & 0xff;
 
-		//	bprintf (0, _T("ACTUAL: %d, WRITTEN: %d\n"), global_scanline, scanline);
-
-			if ((!BIT(scanline,1))) {
+			if ((~irq_mask & 0x02) && (scanline > 0) && (scanline < 240)) {
 				irq_timer = scanline;
 			} else {
 				irq_timer = -1;
@@ -529,19 +524,23 @@ void __fastcall cninja_main_write_word(UINT32 address, UINT16 data)
 		break;
 	}
 
-	if ((address & 0xfffff800) == 0x198000) {
-		deco16_66_prot_w(address, data, 0xffff);
+	if (address >= 0x198000 && address <= 0x19bfff) { // edrandy
+		deco146_104_prot_ww(0x198000, address, data);
 		return;
 	}
 
-	if ((address & 0xffffff00) == 0x1bc000) {
-		UINT16 *ProtRam = (UINT16*)deco16_prot_ram;
-		ProtRam[(address - 0x1bc000) >> 1] = data;
+	if (address >= 0x1a0000 && address <= 0x1a3fff) { // edrandy
+		deco146_104_prot_ww(0x1a0000, address, data);
+		return;
+	}
+
+	if (address >= 0x1bc000 && address <= 0x1bffff) { // cninja
+		deco146_104_prot_ww(0, address, data);
 		return;
 	}
 }
 
-void __fastcall cninja_main_write_byte(UINT32 address, UINT8 data)
+static void __fastcall cninja_main_write_byte(UINT32 address, UINT8 data)
 {
 	// need for cliffhanger
 	deco16_write_control_byte(0, address, 0x140000, data)
@@ -563,9 +562,7 @@ void __fastcall cninja_main_write_byte(UINT32 address, UINT8 data)
 		{
 			scanline = data & 0xff;
 
-			//bprintf (0, _T("ACTUAL: %d, WRITTEN: %d\n"), global_scanline, scanline);
-
-			if ((~irq_mask & 0x02)) {
+			if ((~irq_mask & 0x02) && (scanline > 0) && (scanline < 240)) {
 				irq_timer = scanline;
 			} else {
 				irq_timer = -1;
@@ -592,21 +589,25 @@ void __fastcall cninja_main_write_byte(UINT32 address, UINT8 data)
 		break;
 	}
 
-	if ((address & 0xfffff800) == 0x198000) { 
-		deco16_66_prot_w(address, data, 0x00ff << ((address & 1) << 3));
+	if (address >= 0x198000 && address <= 0x19bfff) { // edrandy
+		deco146_104_prot_wb(0x198000, address, data);
 		return;
 	}
 
-	if ((address & 0xffffff00) == 0x1bc000) {
-		DrvPrtRAM[(address & 0xff)^1] = data;
+	if (address >= 0x1a0000 && address <= 0x1a3fff) { // edrandy
+		deco146_104_prot_wb(0x1a0000, address, data);
+		return;
+	}
 
+	if (address >= 0x1bc000 && address <= 0x1bffff) { // cninja
+		deco146_104_prot_wb(0, address, data);
 		return;
 	}
 	
 	//bprintf(PRINT_NORMAL, _T("Write Byte %x, %x\n"), address, data);
 }
 
-UINT16 __fastcall cninja_main_read_word(UINT32 address)
+static UINT16 __fastcall cninja_main_read_word(UINT32 address)
 {
 	switch (address)
 	{
@@ -630,12 +631,16 @@ UINT16 __fastcall cninja_main_read_word(UINT32 address)
 			return 0;
 	}
 
-	if ((address & 0xfffffc00) == 0x1bc000) {
-		return deco16_104_cninja_prot_r(address);
+	if (address >= 0x198000 && address <= 0x19bfff) { // edrandy
+		return deco146_104_prot_rw(0x198000, address);
 	}
 
-	if ((address & 0xfffff800) == 0x198000) {
-		return deco16_60_prot_r(address);
+	if (address >= 0x1a0000 && address <= 0x1a3fff) { // edrandy
+		return deco146_104_prot_rw(0x1a0000, address);
+	}
+
+	if (address >= 0x1bc000 && address <= 0x1bffff) { // cninja
+		return deco146_104_prot_rw(0, address);
 	}
 	
 	//bprintf(PRINT_NORMAL, _T("Read Word %x, %x\n"), address);
@@ -643,7 +648,7 @@ UINT16 __fastcall cninja_main_read_word(UINT32 address)
 	return 0;
 }
 
-UINT8 __fastcall cninja_main_read_byte(UINT32 address)
+static UINT8 __fastcall cninja_main_read_byte(UINT32 address)
 {
 	switch (address)
 	{
@@ -678,12 +683,16 @@ UINT8 __fastcall cninja_main_read_byte(UINT32 address)
 			return 0;
 	}
 
-	if ((address & 0xfffff800) == 0x198000) {
-		return deco16_60_prot_r(address) >> ((~address & 1) << 3);
+	if (address >= 0x198000 && address <= 0x19bfff) { // edrandy
+		return deco146_104_prot_rb(0x198000, address);
 	}
 
-	if ((address & 0xfffffc00) == 0x1bc000) {
-		return deco16_104_cninja_prot_r(address) >> ((~address & 1) << 3);
+	if (address >= 0x1a0000 && address <= 0x1a3fff) { // edrandy
+		return deco146_104_prot_rb(0x1a0000, address);
+	}
+
+	if (address >= 0x1bc000 && address <= 0x1bffff) { // cninja
+		return deco146_104_prot_rb(0, address);
 	}
 	
 	//bprintf(PRINT_NORMAL, _T("Read Byte %x, %x\n"), address);
@@ -691,7 +700,7 @@ UINT8 __fastcall cninja_main_read_byte(UINT32 address)
 	return 0;
 }
 
-void __fastcall mutantf_main_write_word(UINT32 address, UINT16 data)
+static void __fastcall mutantf_main_write_word(UINT32 address, UINT16 data)
 {
 	deco16_write_control_word(0, address, 0x300000, data)
 	deco16_write_control_word(1, address, 0x310000, data)
@@ -716,13 +725,12 @@ void __fastcall mutantf_main_write_word(UINT32 address, UINT16 data)
 		return;
 	}
 
-	if ((address & 0xfffff800) == 0x1a0000) {
-		deco16_66_prot_w(address, data, 0xffff);
-		return;
+	if (address >= 0x1a0000 && address <= 0x1a3fff) {
+		deco146_104_prot_ww(0, address, data);
 	}
 }
 
-void __fastcall mutantf_main_write_byte(UINT32 address, UINT8 data)
+static void __fastcall mutantf_main_write_byte(UINT32 address, UINT8 data)
 {
 	switch (address)
 	{
@@ -747,33 +755,32 @@ void __fastcall mutantf_main_write_byte(UINT32 address, UINT8 data)
 		break;
 	}
 
-	if ((address & 0xfffff800) == 0x1a0000) {
-		deco16_66_prot_w(address, data, 0x00ff << ((address & 1) << 3));
-		return;
+	if (address >= 0x1a0000 && address <= 0x1a3fff) {
+		deco146_104_prot_wb(0, address, data);
 	}
 }
 
-UINT16 __fastcall mutantf_main_read_word(UINT32 address)
+static UINT16 __fastcall mutantf_main_read_word(UINT32 address)
 {
-	if ((address & 0xfffff800) == 0x1a0000) {
-		return deco16_66_prot_r(address);
+	if (address >= 0x1a0000 && address <= 0x1a3fff) {
+		return deco146_104_prot_rw(0, address);
 	}
 
 	return 0;
 }
 
-UINT8 __fastcall mutantf_main_read_byte(UINT32 address)
+static UINT8 __fastcall mutantf_main_read_byte(UINT32 address)
 {
 	if (address == 0x1c0001) return deco16ic_71_read() & 0xff;
 
-	if ((address & 0xfffff800) == 0x1a0000) {
-		return deco16_66_prot_r(address) >> ((~address & 1) << 3);
+	if (address >= 0x1a0000 && address <= 0x1a3fff) {
+		return deco146_104_prot_rb(0, address);
 	}
 
 	return 0;
 }
 
-void __fastcall robocop2_main_write_word(UINT32 address, UINT16 data)
+static void __fastcall robocop2_main_write_word(UINT32 address, UINT16 data)
 {
 	deco16_write_control_word(0, address, 0x140000, data)
 	deco16_write_control_word(1, address, 0x150000, data)
@@ -787,7 +794,7 @@ void __fastcall robocop2_main_write_word(UINT32 address, UINT16 data)
 		case 0x1b0002: {
 			scanline = data & 0xff;
 
-			if ((!BIT(scanline,1)) && (scanline > 0) && (scanline < 240)) {
+			if ((~irq_mask & 0x02) && (scanline > 0) && (scanline < 240)) {
 				irq_timer = scanline;
 			} else {
 				irq_timer = -1;
@@ -808,9 +815,14 @@ void __fastcall robocop2_main_write_word(UINT32 address, UINT16 data)
 			deco16_priority = data;
 		return;
 	}
+
+	if (address >= 0x18c000 && address <= 0x18ffff) {
+		deco146_104_prot_ww(0, address, data);
+	}
+
 }
 
-void __fastcall robocop2_main_write_byte(UINT32 address, UINT8 data)
+static void __fastcall robocop2_main_write_byte(UINT32 address, UINT8 data)
 {
 	switch (address)
 	{
@@ -846,24 +858,16 @@ void __fastcall robocop2_main_write_byte(UINT32 address, UINT8 data)
 			deco16_priority = data;
 		return;
 	}
+
+	if (address >= 0x18c000 && address <= 0x18ffff) {
+		deco146_104_prot_wb(0, address, data);
+	}
 }
 
-UINT16 __fastcall robocop2_main_read_word(UINT32 address)
+static UINT16 __fastcall robocop2_main_read_word(UINT32 address)
 {
 	switch (address)
 	{
-		case 0x18c41a:
-			return DrvInputs[0];
-
-		case 0x18c320:
-			return (DrvInputs[1] & 0x07) | (deco16_vblank & 0x08);
-
-		case 0x18c4e6:
-			return (DrvDips[1] << 8) | (DrvDips[0] << 0);
-
-		case 0x18c504:
-			return 0x0084;
-
 		case 0x1b0002:
 			return scanline;
 
@@ -876,33 +880,17 @@ UINT16 __fastcall robocop2_main_read_word(UINT32 address)
 			return DrvDips[2];
 	}
 
+	if (address >= 0x18c000 && address <= 0x18ffff) {
+		return deco146_104_prot_rw(0, address);
+	}
+
 	return 0;
 }
 
-UINT8 __fastcall robocop2_main_read_byte(UINT32 address)
+static UINT8 __fastcall robocop2_main_read_byte(UINT32 address)
 {
 	switch (address)
 	{
-		case 0x18c41a:
-			return DrvInputs[0] >> 8;
-
-		case 0x18c41b:
-			return DrvInputs[0] >> 0;
-
-		case 0x18c320:
-		case 0x18c321:
-			return (DrvInputs[1] & 0x07) | (deco16_vblank & 0x08);
-
-		case 0x18c4e6:
-			return DrvDips[0];
-
-		case 0x18c4e7:
-			return DrvDips[1];
-
-		case 0x18c504:
-		case 0x18c505:
-			return 0x0084;
-
 		case 0x1b0002:
 		case 0x1b0003:
 			return scanline;
@@ -918,10 +906,14 @@ UINT8 __fastcall robocop2_main_read_byte(UINT32 address)
 			return DrvDips[2];
 	}
 
+	if (address >= 0x18c000 && address <= 0x18ffff) {
+		return deco146_104_prot_rb(0, address);
+	}
+
 	return 0;
 }
 
-void __fastcall stoneage_sound_write(UINT16 address, UINT8 data)
+static void __fastcall stoneage_sound_write(UINT16 address, UINT8 data)
 {
 	switch (address)
 	{
@@ -934,21 +926,21 @@ void __fastcall stoneage_sound_write(UINT16 address, UINT8 data)
 		return;
 
 		case 0x9800:
-			MSM6295Command(0, data);
+			MSM6295Write(0, data);
 		return;
 	}
 }
 
-UINT8 __fastcall stoneage_sound_read(UINT16 address)
+static UINT8 __fastcall stoneage_sound_read(UINT16 address)
 {
 	switch (address)
 	{
 		case 0x8800:
 		case 0x8801:
-			return BurnYM2151ReadStatus();
+			return BurnYM2151Read();
 
 		case 0x9800:
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 
 		case 0xa000:
 			ZetSetIRQLine(0x20, CPU_IRQSTATUS_NONE);
@@ -1004,8 +996,7 @@ static INT32 DrvDoReset()
 		ZetReset();
 		ZetClose();
 		
-		MSM6295Reset(0);
-		MSM6295Reset(1);
+		MSM6295Reset();
 		BurnYM2151Reset();
 	} else {
 		deco16SoundReset();
@@ -1024,7 +1015,7 @@ static INT32 DrvDoReset()
 
 static void DrvBootlegCharDecode(UINT8 *gfx, INT32 len)
 {
-	UINT8 *dst = (UINT8*)BurnMalloc(len);
+	UINT8 *dst = (UINT8*)BurnMalloc(len+4);
 
 	memcpy (dst, gfx, len);
 
@@ -1072,41 +1063,30 @@ static INT32 MemIndex()
 	DrvSprBuf1	= Next; Next += 0x000800;
 	DrvPalRAM	= Next; Next += 0x002000;
 
-	deco16_prot_ram	= (UINT16*)Next;
-	DrvPrtRAM	= Next; Next += 0x000800;
-
 	DrvZ80RAM	= Next; Next += 0x000800;
 
 	soundlatch	= Next; Next += 0x000001;
 	flipscreen	= Next; Next += 0x000001;
 
 	RamEnd		= Next;
-	
-	SoundBuffer = (INT16*)Next; Next += nBurnSoundLen * 2 * sizeof(INT16);
-
 	MemEnd		= Next;
 
 	return 0;
 }
 
-static void cninja_patch()
+static UINT16 deco_104_port_a_cb()
 {
-	UINT16 *rom = (UINT16 *)Drv68KROM;
+	return DrvInputs[0];
+}
 
-	for (INT32 i = 0; i < 0x80000 / 2; i++)
-	{
-		if (rom[i] == BURN_ENDIAN_SWAP_INT16(0x66ff) || rom[i] == BURN_ENDIAN_SWAP_INT16(0x67ff))
-		{
-			if (rom[i - 4] == BURN_ENDIAN_SWAP_INT16(0x0c39) || rom[i - 4] == BURN_ENDIAN_SWAP_INT16(0x0839))
-			{
-				rom[i - 0] = BURN_ENDIAN_SWAP_INT16(0x4e71);
-				rom[i - 1] = BURN_ENDIAN_SWAP_INT16(0x4e71);
-				rom[i - 2] = BURN_ENDIAN_SWAP_INT16(0x4e71);
-				rom[i - 3] = BURN_ENDIAN_SWAP_INT16(0x4e71);
-				rom[i - 4] = BURN_ENDIAN_SWAP_INT16(0x4e71);
-			}
-		}
-	}
+static UINT16 deco_104_port_b_cb()
+{
+	return (DrvInputs[1] & ~8) | deco16_vblank;
+}
+
+static UINT16 deco_104_port_c_cb()
+{
+	return DrvInputs[2];
 }
 
 static INT32 CninjaInit()
@@ -1160,8 +1140,6 @@ static INT32 CninjaInit()
 		deco16_tile_decode(DrvGfxROM2, DrvGfxROM2, 0x100000, 0);
 
 		deco16_sprite_decode(DrvGfxROM3, 0x200000); // 16x16
-
-		cninja_patch();
 	}
 
 	deco16Init(0, 1, 1);
@@ -1172,6 +1150,14 @@ static INT32 CninjaInit()
 	deco16_set_color_base(3, 0x200 + 0x300);
 	deco16_set_bank_callback(2, cninja_bank_callback);
 	deco16_set_bank_callback(3, cninja_bank_callback);
+
+	// 146_104 prot
+	deco_104_init();
+	deco_146_104_set_use_magic_read_address_xor(1);
+	deco_146_104_set_port_a_cb(deco_104_port_a_cb);
+	deco_146_104_set_port_b_cb(deco_104_port_b_cb);
+	deco_146_104_set_port_c_cb(deco_104_port_c_cb);
+	//deco_146_104_set_soundlatch_cb(deco_146_soundlatch_dummy);
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
@@ -1193,8 +1179,9 @@ static INT32 CninjaInit()
 	SekSetReadByteHandler(0,		cninja_main_read_byte);
 	SekClose();
 
-	deco16SoundInit(DrvHucROM, DrvHucRAM, 8055000, 1, DrvYM2151WritePort, 0.45, 1006875, 0.75, 2013750, 0.60);
+	deco16SoundInit(DrvHucROM, DrvHucRAM, 4027500, 1, DrvYM2151WritePort, 0.45, 1006875, 0.75, 2013750, 0.60);
 	BurnYM2203SetAllRoutes(0, 0.60, BURN_SND_ROUTE_BOTH);
+	BurnYM2151SetInterleave(117); // "BurnYM2151Render()" called this many times per frame
 
 	GenericTilesInit();
 
@@ -1273,6 +1260,13 @@ static INT32 EdrandyInit()
 	deco16_set_bank_callback(2, cninja_bank_callback);
 	deco16_set_bank_callback(3, cninja_bank_callback);
 
+	// 146_104 prot
+	deco_146_init();
+	deco_146_104_set_port_a_cb(deco_104_port_a_cb);
+	deco_146_104_set_port_b_cb(deco_104_port_b_cb);
+	deco_146_104_set_port_c_cb(deco_104_port_c_cb);
+	//deco_146_104_set_soundlatch_cb(deco_146_soundlatch_dummy);
+
 	SekInit(0, 0x68000);
 	SekOpen(0);
 	SekMapMemory(Drv68KROM,			0x000000, 0x0fffff, MAP_ROM);
@@ -1293,7 +1287,7 @@ static INT32 EdrandyInit()
 	SekSetReadByteHandler(0,		cninja_main_read_byte);
 	SekClose();
 
-	deco16SoundInit(DrvHucROM, DrvHucRAM, 8055000, 1, DrvYM2151WritePort, 0.45, 1006875, 0.75, 2013750, 0.60);
+	deco16SoundInit(DrvHucROM, DrvHucRAM, 4027500, 1, DrvYM2151WritePort, 0.45, 1006875, 0.75, 2013750, 0.60);
 	BurnYM2203SetAllRoutes(0, 0.60, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
@@ -1383,6 +1377,13 @@ static INT32 MutantfInit()
 	deco16_set_bank_callback(2, mutantf_1_bank_callback);
 	deco16_set_bank_callback(3, mutantf_1_bank_callback);
 
+	// 146_104 prot
+	deco_146_init();
+	deco_146_104_set_port_a_cb(deco_104_port_a_cb);
+	deco_146_104_set_port_b_cb(deco_104_port_b_cb);
+	deco_146_104_set_port_c_cb(deco_104_port_c_cb);
+	//deco_146_104_set_soundlatch_cb(deco_146_soundlatch_dummy);
+
 	SekInit(0, 0x68000);
 	SekOpen(0);
 	SekMapMemory(Drv68KROM,			0x000000, 0x07ffff, MAP_ROM);
@@ -1404,7 +1405,7 @@ static INT32 MutantfInit()
 	SekSetReadByteHandler(0,		mutantf_main_read_byte);
 	SekClose();
 
-	deco16SoundInit(DrvHucROM, DrvHucRAM, 8055000, 0, DrvYM2151WritePort, 0.45, 1006875, 0.75, 2013750, 0.60);
+	deco16SoundInit(DrvHucROM, DrvHucRAM, 4027500, 0, DrvYM2151WritePort, 0.45, 1006875, 0.75, 2013750, 0.60);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.45, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.45, BURN_SND_ROUTE_RIGHT);
 
@@ -1432,7 +1433,7 @@ static INT32 CninjablInit()
 
 		if (BurnLoadRom(DrvZ80ROM  + 0x00000,  2, 1)) return 1;
 
-		UINT8 *tmp = (UINT8*)malloc(0x400000);
+		UINT8 *tmp = (UINT8*)BurnMalloc(0x400000);
 
 		if (BurnLoadRom(tmp + 0x00000,  3, 2)) return 1;
 		if (BurnLoadRom(tmp + 0x00001,  4, 2)) return 1;
@@ -1446,10 +1447,7 @@ static INT32 CninjablInit()
 		memcpy (DrvGfxROM2 + 0x080000, tmp + 0x100000, 0x080000);
 		memcpy (DrvGfxROM3 + 0x000000, tmp + 0x200000, 0x200000);
 
-		if (tmp) {
-			free (tmp);
-			tmp = NULL;
-		}
+		BurnFree(tmp);
 
 		if (BurnLoadRom(DrvSndROM0  + 0x00000,  5, 1)) return 1;
 
@@ -1464,6 +1462,7 @@ static INT32 CninjablInit()
 	deco16_set_global_offsets(0, 8);
 	deco16_set_scroll_offs(3, 1,  2, 0);
 	deco16_set_scroll_offs(2, 1,  2, 0);
+
 	deco16_set_color_base(2, 0x200 + 0x000);
 	deco16_set_color_base(3, 0x200 + 0x300);
 	deco16_set_bank_callback(2, cninja_bank_callback);
@@ -1582,6 +1581,14 @@ static INT32 StoneageInit()
 	deco16_set_color_base(3, 0x200 + 0x300);
 	deco16_set_bank_callback(2, cninja_bank_callback);
 	deco16_set_bank_callback(3, cninja_bank_callback);
+
+	// 146_104 prot
+	deco_104_init();
+	deco_146_104_set_use_magic_read_address_xor(1);
+	deco_146_104_set_port_a_cb(deco_104_port_a_cb);
+	deco_146_104_set_port_b_cb(deco_104_port_b_cb);
+	deco_146_104_set_port_c_cb(deco_104_port_c_cb);
+	//deco_146_104_set_soundlatch_cb(deco_146_soundlatch_dummy);
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
@@ -1710,6 +1717,14 @@ static INT32 Robocop2Init()
 	deco16_set_bank_callback(2, robocop2_bank_callback);
 	deco16_set_bank_callback(3, robocop2_bank_callback);
 
+	// 146_104 prot
+	deco_146_init();
+	deco_146_104_set_use_magic_read_address_xor(1);
+	deco_146_104_set_port_a_cb(deco_104_port_a_cb);
+	deco_146_104_set_port_b_cb(deco_104_port_b_cb);
+	deco_146_104_set_port_c_cb(deco_104_port_c_cb);
+	//deco_146_104_set_soundlatch_cb(deco_146_soundlatch_dummy);
+
 	SekInit(0, 0x68000);
 	SekOpen(0);
 	SekMapMemory(Drv68KROM,			0x000000, 0x0fffff, MAP_ROM);
@@ -1730,7 +1745,7 @@ static INT32 Robocop2Init()
 	SekSetReadByteHandler(0,		robocop2_main_read_byte);
 	SekClose();
 
-	deco16SoundInit(DrvHucROM, DrvHucRAM, 8055000, 1, DrvYM2151WritePort, 0.45, 1006875, 0.75, 2013750, 0.60);
+	deco16SoundInit(DrvHucROM, DrvHucRAM, 4027500, 1, DrvYM2151WritePort, 0.45, 1006875, 0.75, 2013750, 0.60);
 	BurnYM2203SetAllRoutes(0, 0.60, BURN_SND_ROUTE_BOTH);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.45, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.45, BURN_SND_ROUTE_RIGHT);
@@ -1752,8 +1767,7 @@ static INT32 DrvExit()
 	if (has_z80) {
 		ZetExit();
 		has_z80 = 0;
-		MSM6295Exit(0);
-		MSM6295Exit(1);
+		MSM6295Exit();
 		BurnYM2151Exit();
 	} else {
 		deco16SoundExit();
@@ -2024,9 +2038,7 @@ static INT32 CninjaDraw()
 	deco16_pf12_update();
 	deco16_pf34_update();
 
-	for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++) {
-		pTransDraw[i] = 0x200;
-	}
+	BurnTransferClear(0x200);
 
 	deco16_clear_prio_map();
 
@@ -2051,12 +2063,14 @@ static INT32 CninjablDraw()
 		DrvRecalc = 0;
 //	}
 
+	// force-enable tilemaps (bootleg doesn't enable them)
+    deco16_pf_control[0][5] |= 0x8080;
+    deco16_pf_control[1][5] |= 0x8080;
+
 	deco16_pf12_update();
 	deco16_pf34_update();
 
-	for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++) {
-		pTransDraw[i] = 0x200;
-	}
+	BurnTransferClear(0x200);
 
 	deco16_clear_prio_map();
 
@@ -2074,25 +2088,31 @@ static INT32 CninjablDraw()
 	return 0;
 }
 
+static INT32 lastline;
+
 static INT32 EdrandyStartDraw()
 {
 	deco16_clear_prio_map();
 
-	for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++) {
-		pTransDraw[i] = 0;
-	}
+	BurnTransferClear();
+
+	lastline = 0;
 
 	return 0;
 }
 
 static INT32 EdrandyDrawScanline(INT32 line)
 {
+	if (line > nScreenHeight) return 0;
+
 	deco16_pf12_update();
 	deco16_pf34_update();
 
-	if (nSpriteEnable &  1) deco16_draw_layer_by_line(line, line+1, 3, pTransDraw, DECO16_LAYER_PRIORITY(0x01) | DECO16_LAYER_OPAQUE);
-	if (nSpriteEnable &  2) deco16_draw_layer_by_line(line, line+1, 2, pTransDraw, DECO16_LAYER_PRIORITY(0x02));
-	if (nSpriteEnable &  4) deco16_draw_layer_by_line(line, line+1, 1, pTransDraw, DECO16_LAYER_PRIORITY(0x04));
+	if (nSpriteEnable &  1) deco16_draw_layer_by_line(lastline, line, 3, pTransDraw, DECO16_LAYER_PRIORITY(0x01) | DECO16_LAYER_OPAQUE);
+	if (nSpriteEnable &  2) deco16_draw_layer_by_line(lastline, line, 2, pTransDraw, DECO16_LAYER_PRIORITY(0x02));
+	if (nSpriteEnable &  4) deco16_draw_layer_by_line(lastline, line, 1, pTransDraw, DECO16_LAYER_PRIORITY(0x04));
+
+	lastline = line;
 
 	return 0;
 }
@@ -2117,15 +2137,17 @@ static INT32 Robocop2StartDraw()
 {
 	deco16_clear_prio_map();
 
-	for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++) {
-		pTransDraw[i] = 0x200;
-	}
+	BurnTransferClear(0x200);
+
+	lastline = 0;
 
 	return 0;
 }
 
 static INT32 Robocop2DrawScanline(INT32 line)
 {
+	if (line > nScreenHeight) return 0;
+
 	deco16_pf12_update();
 	deco16_pf34_update();
 
@@ -2144,16 +2166,18 @@ static INT32 Robocop2DrawScanline(INT32 line)
 		deco16_set_color_mask(3, 0xf);
 		deco16_set_graphics(2, DrvGfxROM2, 0x300000, 16);
 
-		if (nSpriteEnable &  1) deco16_draw_layer_by_line(line, line+1, 3, pTransDraw, DECO16_LAYER_OPAQUE | DECO16_LAYER_PRIORITY(0x01));
+		if (nSpriteEnable &  1) deco16_draw_layer_by_line(lastline, line, 3, pTransDraw, DECO16_LAYER_OPAQUE | DECO16_LAYER_PRIORITY(0x01));
 	}
 
 	if (deco16_priority & 8) {
-		if (nSpriteEnable &  2) deco16_draw_layer_by_line(line, line+1, 1, pTransDraw, DECO16_LAYER_PRIORITY(0x02));
-		if (nSpriteEnable &  4) deco16_draw_layer_by_line(line, line+1, 2, pTransDraw, DECO16_LAYER_PRIORITY(0x04) | layer_8bpp);
+		if (nSpriteEnable &  2) deco16_draw_layer_by_line(lastline, line, 1, pTransDraw, DECO16_LAYER_PRIORITY(0x02));
+		if (nSpriteEnable &  4) deco16_draw_layer_by_line(lastline, line, 2, pTransDraw, DECO16_LAYER_PRIORITY(0x04) | layer_8bpp);
 	} else {
-		if (nSpriteEnable &  2) deco16_draw_layer_by_line(line, line+1, 2, pTransDraw, DECO16_LAYER_PRIORITY(0x02) | layer_8bpp);
-		if (nSpriteEnable &  4) deco16_draw_layer_by_line(line, line+1, 1, pTransDraw, DECO16_LAYER_PRIORITY(0x04));
+		if (nSpriteEnable &  2) deco16_draw_layer_by_line(lastline, line, 2, pTransDraw, DECO16_LAYER_PRIORITY(0x02) | layer_8bpp);
+		if (nSpriteEnable &  4) deco16_draw_layer_by_line(lastline, line, 1, pTransDraw, DECO16_LAYER_PRIORITY(0x04));
 	}
+
+	lastline = line;
 
 	return 0;
 }
@@ -2185,14 +2209,12 @@ static INT32 MutantfDraw()
 	deco16_pf12_update();
 	deco16_pf34_update();
 
-	for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++) {
-		pTransDraw[i] = 0x400;
-	}
+	BurnTransferClear(0x400);
 
 	if (nSpriteEnable &  1) deco16_draw_layer(3, pTransDraw, DECO16_LAYER_OPAQUE);
 	if (nSpriteEnable &  2) deco16_draw_layer(1, pTransDraw, 0);
 	if (nSpriteEnable &  4) deco16_draw_layer(2, pTransDraw, 0);
- 
+
 	if (deco16_priority & 1)
 	{
 		deco16_clear_prio_map();
@@ -2222,8 +2244,7 @@ static INT32 CninjaFrame()
 	}
 
 	{
-		deco16_prot_inputs = DrvInputs;
-		memset (DrvInputs, 0xff, 2 * sizeof(INT16)); 
+		memset (DrvInputs, 0xff, 2 * sizeof(INT16));
 		for (INT32 i = 0; i < 16; i++) {
 			DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;
 			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
@@ -2233,11 +2254,11 @@ static INT32 CninjaFrame()
 
 	INT32 nInterleave = 232; //58 * 4
 	INT32 nSoundBufferPos = 0;
-	INT32 nCyclesTotal[2] = { 12000000 / 58, 8055000 / 58 };
+	INT32 nCyclesTotal[2] = { 12000000 / 58, 4027500 / 58 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
 	h6280NewFrame();
-	
+
 	SekOpen(0);
 	h6280Open(0);
 
@@ -2245,8 +2266,7 @@ static INT32 CninjaFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += SekRun(nCyclesTotal[0] / nInterleave);
-		//nCyclesDone[1] += h6280Run(nCyclesTotal[1] / nInterleave);
+		CPU_RUN(0, Sek);
 		BurnTimerUpdate((i + 1) * nCyclesTotal[1] / nInterleave);
 
 		if (irq_timer == i) {
@@ -2255,29 +2275,26 @@ static INT32 CninjaFrame()
 		}
 		if (i == 206) deco16_vblank = 0x08;
 		
-		INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-		INT16* pSoundBuf = SoundBuffer + (nSoundBufferPos << 1);
-		deco16SoundUpdate(pSoundBuf, nSegmentLength);
-		nSoundBufferPos += nSegmentLength;
+		if (pBurnSoundOut && i&1) {
+			INT32 nSegmentLength = nBurnSoundLen / (nInterleave / 2);
+			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
+			deco16SoundUpdate(pSoundBuf, nSegmentLength);
+			nSoundBufferPos += nSegmentLength;
+		}
 	}
 
 	SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
 	BurnTimerEndFrame(nCyclesTotal[1]);
 
 	if (pBurnSoundOut) {
-		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
-		
 		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = SoundBuffer + (nSoundBufferPos << 1);
+		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 
 		if (nSegmentLength) {
 			deco16SoundUpdate(pSoundBuf, nSegmentLength);
 		}
-		
-		for (INT32 i = 0; i < nBurnSoundLen; i++) {
-			pBurnSoundOut[(i << 1) + 0] = BURN_SND_CLIP(pBurnSoundOut[(i << 1) + 0] + SoundBuffer[(i << 1) + 0]);
-			pBurnSoundOut[(i << 1) + 1] = BURN_SND_CLIP(pBurnSoundOut[(i << 1) + 1] + SoundBuffer[(i << 1) + 1]);
-		}
+
+		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	h6280Close();
@@ -2297,8 +2314,7 @@ static INT32 EdrandyFrame()
 	}
 
 	{
-		deco16_prot_inputs = DrvInputs;
-		memset (DrvInputs, 0xff, 2 * sizeof(INT16)); 
+		memset (DrvInputs, 0xff, 2 * sizeof(INT16));
 		for (INT32 i = 0; i < 16; i++) {
 			DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;
 			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
@@ -2308,7 +2324,7 @@ static INT32 EdrandyFrame()
 
 	INT32 nInterleave = 256; // scanlines
 	INT32 nSoundBufferPos = 0;
-	INT32 nCyclesTotal[2] = { 12000000 / 58, 8055000 / 58 };
+	INT32 nCyclesTotal[2] = { 12000000 / 58, 4027500 / 58 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
 	h6280NewFrame();
@@ -2316,55 +2332,45 @@ static INT32 EdrandyFrame()
 	SekOpen(0);
 	h6280Open(0);
 
-	deco16_vblank = 0x08;
+	deco16_vblank = 0x00;
 	EdrandyStartDraw();
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-	global_scanline = i;
-		nCyclesDone[0] += SekRun(nCyclesTotal[0] / nInterleave);
-		nCyclesDone[1] += h6280Run(nCyclesTotal[1] / nInterleave);
-
 		if (irq_timer == i) {
+			if (i >= 8 && i < 248) EdrandyDrawScanline(i-8);
 			SekSetIRQLine((irq_mask & 0x10) ? 3 : 4, CPU_IRQSTATUS_ACK);
 			irq_timer = -1;
 		}
 
-		if (i < 8) deco16_vblank = 0;
+		CPU_RUN(0, Sek);
+		BurnTimerUpdate((i + 1) * nCyclesTotal[1] / nInterleave);
 
-		//if (i >= 8 && i < 248) {
-		if (i > 16) {
-			deco16_vblank = 8;
-			EdrandyDrawScanline(i-16);
-		}
-
-		if (i == 255) {
+		if (i == 248) {
+			EdrandyDrawScanline(i-8);
 			SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
-		//	deco16_vblank = 0x00;
+			deco16_vblank = 0x08;
 		}
 
-		INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-		INT16* pSoundBuf = SoundBuffer + (nSoundBufferPos << 1);
-		deco16SoundUpdate(pSoundBuf, nSegmentLength);
-		nSoundBufferPos += nSegmentLength;
+		if (pBurnSoundOut && i%4 == 3) {
+			INT32 nSegmentLength = nBurnSoundLen / (nInterleave / 4);
+			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
+			deco16SoundUpdate(pSoundBuf, nSegmentLength);
+			nSoundBufferPos += nSegmentLength;
+		}
 	}
 
 	BurnTimerEndFrame(nCyclesTotal[1]);
 
 	if (pBurnSoundOut) {
-		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
-		
 		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = SoundBuffer + (nSoundBufferPos << 1);
+		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 
 		if (nSegmentLength) {
 			deco16SoundUpdate(pSoundBuf, nSegmentLength);
 		}
-		
-		for (INT32 i = 0; i < nBurnSoundLen; i++) {
-			pBurnSoundOut[(i << 1) + 0] = BURN_SND_CLIP(pBurnSoundOut[(i << 1) + 0] + SoundBuffer[(i << 1) + 0]);
-			pBurnSoundOut[(i << 1) + 1] = BURN_SND_CLIP(pBurnSoundOut[(i << 1) + 1] + SoundBuffer[(i << 1) + 1]);
-		}
+
+		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	h6280Close();
@@ -2384,8 +2390,7 @@ static INT32 Robocop2Frame()
 	}
 
 	{
-		deco16_prot_inputs = DrvInputs;
-		memset (DrvInputs, 0xff, 2 * sizeof(INT16)); 
+		memset (DrvInputs, 0xff, 2 * sizeof(INT16));
 		for (INT32 i = 0; i < 16; i++) {
 			DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;
 			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
@@ -2395,7 +2400,7 @@ static INT32 Robocop2Frame()
 
 	INT32 nInterleave = 256;	// scanlines
 	INT32 nSoundBufferPos = 0;
-	INT32 nCyclesTotal[2] = { 14000000 / 58, 8055000 / 58 };
+	INT32 nCyclesTotal[2] = { 14000000 / 58, 4027500 / 58 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
 	h6280NewFrame();
@@ -2409,46 +2414,44 @@ static INT32 Robocop2Frame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += SekRun(nCyclesTotal[0] / nInterleave);
-		nCyclesDone[1] += h6280Run(nCyclesTotal[1] / nInterleave);
+		CPU_RUN(0, Sek);
+		BurnTimerUpdate((i + 1) * nCyclesTotal[1] / nInterleave);
 
 		if (irq_timer == i) {
+			if (i >= 8 && i < 248) Robocop2DrawScanline(i-8);
 			SekSetIRQLine((irq_mask & 0x10) ? 3 : 4, CPU_IRQSTATUS_ACK);
 			irq_timer = -1;
 		}
 
-		if (i >= 8 && i < 248) {
+		if (i >= 8) {
 			deco16_vblank = 0;
-			Robocop2DrawScanline(i-8);
 		}
 
 		if (i == 248) {
+			Robocop2DrawScanline(i-8);
 			deco16_vblank = 0x08;
 		}
-		
-		INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-		INT16* pSoundBuf = SoundBuffer + (nSoundBufferPos << 1);
-		deco16SoundUpdate(pSoundBuf, nSegmentLength);
-		nSoundBufferPos += nSegmentLength;
-	}
 
+		if (pBurnSoundOut && i%8 == 7) {
+			INT32 nSegmentLength = nBurnSoundLen / (nInterleave / 8);
+			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
+			deco16SoundUpdate(pSoundBuf, nSegmentLength);
+			nSoundBufferPos += nSegmentLength;
+		}
+	}
 	SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
+
 	BurnTimerEndFrame(nCyclesTotal[1]);
 
 	if (pBurnSoundOut) {
-		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
-		
 		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = SoundBuffer + (nSoundBufferPos << 1);
+		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 
 		if (nSegmentLength) {
 			deco16SoundUpdate(pSoundBuf, nSegmentLength);
 		}
-		
-		for (INT32 i = 0; i < nBurnSoundLen; i++) {
-			pBurnSoundOut[(i << 1) + 0] = BURN_SND_CLIP(pBurnSoundOut[(i << 1) + 0] + SoundBuffer[(i << 1) + 0]);
-			pBurnSoundOut[(i << 1) + 1] = BURN_SND_CLIP(pBurnSoundOut[(i << 1) + 1] + SoundBuffer[(i << 1) + 1]);
-		}
+
+		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	h6280Close();
@@ -2468,8 +2471,7 @@ static INT32 MutantfFrame()
 	}
 
 	{
-		deco16_prot_inputs = DrvInputs;
-		memset (DrvInputs, 0xff, 2 * sizeof(INT16)); 
+		memset (DrvInputs, 0xff, 2 * sizeof(INT16));
 		for (INT32 i = 0; i < 16; i++) {
 			DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;
 			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
@@ -2479,11 +2481,11 @@ static INT32 MutantfFrame()
 
 	INT32 nInterleave = 256;
 	INT32 nSoundBufferPos = 0;
-	INT32 nCyclesTotal[2] = { 14000000 / 58, 8055000 / 58 };
+	INT32 nCyclesTotal[2] = { 14000000 / 58, 4027500 / 58 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
 	h6280NewFrame();
-	
+
 	SekOpen(0);
 	h6280Open(0);
 
@@ -2491,13 +2493,13 @@ static INT32 MutantfFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += SekRun(nCyclesTotal[0] / nInterleave);
-		nCyclesDone[1] += h6280Run(nCyclesTotal[1] / nInterleave);
+		CPU_RUN(0, Sek);
+		CPU_RUN(1, h6280);
 
 		if (i == 240) deco16_vblank = 0x08;
 		
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
+		if (pBurnSoundOut && i%4 == 3) {
+			INT32 nSegmentLength = nBurnSoundLen / (nInterleave / 4);
 			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 			deco16SoundUpdate(pSoundBuf, nSegmentLength);
 			nSoundBufferPos += nSegmentLength;
@@ -2505,7 +2507,7 @@ static INT32 MutantfFrame()
 	}
 
 	SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
-	
+
 	if (pBurnSoundOut) {
 		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
 		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
@@ -2532,8 +2534,7 @@ static INT32 StoneageFrame()
 	}
 
 	{
-		deco16_prot_inputs = DrvInputs;
-		memset (DrvInputs, 0xff, 2 * sizeof(INT16)); 
+		memset (DrvInputs, 0xff, 2 * sizeof(INT16));
 		for (INT32 i = 0; i < 16; i++) {
 			DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;
 			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
@@ -2553,8 +2554,8 @@ static INT32 StoneageFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += SekRun(nCyclesTotal[0] / nInterleave);
-		nCyclesDone[1] += ZetRun(nCyclesTotal[1] / nInterleave);
+		CPU_RUN(0, Sek);
+		CPU_RUN(1, Zet);
 
 		if (irq_timer == i) {
 			SekSetIRQLine((irq_mask & 0x10) ? 3 : 4, CPU_IRQSTATUS_ACK);
@@ -2562,12 +2563,11 @@ static INT32 StoneageFrame()
 		}
 		if (i == 248) deco16_vblank = 0x08;
 		
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
+		if (pBurnSoundOut && i%4 == 3) {
+			INT32 nSegmentLength = nBurnSoundLen / (nInterleave / 4);
 			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			MSM6295Render(0, pSoundBuf, nSegmentLength);
-			MSM6295Render(1, pSoundBuf, nSegmentLength);
+			MSM6295Render(pSoundBuf, nSegmentLength);
 			nSoundBufferPos += nSegmentLength;
 		}
 	}
@@ -2579,8 +2579,7 @@ static INT32 StoneageFrame()
 		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 		if (nSegmentLength) {
 			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			MSM6295Render(0, pSoundBuf, nSegmentLength);
-			MSM6295Render(1, pSoundBuf, nSegmentLength);
+			MSM6295Render(pSoundBuf, nSegmentLength);
 		}
 	}
 
@@ -2612,7 +2611,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 	if (nAction & ACB_DRIVER_DATA) {
 		SekScan(nAction);
-	
+
 		deco16SoundScan(nAction, pnMin);
 
 		deco16Scan();
@@ -2647,10 +2646,9 @@ static INT32 StoneageScan(INT32 nAction, INT32 *pnMin)
 	if (nAction & ACB_DRIVER_DATA) {
 		SekScan(nAction);
 		ZetScan(nAction);
-		BurnYM2151Scan(nAction);
-		MSM6295Scan(0, nAction);
-		MSM6295Scan(1, nAction);
-	
+		BurnYM2151Scan(nAction, pnMin);
+		MSM6295Scan(nAction, pnMin);
+
 		deco16Scan();
 
 		SCAN_VAR(scanline);
@@ -2711,7 +2709,7 @@ struct BurnDriver BurnDrvCninja = {
 	"Caveman Ninja (World ver 4)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
-	NULL, cninjaRomInfo, cninjaRomName, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
+	NULL, cninjaRomInfo, cninjaRomName, NULL, NULL, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
 	CninjaInit, DrvExit, CninjaFrame, CninjaDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };
@@ -2764,7 +2762,7 @@ struct BurnDriver BurnDrvCninja1 = {
 	"Caveman Ninja (World ver 1)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
-	NULL, cninja1RomInfo, cninja1RomName, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
+	NULL, cninja1RomInfo, cninja1RomName, NULL, NULL, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
 	CninjaInit, DrvExit, CninjaFrame, CninjaDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };
@@ -2817,7 +2815,7 @@ struct BurnDriver BurnDrvCninjau = {
 	"Caveman Ninja (US ver 4)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
-	NULL, cninjauRomInfo, cninjauRomName, NULL, NULL, DrvInputInfo, CninjauDIPInfo,
+	NULL, cninjauRomInfo, cninjauRomName, NULL, NULL, NULL, NULL, DrvInputInfo, CninjauDIPInfo,
 	CninjaInit, DrvExit, CninjaFrame, CninjaDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };
@@ -2870,7 +2868,7 @@ struct BurnDriver BurnDrvJoemac = {
 	"Tatakae Genshizin Joe & Mac (Japan ver 1)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
-	NULL, joemacRomInfo, joemacRomName, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
+	NULL, joemacRomInfo, joemacRomName, NULL, NULL, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
 	CninjaInit, DrvExit, CninjaFrame, CninjaDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };
@@ -2912,7 +2910,7 @@ struct BurnDriver BurnDrvStoneage = {
 	"Stoneage (bootleg of Caveman Ninja)\0", NULL, "bootleg", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
-	NULL, stoneageRomInfo, stoneageRomName, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
+	NULL, stoneageRomInfo, stoneageRomName, NULL, NULL, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
 	StoneageInit, DrvExit, StoneageFrame, CninjaDraw, StoneageScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };
@@ -2940,7 +2938,7 @@ struct BurnDriver BurnDrvCninjabl = {
 	"Caveman Ninja (bootleg)\0", NULL, "bootleg", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
-	NULL, cninjablRomInfo, cninjablRomName, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
+	NULL, cninjablRomInfo, cninjablRomName, NULL, NULL, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
 	CninjablInit, DrvExit, StoneageFrame, CninjablDraw, StoneageScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };
@@ -2985,11 +2983,11 @@ STD_ROM_PICK(mutantf)
 STD_ROM_FN(mutantf)
 
 struct BurnDriver BurnDrvMutantf = {
-	"mutantf", NULL, NULL, NULL, "1992",
+	"mutantf", NULL, NULL, NULL, "1991",
 	"Mutant Fighter (World ver EM-5)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_VSFIGHT, 0,
-	NULL, mutantfRomInfo, mutantfRomName, NULL, NULL, DrvInputInfo, MutantfDIPInfo,
+	NULL, mutantfRomInfo, mutantfRomName, NULL, NULL, NULL, NULL, DrvInputInfo, MutantfDIPInfo,
 	MutantfInit, DrvExit, MutantfFrame, MutantfDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };
@@ -3034,11 +3032,11 @@ STD_ROM_PICK(mutantf4)
 STD_ROM_FN(mutantf4)
 
 struct BurnDriver BurnDrvMutantf4 = {
-	"mutantf4", "mutantf", NULL, NULL, "1992",
+	"mutantf4", "mutantf", NULL, NULL, "1991",
 	"Mutant Fighter (World ver EM-4)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_VSFIGHT, 0,
-	NULL, mutantf4RomInfo, mutantf4RomName, NULL, NULL, DrvInputInfo, MutantfDIPInfo,
+	NULL, mutantf4RomInfo, mutantf4RomName, NULL, NULL, NULL, NULL, DrvInputInfo, MutantfDIPInfo,
 	MutantfInit, DrvExit, MutantfFrame, MutantfDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };
@@ -3083,11 +3081,11 @@ STD_ROM_PICK(mutantf3)
 STD_ROM_FN(mutantf3)
 
 struct BurnDriver BurnDrvMutantf3 = {
-	"mutantf3", "mutantf", NULL, NULL, "1992",
+	"mutantf3", "mutantf", NULL, NULL, "1991",
 	"Mutant Fighter (World ver EM-3)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_VSFIGHT, 0,
-	NULL, mutantf3RomInfo, mutantf3RomName, NULL, NULL, DrvInputInfo, MutantfDIPInfo,
+	NULL, mutantf3RomInfo, mutantf3RomName, NULL, NULL, NULL, NULL, DrvInputInfo, MutantfDIPInfo,
 	MutantfInit, DrvExit, MutantfFrame, MutantfDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };
@@ -3132,11 +3130,11 @@ STD_ROM_PICK(mutantf2)
 STD_ROM_FN(mutantf2)
 
 struct BurnDriver BurnDrvMutantf2 = {
-	"mutantf2", "mutantf", NULL, NULL, "1992",
+	"mutantf2", "mutantf", NULL, NULL, "1991",
 	"Mutant Fighter (World ver EM-2)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_VSFIGHT, 0,
-	NULL, mutantf2RomInfo, mutantf2RomName, NULL, NULL, DrvInputInfo, MutantfDIPInfo,
+	NULL, mutantf2RomInfo, mutantf2RomName, NULL, NULL, NULL, NULL, DrvInputInfo, MutantfDIPInfo,
 	MutantfInit, DrvExit, MutantfFrame, MutantfDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };
@@ -3181,11 +3179,11 @@ STD_ROM_PICK(deathbrd)
 STD_ROM_FN(deathbrd)
 
 struct BurnDriver BurnDrvDeathbrd = {
-	"deathbrd", "mutantf", NULL, NULL, "1992",
+	"deathbrd", "mutantf", NULL, NULL, "1991",
 	"Death Brade (Japan ver JM-3)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_VSFIGHT, 0,
-	NULL, deathbrdRomInfo, deathbrdRomName, NULL, NULL, DrvInputInfo, MutantfDIPInfo,
+	NULL, deathbrdRomInfo, deathbrdRomName, NULL, NULL, NULL, NULL, DrvInputInfo, MutantfDIPInfo,
 	MutantfInit, DrvExit, MutantfFrame, MutantfDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };
@@ -3239,7 +3237,7 @@ struct BurnDriver BurnDrvEdrandy = {
 	"The Cliffhanger - Edward Randy (World ver 3)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
-	NULL, edrandyRomInfo, edrandyRomName, NULL, NULL, DrvInputInfo, EdrandyDIPInfo,
+	NULL, edrandyRomInfo, edrandyRomName, NULL, NULL, NULL, NULL, DrvInputInfo, EdrandyDIPInfo,
 	EdrandyInit, DrvExit, EdrandyFrame, EdrandyDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };
@@ -3293,7 +3291,7 @@ struct BurnDriver BurnDrvEdrandy2 = {
 	"The Cliffhanger - Edward Randy (World ver 2)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
-	NULL, edrandy2RomInfo, edrandy2RomName, NULL, NULL, DrvInputInfo, EdrandcDIPInfo,
+	NULL, edrandy2RomInfo, edrandy2RomName, NULL, NULL, NULL, NULL, DrvInputInfo, EdrandcDIPInfo,
 	EdrandyInit, DrvExit, EdrandyFrame, EdrandyDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };
@@ -3347,7 +3345,7 @@ struct BurnDriver BurnDrvEdrandy1 = {
 	"The Cliffhanger - Edward Randy (World ver 1)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
-	NULL, edrandy1RomInfo, edrandy1RomName, NULL, NULL, DrvInputInfo, EdrandcDIPInfo,
+	NULL, edrandy1RomInfo, edrandy1RomName, NULL, NULL, NULL, NULL, DrvInputInfo, EdrandcDIPInfo,
 	EdrandyInit, DrvExit, EdrandyFrame, EdrandyDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };
@@ -3401,7 +3399,7 @@ struct BurnDriver BurnDrvEdrandyj = {
 	"The Cliffhanger - Edward Randy (Japan ver 3)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
-	NULL, edrandyjRomInfo, edrandyjRomName, NULL, NULL, DrvInputInfo, EdrandcDIPInfo,
+	NULL, edrandyjRomInfo, edrandyjRomName, NULL, NULL, NULL, NULL, DrvInputInfo, EdrandcDIPInfo,
 	EdrandyInit, DrvExit, EdrandyFrame, EdrandyDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };
@@ -3452,8 +3450,8 @@ struct BurnDriver BurnDrvRobocop2 = {
 	"robocop2", NULL, NULL, NULL, "1991",
 	"Robocop 2 (Euro/Asia v0.10)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
-	NULL, robocop2RomInfo, robocop2RomName, NULL, NULL, Robocop2InputInfo, Robocop2DIPInfo,
+	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_RUNGUN, 0,
+	NULL, robocop2RomInfo, robocop2RomName, NULL, NULL, NULL, NULL, Robocop2InputInfo, Robocop2DIPInfo,
 	Robocop2Init, DrvExit, Robocop2Frame, Robocop2Draw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };
@@ -3504,8 +3502,8 @@ struct BurnDriver BurnDrvRobocop2u = {
 	"robocop2u", "robocop2", NULL, NULL, "1991",
 	"Robocop 2 (US v0.10)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
-	NULL, robocop2uRomInfo, robocop2uRomName, NULL, NULL, Robocop2InputInfo, Robocop2DIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_RUNGUN, 0,
+	NULL, robocop2uRomInfo, robocop2uRomName, NULL, NULL, NULL, NULL, Robocop2InputInfo, Robocop2DIPInfo,
 	Robocop2Init, DrvExit, Robocop2Frame, Robocop2Draw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };
@@ -3556,8 +3554,8 @@ struct BurnDriver BurnDrvRobocop2ua = {
 	"robocop2ua", "robocop2", NULL, NULL, "1991",
 	"Robocop 2 (US v0.05)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
-	NULL, robocop2uaRomInfo, robocop2uaRomName, NULL, NULL, Robocop2InputInfo, Robocop2DIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_RUNGUN, 0,
+	NULL, robocop2uaRomInfo, robocop2uaRomName, NULL, NULL, NULL, NULL, Robocop2InputInfo, Robocop2DIPInfo,
 	Robocop2Init, DrvExit, Robocop2Frame, Robocop2Draw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };
@@ -3608,8 +3606,8 @@ struct BurnDriver BurnDrvRobocop2j = {
 	"robocop2j", "robocop2", NULL, NULL, "1991",
 	"Robocop 2 (Japan v0.11)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
-	NULL, robocop2jRomInfo, robocop2jRomName, NULL, NULL, Robocop2InputInfo, Robocop2DIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_RUNGUN, 0,
+	NULL, robocop2jRomInfo, robocop2jRomName, NULL, NULL, NULL, NULL, Robocop2InputInfo, Robocop2DIPInfo,
 	Robocop2Init, DrvExit, Robocop2Frame, Robocop2Draw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };

@@ -166,12 +166,8 @@ static void __fastcall xxmission_main_write(UINT16 address, UINT8 data)
 
 				case 0x40: {
 					cpu_status &= ~0x08;
-					ZetClose();
-					ZetOpen(1);
-					ZetSetVector(0x10);
-					ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
-					ZetClose();
-					ZetOpen(0);
+					ZetSetVector(1, 0x10);
+					ZetSetIRQLine(1, 0, CPU_IRQSTATUS_HOLD);
 				}
 				break;
 			}
@@ -226,12 +222,8 @@ static void __fastcall xxmission_sub_write(UINT16 address, UINT8 data)
 
 				case 0x80: {
 					cpu_status &= ~0x04;
-					ZetClose();
-					ZetOpen(0);
-					ZetSetVector(0x10);
-					ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
-					ZetClose();
-					ZetOpen(1);
+					ZetSetVector(0, 0x10);
+					ZetSetIRQLine(0, 0, CPU_IRQSTATUS_HOLD);
 				}
 				break;
 			}
@@ -287,17 +279,7 @@ static void DrvYM2203WritePortA(UINT32, UINT32 data)
 
 static void DrvYM2203WritePortB(UINT32, UINT32 data)
 {
-	scrolly = data;	
-}
-
-inline static INT32 DrvSynchroniseStream(INT32 nSoundRate)
-{
-	return (INT64)(ZetTotalCycles() * nSoundRate / 3000000);
-}
-
-inline static double DrvGetTime()
-{
-	return (double)ZetTotalCycles() / 3000000;
+	scrolly = data;
 }
 
 static INT32 DrvDoReset()
@@ -431,7 +413,7 @@ static INT32 DrvInit()
 	ZetSetReadHandler(xxmission_read);
 	ZetClose();
 
-	BurnYM2203Init(2,  1500000, NULL, DrvSynchroniseStream, DrvGetTime, 0);
+	BurnYM2203Init(2,  1500000, NULL, 0);
 	BurnYM2203SetPorts(0, &DrvYM2203ReadPortA, &DrvYM2203ReadPortB, NULL, NULL);
 	BurnYM2203SetPorts(1, NULL, NULL, &DrvYM2203WritePortA, &DrvYM2203WritePortB);
 	BurnTimerAttachZet(3000000);
@@ -687,7 +669,7 @@ struct BurnDriver BurnDrvXxmissio = {
 	"XX Mission\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, xxmissioRomInfo, xxmissioRomName, NULL, NULL, XxmissioInputInfo, XxmissioDIPInfo,
+	NULL, xxmissioRomInfo, xxmissioRomName, NULL, NULL, NULL, NULL, XxmissioInputInfo, XxmissioDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	192, 512, 3, 4
 };

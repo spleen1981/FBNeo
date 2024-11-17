@@ -4,6 +4,7 @@
 #include "tiles_generic.h"
 #include "m68000_intf.h"
 #include "z80_intf.h"
+#include "watchdog.h"
 #include "burn_ym2610.h"
 
 static UINT8 *AllMem;
@@ -25,8 +26,6 @@ static UINT8 *DrvSprBuf;
 static UINT8 *DrvPalRAM;
 static UINT32 *DrvPalette;
 
-static UINT8 *DrvPrioBitmap;
-
 static UINT8 DrvRecalc;
 
 static UINT8 DrvJoy1[16];
@@ -43,10 +42,6 @@ static UINT16 *DrvVidRegBuf;
 static UINT8 *nDrvZ80Bank;
 static UINT8 *soundlatch;
 static UINT8 *soundlatch2;
-
-static INT32 nCyclesTotal[2];
-static INT32 nCyclesDone[2];
-static INT32 watchdog;
 
 static INT32 nGame;
 
@@ -220,15 +215,11 @@ STDDIPINFO(Nost)
 
 static inline void mcatadv_z80_sync()
 {
-#if 0
-	float nCycles = SekTotalCycles() * 1.0000;
-	nCycles /= nCyclesTotal[0];
-	nCycles *= nCyclesTotal[1];
-	nCycles -= nCyclesDone[1];
+	INT32 nCycles = (SekTotalCycles() / 4) - ZetTotalCycles();
+
 	if (nCycles > 0) {
-		nCyclesDone[1] += ZetRun((INT32)nCycles);
+		BurnTimerUpdate(ZetTotalCycles() + nCycles);
 	}
-#endif
 }
 
 static inline void palette_write(INT32 offset)
@@ -248,12 +239,12 @@ static inline void palette_write(INT32 offset)
 	DrvPalette[offset/2] = BurnHighCol(r, g, b, 0);
 }
 
-void __fastcall mcatadv_write_byte(UINT32 /*address*/, UINT8 /*data*/)
+static void __fastcall mcatadv_write_byte(UINT32 /*address*/, UINT8 /*data*/)
 {
 
 }
 
-void __fastcall mcatadv_write_word(UINT32 address, UINT16 data)
+static void __fastcall mcatadv_write_word(UINT32 address, UINT16 data)
 {
 	switch (address)
 	{
@@ -281,13 +272,12 @@ void __fastcall mcatadv_write_word(UINT32 address, UINT16 data)
 		return;
 
 		case 0xb00018:
-			watchdog = 0;
+			BurnWatchdogWrite();
 		return;
 
 		case 0xc00000:
 		{
 			mcatadv_z80_sync();
-
 			*soundlatch = data;
 			ZetNmi();
 		}
@@ -295,7 +285,7 @@ void __fastcall mcatadv_write_word(UINT32 address, UINT16 data)
 	}
 }
 
-UINT8 __fastcall mcatadv_read_byte(UINT32 address)
+static UINT8 __fastcall mcatadv_read_byte(UINT32 address)
 {
 	switch (address)
 	{
@@ -315,7 +305,7 @@ UINT8 __fastcall mcatadv_read_byte(UINT32 address)
 	return 0;
 }
 
-UINT16 __fastcall mcatadv_read_word(UINT32 address)
+static UINT16 __fastcall mcatadv_read_word(UINT32 address)
 {
 	switch (address)
 	{
@@ -332,7 +322,7 @@ UINT16 __fastcall mcatadv_read_word(UINT32 address)
 			return (DrvDips[1] << 8) | 0x00ff;
 
 		case 0xb0001e:
-			watchdog = 0;
+			BurnWatchdogRead();
 			return 0x0c00;
 
 		case 0xc00000:
@@ -349,9 +339,9 @@ static void sound_bankswitch(INT32 data)
 
 	ZetMapArea(0x4000 << nGame, 0xbfff, 0, DrvZ80ROM + (data * 0x4000));
 	ZetMapArea(0x4000 << nGame, 0xbfff, 2, DrvZ80ROM + (data * 0x4000));
-}	
+}
 
-void __fastcall mcatadv_sound_write(UINT16 address, UINT8 data)
+static void __fastcall mcatadv_sound_write(UINT16 address, UINT8 data)
 {
 	switch (address)
 	{
@@ -368,7 +358,7 @@ void __fastcall mcatadv_sound_write(UINT16 address, UINT8 data)
 	}
 }
 
-UINT8 __fastcall mcatadv_sound_read(UINT16 address)
+static UINT8 __fastcall mcatadv_sound_read(UINT16 address)
 {
 	switch (address)
 	{
@@ -380,7 +370,7 @@ UINT8 __fastcall mcatadv_sound_read(UINT16 address)
 	return 0;
 }
 
-void __fastcall mcatadv_sound_out(UINT16 port, UINT8 data)
+static void __fastcall mcatadv_sound_out(UINT16 port, UINT8 data)
 {
 	switch (port & 0xff)
 	{
@@ -401,7 +391,7 @@ void __fastcall mcatadv_sound_out(UINT16 port, UINT8 data)
 	}
 }
 
-UINT8 __fastcall mcatadv_sound_in(UINT16 port)
+static UINT8 __fastcall mcatadv_sound_in(UINT16 port)
 {
 	switch (port & 0xff)
 	{
@@ -409,7 +399,7 @@ UINT8 __fastcall mcatadv_sound_in(UINT16 port)
 		case 0x05:
 		case 0x06:
 		case 0x07:
-			return BurnYM2610Read(port & 3); 
+			return BurnYM2610Read(port & 3);
 
 		case 0x80:
 			return *soundlatch;
@@ -425,16 +415,6 @@ static void DrvFMIRQHandler(INT32, INT32 nStatus)
 	} else {
 		ZetSetIRQLine(0,    CPU_IRQSTATUS_NONE);
 	}
-}
-
-static INT32 DrvSynchroniseStream(INT32 nSoundRate)
-{
-	return (INT64)ZetTotalCycles() * nSoundRate / 4000000;
-}
-
-static double DrvGetTime()
-{
-	return (double)ZetTotalCycles() / 4000000.0;
 }
 
 static INT32 DrvGfxDecode()
@@ -476,8 +456,6 @@ static INT32 MemIndex()
 
 	DrvPalette		= (UINT32*)Next; Next += 0x1001 * sizeof(UINT32);
 
-	DrvPrioBitmap		= Next; Next += 320 * 224; 
-
 	AllRam			= Next;
 
 	Drv68KRAM		= Next; Next += 0x010000;
@@ -505,11 +483,10 @@ static INT32 MemIndex()
 	return 0;
 }
 
-static INT32 DrvDoReset()
+static INT32 DrvDoReset(INT32 clear_mem)
 {
-	DrvReset = 0;
-
-	memset (AllRam, 0, RamEnd - AllRam);
+	if (clear_mem)
+		memset (AllRam, 0, RamEnd - AllRam);
 
 	SekOpen(0);
 	SekReset();
@@ -518,11 +495,11 @@ static INT32 DrvDoReset()
 	ZetOpen(0);
 	ZetReset();
 	sound_bankswitch(1);
+	BurnYM2610Reset();
 	ZetClose();
 
-	BurnYM2610Reset();
-
-	watchdog = 0;
+	BurnWatchdogReset();
+	BurnWatchdogRead(); // needs watchdog on by default
 
 	HiscoreReset();
 
@@ -557,7 +534,7 @@ static INT32 DrvInit()
 		{
 			if (BurnLoadRom(DrvGfxROM1 + 0x000000,	9, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM1 + 0x100000, 10, 1)) return 1;
-	
+
 			if (BurnLoadRom(DrvGfxROM2 + 0x000000, 11, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM2 + 0x100000, 12, 1)) return 1;
 
@@ -566,7 +543,7 @@ static INT32 DrvInit()
 		else
 		{
 			if (BurnLoadRom(DrvGfxROM1 + 0x000000,	9, 1)) return 1;
-	
+
 			if (BurnLoadRom(DrvGfxROM2 + 0x000000, 10, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM2 + 0x100000, 11, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM2 + 0x200000, 12, 1)) return 1;
@@ -604,8 +581,10 @@ static INT32 DrvInit()
 	ZetSetOutHandler(mcatadv_sound_out);
 	ZetClose();
 
+	BurnWatchdogInit(DrvDoReset, 180);
+
 	INT32 DrvSndROMLen = nGame ? 0x100000 : 0x80000;
-	BurnYM2610Init(8000000, DrvSndROM, &DrvSndROMLen, DrvSndROM, &DrvSndROMLen, &DrvFMIRQHandler, DrvSynchroniseStream, DrvGetTime, 0);
+	BurnYM2610Init(8000000, DrvSndROM, &DrvSndROMLen, DrvSndROM, &DrvSndROMLen, &DrvFMIRQHandler, 0);
 	BurnTimerAttachZet(4000000);
 	BurnYM2610SetRoute(BURN_SND_YM2610_YM2610_ROUTE_1, 2.00, BURN_SND_ROUTE_LEFT);
 	BurnYM2610SetRoute(BURN_SND_YM2610_YM2610_ROUTE_2, 2.00, BURN_SND_ROUTE_RIGHT);
@@ -613,7 +592,7 @@ static INT32 DrvInit()
 
 	GenericTilesInit();
 
-	DrvDoReset();
+	DrvDoReset(1);
 
 	return 0;
 }
@@ -637,7 +616,7 @@ static void draw_sprites()
 	UINT16 *source = finish + 0x2000-4;
 	UINT16 *vidregram = DrvVidRegs;
 	UINT16 *vidregbuf = DrvVidRegBuf;
-	UINT8 *prio = DrvPrioBitmap;
+	UINT8 *prio = pPrioDraw;
 	INT32 global_x = vidregram[0]-0x184;
 	INT32 global_y = vidregram[1]-0x1f1;
 
@@ -691,7 +670,7 @@ static void draw_sprites()
 
 				if ((drawypos >= 0) && (drawypos < 224)) {
 					destline = pTransDraw + drawypos * 320;
-					prio = DrvPrioBitmap + drawypos * 320;
+					prio = pPrioDraw + drawypos * 320;
 
 					for (xcnt = xstart; xcnt != xend; xcnt += xinc) {
 						drawxpos = x+xcnt-global_x;
@@ -731,7 +710,7 @@ static void draw_background(UINT8 *vidramsrc, UINT8 *gfxbase, UINT16 *scroll, IN
 {
 	UINT16 *vidram	= (UINT16*)vidramsrc;
 	UINT16 *dest 	= pTransDraw;
-	UINT8 *prio	= DrvPrioBitmap;
+	UINT8 *prio	= pPrioDraw;
 
 	INT32 yscroll = ((scroll[1] & 0x1ff) - 0x1df) & 0x1ff;
 	INT32 xscroll = ((scroll[0] & 0x1ff) - 0x194) & 0x1ff;
@@ -767,7 +746,7 @@ static void draw_background(UINT8 *vidramsrc, UINT8 *gfxbase, UINT16 *scroll, IN
 						if (sy >= nScreenHeight) break;
 
 						dest = pTransDraw + nScreenWidth * sy;
-						prio = DrvPrioBitmap + nScreenWidth * sy;
+						prio = pPrioDraw + nScreenWidth * sy;
 
 						for (INT32 vx = 0; vx < 16; vx++, sx++) {
 							if (sx < 0 || sx >= nScreenWidth) continue;
@@ -838,11 +817,8 @@ static INT32 DrvDraw()
 		}
 		DrvPalette[0x1000] = 0;
 	}
-		
-	for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++) {
-		pTransDraw[i] = 0x3f0;
-		DrvPrioBitmap[i] = 0;
-	}
+
+	BurnTransferClear(0x3f0);
 
 	for (INT32 i = 0; i < 4; i++)
 	{
@@ -864,8 +840,10 @@ static INT32 DrvDraw()
 
 static INT32 DrvFrame()
 {
+	BurnWatchdogUpdate();
+
 	if (DrvReset) {
-		DrvDoReset();
+		DrvDoReset(1);
 	}
 
 	{
@@ -878,31 +856,22 @@ static INT32 DrvFrame()
 		DrvInputs[0] ^= (nGame << 11); // nostradamus wants bit 11 off
 	}
 
+	INT32 nCyclesTotal[2] = { 16000000 / 60, 4000000 / 60 };
+	INT32 nCyclesDone[2] = { 0, 0 };
+	INT32 nInterleave = 30;
+
 	if (nGame == 1) { // Nostradamus 4mhz boost -dink
 		nCyclesTotal[0] = 20000000 / 60;
-	} else {
-		nCyclesTotal[0] = 16000000 / 60;
 	}
-	nCyclesTotal[1] = 4000000 / 60;
-	nCyclesDone[1 ] = 0;
-
-	INT32 nInterleave = 30;
 
 	SekNewFrame();
 	ZetNewFrame();
-	
+
 	SekOpen(0);
 	ZetOpen(0);
 
-	watchdog++;
-	if (watchdog == 180) {
-		SekReset();
-		ZetReset();
-		watchdog = 0;
-	}
-
 	for (INT32 i = 0; i < nInterleave; i++) {
-		SekRun(nCyclesTotal[0] / nInterleave);
+		nCyclesDone[0] += SekRun(nCyclesTotal[0] / nInterleave);
 		BurnTimerUpdate((i + 1) * (nCyclesTotal[1] / nInterleave));
 	}
 	SekSetIRQLine(1, CPU_IRQSTATUS_AUTO);
@@ -945,8 +914,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		BurnYM2610Scan(nAction, pnMin);
 
-		SCAN_VAR(nCyclesDone[1]);
-		SCAN_VAR(watchdog);
+		BurnWatchdogScan(nAction);
 	}
 
 	if (nAction & ACB_WRITE) {
@@ -991,7 +959,7 @@ struct BurnDriver BurnDrvMcatadv = {
 	"Magical Cat Adventure\0", NULL, "Wintechno", "LINDA",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
-	NULL, mcatadvRomInfo, mcatadvRomName, NULL, NULL, McatadvInputInfo, McatadvDIPInfo,
+	NULL, mcatadvRomInfo, mcatadvRomName, NULL, NULL, NULL, NULL, McatadvInputInfo, McatadvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1001,
 	320, 224, 4, 3
 };
@@ -1029,7 +997,7 @@ struct BurnDriver BurnDrvMcatadvj = {
 	"Magical Cat Adventure (Japan)\0", NULL, "Wintechno", "LINDA",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
-	NULL, mcatadvjRomInfo, mcatadvjRomName, NULL, NULL, McatadvInputInfo, McatadvDIPInfo,
+	NULL, mcatadvjRomInfo, mcatadvjRomName, NULL, NULL, NULL, NULL, McatadvInputInfo, McatadvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1001,
 	320, 224, 4, 3
 };
@@ -1070,7 +1038,7 @@ struct BurnDriver BurnDrvCatt = {
 	"Catt (Japan)\0", NULL, "Wintechno", "LINDA",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
-	NULL, cattRomInfo, cattRomName, NULL, NULL, McatadvInputInfo, McatadvDIPInfo,
+	NULL, cattRomInfo, cattRomName, NULL, NULL, NULL, NULL, McatadvInputInfo, McatadvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1001,
 	320, 224, 4, 3
 };
@@ -1103,31 +1071,13 @@ static struct BurnRomInfo nostRomDesc[] = {
 STD_ROM_PICK(nost)
 STD_ROM_FN(nost)
 
-static void NostPatch()
-{
-	// Can also be fixed overclocking the z80 to 4250000 and enabling
-	// z80 sync, but is slow and breaks sound in Mcatadv.
-	*((UINT16*)(Drv68KROM + 0x000122)) = BURN_ENDIAN_SWAP_INT16(0x0146); // Skip ROM Check
-}
-
-static INT32 NostInit()
-{
-	INT32 nRet = DrvInit();
-
-	if (nRet == 0) {
-		NostPatch();
-	}
-
-	return nRet;
-}
-
 struct BurnDriver BurnDrvNost = {
 	"nost", NULL, NULL, NULL, "1993",
 	"Nostradamus\0", NULL, "Face", "LINDA",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, nostRomInfo, nostRomName, NULL, NULL, NostInputInfo, NostDIPInfo,
-	NostInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1001,
+	NULL, nostRomInfo, nostRomName, NULL, NULL, NULL, NULL, NostInputInfo, NostDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1001,
 	224, 320, 3, 4
 };
 
@@ -1164,8 +1114,8 @@ struct BurnDriver BurnDrvNostj = {
 	"Nostradamus (Japan)\0", NULL, "Face", "LINDA",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, nostjRomInfo, nostjRomName, NULL, NULL, NostInputInfo, NostDIPInfo,
-	NostInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1001,
+	NULL, nostjRomInfo, nostjRomName, NULL, NULL, NULL, NULL, NostInputInfo, NostDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1001,
 	224, 320, 3, 4
 };
 
@@ -1202,7 +1152,7 @@ struct BurnDriver BurnDrvNostk = {
 	"Nostradamus (Korea)\0", NULL, "Face", "LINDA",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, nostkRomInfo, nostkRomName, NULL, NULL, NostInputInfo, NostDIPInfo,
-	NostInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1001,
+	NULL, nostkRomInfo, nostkRomName, NULL, NULL, NULL, NULL, NostInputInfo, NostDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1001,
 	224, 320, 3, 4
 };

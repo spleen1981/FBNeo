@@ -44,18 +44,18 @@ static INT32 watchdog;
 
 static struct BurnInputInfo CircuscInputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 start"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 start"	},
 	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 left"	},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
 
 	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 start"	},
+	{"P2 Start",	BIT_DIGITAL,	DrvJoy1 + 4,	"p2 start"	},
 	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 left"	},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 right"	},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
+	{"P2 Right",	BIT_DIGITAL,	DrvJoy3 + 1,	"p2 right"	},
+	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Service",		BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
 	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
@@ -118,13 +118,13 @@ static struct BurnDIPInfo CircuscDIPList[]=
 	{0x0d, 0x01, 0x08, 0x08, "20k 90k 70k+"		},
 	{0x0d, 0x01, 0x08, 0x00, "30k 110k 80k+"	},
 
-	{0   , 0xfe, 0   ,    0, "Difficulty"		},
+	{0   , 0xfe, 0   ,    4, "Difficulty"		},
 	{0x0d, 0x01, 0x60, 0x60, "Easy"			},
 	{0x0d, 0x01, 0x60, 0x40, "Normal"		},
 	{0x0d, 0x01, 0x60, 0x20, "Hard"			},
 	{0x0d, 0x01, 0x60, 0x00, "Hardest"		},
 
-	{0   , 0xfe, 0   ,    4, "Demo Sounds"		},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x0d, 0x01, 0x80, 0x80, "Off"			},
 	{0x0d, 0x01, 0x80, 0x00, "On"			},
 };
@@ -277,7 +277,7 @@ static INT32 MemIndex()
 	UINT8 *Next; Next = AllMem;
 
 	DrvM6809ROM		= Next; Next += 0x00a000;
-	DrvM6809ROMDec		= Next; Next += 0x00a000;
+	DrvM6809ROMDec	= Next; Next += 0x00a000;
 	DrvZ80ROM		= Next; Next += 0x004000;
 
 	DrvGfxROM0		= Next; Next += 0x018000;
@@ -285,7 +285,7 @@ static INT32 MemIndex()
 
 	DrvColPROM		= Next; Next += 0x000220;
 
-	DrvTransTable		= Next; Next += 0x000200;
+	DrvTransTable	= Next; Next += 0x000200;
 
 	DrvPalette		= (UINT32*)Next; Next += 0x200 * sizeof(UINT32);
 
@@ -358,7 +358,7 @@ static INT32 DrvInit()
 		DrvGfxExpand(DrvGfxROM1, 0xc000);
 	}
 
-	M6809Init(1);
+	M6809Init(0);
 	M6809Open(0);
 	M6809MapMemory(DrvM6809RAM,		0x2000, 0x2fff, MAP_RAM);
 	M6809MapMemory(DrvColRAM,		0x3000, 0x33ff, MAP_RAM);
@@ -385,6 +385,7 @@ static INT32 DrvInit()
 	SN76496Init(1, 1789772, 1);
 	SN76496SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
 	SN76496SetRoute(1, 1.00, BURN_SND_ROUTE_BOTH);
+    SN76496SetBuffered(ZetTotalCycles, 3579545);
 
 	DACInit(0, 0, 1, DrvDACSync);
 	DACSetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
@@ -541,37 +542,20 @@ static INT32 DrvFrame()
 	INT32 nInterleave = 32;
 	INT32 nCyclesTotal[2] = { 2048000 / 60, 3579545 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
-	INT32 nSoundBufferPos = 0;
 
 	M6809Open(0);
 	ZetOpen(0);
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += M6809Run(nCyclesTotal[0] / nInterleave);
-
-		nCyclesDone[1] += ZetRun(nCyclesTotal[1] / nInterleave);
-
-		// Render Sound Segment
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			SN76496Update(0, pSoundBuf, nSegmentLength);
-			SN76496Update(1, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
+        nCyclesDone[0] += M6809Run(((i + 1) * nCyclesTotal[0] / nInterleave) - nCyclesDone[0]);
+        nCyclesDone[1] += ZetRun(((i + 1) * nCyclesTotal[1] / nInterleave) - nCyclesDone[1]);
 	}
 
-	if (irqmask) M6809SetIRQLine(0, CPU_IRQSTATUS_AUTO);
+	if (irqmask) M6809SetIRQLine(0, CPU_IRQSTATUS_HOLD);
 
-	// Make sure the buffer is entirely filled.
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		if (nSegmentLength) {
-			SN76496Update(0, pSoundBuf, nSegmentLength);
-			SN76496Update(1, pSoundBuf, nSegmentLength);
-		}
+        SN76496Update(pBurnSoundOut, nBurnSoundLen);
 		DACUpdate(pBurnSoundOut, nBurnSoundLen);
 	}
 
@@ -585,7 +569,7 @@ static INT32 DrvFrame()
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -593,7 +577,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		*pnMin = 0x029705;
 	}
 
-	if (nAction & ACB_VOLATILE) {		
+    if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
 
 		ba.Data	  = AllRam;
@@ -652,8 +636,8 @@ struct BurnDriver BurnDrvCircusc = {
 	"circusc", NULL, NULL, NULL, "1984",
 	"Circus Charlie (level select, set 1)\0", NULL, "Konami", "GX380",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_PLATFORM, 0,
-	NULL, circuscRomInfo, circuscRomName, NULL, NULL, CircuscInputInfo, CircuscDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_ACTION, 0,
+	NULL, circuscRomInfo, circuscRomName, NULL, NULL, NULL, NULL, CircuscInputInfo, CircuscDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -693,8 +677,8 @@ struct BurnDriver BurnDrvCircusc2 = {
 	"circusc2", "circusc", NULL, NULL, "1984",
 	"Circus Charlie (level select, set 2)\0", NULL, "Konami", "GX380",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_PLATFORM, 0,
-	NULL, circusc2RomInfo, circusc2RomName, NULL, NULL, CircuscInputInfo, CircuscDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_ACTION, 0,
+	NULL, circusc2RomInfo, circusc2RomName, NULL, NULL, NULL, NULL, CircuscInputInfo, CircuscDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -734,8 +718,8 @@ struct BurnDriver BurnDrvCircusc3 = {
 	"circusc3", "circusc", NULL, NULL, "1984",
 	"Circus Charlie (level select, set 3)\0", NULL, "Konami", "GX380",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_PLATFORM, 0,
-	NULL, circusc3RomInfo, circusc3RomName, NULL, NULL, CircuscInputInfo, CircuscDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_ACTION, 0,
+	NULL, circusc3RomInfo, circusc3RomName, NULL, NULL, NULL, NULL, CircuscInputInfo, CircuscDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -775,8 +759,8 @@ struct BurnDriver BurnDrvCircusc4 = {
 	"circusc4", "circusc", NULL, NULL, "1984",
 	"Circus Charlie (no level select)\0", NULL, "Konami", "GX380",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_PLATFORM, 0,
-	NULL, circusc4RomInfo, circusc4RomName, NULL, NULL, CircuscInputInfo, CircuscDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_ACTION, 0,
+	NULL, circusc4RomInfo, circusc4RomName, NULL, NULL, NULL, NULL, CircuscInputInfo, CircuscDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -816,8 +800,8 @@ struct BurnDriver BurnDrvCircuscc = {
 	"circuscc", "circusc", NULL, NULL, "1984",
 	"Circus Charlie (Centuri)\0", NULL, "Konami (Centuri license)", "GX380",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_PLATFORM, 0,
-	NULL, circusccRomInfo, circusccRomName, NULL, NULL, CircuscInputInfo, CircuscDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_ACTION, 0,
+	NULL, circusccRomInfo, circusccRomName, NULL, NULL, NULL, NULL, CircuscInputInfo, CircuscDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -857,8 +841,8 @@ struct BurnDriver BurnDrvCircusce = {
 	"circusce", "circusc", NULL, NULL, "1984",
 	"Circus Charlie (Centuri, earlier)\0", NULL, "Konami (Centuri license)", "GX380",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_PLATFORM, 0,
-	NULL, circusceRomInfo, circusceRomName, NULL, NULL, CircuscInputInfo, CircuscDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_ACTION, 0,
+	NULL, circusceRomInfo, circusceRomName, NULL, NULL, NULL, NULL, CircuscInputInfo, CircuscDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };

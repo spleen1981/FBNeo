@@ -619,7 +619,6 @@ static UINT8 __fastcall ninjakd2_main_read(UINT16 address)
 		case 0xf803:
 		case 0xf804:
 			return DrvDips[(address & 7) - 3];
-			return DrvDips[1];
 	}
 
 	return 0;
@@ -643,11 +642,7 @@ static void __fastcall ninjakd2_main_write(UINT16 address, UINT8 data)
 		{
 			if (data & 0x10)
 			{
-				ZetClose();
-				ZetOpen(1);
-				ZetReset();
-				ZetClose();
-				ZetOpen(0);
+				ZetReset(1);
 			}
 
 			*flipscreen = data & 0x80;
@@ -690,11 +685,7 @@ static void __fastcall mnight_main_write(UINT16 address, UINT8 data)
 		{
 			if (data & 0x10)
 			{
-				ZetClose();
-				ZetOpen(1);
-				ZetReset();
-				ZetClose();
-				ZetOpen(0);
+				ZetReset(1);
 			}
 
 			*flipscreen = data & 0x80;
@@ -748,11 +739,7 @@ static void __fastcall robokid_main_write(UINT16 address, UINT8 data)
 		case 0xdc01:
 		{
 			if (data & 0x10) {
-				ZetClose();
-				ZetOpen(1);
-				ZetReset();
-				ZetClose();
-				ZetOpen(0);
+				ZetReset(1);
 			}
 
 			*flipscreen = data & 0x80;
@@ -900,6 +887,9 @@ static UINT8 __fastcall omegaf_main_read(UINT16 address)
 		case 0xc002:
 		case 0xc003:
 			return omegaf_protection_read(address - 0xc001);
+
+		case 0xc1e7: // more prot
+		    return 0xff;
 	}
 
 	return 0;
@@ -922,11 +912,7 @@ static void __fastcall omegaf_main_write(UINT16 address, UINT8 data)
 		case 0xc001:
 		{
 			if (data & 0x10) {
-				ZetClose();
-				ZetOpen(1);
-				ZetReset();
-				ZetClose();
-				ZetOpen(0);
+				ZetReset(1);
 			}
 
 			*flipscreen = data & 0x80;
@@ -1056,16 +1042,6 @@ inline static void DrvYM2203IRQHandler(INT32, INT32 nStatus)
 	ZetSetIRQLine(0, (nStatus) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 }
 
-inline static INT32 DrvSynchroniseStream(INT32 nSoundRate)
-{
-	return (INT64)ZetTotalCycles() * nSoundRate / 5000000;
-}
-
-inline static double DrvGetTime()
-{
-	return (double)ZetTotalCycles() / 5000000.0;
-}
-
 static void ninjakd2_sound_init()
 {
 	ZetInit(1);
@@ -1082,7 +1058,7 @@ static void ninjakd2_sound_init()
 	ZetSetReadHandler(ninjakd2_sound_read);
 	ZetClose();
 
-	BurnYM2203Init(2,  1500000, &DrvYM2203IRQHandler, DrvSynchroniseStream, DrvGetTime, 0);
+	BurnYM2203Init(2,  1500000, &DrvYM2203IRQHandler, 0);
 	BurnTimerAttachZet(5000000);
 	BurnYM2203SetRoute(0, BURN_SND_YM2203_YM2203_ROUTE,   0.50, BURN_SND_ROUTE_BOTH);
 	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_1, 0.10, BURN_SND_ROUTE_BOTH);
@@ -1902,6 +1878,16 @@ static INT32 OmegafDraw()
 	return 0;
 }
 
+static inline void DrvClearOpposites(UINT8* nJoystickInputs)
+{ // for active LOW
+	if ((*nJoystickInputs & 0x03) == 0x00) {
+		*nJoystickInputs |= 0x03;
+	}
+	if ((*nJoystickInputs & 0x0c) == 0x00) {
+		*nJoystickInputs |= 0x0c;
+	}
+}
+
 static INT32 DrvFrame()
 {
 	if (DrvReset) {
@@ -1916,6 +1902,9 @@ static INT32 DrvFrame()
 			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
 			DrvInputs[2] ^= (DrvJoy3[i] & 1) << i;
 		}
+
+		DrvClearOpposites(&DrvInputs[1]);
+		DrvClearOpposites(&DrvInputs[2]);
 
 		previous_coin[0] = (DrvInputs[0] & 0x40) ? 0 : (previous_coin[0] + 1);
 		previous_coin[1] = (DrvInputs[0] & 0x80) ? 0 : (previous_coin[1] + 1);
@@ -2060,23 +2049,23 @@ static INT32 OmegafScan(INT32 nAction, INT32 *pnMin)
 // Ninja-Kid II / NinjaKun Ashura no Shou (set 1)
 
 static struct BurnRomInfo ninjakd2RomDesc[] = {
-	{ "nk2_01.rom",		0x08000, 0x3cdbb906, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
-	{ "nk2_02.rom",		0x08000, 0xb5ce9a1a, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "nk2_03.rom",		0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "nk2_04.rom",		0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "nk2_05.rom",		0x08000, 0x5dac9426, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "1.3s",			0x08000, 0x3cdbb906, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "2.3q",			0x08000, 0xb5ce9a1a, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "3.3r",			0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "4.3p",			0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "5.3m",			0x08000, 0x5dac9426, 1 | BRF_PRG | BRF_ESS }, //  4
 
-	{ "nk2_06.rom",		0x10000, 0xd3a18a79, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code (mc8123 encrypted)
+	{ "6.3h",			0x10000, 0xd3a18a79, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code (mc8123 encrypted)
 
-	{ "nk2_12.rom",		0x08000, 0xdb5657a9, 3 | BRF_GRA },           //  6 Foreground Tiles
+	{ "12.5n",			0x08000, 0xdb5657a9, 3 | BRF_GRA },           //  6 Foreground Tiles
 
-	{ "nk2_08.rom",		0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
-	{ "nk2_07.rom",		0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
+	{ "8.6l",			0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
+	{ "7.6n",			0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
 
-	{ "nk2_11.rom",		0x10000, 0x41a714b3, 5 | BRF_GRA },           //  9 Background Tiles
-	{ "nk2_10.rom",		0x10000, 0xc913c4ab, 5 | BRF_GRA },           // 10
+	{ "11.2n",			0x10000, 0x41a714b3, 5 | BRF_GRA },           //  9 Background Tiles
+	{ "10.2r",			0x10000, 0xc913c4ab, 5 | BRF_GRA },           // 10
 
-	{ "nk2_09.rom",		0x10000, 0xc1d2d170, 6 | BRF_GRA },           // 11 Samples (8 bit unsigned)
+	{ "9.6c",			0x10000, 0xc1d2d170, 6 | BRF_GRA },           // 11 Samples (8 bit unsigned)
 
 	{ "ninjakd2.key",	0x02000, 0xec25318f, 7 | BRF_PRG | BRF_ESS }, // 12 mc8123 key
 };
@@ -2089,7 +2078,7 @@ struct BurnDriver BurnDrvNinjakd2 = {
 	"Ninja-Kid II / NinjaKun Ashura no Shou (set 1)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
-	NULL, ninjakd2RomInfo, ninjakd2RomName, NULL, NULL, DrvInputInfo, Ninjakd2DIPInfo,
+	NULL, ninjakd2RomInfo, ninjakd2RomName, NULL, NULL, NULL, NULL, DrvInputInfo, Ninjakd2DIPInfo,
 	Ninjakd2Init, DrvExit, DrvFrame, Ninjakd2Draw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
 };
@@ -2098,23 +2087,23 @@ struct BurnDriver BurnDrvNinjakd2 = {
 // Ninja-Kid II / NinjaKun Ashura no Shou (set 2, bootleg?)
 
 static struct BurnRomInfo ninjakd2aRomDesc[] = {
-	{ "nk2_01.bin",		0x08000, 0xe6adca65, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
-	{ "nk2_02.bin",		0x08000, 0xd9284bd1, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "nk2_03.rom",		0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "nk2_04.rom",		0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "nk2_05.bin",		0x08000, 0x960725fb, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "1.3s",			0x08000, 0xe6adca65, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "2.3q",			0x08000, 0xd9284bd1, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "3.3r",			0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "4.3p",			0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "5.3m",			0x08000, 0x960725fb, 1 | BRF_PRG | BRF_ESS }, //  4
 
 	{ "nk2_06.bin",		0x10000, 0x7bfe6c9e, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code
 
-	{ "nk2_12.rom",		0x08000, 0xdb5657a9, 3 | BRF_GRA },           //  6 Foreground Tiles
+	{ "12.5n",			0x08000, 0xdb5657a9, 3 | BRF_GRA },           //  6 Foreground Tiles
 
-	{ "nk2_08.rom",		0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
-	{ "nk2_07.rom",		0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
+	{ "8.6l",			0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
+	{ "7.6n",			0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
 
-	{ "nk2_11.rom",		0x10000, 0x41a714b3, 5 | BRF_GRA },           //  9 Background Tiles
-	{ "nk2_10.rom",		0x10000, 0xc913c4ab, 5 | BRF_GRA },           // 10
+	{ "11.2n",			0x10000, 0x41a714b3, 5 | BRF_GRA },           //  9 Background Tiles
+	{ "10.2r",			0x10000, 0xc913c4ab, 5 | BRF_GRA },           // 10
 
-	{ "nk2_09.rom",		0x10000, 0xc1d2d170, 6 | BRF_GRA },           // 11 Samples (8 bit unsigned)
+	{ "9.6c",			0x10000, 0xc1d2d170, 6 | BRF_GRA },           // 11 Samples (8 bit unsigned)
 };
 
 STD_ROM_PICK(ninjakd2a)
@@ -2125,7 +2114,7 @@ struct BurnDriver BurnDrvNinjakd2a = {
 	"Ninja-Kid II / NinjaKun Ashura no Shou (set 2, bootleg?)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
-	NULL, ninjakd2aRomInfo, ninjakd2aRomName, NULL, NULL, DrvInputInfo, Ninjakd2DIPInfo,
+	NULL, ninjakd2aRomInfo, ninjakd2aRomName, NULL, NULL, NULL, NULL, DrvInputInfo, Ninjakd2DIPInfo,
 	Ninjakd2DecryptedInit, DrvExit, DrvFrame, Ninjakd2Draw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
 };
@@ -2136,21 +2125,21 @@ struct BurnDriver BurnDrvNinjakd2a = {
 static struct BurnRomInfo ninjakd2bRomDesc[] = {
 	{ "1.3s",			0x08000, 0xcb4f4624, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
 	{ "2.3q",			0x08000, 0x0ad0c100, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "nk2_03.rom",		0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "nk2_04.rom",		0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "nk2_05.rom",		0x08000, 0x5dac9426, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "3.3r",			0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "4.3p",			0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "5.3m",			0x08000, 0x5dac9426, 1 | BRF_PRG | BRF_ESS }, //  4
 
 	{ "nk2_06.bin",		0x10000, 0x7bfe6c9e, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code
 
-	{ "nk2_12.rom",		0x08000, 0xdb5657a9, 3 | BRF_GRA },           //  6 Foreground Tiles
+	{ "12.5n",			0x08000, 0xdb5657a9, 3 | BRF_GRA },           //  6 Foreground Tiles
 
-	{ "nk2_08.rom",		0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
-	{ "nk2_07.rom",		0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
+	{ "8.6l",			0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
+	{ "7.6n",			0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
 
-	{ "nk2_11.rom",		0x10000, 0x41a714b3, 5 | BRF_GRA },           //  9 Background Tiles
-	{ "nk2_10.rom",		0x10000, 0xc913c4ab, 5 | BRF_GRA },           // 10
+	{ "11.2n",			0x10000, 0x41a714b3, 5 | BRF_GRA },           //  9 Background Tiles
+	{ "10.2r",			0x10000, 0xc913c4ab, 5 | BRF_GRA },           // 10
 
-	{ "nk2_09.rom",		0x10000, 0xc1d2d170, 6 | BRF_GRA },           // 11 Samples (8 bit unsigned)
+	{ "9.6c",			0x10000, 0xc1d2d170, 6 | BRF_GRA },           // 11 Samples (8 bit unsigned)
 };
 
 STD_ROM_PICK(ninjakd2b)
@@ -2161,7 +2150,7 @@ struct BurnDriver BurnDrvNinjakd2b = {
 	"Ninja-Kid II / NinjaKun Ashura no Shou (set 3, bootleg?)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
-	NULL, ninjakd2bRomInfo, ninjakd2bRomName, NULL, NULL, DrvInputInfo, RdactionDIPInfo,
+	NULL, ninjakd2bRomInfo, ninjakd2bRomName, NULL, NULL, NULL, NULL, DrvInputInfo, RdactionDIPInfo,
 	Ninjakd2DecryptedInit, DrvExit, DrvFrame, Ninjakd2Draw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
 };
@@ -2171,23 +2160,23 @@ struct BurnDriver BurnDrvNinjakd2b = {
 // close to set 3
 
 static struct BurnRomInfo ninjakd2cRomDesc[] = {
-	{ "1.3U",			0x08000, 0x06096412, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
-	{ "2.3T",			0x08000, 0x9ed9a994, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "nk2_03.rom",		0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "nk2_04.rom",		0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "5.3M",			0x08000, 0x800d4951, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "1.3u",			0x08000, 0x06096412, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "2.3t",			0x08000, 0x9ed9a994, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "3.3r",			0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "4.3p",			0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "5.3m",			0x08000, 0x800d4951, 1 | BRF_PRG | BRF_ESS }, //  4
 
-	{ "nk2_06.rom",		0x10000, 0xd3a18a79, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code (mc8123 encrypted)
+	{ "6.3h",			0x10000, 0xd3a18a79, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code (mc8123 encrypted)
 
-	{ "nk2_12.rom",		0x08000, 0xdb5657a9, 3 | BRF_GRA },           //  6 Foreground Tiles
+	{ "12.5n",			0x08000, 0xdb5657a9, 3 | BRF_GRA },           //  6 Foreground Tiles
 
-	{ "nk2_08.rom",		0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
-	{ "nk2_07.rom",		0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
+	{ "8.6l",			0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
+	{ "7.6n",			0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
 
-	{ "nk2_11.rom",		0x10000, 0x41a714b3, 5 | BRF_GRA },           //  9 Background Tiles
-	{ "nk2_10.rom",		0x10000, 0xc913c4ab, 5 | BRF_GRA },           // 10
+	{ "11.2n",			0x10000, 0x41a714b3, 5 | BRF_GRA },           //  9 Background Tiles
+	{ "10.2r",			0x10000, 0xc913c4ab, 5 | BRF_GRA },           // 10
 
-	{ "nk2_09.rom",		0x10000, 0xc1d2d170, 6 | BRF_GRA },           // 11 Samples (8 bit unsigned)
+	{ "9.6c",			0x10000, 0xc1d2d170, 6 | BRF_GRA },           // 11 Samples (8 bit unsigned)
 	
 	{ "ninjakd2.key",	0x02000, 0xec25318f, 7 | BRF_PRG | BRF_ESS }, // 12 mc8123 key
 };
@@ -2200,7 +2189,7 @@ struct BurnDriver BurnDrvNinjakd2c = {
 	"Ninja-Kid II / NinjaKun Ashura no Shou (set 4)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
-	NULL, ninjakd2cRomInfo, ninjakd2cRomName, NULL, NULL, DrvInputInfo, RdactionDIPInfo,
+	NULL, ninjakd2cRomInfo, ninjakd2cRomName, NULL, NULL, NULL, NULL, DrvInputInfo, RdactionDIPInfo,
 	Ninjakd2Init, DrvExit, DrvFrame, Ninjakd2Draw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
 };
@@ -2211,21 +2200,21 @@ struct BurnDriver BurnDrvNinjakd2c = {
 static struct BurnRomInfo rdactionRomDesc[] = {
 	{ "1.3u",			0x08000, 0x5c475611, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
 	{ "2.3s",			0x08000, 0xa1e23bd2, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "nk2_03.rom",		0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "nk2_04.rom",		0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "nk2_05.bin",		0x08000, 0x960725fb, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "3.3r",			0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "4.3p",			0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "5.3m",			0x08000, 0x960725fb, 1 | BRF_PRG | BRF_ESS }, //  4
 
-	{ "nk2_06.rom",		0x10000, 0xd3a18a79, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code (mc8123 encrypted)
+	{ "6.3h",			0x10000, 0xd3a18a79, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code (mc8123 encrypted)
 
 	{ "12.5n",			0x08000, 0x0936b365, 3 | BRF_GRA },           //  6 Foreground Tiles
 
-	{ "nk2_08.rom",		0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
-	{ "nk2_07.rom",		0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
+	{ "8.6l",			0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
+	{ "7.6n",			0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
 
-	{ "nk2_11.rom",		0x10000, 0x41a714b3, 5 | BRF_GRA },           //  9 Background Tiles
-	{ "nk2_10.rom",		0x10000, 0xc913c4ab, 5 | BRF_GRA },           // 10
+	{ "11.2n",			0x10000, 0x41a714b3, 5 | BRF_GRA },           //  9 Background Tiles
+	{ "10.2r",			0x10000, 0xc913c4ab, 5 | BRF_GRA },           // 10
 
-	{ "nk2_09.rom",		0x10000, 0xc1d2d170, 6 | BRF_GRA },           // 11 Samples (8 bit unsigned)
+	{ "9.6c",			0x10000, 0xc1d2d170, 6 | BRF_GRA },           // 11 Samples (8 bit unsigned)
 
 	{ "ninjakd2.key",	0x02000, 0xec25318f, 7 | BRF_PRG | BRF_ESS }, // 12 mc8123 key
 };
@@ -2238,33 +2227,35 @@ struct BurnDriver BurnDrvRdaction = {
 	"Rad Action / NinjaKun Ashura no Shou\0", NULL, "UPL (World Games license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
-	NULL, rdactionRomInfo, rdactionRomName, NULL, NULL, DrvInputInfo, RdactionDIPInfo,
+	NULL, rdactionRomInfo, rdactionRomName, NULL, NULL, NULL, NULL, DrvInputInfo, RdactionDIPInfo,
 	Ninjakd2Init, DrvExit, DrvFrame, Ninjakd2Draw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
 };
 
 
-// JT-104 (title screen modification of Rad Action)
+// JT 104 / NinjaKun Ashura no Shou
 // identical to rdaction set with different gfx rom and decrypted sound rom
+// Found on an official UPL board with an original encrypted sound CPU block and official UPL serial number sticker
+// Other "JT-104" sets have been found with mismatched ROMs and the decrypted sound CPU + ROM hack
 
 static struct BurnRomInfo jt104RomDesc[] = {
 	{ "1.3u",			0x08000, 0x5c475611, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
-	{ "2.3s",			0x08000, 0xa1e23bd2, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "nk2_03.rom",		0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "nk2_04.rom",		0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "nk2_05.bin",		0x08000, 0x960725fb, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "2.3s",			0x08000, 0x87a91d11, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "3.3r",			0x08000, 0xad275654, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "4.3p",			0x08000, 0xe7692a77, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "5.3m",			0x08000, 0x960725fb, 1 | BRF_PRG | BRF_ESS }, //  4
 
-	{ "nk2_06.bin",		0x10000, 0x7bfe6c9e, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code
+	{ "6.3h",			0x10000, 0xd3a18a79, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code
 
-	{ "jt_104_12.bin",	0x08000, 0xc038fadb, 3 | BRF_GRA },           //  6 Foreground Tiles
+	{ "12.5n",			0x08000, 0xc038fadb, 3 | BRF_GRA },           //  6 Foreground Tiles
 
-	{ "nk2_08.rom",		0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
-	{ "nk2_07.rom",		0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
+	{ "8.6l",			0x10000, 0x1b79c50a, 4 | BRF_GRA },           //  7 Sprite Tiles
+	{ "7.6n",			0x10000, 0x0be5cd13, 4 | BRF_GRA },           //  8
 
-	{ "nk2_11.rom",		0x10000, 0x41a714b3, 5 | BRF_GRA },           //  9 Background Tiles
-	{ "nk2_10.rom",		0x10000, 0xc913c4ab, 5 | BRF_GRA },           // 10
+	{ "11.2n",			0x10000, 0x41a714b3, 5 | BRF_GRA },           //  9 Background Tiles
+	{ "10.2r",			0x10000, 0xc913c4ab, 5 | BRF_GRA },           // 10
 
-	{ "nk2_09.rom",		0x10000, 0xc1d2d170, 6 | BRF_GRA },           // 11 Samples (8 bit unsigned)
+	{ "9.6c",			0x10000, 0xc1d2d170, 6 | BRF_GRA },           // 11 Samples (8 bit unsigned)
 
 	{ "ninjakd2.key",	0x02000, 0xec25318f, 7 | BRF_PRG | BRF_ESS }, // 12 mc8123 key
 };
@@ -2274,35 +2265,35 @@ STD_ROM_FN(jt104)
 
 struct BurnDriver BurnDrvJt104 = {
 	"jt104", "ninjakd2", NULL, NULL, "1987",
-	"JT-104 (title screen modification of Rad Action)\0", NULL, "UPL (United Amusements license)", "Miscellaneous",
+	"JT 104 / NinjaKun Ashura no Shou\0", NULL, "UPL (United Amusements license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
-	NULL, jt104RomInfo, jt104RomName, NULL, NULL, DrvInputInfo, RdactionDIPInfo,
-	Ninjakd2DecryptedInit, DrvExit, DrvFrame, Ninjakd2Draw, DrvScan, &DrvRecalc, 0x300,
+	NULL, jt104RomInfo, jt104RomName, NULL, NULL, NULL, NULL, DrvInputInfo, RdactionDIPInfo,
+	Ninjakd2Init, DrvExit, DrvFrame, Ninjakd2Draw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
 };
 
 
-// Mutant Night
+// Mutant Night 
 
 static struct BurnRomInfo mnightRomDesc[] = {
-	{ "mn6-j19.bin",	0x08000, 0x56678d14, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
-	{ "mn5-j17.bin",	0x08000, 0x2a73f88e, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "mn4-j16.bin",	0x08000, 0xc5e42bb4, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "mn3-j14.bin",	0x08000, 0xdf6a4f7a, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "mn2-j12.bin",	0x08000, 0x9c391d1b, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "1.j19",			0x08000, 0x56678d14, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "2.j17",			0x08000, 0x2a73f88e, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "3.j16",			0x08000, 0xc5e42bb4, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "4.j14",			0x08000, 0xdf6a4f7a, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "5.j12",			0x08000, 0x9c391d1b, 1 | BRF_PRG | BRF_ESS }, //  4
 
-	{ "mn1-j7.bin",		0x10000, 0xa0782a31, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code
+	{ "6.j7",			0x10000, 0xa0782a31, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code
 
-	{ "mn10-b10.bin",	0x08000, 0x37b8221f, 3 | BRF_GRA },           //  6 Foreground Tiles
+	{ "13.b10",			0x08000, 0x8c177a19, 3 | BRF_GRA },           //  6 Foreground Tiles
 
-	{ "mn7-e11.bin",	0x10000, 0x4883059c, 4 | BRF_GRA },           //  7 Sprite Tiles
-	{ "mn8-e12.bin",	0x10000, 0x02b91445, 4 | BRF_GRA },           //  8
-	{ "mn9-e14.bin",	0x10000, 0x9f08d160, 4 | BRF_GRA },           //  9
+	{ "9.e11",			0x10000, 0x4883059c, 4 | BRF_GRA },           //  7 Sprite Tiles
+	{ "8.e12",			0x10000, 0x02b91445, 4 | BRF_GRA },           //  8
+	{ "7.e14",			0x10000, 0x9f08d160, 4 | BRF_GRA },           //  9
 
-	{ "mn11-b20.bin",	0x10000, 0x4d37e0f4, 5 | BRF_GRA },           // 10 Background Tiles
-	{ "mn12-b22.bin",	0x10000, 0xb22cbbd3, 5 | BRF_GRA },           // 11
-	{ "mn13-b23.bin",	0x10000, 0x65714070, 5 | BRF_GRA },           // 12
+	{ "12.b20",			0x10000, 0x4d37e0f4, 5 | BRF_GRA },           // 10 Background Tiles
+	{ "11.b22",			0x10000, 0xb22cbbd3, 5 | BRF_GRA },           // 11
+	{ "10.b23",			0x10000, 0x65714070, 5 | BRF_GRA },           // 12
 };
 
 STD_ROM_PICK(mnight)
@@ -2310,10 +2301,46 @@ STD_ROM_FN(mnight)
 
 struct BurnDriver BurnDrvMnight = {
 	"mnight", NULL, NULL, NULL, "1987",
-	"Mutant Night\0", NULL, "UPL (Kawakus license)", "Miscellaneous",
+	"Mutant Night\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
-	NULL, mnightRomInfo, mnightRomName, NULL, NULL, DrvInputInfo, MnightDIPInfo,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	NULL, mnightRomInfo, mnightRomName, NULL, NULL, NULL, NULL, DrvInputInfo, MnightDIPInfo,
+	MnightInit, DrvExit, DrvFrame, MnightDraw, DrvScan, &DrvRecalc, 0x300,
+	256, 192, 4, 3
+};
+
+
+// Mutant Night (Japan)
+
+static struct BurnRomInfo mnightjRomDesc[] = {
+	{ "1.j19",			0x08000, 0x56678d14, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "2.j17",			0x08000, 0x2a73f88e, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "3.j16",			0x08000, 0xc5e42bb4, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "4.j14",			0x08000, 0xdf6a4f7a, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "5.j12",			0x08000, 0x9c391d1b, 1 | BRF_PRG | BRF_ESS }, //  4
+
+	{ "6.j7",			0x10000, 0xa0782a31, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code
+
+	{ "13.b10",			0x08000, 0x37b8221f, 3 | BRF_GRA },           //  6 Foreground Tiles
+
+	{ "9.e11",			0x10000, 0x4883059c, 4 | BRF_GRA },           //  7 Sprite Tiles
+	{ "8.e12",			0x10000, 0x02b91445, 4 | BRF_GRA },           //  8
+	{ "7.e14",			0x10000, 0x9f08d160, 4 | BRF_GRA },           //  9
+
+	{ "12.b20",			0x10000, 0x4d37e0f4, 5 | BRF_GRA },           // 10 Background Tiles
+	{ "11.b22",			0x10000, 0xb22cbbd3, 5 | BRF_GRA },           // 11
+	{ "10.b23",			0x10000, 0x65714070, 5 | BRF_GRA },           // 12
+};
+
+STD_ROM_PICK(mnightj)
+STD_ROM_FN(mnightj)
+
+struct BurnDriver BurnDrvMnightj = {
+	"mnightj", "mnight", NULL, NULL, "1987",
+	"Mutant Night (Japan)\0", NULL, "UPL (Kawakus license)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	NULL, mnightjRomInfo, mnightjRomName, NULL, NULL, NULL, NULL, DrvInputInfo, MnightDIPInfo,
 	MnightInit, DrvExit, DrvFrame, MnightDraw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
 };
@@ -2349,7 +2376,7 @@ struct BurnDriver BurnDrvArkarea = {
 	"Ark Area\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
-	NULL, arkareaRomInfo, arkareaRomName, NULL, NULL, Drv2InputInfo, ArkareaDIPInfo,
+	NULL, arkareaRomInfo, arkareaRomName, NULL, NULL, NULL, NULL, Drv2InputInfo, ArkareaDIPInfo,
 	MnightInit, DrvExit, DrvFrame, MnightDraw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
 };
@@ -2407,7 +2434,7 @@ struct BurnDriver BurnDrvRobokid = {
 	"Atomic Robo-kid (World, Type-2)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
-	NULL, robokidRomInfo, robokidRomName, NULL, NULL, DrvInputInfo, RobokidDIPInfo,
+	NULL, robokidRomInfo, robokidRomName, NULL, NULL, NULL, NULL, DrvInputInfo, RobokidDIPInfo,
 	RobokidInit, DrvExit, DrvFrame, RobokidDraw, RobokidScan, &DrvRecalc, 0x400,
 	256, 192, 4, 3
 };
@@ -2465,7 +2492,7 @@ struct BurnDriver BurnDrvRobokidj = {
 	"Atomic Robo-kid (Japan, Type-2, set 1)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
-	NULL, robokidjRomInfo, robokidjRomName, NULL, NULL, DrvInputInfo, RobokidjDIPInfo,
+	NULL, robokidjRomInfo, robokidjRomName, NULL, NULL, NULL, NULL, DrvInputInfo, RobokidjDIPInfo,
 	RobokidInit, DrvExit, DrvFrame, RobokidDraw, RobokidScan, &DrvRecalc, 0x400,
 	256, 192, 4, 3
 };
@@ -2523,7 +2550,7 @@ struct BurnDriver BurnDrvRobokidj2 = {
 	"Atomic Robo-kid (Japan, Type-2, set 2)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
-	NULL, robokidj2RomInfo, robokidj2RomName, NULL, NULL, DrvInputInfo, RobokidjDIPInfo,
+	NULL, robokidj2RomInfo, robokidj2RomName, NULL, NULL, NULL, NULL, DrvInputInfo, RobokidjDIPInfo,
 	RobokidInit, DrvExit, DrvFrame, RobokidDraw, RobokidScan, &DrvRecalc, 0x400,
 	256, 192, 4, 3
 };
@@ -2581,7 +2608,7 @@ struct BurnDriver BurnDrvRobokidj3 = {
 	"Atomic Robo-kid (Japan)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
-	NULL, robokidj3RomInfo, robokidj3RomName, NULL, NULL, DrvInputInfo, RobokidjDIPInfo,
+	NULL, robokidj3RomInfo, robokidj3RomName, NULL, NULL, NULL, NULL, DrvInputInfo, RobokidjDIPInfo,
 	RobokidInit, DrvExit, DrvFrame, RobokidDraw, RobokidScan, &DrvRecalc, 0x400,
 	256, 192, 4, 3
 };
@@ -2614,7 +2641,7 @@ struct BurnDriver BurnDrvOmegaf = {
 	"Omega Fighter\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, omegafRomInfo, omegafRomName, NULL, NULL, OmegafInputInfo, OmegafDIPInfo,
+	NULL, omegafRomInfo, omegafRomName, NULL, NULL, NULL, NULL, OmegafInputInfo, OmegafDIPInfo,
 	OmegafInit, DrvExit, DrvFrame, OmegafDraw, OmegafScan, &DrvRecalc, 0x400,
 	192, 256, 3, 4
 };
@@ -2647,7 +2674,7 @@ struct BurnDriver BurnDrvOmegafs = {
 	"Omega Fighter Special\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, omegafsRomInfo, omegafsRomName, NULL, NULL, OmegafInputInfo, OmegafDIPInfo,
+	NULL, omegafsRomInfo, omegafsRomName, NULL, NULL, NULL, NULL, OmegafInputInfo, OmegafDIPInfo,
 	OmegafInit, DrvExit, DrvFrame, OmegafDraw, OmegafScan, &DrvRecalc, 0x400,
 	192, 256, 3, 4
 };

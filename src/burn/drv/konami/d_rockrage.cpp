@@ -233,7 +233,7 @@ static UINT8 rockrage_sound_read(UINT16 address)
 
 		case 0x6000:
 		case 0x6001:
-			return BurnYM2151ReadStatus();
+			return BurnYM2151Read();
 	}
 
 	return 0;
@@ -393,7 +393,7 @@ static INT32 DrvInit()
 	HD6309SetReadHandler(rockrage_main_read);
 	HD6309Close();
 
-	M6809Init(1);
+	M6809Init(0);
 	M6809Open(0);
 	M6809MapMemory(DrvM6809RAM,		0x7000, 0x77ff, MAP_RAM);
 	M6809MapMemory(DrvM6809ROM  + 0x08000,	0x8000, 0xffff, MAP_ROM);
@@ -442,9 +442,9 @@ static void DrvPaletteInit()
 	UINT16 *p = (UINT16*)DrvPalRAM;
 
 	for (INT32 i = 0; i < 0x80 / 2; i++) {
-		INT32 r = (p[i] & 0x1f);
-		INT32 g = (p[i] >> 5) & 0x1f;
-		INT32 b = (p[i] >> 10) & 0x1f;
+		INT32 r = (BURN_ENDIAN_SWAP_INT16(p[i]) & 0x1f);
+		INT32 g = (BURN_ENDIAN_SWAP_INT16(p[i]) >> 5) & 0x1f;
+		INT32 b = (BURN_ENDIAN_SWAP_INT16(p[i]) >> 10) & 0x1f;
 
 		r = (r << 3) | (r >> 2);
 		g = (g << 3) | (g >> 2);
@@ -566,8 +566,8 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		HD6309Scan(nAction);
 		M6809Scan(nAction);
 
-		BurnYM2151Scan(nAction);
-		vlm5030Scan(nAction);
+		BurnYM2151Scan(nAction, pnMin);
+		vlm5030Scan(nAction, pnMin);
 
 		K007342Scan(nAction);
 
@@ -615,7 +615,7 @@ struct BurnDriver BurnDrvRockrage = {
 	"Rock'n Rage (World)\0", NULL, "Konami", "GX620",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, rockrageRomInfo, rockrageRomName, NULL, NULL, RockrageInputInfo, RockrageDIPInfo,
+	NULL, rockrageRomInfo, rockrageRomName, NULL, NULL, NULL, NULL, RockrageInputInfo, RockrageDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	256, 224, 4, 3
 };
@@ -654,7 +654,7 @@ struct BurnDriver BurnDrvRockragea = {
 	"Rock'n Rage (prototype?)\0", NULL, "Konami", "GX620",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, rockrageaRomInfo, rockrageaRomName, NULL, NULL, RockrageInputInfo, RockrageDIPInfo,
+	NULL, rockrageaRomInfo, rockrageaRomName, NULL, NULL, NULL, NULL, RockrageInputInfo, RockrageDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	256, 224, 4, 3
 };
@@ -689,7 +689,7 @@ struct BurnDriver BurnDrvRockragej = {
 	"Koi no Hotrock (Japan)\0", NULL, "Konami", "GX620",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, rockragejRomInfo, rockragejRomName, NULL, NULL, RockrageInputInfo, RockrageDIPInfo,
+	NULL, rockragejRomInfo, rockragejRomName, NULL, NULL, NULL, NULL, RockrageInputInfo, RockrageDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	256, 224, 4, 3
 };

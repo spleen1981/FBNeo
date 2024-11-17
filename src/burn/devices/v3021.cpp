@@ -1,4 +1,5 @@
 /* v3021 Calendar Emulation */
+/* Based on MAME sources by Angelo Salese */
 
 #include "burnint.h"
 
@@ -11,7 +12,7 @@ static UINT8 bcd(UINT8 data)
 
 UINT8 v3021Read()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_V3021Initted) bprintf(PRINT_ERROR, _T("v3021Read called without init\n"));
 #endif
 
@@ -23,12 +24,13 @@ UINT8 v3021Read()
 
 void v3021Write(UINT16 data)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_V3021Initted) bprintf(PRINT_ERROR, _T("v3021Write called without init\n"));
 #endif
 
-	time_t nLocalTime = time(NULL);
-	tm* tmLocalTime = localtime(&nLocalTime);
+	tm time;
+	tm* tmLocalTime = &time;
+	BurnGetLocalTime(&time);
 
 	CalCom <<= 1;
 	CalCom |= data & 1;
@@ -78,7 +80,7 @@ void v3021Write(UINT16 data)
 				break;
 
 			case 0xf: // Load Date
-				tmLocalTime = localtime(&nLocalTime);
+				// done by default
 				break;
 		}
 	}
@@ -87,11 +89,16 @@ void v3021Write(UINT16 data)
 void v3021Init()
 {
 	DebugDev_V3021Initted = 1;
+
+	CalVal = 0;
+	CalMask = 0;
+	CalCom = 0;
+	CalCnt = 0;
 }
 
 void v3021Exit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_V3021Initted) bprintf(PRINT_ERROR, _T("v3021Exit called without init\n"));
 #endif
 
@@ -100,7 +107,7 @@ void v3021Exit()
 
 INT32 v3021Scan()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_V3021Initted) bprintf(PRINT_ERROR, _T("v3021Scan called without init\n"));
 #endif
 

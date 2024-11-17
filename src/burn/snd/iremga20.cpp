@@ -2,6 +2,8 @@
 
 Irem GA20 PCM Sound Chip
 
+Based on MAME sources by Acho A. Tang,R. Belmont
+
 It's not currently known whether this chip is stereo.
 
 
@@ -70,7 +72,7 @@ static INT32 nNumChips;
 
 void iremga20_update(INT32 device, INT16 *buffer, INT32 length)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_IremGA20Initted) bprintf(PRINT_ERROR, _T("iremga20_update called without init\n"));
 	if (device > nNumChips) bprintf(PRINT_ERROR, _T("iremga20_update called with invalid chip %x\n"), device);
 #endif
@@ -160,7 +162,7 @@ void iremga20_update(INT32 device, INT16 *buffer, INT32 length)
 
 void iremga20_write(INT32 device, INT32 offset, INT32 data)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_IremGA20Initted) bprintf(PRINT_ERROR, _T("iremga20_write called without init\n"));
 	if (device > nNumChips) bprintf(PRINT_ERROR, _T("iremga20_write called with invalid chip %x\n"), device);
 #endif
@@ -207,7 +209,7 @@ void iremga20_write(INT32 device, INT32 offset, INT32 data)
 
 UINT8 iremga20_read(INT32 device, INT32 offset)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_IremGA20Initted) bprintf(PRINT_ERROR, _T("iremga20_read called without init\n"));
 	if (device > nNumChips) bprintf(PRINT_ERROR, _T("iremga20_read called with invalid chip %x\n"), device);
 #endif
@@ -228,7 +230,7 @@ UINT8 iremga20_read(INT32 device, INT32 offset)
 
 void iremga20_reset(INT32 device)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_IremGA20Initted) bprintf(PRINT_ERROR, _T("iremga20_reset called without init\n"));
 	if (device > nNumChips) bprintf(PRINT_ERROR, _T("iremga20_reset called with invalid chip %x\n"), device);
 #endif
@@ -275,7 +277,7 @@ void iremga20_init(INT32 device, UINT8 *rom, INT32 rom_size, INT32 frequency)
 
 void itemga20_set_route(INT32 device, double nVolume, INT32 nRouteDir)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_IremGA20Initted) bprintf(PRINT_ERROR, _T("itemga20_set_route called without init\n"));
 	if (device > nNumChips) bprintf(PRINT_ERROR, _T("itemga20_set_route called with invalid chip %x\n"), device);
 #endif
@@ -288,7 +290,7 @@ void itemga20_set_route(INT32 device, double nVolume, INT32 nRouteDir)
 
 void iremga20_exit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_IremGA20Initted) bprintf(PRINT_ERROR, _T("iremga20_exit called without init\n"));
 #endif
 
@@ -296,26 +298,23 @@ void iremga20_exit()
 	nNumChips = 0;
 }
 
-INT32 iremga20_scan(INT32 device, INT32 nAction, INT32 *pnMin)
+void iremga20_scan(INT32 nAction, INT32 *pnMin)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_IremGA20Initted) bprintf(PRINT_ERROR, _T("iremga20_scan called without init\n"));
-	if (device > nNumChips) bprintf(PRINT_ERROR, _T("iremga20_scan called with invalid chip %x\n"), device);
 #endif
 
 	if (pnMin != NULL) {
 		*pnMin = 0x029678;
 	}
-	
-	chip = &chips[device];
 
-	if ((nAction & ACB_DRIVER_DATA)) {
-		SCAN_VAR(chip->channel);
-		SCAN_VAR(chip->regs);
-		SCAN_VAR(chip->frequency);
-		SCAN_VAR(chip->gain);
-		SCAN_VAR(chip->output_dir);
+	if (nAction & ACB_DRIVER_DATA)
+	{
+		for (INT32 i = 0; i < MAX_GA20; i++)
+		{
+			chip = &chips[i];
+			SCAN_VAR(chip->channel);
+			SCAN_VAR(chip->regs);
+		}
 	}
-
-	return 0;
 }

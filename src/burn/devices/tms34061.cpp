@@ -45,7 +45,9 @@ static UINT16              m_xmask;
 static UINT8               m_yshift;
 static UINT32              m_vrammask;
 static UINT8 *             m_vram;
+static UINT8 *             m_vram_orig;
 static UINT8 *             m_latchram;
+static UINT8 *             m_latchram_orig;
 static UINT8               m_latchdata;
 static UINT8 *             m_shiftreg;
 static INT32 		   m_timer;
@@ -59,7 +61,7 @@ INT32 			   tms34061_current_scanline;
 
 void tms34061_reset()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_Tms34061Initted) bprintf(PRINT_ERROR, _T("tms34061_reset called without init\n"));
 #endif
 
@@ -105,10 +107,10 @@ void tms34061_init(UINT8 rowshift, UINT32 ram_size, void (*partial_update)(), vo
 	m_vrammask = m_vramsize - 1;
 
 	/* allocate memory for VRAM */
-	m_vram = (UINT8*)BurnMalloc(m_vramsize + 256 * 2);
+	m_vram = m_vram_orig = (UINT8*)BurnMalloc(m_vramsize + 256 * 2);
 
 	/* allocate memory for latch RAM */
-	m_latchram = (UINT8*)BurnMalloc(m_vramsize + 256 * 2);
+	m_latchram = m_latchram_orig = (UINT8*)BurnMalloc(m_vramsize + 256 * 2);
 
 	/* add some buffer space for VRAM and latch RAM */
 	m_vram += 256;
@@ -120,13 +122,13 @@ void tms34061_init(UINT8 rowshift, UINT32 ram_size, void (*partial_update)(), vo
 
 void tms34061_exit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_Tms34061Initted) bprintf(PRINT_ERROR, _T("tms34061_exit called without init\n"));
 #endif
 
-	BurnFree(m_vram);
+	BurnFree(m_vram_orig);
 	m_vram = NULL;
-	BurnFree(m_latchram);
+	BurnFree(m_latchram_orig);
 	m_latchram = NULL;
 	
 	DebugDev_Tms34061Initted = 0;
@@ -154,7 +156,7 @@ static void update_interrupts()
 
 void tms34061_interrupt()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_Tms34061Initted) bprintf(PRINT_ERROR, _T("tms34061_interrupt called without init\n"));
 #endif
 
@@ -414,7 +416,7 @@ static UINT8 xypixel_r(INT32 offset)
 
 void tms34061_write(INT32 col, INT32 row, INT32 func, UINT8 data)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_Tms34061Initted) bprintf(PRINT_ERROR, _T("tms34061_write called without init\n"));
 #endif
 
@@ -477,7 +479,7 @@ void tms34061_write(INT32 col, INT32 row, INT32 func, UINT8 data)
 
 UINT8 tms34061_read(INT32 col, INT32 row, INT32 func)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_Tms34061Initted) bprintf(PRINT_ERROR, _T("tms34061_read called without init\n"));
 #endif
 
@@ -543,7 +545,7 @@ UINT8 tms34061_read(INT32 col, INT32 row, INT32 func)
 
 UINT8 tms34061_latch_read()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_Tms34061Initted) bprintf(PRINT_ERROR, _T("tms34061_latch_read called without init\n"));
 #endif
 
@@ -553,7 +555,7 @@ UINT8 tms34061_latch_read()
 
 void tms34061_latch_write(UINT8 data)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_Tms34061Initted) bprintf(PRINT_ERROR, _T("tms34061_latch_write called without init\n"));
 #endif
 
@@ -562,7 +564,7 @@ void tms34061_latch_write(UINT8 data)
 
 INT32 tms34061_display_blanked()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_Tms34061Initted) bprintf(PRINT_ERROR, _T("tms34061_display_blanked called without init\n"));
 #endif
 
@@ -571,7 +573,7 @@ INT32 tms34061_display_blanked()
 
 UINT8 *tms34061_get_vram_pointer()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_Tms34061Initted) bprintf(PRINT_ERROR, _T("tms34061_get_vram_pointer called without init\n"));
 #endif
 
@@ -587,13 +589,13 @@ UINT8 *tms34061_get_vram_pointer()
 
 INT32 tms34061_scan(INT32 nAction, INT32 *)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_Tms34061Initted) bprintf(PRINT_ERROR, _T("tms34061_scan called without init\n"));
 #endif
 
 	struct BurnArea ba;
 
-	if (nAction & ACB_VOLATILE) {		
+	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
 
 		ba.Data	  = m_vram;
@@ -607,7 +609,7 @@ INT32 tms34061_scan(INT32 nAction, INT32 *)
 		BurnAcb(&ba);
 
 		ba.Data	  = m_regs;
-		ba.nLen	  = TMS34061_REGCOUNT * sizeof(UINT16);
+		ba.nLen	  = sizeof(m_regs);
 		ba.szName = "tms34061 registers";
 		BurnAcb(&ba);
 

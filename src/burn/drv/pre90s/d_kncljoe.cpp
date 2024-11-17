@@ -5,10 +5,7 @@
 #include "m6800_intf.h"
 #include "z80_intf.h"
 #include "sn76496.h"
-#include "driver.h"
-extern "C" {
 #include "ay8910.h"
-}
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;
@@ -27,8 +24,6 @@ static UINT8 *DrvM6803RAM;
 static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
-static INT16 *pAY8910Buffer[3];
-
 static UINT8 *soundlatch;
 static UINT8 *flipscreen;
 static UINT8 *sprite_bank;
@@ -46,27 +41,27 @@ static UINT8 DrvInputs[3];
 static UINT8 DrvReset;
 
 static struct BurnInputInfo KncljoeInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Kncljoe)
@@ -152,7 +147,7 @@ static void __fastcall kncljoe_main_write(UINT16 address, UINT8 data)
 		return;
 
 		case 0xd801: {
-			*flipscreen = (data & 0x01) >> 0;
+			*flipscreen = 0; //(data & 0x01) >> 0;  // avoid flipping screen w/2players
 
 			if (((data & 0x04) >> 2) != *sprite_bank) {
 				memset (DrvZ80RAM + 0x0100, 0, 0x180);
@@ -283,9 +278,9 @@ static INT32 DrvDoReset()
 	ZetReset();
 	ZetClose();
 
-//	M6803Open(0);
+	M6803Open(0);
 	M6803Reset();
-//	M6803Close();
+	M6803Close();
 
 	AY8910Reset(0);
 
@@ -301,7 +296,7 @@ static INT32 DrvGfxDecode(UINT8 *gfx, INT32 len, INT32 size)
 	INT32 XOffs[16] = { STEP8(0,1), STEP8(64,1) };
 	INT32 YOffs[16] = { STEP8(0,8), STEP8(128,8) };
 
-	UINT8 *tmp = (UINT8*)malloc(len);
+	UINT8 *tmp = (UINT8*)BurnMalloc(len);
 	if (tmp == NULL) {
 		return 1;
 	}
@@ -310,7 +305,7 @@ static INT32 DrvGfxDecode(UINT8 *gfx, INT32 len, INT32 size)
 
 	GfxDecode(((len / 3) * 8) / (size * size), 3, size, size, Planes, XOffs, YOffs, size * size, tmp, gfx);
 
-	free (tmp);
+	BurnFree (tmp);
 
 	return 0;
 }
@@ -384,10 +379,6 @@ static INT32 MemIndex()
 
 	RamEnd			= Next;
 
-	pAY8910Buffer[0]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[1]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[2]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-
 	MemEnd			= Next;
 
 	return 0;
@@ -398,7 +389,7 @@ static INT32 DrvInit()
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -434,38 +425,34 @@ static INT32 DrvInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapArea(0x0000, 0xbfff, 0, DrvZ80ROM);
-	ZetMapArea(0x0000, 0xbfff, 2, DrvZ80ROM);
-	ZetMapArea(0xc000, 0xcfff, 0, DrvVidRAM);
-	ZetMapArea(0xc000, 0xcfff, 1, DrvVidRAM);
-	ZetMapArea(0xc000, 0xcfff, 2, DrvVidRAM);
-	ZetMapArea(0xe800, 0xefff, 0, DrvSprRAM);
-	ZetMapArea(0xe800, 0xefff, 1, DrvSprRAM);
-	ZetMapArea(0xe800, 0xefff, 2, DrvSprRAM);
-	ZetMapArea(0xf000, 0xffff, 0, DrvZ80RAM);
-	ZetMapArea(0xf000, 0xffff, 1, DrvZ80RAM);
-	ZetMapArea(0xf000, 0xffff, 2, DrvZ80RAM);
+	ZetMapMemory(DrvZ80ROM,		0x0000, 0xbfff, MAP_ROM);
+	ZetMapMemory(DrvVidRAM,		0xc000, 0xcfff, MAP_RAM);
+	ZetMapMemory(DrvSprRAM,		0xe800, 0xefff, MAP_RAM);
+	ZetMapMemory(DrvZ80RAM,		0xf000, 0xffff, MAP_RAM);
 	ZetSetWriteHandler(kncljoe_main_write);
 	ZetSetReadHandler(kncljoe_main_read);
 	ZetClose();
 
-	M6803Init(1);
-//	M6803Open(0);
+	M6803Init(0);
+	M6803Open(0);
 	M6803MapMemory(DrvM6803ROM,	0x6000, 0x7fff, MAP_ROM);
 	M6803MapMemory(DrvM6803ROM,	0xe000, 0xffff, MAP_ROM);
 	M6803SetReadHandler(kncljoe_sound_read);
 	M6803SetWriteHandler(kncljoe_sound_write);
 	M6803SetWritePortHandler(kncljoe_sound_write_port);
 	M6803SetReadPortHandler(kncljoe_sound_read_port);
-//	M6803Close();
+	M6803Close();
 
-	AY8910Init(0, 894886, nBurnSoundRate, &ay8910_port_A_read, NULL, NULL, NULL);
-	AY8910SetAllRoutes(0, 0.30, BURN_SND_ROUTE_BOTH);
+	AY8910Init(0, 894886, 0);
+	AY8910SetPorts(0, &ay8910_port_A_read, NULL, NULL, NULL);
+	AY8910SetAllRoutes(0, 0.15, BURN_SND_ROUTE_BOTH);
+	AY8910SetBuffered(M6803TotalCycles, 3579545);
 
 	SN76489Init(0, 3579545, 1);
 	SN76489Init(1, 3579545, 1);
 	SN76496SetRoute(0, 0.30, BURN_SND_ROUTE_BOTH);
 	SN76496SetRoute(1, 0.30, BURN_SND_ROUTE_BOTH);
+	SN76496SetBuffered(ZetTotalCycles, 6000000);
 
 	GenericTilesInit();
 
@@ -484,8 +471,7 @@ static INT32 DrvExit()
 	AY8910Exit(0);
 	SN76496Exit();
 
-	free (AllMem);
-	AllMem = NULL;
+	BurnFree (AllMem);
 
 	return 0;
 }
@@ -539,12 +525,12 @@ static void draw_layer()
 
 static void draw_sprites()
 {
-	UINT16 *pDraw = pTransDraw;
 
-	if (*flipscreen == 0) {
-		pDraw += 64 * nScreenWidth;
+	if (*flipscreen) {
+		GenericTilesSetClip(0, nScreenWidth, 0, nScreenHeight-64);
+	} else {
+		GenericTilesSetClip(0, nScreenWidth, 64, nScreenHeight);
 	}
-	nScreenHeight -= 64;
 
 	for (INT32 i = 0; i < 4; i++)
 	{
@@ -552,7 +538,7 @@ static void draw_sprites()
 		{
 			INT32 offs = ((~i & 1) << 8) | ((~i & 2) << 6) | j;
 
-			INT32 sy    = DrvSprRAM[offs + 0] - 64;
+			INT32 sy    = DrvSprRAM[offs + 0];
 			INT32 attr  = DrvSprRAM[offs + 1];
 			INT32 code  = DrvSprRAM[offs + 2] | ((attr & 0x10) << 5) | ((attr & 0x20) << 3) | (*sprite_bank << 10);
 			INT32 sx    = DrvSprRAM[offs + 3];
@@ -574,21 +560,20 @@ static void draw_sprites()
 
 			if (flipy) {
 				if (flipx) {
-					Render16x16Tile_Mask_FlipXY_Clip(pDraw, code, sx - 8, sy, color, 3, 0, 0x80, DrvGfxROM1);
+					Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, sx - 8, sy, color, 3, 0, 0x80, DrvGfxROM1);
 				} else {
-					Render16x16Tile_Mask_FlipY_Clip(pDraw, code, sx - 8, sy, color, 3, 0, 0x80, DrvGfxROM1);
+					Render16x16Tile_Mask_FlipY_Clip(pTransDraw, code, sx - 8, sy, color, 3, 0, 0x80, DrvGfxROM1);
 				}
 			} else {
 				if (flipx) {
-					Render16x16Tile_Mask_FlipX_Clip(pDraw, code, sx - 8, sy, color, 3, 0, 0x80, DrvGfxROM1);
+					Render16x16Tile_Mask_FlipX_Clip(pTransDraw, code, sx - 8, sy, color, 3, 0, 0x80, DrvGfxROM1);
 				} else {
-					Render16x16Tile_Mask_Clip(pDraw, code, sx - 8, sy, color, 3, 0, 0x80, DrvGfxROM1);
+					Render16x16Tile_Mask_Clip(pTransDraw, code, sx - 8, sy, color, 3, 0, 0x80, DrvGfxROM1);
 				}
 			}
 		}
 	}
-
-	nScreenHeight += 64;
+	GenericTilesClearClip();
 }
 
 static INT32 DrvDraw()
@@ -598,9 +583,11 @@ static INT32 DrvDraw()
 		DrvRecalc = 0;
 	}
 
-	draw_layer();
+	BurnTransferClear();
 
-	draw_sprites();
+	if (nBurnLayer & 1) draw_layer();
+
+	if (nSpriteEnable & 1) draw_sprites();
 
 	BurnTransferCopy(DrvPalette);
 
@@ -627,26 +614,22 @@ static INT32 DrvFrame()
 	INT32 nCyclesDone[2] = { 0, 0 };
 
 	ZetOpen(0);
-//	M6803Open(0);
+	M6803Open(0);
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		INT32 nSegment;
-
-		nSegment = nCyclesTotal[0] / nInterleave;
-		nCyclesDone[0] += ZetRun(nSegment);
+		CPU_RUN(0, Zet);
 		if (i == 60) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 
-		nSegment = nCyclesTotal[1] / nInterleave;
-		nCyclesDone[1] += M6803Run(nSegment);
+		CPU_RUN(1, M6803);
 		M6803SetIRQLine(M6803_INPUT_LINE_NMI, CPU_IRQSTATUS_AUTO);
 	}
 
-//	M6803Close();
+	M6803Close();
 	ZetClose();
 
 	if (pBurnSoundOut) {
-		AY8910Render(&pAY8910Buffer[0], pBurnSoundOut, nBurnSoundLen, 0);
+		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 		SN76496Update(0, pBurnSoundOut, nBurnSoundLen);
 		SN76496Update(1, pBurnSoundOut, nBurnSoundLen);
 	}
@@ -658,7 +641,7 @@ static INT32 DrvFrame()
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -666,7 +649,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		*pnMin = 0x029702;
 	}
 
-	if (nAction & ACB_VOLATILE) {		
+	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
 
 		ba.Data	  = AllRam;
@@ -723,9 +706,9 @@ struct BurnDriver BurnDrvKncljoe = {
 	"Knuckle Joe (set 1)\0", NULL, "[Seibu Kaihatsu] (Taito license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
-	NULL, kncljoeRomInfo, kncljoeRomName, NULL, NULL, KncljoeInputInfo, KncljoeDIPInfo,
+	NULL, kncljoeRomInfo, kncljoeRomName, NULL, NULL, NULL, NULL, KncljoeInputInfo, KncljoeDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
-	240, 256, 3, 4
+	240, 256, 4, 3
 };
 
 
@@ -764,9 +747,9 @@ struct BurnDriver BurnDrvKncljoea = {
 	"Knuckle Joe (set 2)\0", NULL, "[Seibu Kaihatsu] (Taito license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
-	NULL, kncljoeaRomInfo, kncljoeaRomName, NULL, NULL, KncljoeInputInfo, KncljoeDIPInfo,
+	NULL, kncljoeaRomInfo, kncljoeaRomName, NULL, NULL, NULL, NULL, KncljoeInputInfo, KncljoeDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
-	240, 256, 3, 4
+	240, 256, 4, 3
 };
 
 
@@ -805,7 +788,7 @@ struct BurnDriver BurnDrvBcrusher = {
 	"Bone Crusher\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
-	NULL, bcrusherRomInfo, bcrusherRomName, NULL, NULL, KncljoeInputInfo, KncljoeDIPInfo,
+	NULL, bcrusherRomInfo, bcrusherRomName, NULL, NULL, NULL, NULL, KncljoeInputInfo, KncljoeDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
-	240, 256, 3, 4
+	240, 256, 4, 3
 };

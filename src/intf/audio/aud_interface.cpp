@@ -19,8 +19,16 @@ static UINT32 nAudActive = 0;
 #if defined (BUILD_WIN32)
 	extern struct AudOut AudOutDx;
 	extern struct AudOut AudOutXAudio2;
-#elif defined (BUILD_SDL)
+#elif defined (BUILD_MACOS)
+    extern struct AudOut AudOutMacOS;
+#elif defined (BUILD_SDL) 
 	extern struct AudOut AudOutSDL;
+#elif defined (BUILD_SDL2)
+	#if defined (FORCE_PULSE_AUDIO)
+		extern struct AudOut AudOutPulseSimple;
+	#else
+		extern struct AudOut AudOutSDL;
+	#endif
 #elif defined (_XBOX)
 	extern struct AudOut AudOutXAudio2;
 #elif defined (BUILD_QT)
@@ -35,8 +43,16 @@ static struct AudOut *pAudOut[]=
 #if defined (BUILD_WIN32)
 	&AudOutDx,
 	&AudOutXAudio2,
-#elif defined (BUILD_SDL)
+#elif defined (BUILD_MACOS)
+    &AudOutMacOS,
+#elif defined (BUILD_SDL) 
 	&AudOutSDL,
+#elif defined (BUILD_SDL2)
+	#if defined (FORCE_PULSE_AUDIO)
+		&AudOutPulseSimple,
+	#else
+		&AudOutSDL,
+	#endif
 #elif defined (_XBOX)
 	&AudOutXAudio2,
 #elif defined (BUILD_QT)
@@ -51,13 +67,8 @@ static struct AudOut *pAudOut[]=
 
 static InterfaceInfo AudInfo = { NULL, NULL, NULL };
 
-// for NeoGeo CD (WAV playback)
-void wav_pause(bool bResume);
-
 INT32 AudBlankSound()
 {
-	wav_pause(false); // pause / stop if needed
-
 	if (!bAudOkay || nAudActive >= AUD_LEN) {
 		return 1;
 	}
@@ -67,8 +78,6 @@ INT32 AudBlankSound()
 // This function checks the Sound loop, and if necessary gets some more sound
 INT32 AudSoundCheck()
 {
-	if(!bRunPause) wav_pause(true); // resume, if needed
-
 	if (!bAudOkay || nAudActive >= AUD_LEN) {
 		return 1;
 	}
@@ -82,7 +91,7 @@ INT32 AudSoundInit()
 	if (nAudSelect >= AUD_LEN) {
 		return 1;
 	}
-	
+
 	nAudActive = nAudSelect;
 
 	if ((nRet = pAudOut[nAudActive]->SoundInit()) == 0) {
@@ -105,13 +114,12 @@ INT32 AudSoundPlay()
 	if (!bAudOkay || nAudActive >= AUD_LEN) {
 		return 1;
 	}
-	
+
 	INT32 nRet = pAudOut[nAudActive]->SoundPlay();
 	if (!nRet) {
 		bAudPlaying = true;
-		if (bCDEmuOkay) wav_pause(true);
 	}
-	
+
 	return nRet;
 }
 
@@ -120,26 +128,25 @@ INT32 AudSoundStop()
 	if (nAudActive >= AUD_LEN) {
 		return 1;
 	}
-	
+
 	bAudPlaying = false;
-	if (bCDEmuOkay) wav_pause(false);
-	
+
 	return pAudOut[nAudActive]->SoundStop();
 }
 
 INT32 AudSoundExit()
 {
 	IntInfoFree(&AudInfo);
-	
+
 	if (!bAudOkay || nAudActive >= AUD_LEN) {
 		return 1;
 	}
 	bAudOkay = false;
 
 	INT32 nRet = pAudOut[nAudActive]->SoundExit();
-	
+
 	nAudActive = 0;
-	
+
 	return nRet;
 }
 
@@ -186,7 +193,7 @@ INT32 AudSelect(UINT32 nPlugIn)
 		nAudSelect = nPlugIn;
 		return 0;
 	}
-	
+
 	return 1;
 }
 

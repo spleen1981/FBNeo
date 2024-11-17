@@ -1,12 +1,9 @@
 // Mouser for FBA, ported by vbt with help from dink
+// Based on MAME driver by Frank Palazzolo
 #include "tiles_generic.h"
 #include "z80_intf.h"
-#include "driver.h"
 #include "bitswap.h"
-extern "C" {
-	#include "ay8910.h"
-}
-static INT16 *pAY8910Buffer[6];
+#include "ay8910.h"
 
 static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
@@ -39,20 +36,20 @@ static void DrvPaletteInit();
 
 static struct BurnInputInfo MouserInputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"},
-	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"},
 	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 up"},
 	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 down"},
 	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 6,	"p1 left"},
-	{"P1 Right",	BIT_DIGITAL,	DrvJoy2 + 7,	"p1 right"},
-	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy2 + 3,	"p1 fire 1"},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 7,	"p1 right"},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 fire 1"},
 
 	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"},
-	{"P2 Start",	BIT_DIGITAL,	DrvJoy1 + 3,	"p2 start"},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 start"},
 	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 up"},
 	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 down"},
 	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 left"},
-	{"P2 Right",	BIT_DIGITAL,	DrvJoy3 + 7,	"p2 right"},
-	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy3 + 3,	"p2 fire 1"},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 7,	"p2 right"},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 fire 1"},
 
 	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
 	{"Dip A",		BIT_DIPSWITCH,	DrvJoy1 + 5,"dip"},
@@ -93,7 +90,7 @@ static struct BurnDIPInfo MouserDIPList[]=
 	{0x10, 0x01, 0x70, 0x40, "1 Coin  3 Credits"		},
 	{0x10, 0x01, 0x70, 0x60, "1 Coin  4 Credits"		},
 
-	{0   , 0xfe, 0   ,    8, "Cabinet"		},
+	{0   , 0xfe, 0   ,    2, "Cabinet"		},
 	{0x10, 0x01, 0x80, 0x80, "Upright"		},
 	{0x10, 0x01, 0x80, 0x00, "Cocktail"		},
 };
@@ -302,13 +299,6 @@ static INT32 MemIndex()
 
 	RamEnd			= Next;
 
-	pAY8910Buffer[0]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[1]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[2]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[3]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[4]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[5]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-
 	MemEnd			= Next;
 
 	return 0;
@@ -429,9 +419,8 @@ static INT32 DrvInit()
 	ZetSetOutHandler(mouser_sub_out);
 	ZetClose();
 
-	AY8910Init(0, 2000000, nBurnSoundRate, NULL, NULL, NULL, NULL);
-	AY8910Init(1, 2000000, nBurnSoundRate, NULL, NULL, NULL, NULL);
-
+	AY8910Init(0, 2000000, 0);
+	AY8910Init(1, 2000000, 1);
 	AY8910SetAllRoutes(0, 0.15, BURN_SND_ROUTE_BOTH);
 	AY8910SetAllRoutes(1, 0.15, BURN_SND_ROUTE_BOTH);
 
@@ -492,7 +481,7 @@ static INT32 DrvFrame()
 	}
 
 	if (pBurnSoundOut) {
-		AY8910Render(&pAY8910Buffer[0], pBurnSoundOut, nBurnSoundLen, 0);
+		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	if (pBurnDraw) {
@@ -558,8 +547,8 @@ struct BurnDriver BurnDrvMouser = {
 	"mouser", NULL, NULL, NULL, "1983",
 	"Mouser\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, mouserRomInfo, mouserRomName, NULL, NULL, MouserInputInfo, MouserDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, mouserRomInfo, mouserRomName, NULL, NULL, NULL, NULL, MouserInputInfo, MouserDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	224, 256, 3, 4
 };
@@ -590,8 +579,8 @@ struct BurnDriver BurnDrvMouserc = {
 	"mouserc", "mouser", NULL, NULL, "1983",
 	"Mouser (Cosmos)\0", NULL, "UPL (Cosmos license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, mousercRomInfo, mousercRomName, NULL, NULL, MouserInputInfo, MouserDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, mousercRomInfo, mousercRomName, NULL, NULL, NULL, NULL, MouserInputInfo, MouserDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	224, 256, 3, 4
 };

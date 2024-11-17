@@ -1,10 +1,11 @@
 // Driver Selector module
 // TreeView Version by HyperYagami
 #include "burner.h"
+#include <process.h>
 
-// reduce the total number of sets by this number - (isgsm, neogeo, nmk004, pgm, skns, ym2608, coleco)
+// reduce the total number of sets by this number - (isgsm, neogeo, nmk004, pgm, skns, ym2608, coleco, msx_msx, spectrum, spec128, decocass, midssio, cchip, fdsbios, ngp, bubsys)
 // don't reduce for these as we display them in the list (neogeo, neocdz)
-#define REDUCE_TOTAL_SETS_BIOS		7
+#define REDUCE_TOTAL_SETS_BIOS		16
 
 UINT_PTR nTimer					= 0;
 UINT_PTR nInitPreviewTimer		= 0;
@@ -25,6 +26,9 @@ static HWND hParent				= NULL;
 static HWND hInfoLabel[6]		= { NULL, NULL, NULL, NULL, NULL };			// 4 things in our Info-box
 static HWND hInfoText[6]		= { NULL, NULL, NULL, NULL, NULL };			// 4 things in our Info-box
 
+TCHAR szSearchString[256]       = { _T("") };                               // Stores the search text between game loads
+bool bSearchStringInit          = false;                                    // Used (internally) while dialog is initting
+
 static HBRUSH hWhiteBGBrush;
 static HICON hExpand, hCollapse;
 static HICON hNotWorking, hNotFoundEss, hNotFoundNonEss;
@@ -40,9 +44,10 @@ int	nIconsSize					= ICON_16x16;
 int	nIconsSizeXY				= 16;
 bool bEnableIcons				= 0;
 bool bIconsLoaded				= 0;
+bool bIconsOnlyParents          = 1;
 int nIconsXDiff;
 int nIconsYDiff;
-static HICON hDrvIcon[9999];
+static HICON hDrvIcon[19999];
 bool bGameInfoOpen				= false;
 
 // Dialog Sizing
@@ -67,12 +72,12 @@ static int nDlgSearchGrpInitialPos[4];
 static int nDlgSearchTxtInitialPos[4];
 static int nDlgCancelBtnInitialPos[4];
 static int nDlgPlayBtnInitialPos[4];
-static int nDlgPreviewGrpInitialPos[4];
-static int nDlgPreviewImgHInitialPos[4];
-static int nDlgPreviewImgVInitialPos[4];
 static int nDlgTitleGrpInitialPos[4];
 static int nDlgTitleImgHInitialPos[4];
 static int nDlgTitleImgVInitialPos[4];
+static int nDlgPreviewGrpInitialPos[4];
+static int nDlgPreviewImgHInitialPos[4];
+static int nDlgPreviewImgVInitialPos[4];
 static int nDlgWhiteBoxInitialPos[4];
 static int nDlgGameInfoLblInitialPos[4];
 static int nDlgRomNameLblInitialPos[4];
@@ -116,11 +121,16 @@ HTREEITEM hFilterMiscPre90s			= NULL;
 HTREEITEM hFilterMiscPost90s		= NULL;
 HTREEITEM hFilterMegadrive			= NULL;
 HTREEITEM hFilterPce				= NULL;
-//HTREEITEM hFilterSnes				= NULL;
+HTREEITEM hFilterMsx				= NULL;
+HTREEITEM hFilterNes				= NULL;
+HTREEITEM hFilterFds				= NULL;
+HTREEITEM hFilterNgp				= NULL;
 HTREEITEM hFilterSms				= NULL;
 HTREEITEM hFilterGg					= NULL;
 HTREEITEM hFilterSg1000				= NULL;
 HTREEITEM hFilterColeco				= NULL;
+HTREEITEM hFilterSpectrum			= NULL;
+HTREEITEM hFilterMidway				= NULL;
 HTREEITEM hFilterBootleg			= NULL;
 HTREEITEM hFilterDemo				= NULL;
 HTREEITEM hFilterHack				= NULL;
@@ -147,6 +157,11 @@ HTREEITEM hFilterMisc				= NULL;
 HTREEITEM hFilterMahjong			= NULL;
 HTREEITEM hFilterRacing				= NULL;
 HTREEITEM hFilterShoot				= NULL;
+HTREEITEM hFilterRungun 			= NULL;
+HTREEITEM hFilterAction				= NULL;
+HTREEITEM hFilterStrategy   		= NULL;
+HTREEITEM hFilterRpg        		= NULL;
+HTREEITEM hFilterSim        		= NULL;
 HTREEITEM hFilterOtherFamily		= NULL;
 HTREEITEM hFilterMslug				= NULL;
 HTREEITEM hFilterSf					= NULL;
@@ -157,11 +172,17 @@ HTREEITEM hFilterSamsho				= NULL;
 HTREEITEM hFilter19xx				= NULL;
 HTREEITEM hFilterSonicwi			= NULL;
 HTREEITEM hFilterPwrinst			= NULL;
+HTREEITEM hFilterSonic				= NULL;
+HTREEITEM hFilterDonpachi			= NULL;
+HTREEITEM hFilterMahou				= NULL;
+HTREEITEM hFilterCapcomGrp			= NULL;
+HTREEITEM hFilterSegaGrp			= NULL;
 
 HTREEITEM hRoot						= NULL;
 HTREEITEM hBoardType				= NULL;
 HTREEITEM hFamily					= NULL;
 HTREEITEM hGenre					= NULL;
+HTREEITEM hFavorites				= NULL;
 HTREEITEM hHardware					= NULL;
 
 // GCC doesn't seem to define these correctly.....
@@ -182,64 +203,77 @@ HTREEITEM hHardware					= NULL;
 #define DISABLE_NON_AVAILABLE_SELECT	0						// Disable selecting non-available sets
 #define NON_WORKING_PROMPT_ON_LOAD		1						// Prompt user on loading non-working sets
 
-static int CapcomMiscValue		= HARDWARE_PREFIX_CAPCOM_MISC >> 24;
-static int MASKCAPMISC			= 1 << CapcomMiscValue;
-static int CaveValue			= HARDWARE_PREFIX_CAVE >> 24;
-static int MASKCAVE				= 1 << CaveValue;
-static int CpsValue				= HARDWARE_PREFIX_CAPCOM >> 24;
-static int MASKCPS				= 1 << CpsValue;
-static int Cps2Value			= HARDWARE_PREFIX_CPS2 >> 24;
-static int MASKCPS2				= 1 << Cps2Value;
-static int Cps3Value			= HARDWARE_PREFIX_CPS3 >> 24;
-static int MASKCPS3				= 1 << Cps3Value;
-static int DataeastValue		= HARDWARE_PREFIX_DATAEAST >> 24;
-static int MASKDATAEAST			= 1 << DataeastValue;
-static int GalaxianValue		= HARDWARE_PREFIX_GALAXIAN >> 24;
-static int MASKGALAXIAN			= 1 << GalaxianValue;
-static int IremValue			= HARDWARE_PREFIX_IREM >> 24;
-static int MASKIREM				= 1 << IremValue;
-static int KanekoValue			= HARDWARE_PREFIX_KANEKO >> 24;
-static int MASKKANEKO			= 1 << KanekoValue;
-static int KonamiValue			= HARDWARE_PREFIX_KONAMI >> 24;
-static int MASKKONAMI			= 1 << KonamiValue;
-static int NeogeoValue			= HARDWARE_PREFIX_SNK >> 24;
-static int MASKNEOGEO			= 1 << NeogeoValue;
-static int PacmanValue			= HARDWARE_PREFIX_PACMAN >> 24;
-static int MASKPACMAN			= 1 << PacmanValue;
-static int PgmValue				= HARDWARE_PREFIX_IGS_PGM >> 24;
-static int MASKPGM				= 1 << PgmValue;
-static int PsikyoValue			= HARDWARE_PREFIX_PSIKYO >> 24;
-static int MASKPSIKYO			= 1 << PsikyoValue;
-static int SegaValue			= HARDWARE_PREFIX_SEGA >> 24;
-static int MASKSEGA				= 1 << SegaValue;
-static int SetaValue			= HARDWARE_PREFIX_SETA >> 24;
-static int MASKSETA				= 1 << SetaValue;
-static int TaitoValue			= HARDWARE_PREFIX_TAITO >> 24;
-static int MASKTAITO			= 1 << TaitoValue;
-static int TechnosValue			= HARDWARE_PREFIX_TECHNOS >> 24;
-static int MASKTECHNOS			= 1 << TechnosValue;
-static int ToaplanValue			= HARDWARE_PREFIX_TOAPLAN >> 24;
-static int MASKTOAPLAN			= 1 << ToaplanValue;
-static int MiscPre90sValue		= HARDWARE_PREFIX_MISC_PRE90S >> 24;
-static int MASKMISCPRE90S		= 1 << MiscPre90sValue;
-static int MiscPost90sValue		= HARDWARE_PREFIX_MISC_POST90S >> 24;
-static int MASKMISCPOST90S		= 1 << MiscPost90sValue;
-static int MegadriveValue		= HARDWARE_PREFIX_SEGA_MEGADRIVE >> 24;
-static int MASKMEGADRIVE		= 1 << MegadriveValue;
-static int PCEngineValue		= HARDWARE_PREFIX_PCENGINE >> 24;
-static int MASKPCENGINE			= 1 << PCEngineValue;
-//static int SnesValue			= HARDWARE_PREFIX_NINTENDO_SNES >> 24;
-//static int MASKSNES				= 1 << SnesValue;
-static int SmsValue				= HARDWARE_PREFIX_SEGA_MASTER_SYSTEM >> 24;
-static int MASKSMS				= 1 << SmsValue;
-static int GgValue				= HARDWARE_PREFIX_SEGA_GAME_GEAR >> 24;
-static int MASKGG				= 1 << GgValue;
-static int Sg1000Value			= HARDWARE_PREFIX_SEGA_SG1000 >> 24;
-static int MASKSG1000			= 1 << Sg1000Value;
-static int ColecoValue			= HARDWARE_PREFIX_COLECO >> 24;
-static int MASKCOLECO			= 1 << ColecoValue;
+static UINT64 CapcomMiscValue		= HARDWARE_PREFIX_CAPCOM_MISC >> 24;
+static UINT64 MASKCAPMISC			= 1 << CapcomMiscValue;
+static UINT64 CaveValue				= HARDWARE_PREFIX_CAVE >> 24;
+static UINT64 MASKCAVE				= 1 << CaveValue;
+static UINT64 CpsValue				= HARDWARE_PREFIX_CAPCOM >> 24;
+static UINT64 MASKCPS				= 1 << CpsValue;
+static UINT64 Cps2Value				= HARDWARE_PREFIX_CPS2 >> 24;
+static UINT64 MASKCPS2				= 1 << Cps2Value;
+static UINT64 Cps3Value				= HARDWARE_PREFIX_CPS3 >> 24;
+static UINT64 MASKCPS3				= 1 << Cps3Value;
+static UINT64 DataeastValue			= HARDWARE_PREFIX_DATAEAST >> 24;
+static UINT64 MASKDATAEAST			= 1 << DataeastValue;
+static UINT64 GalaxianValue			= HARDWARE_PREFIX_GALAXIAN >> 24;
+static UINT64 MASKGALAXIAN			= 1 << GalaxianValue;
+static UINT64 IremValue				= HARDWARE_PREFIX_IREM >> 24;
+static UINT64 MASKIREM				= 1 << IremValue;
+static UINT64 KanekoValue			= HARDWARE_PREFIX_KANEKO >> 24;
+static UINT64 MASKKANEKO			= 1 << KanekoValue;
+static UINT64 KonamiValue			= HARDWARE_PREFIX_KONAMI >> 24;
+static UINT64 MASKKONAMI			= 1 << KonamiValue;
+static UINT64 NeogeoValue			= HARDWARE_PREFIX_SNK >> 24;
+static UINT64 MASKNEOGEO			= 1 << NeogeoValue;
+static UINT64 PacmanValue			= HARDWARE_PREFIX_PACMAN >> 24;
+static UINT64 MASKPACMAN			= 1 << PacmanValue;
+static UINT64 PgmValue				= HARDWARE_PREFIX_IGS_PGM >> 24;
+static UINT64 MASKPGM				= 1 << PgmValue;
+static UINT64 PsikyoValue			= HARDWARE_PREFIX_PSIKYO >> 24;
+static UINT64 MASKPSIKYO			= 1 << PsikyoValue;
+static UINT64 SegaValue				= HARDWARE_PREFIX_SEGA >> 24;
+static UINT64 MASKSEGA				= 1 << SegaValue;
+static UINT64 SetaValue				= HARDWARE_PREFIX_SETA >> 24;
+static UINT64 MASKSETA				= 1 << SetaValue;
+static UINT64 TaitoValue			= HARDWARE_PREFIX_TAITO >> 24;
+static UINT64 MASKTAITO				= 1 << TaitoValue;
+static UINT64 TechnosValue			= HARDWARE_PREFIX_TECHNOS >> 24;
+static UINT64 MASKTECHNOS			= 1 << TechnosValue;
+static UINT64 ToaplanValue			= HARDWARE_PREFIX_TOAPLAN >> 24;
+static UINT64 MASKTOAPLAN			= 1 << ToaplanValue;
+static UINT64 MiscPre90sValue		= HARDWARE_PREFIX_MISC_PRE90S >> 24;
+static UINT64 MASKMISCPRE90S		= 1 << MiscPre90sValue;
+static UINT64 MiscPost90sValue		= HARDWARE_PREFIX_MISC_POST90S >> 24;
+static UINT64 MASKMISCPOST90S		= 1 << MiscPost90sValue;
+static UINT64 MegadriveValue		= HARDWARE_PREFIX_SEGA_MEGADRIVE >> 24;
+static UINT64 MASKMEGADRIVE			= 1 << MegadriveValue;
+static UINT64 PCEngineValue			= HARDWARE_PREFIX_PCENGINE >> 24;
+static UINT64 MASKPCENGINE			= 1 << PCEngineValue;
+static UINT64 SmsValue				= HARDWARE_PREFIX_SEGA_MASTER_SYSTEM >> 24;
+static UINT64 MASKSMS				= 1 << SmsValue;
+static UINT64 GgValue				= HARDWARE_PREFIX_SEGA_GAME_GEAR >> 24;
+static UINT64 MASKGG				= 1 << GgValue;
+static UINT64 Sg1000Value			= HARDWARE_PREFIX_SEGA_SG1000 >> 24;
+static UINT64 MASKSG1000			= 1 << Sg1000Value;
+static UINT64 ColecoValue			= HARDWARE_PREFIX_COLECO >> 24;
+static UINT64 MASKCOLECO			= 1 << ColecoValue;
+static UINT64 MsxValue				= HARDWARE_PREFIX_MSX >> 24;
+static UINT64 MASKMSX				= 1 << MsxValue;
+static UINT64 SpecValue				= HARDWARE_PREFIX_SPECTRUM >> 24;
+static UINT64 MASKSPECTRUM			= 1 << SpecValue;
+static UINT64 MidwayValue			= HARDWARE_PREFIX_MIDWAY >> 24;
+static UINT64 MASKMIDWAY			= 1 << MidwayValue;
+static UINT64 NesValue				= HARDWARE_PREFIX_NES >> 24;
+static UINT64 MASKNES				= 1 << NesValue;
 
-static int MASKALL				= MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 | MASKCPS3 | MASKDATAEAST | MASKGALAXIAN | MASKIREM | MASKKANEKO | MASKKONAMI | MASKNEOGEO | MASKPACMAN | MASKPGM | MASKPSIKYO | MASKSEGA | MASKSETA | MASKTAITO | MASKTECHNOS | MASKTOAPLAN | MASKMISCPRE90S | MASKMISCPOST90S | MASKMEGADRIVE | MASKPCENGINE | MASKSMS | MASKGG | MASKSG1000 | MASKCOLECO; // | MASKSNES
+static UINT64 FdsValue				= (UINT64)HARDWARE_PREFIX_FDS >> 24;
+static UINT64 MASKFDS				= (UINT64)1 << FdsValue;            // 1 << 0x1f - needs casting or.. bonkers!
+
+// this is where things start going above the 32bit-zone..
+static UINT64 NgpValue				= (UINT64)HARDWARE_PREFIX_NGP >> 24;
+static UINT64 MASKNGP				= (UINT64)1 << NgpValue;
+
+static UINT64 MASKALL				= ((UINT64)MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 | MASKCPS3 | MASKDATAEAST | MASKGALAXIAN | MASKIREM | MASKKANEKO | MASKKONAMI | MASKNEOGEO | MASKPACMAN | MASKPGM | MASKPSIKYO | MASKSEGA | MASKSETA | MASKTAITO | MASKTECHNOS | MASKTOAPLAN | MASKMISCPRE90S | MASKMISCPOST90S | MASKMEGADRIVE | MASKPCENGINE | MASKSMS | MASKGG | MASKSG1000 | MASKCOLECO | MASKMSX | MASKSPECTRUM | MASKMIDWAY | MASKNES | MASKFDS | MASKNGP);
 
 #define UNAVAILABLE				(1 << 27)
 #define AVAILABLE				(1 << 28)
@@ -250,14 +284,22 @@ static int MASKALL				= MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 | MASKCPS3 |
 #define MASKBOARDTYPEGENUINE	(1)
 #define MASKFAMILYOTHER			0x10000000
 
-#define MASKALLGENRE			(GBF_HORSHOOT | GBF_VERSHOOT | GBF_SCRFIGHT | GBF_VSFIGHT | GBF_BIOS | GBF_BREAKOUT | GBF_CASINO | GBF_BALLPADDLE | GBF_MAZE | GBF_MINIGAMES | GBF_PINBALL | GBF_PLATFORM | GBF_PUZZLE | GBF_QUIZ | GBF_SPORTSMISC | GBF_SPORTSFOOTBALL | GBF_MISC | GBF_MAHJONG | GBF_RACING | GBF_SHOOT)
-#define MASKALLFAMILY			(MASKFAMILYOTHER | FBF_MSLUG | FBF_SF | FBF_KOF | FBF_DSTLK | FBF_FATFURY | FBF_SAMSHO | FBF_19XX | FBF_SONICWI | FBF_PWRINST)
+#define MASKALLGENRE			(GBF_HORSHOOT | GBF_VERSHOOT | GBF_SCRFIGHT | GBF_VSFIGHT | GBF_BIOS | GBF_BREAKOUT | GBF_CASINO | GBF_BALLPADDLE | GBF_MAZE | GBF_MINIGAMES | GBF_PINBALL | GBF_PLATFORM | GBF_PUZZLE | GBF_QUIZ | GBF_SPORTSMISC | GBF_SPORTSFOOTBALL | GBF_MISC | GBF_MAHJONG | GBF_RACING | GBF_SHOOT | GBF_ACTION | GBF_RUNGUN | GBF_STRATEGY | GBF_RPG | GBF_SIM)
+#define MASKALLFAMILY			(MASKFAMILYOTHER | FBF_MSLUG | FBF_SF | FBF_KOF | FBF_DSTLK | FBF_FATFURY | FBF_SAMSHO | FBF_19XX | FBF_SONICWI | FBF_PWRINST | FBF_SONIC | FBF_DONPACHI | FBF_MAHOU)
 #define MASKALLBOARD			(MASKBOARDTYPEGENUINE | BDF_BOOTLEG | BDF_DEMO | BDF_HACK | BDF_HOMEBREW | BDF_PROTOTYPE)
 
-int nLoadMenuShowX				= 0;
+#define MASKCAPGRP				(MASKCAPMISC | MASKCPS | MASKCPS2 | MASKCPS3)
+#define MASKSEGAGRP				(MASKSEGA | MASKSG1000 | MASKSMS | MASKMEGADRIVE | MASKGG)
+
+UINT64 nLoadMenuShowX			= 0; // hardware etc
+int nLoadMenuShowY				= 0; // selector options
 int nLoadMenuBoardTypeFilter	= 0;
 int nLoadMenuGenreFilter		= 0;
+int nLoadMenuFavoritesFilter	= 0;
 int nLoadMenuFamilyFilter		= 0;
+
+// expanded/collapsed state of filter nodes. default: expand main (0x01) & hardware (0x10)
+int nLoadMenuExpand             = 0x10 | 0x01;
 
 struct NODEINFO {
 	int nBurnDrvNo;
@@ -266,7 +308,8 @@ struct NODEINFO {
 	HTREEITEM hTreeHandle;
 };
 
-static NODEINFO* nBurnDrv;
+static NODEINFO* nBurnDrv = NULL;
+static NODEINFO* nBurnZipListDrv = NULL;
 static unsigned int nTmpDrvCount;
 
 // prototype  -----------------------
@@ -285,26 +328,29 @@ static void RebuildEverything();
 	GetClientRect(GetDlgItem(hSelDlg, a), &rect);				\
 	b[2] = rect.right;											\
 	b[3] = rect.bottom;
-	
+
 #define SetControlPosAlignTopRight(a, b)						\
 	SetWindowPos(GetDlgItem(hSelDlg, a), hSelDlg, b[0] - xDelta, b[1], 0, 0, SWP_NOZORDER | SWP_NOSIZE | SWP_NOSENDCHANGING);
-	
+
 #define SetControlPosAlignTopLeft(a, b)							\
 	SetWindowPos(GetDlgItem(hSelDlg, a), hSelDlg, b[0], b[1], 0, 0, SWP_NOZORDER | SWP_NOSIZE | SWP_NOSENDCHANGING);
-	
+
 #define SetControlPosAlignBottomRight(a, b)						\
 	SetWindowPos(GetDlgItem(hSelDlg, a), hSelDlg, b[0] - xDelta, b[1] - yDelta, 0, 0, SWP_NOZORDER | SWP_NOSIZE | SWP_NOSENDCHANGING);
-	
+
 #define SetControlPosAlignBottomLeftResizeHor(a, b)				\
 	SetWindowPos(GetDlgItem(hSelDlg, a), hSelDlg, b[0], b[1] - yDelta, b[2] - xDelta, b[3], SWP_NOZORDER | SWP_NOSENDCHANGING);
-	
+
 #define SetControlPosAlignTopRightResizeVert(a, b)				\
 	xScrollBarDelta = (a == IDC_TREE2) ? -18 : 0;				\
 	SetWindowPos(GetDlgItem(hSelDlg, a), hSelDlg, b[0] - xDelta, b[1], b[2] - xScrollBarDelta, b[3] - yDelta, SWP_NOZORDER | SWP_NOSENDCHANGING);
-	
+
 #define SetControlPosAlignTopLeftResizeHorVert(a, b)			\
 	xScrollBarDelta = (a == IDC_TREE1) ? -18 : 0;				\
 	SetWindowPos(GetDlgItem(hSelDlg, a), hSelDlg, b[0], b[1], b[2] - xDelta - xScrollBarDelta, b[3] - yDelta, SWP_NOZORDER | SWP_NOSENDCHANGING);
+
+#define SetControlPosAlignTopLeftResizeHorVertALT(a, b)			\
+	SetWindowPos(GetDlgItem(hSelDlg, a), hSelDlg, b[0], b[1], b[2] - xDelta, b[3] - yDelta, SWP_NOZORDER | SWP_NOSENDCHANGING);
 
 static void GetInitialPositions()
 {
@@ -314,7 +360,7 @@ static void GetInitialPositions()
 	GetClientRect(hSelDlg, &rect);
 	nDlgInitialWidth = rect.right;
 	nDlgInitialHeight = rect.bottom;
-	
+
 	GetInititalControlPos(IDC_STATIC_OPT, nDlgOptionsGrpInitialPos);
 	GetInititalControlPos(IDC_CHECKAVAILABLE, nDlgAvailableChbInitialPos);
 	GetInititalControlPos(IDC_CHECKUNAVAILABLE, nDlgUnavailableChbInitialPos);
@@ -329,15 +375,15 @@ static void GetInitialPositions()
 	GetInititalControlPos(IDC_SEL_APPLYIPS, nDlgApplyIpsChbInitialPos);
 	GetInititalControlPos(IDC_SEL_IPSMANAGER, nDlgIpsManBtnInitialPos);
 	GetInititalControlPos(IDC_SEL_SEARCHGROUP, nDlgSearchGrpInitialPos);
-	GetInititalControlPos(IDC_SEL_SEARCH, nDlgSearchTxtInitialPos);	
+	GetInititalControlPos(IDC_SEL_SEARCH, nDlgSearchTxtInitialPos);
 	GetInititalControlPos(IDCANCEL, nDlgCancelBtnInitialPos);
 	GetInititalControlPos(IDOK, nDlgPlayBtnInitialPos);
-	GetInititalControlPos(IDC_STATIC2, nDlgPreviewGrpInitialPos);
-	GetInititalControlPos(IDC_SCREENSHOT_H, nDlgPreviewImgHInitialPos);
-	GetInititalControlPos(IDC_SCREENSHOT_V, nDlgPreviewImgVInitialPos);
 	GetInititalControlPos(IDC_STATIC3, nDlgTitleGrpInitialPos);
 	GetInititalControlPos(IDC_SCREENSHOT2_H, nDlgTitleImgHInitialPos);
 	GetInititalControlPos(IDC_SCREENSHOT2_V, nDlgTitleImgVInitialPos);
+	GetInititalControlPos(IDC_STATIC2, nDlgPreviewGrpInitialPos);
+	GetInititalControlPos(IDC_SCREENSHOT_H, nDlgPreviewImgHInitialPos);
+	GetInititalControlPos(IDC_SCREENSHOT_V, nDlgPreviewImgVInitialPos);
 	GetInititalControlPos(IDC_STATIC_INFOBOX, nDlgWhiteBoxInitialPos);
 	GetInititalControlPos(IDC_LABELCOMMENT, nDlgGameInfoLblInitialPos);
 	GetInititalControlPos(IDC_LABELROMNAME, nDlgRomNameLblInitialPos);
@@ -355,6 +401,17 @@ static void GetInitialPositions()
 	GetInititalControlPos(IDGAMEINFO, nDlgDrvRomInfoBtnInitialPos);
 	GetInititalControlPos(IDC_STATIC1, nDlgSelectGameGrpInitialPos);
 	GetInititalControlPos(IDC_TREE1, nDlgSelectGameLstInitialPos);
+
+	// When the window is created with too few entries for TreeView to warrant the
+	// use of a vertical scrollbar, the right side will be slightly askew. -dink
+
+	if (nDlgSelectGameGrpInitialPos[2] - nDlgSelectGameLstInitialPos[2] < 30 ) {
+		nDlgSelectGameLstInitialPos[2] = nDlgSelectGameGrpInitialPos[2] - 34;
+	}
+
+	if (nDlgFilterGrpInitialPos[2] - nDlgFilterTreeInitialPos[2] < 30 ) {
+		nDlgFilterTreeInitialPos[2] = nDlgFilterGrpInitialPos[2] - 34;
+	}
 }
 
 // Check if a specified driver is working
@@ -399,29 +456,68 @@ static TCHAR* MangleGamename(const TCHAR* szOldName, bool /*bRemoveArticle*/)
 	}
 #endif
 
+#if 0
+	static TCHAR szPrefix[256] = _T("");
+	// dink's prefix-izer - it's useless...
+	_tcscpy(szPrefix, BurnDrvGetText(DRV_NAME));
+	int use_prefix = 0;
+	int nn_len = 0;
+	for (int i = 0; i < 6; i++) {
+		if (szPrefix[i] == _T('_')) {
+			szNewName[nn_len++] = _T(' ');
+			use_prefix = 1;
+			break;
+		} else {
+			szNewName[nn_len++] = towupper(szPrefix[i]);
+		}
+	}
+	if (use_prefix == 0) nn_len = 0;
+#endif
+
 #if 1
 	_tcscpy(szNewName, szOldName);
-#endif	
+#endif
+
+	return szNewName;
+}
+
+static TCHAR* RemoveSpace(const TCHAR* szOldName)
+{
+	static TCHAR szNewName[256] = _T("");
+	int j = 0;
+	int i = 0;
+
+	for (i = 0; szOldName[i]; i++) {
+		if (!iswspace(szOldName[i])) {
+			szNewName[j++] = szOldName[i];
+		}
+	}
+
+	szNewName[j] = _T('\0');
 
 	return szNewName;
 }
 
 static int DoExtraFilters()
 {
+	if (nLoadMenuFavoritesFilter) {
+		return (CheckFavorites(BurnDrvGetTextA(DRV_NAME)) != -1) ? 0 : 1;
+	}
+
 	if (nShowMVSCartsOnly && ((BurnDrvGetHardwareCode() & HARDWARE_PREFIX_CARTRIDGE) != HARDWARE_PREFIX_CARTRIDGE)) return 1;
-	
+
 	if ((nLoadMenuBoardTypeFilter & BDF_BOOTLEG)			&& (BurnDrvGetFlags() & BDF_BOOTLEG))				return 1;
 	if ((nLoadMenuBoardTypeFilter & BDF_DEMO)				&& (BurnDrvGetFlags() & BDF_DEMO))					return 1;
 	if ((nLoadMenuBoardTypeFilter & BDF_HACK)				&& (BurnDrvGetFlags() & BDF_HACK))					return 1;
 	if ((nLoadMenuBoardTypeFilter & BDF_HOMEBREW)			&& (BurnDrvGetFlags() & BDF_HOMEBREW))				return 1;
 	if ((nLoadMenuBoardTypeFilter & BDF_PROTOTYPE)			&& (BurnDrvGetFlags() & BDF_PROTOTYPE))				return 1;
-	
-	if ((nLoadMenuBoardTypeFilter & MASKBOARDTYPEGENUINE)	&& (!(BurnDrvGetFlags() & BDF_BOOTLEG)) 
-															&& (!(BurnDrvGetFlags() & BDF_DEMO)) 
-															&& (!(BurnDrvGetFlags() & BDF_HACK)) 
-															&& (!(BurnDrvGetFlags() & BDF_HOMEBREW)) 
+
+	if ((nLoadMenuBoardTypeFilter & MASKBOARDTYPEGENUINE)	&& (!(BurnDrvGetFlags() & BDF_BOOTLEG))
+															&& (!(BurnDrvGetFlags() & BDF_DEMO))
+															&& (!(BurnDrvGetFlags() & BDF_HACK))
+															&& (!(BurnDrvGetFlags() & BDF_HOMEBREW))
 															&& (!(BurnDrvGetFlags() & BDF_PROTOTYPE)))	return 1;
-	
+
 	if ((nLoadMenuFamilyFilter & FBF_MSLUG)					&& (BurnDrvGetFamilyFlags() & FBF_MSLUG))			return 1;
 	if ((nLoadMenuFamilyFilter & FBF_SF)					&& (BurnDrvGetFamilyFlags() & FBF_SF))				return 1;
 	if ((nLoadMenuFamilyFilter & FBF_KOF)					&& (BurnDrvGetFamilyFlags() & FBF_KOF))				return 1;
@@ -431,47 +527,69 @@ static int DoExtraFilters()
 	if ((nLoadMenuFamilyFilter & FBF_19XX)					&& (BurnDrvGetFamilyFlags() & FBF_19XX))			return 1;
 	if ((nLoadMenuFamilyFilter & FBF_SONICWI)				&& (BurnDrvGetFamilyFlags() & FBF_SONICWI))			return 1;
 	if ((nLoadMenuFamilyFilter & FBF_PWRINST)				&& (BurnDrvGetFamilyFlags() & FBF_PWRINST))			return 1;
-	
-	if ((nLoadMenuFamilyFilter & MASKFAMILYOTHER)			&& (!(BurnDrvGetFamilyFlags() & FBF_MSLUG)) 
-															&& (!(BurnDrvGetFamilyFlags() & FBF_SF)) 
-															&& (!(BurnDrvGetFamilyFlags() & FBF_KOF)) 
-															&& (!(BurnDrvGetFamilyFlags() & FBF_DSTLK)) 
-															&& (!(BurnDrvGetFamilyFlags() & FBF_FATFURY)) 
-															&& (!(BurnDrvGetFamilyFlags() & FBF_SAMSHO)) 
-															&& (!(BurnDrvGetFamilyFlags() & FBF_19XX)) 
-															&& (!(BurnDrvGetFamilyFlags() & FBF_SONICWI)) 
-															&& (!(BurnDrvGetFamilyFlags() & FBF_PWRINST)))		return 1;
-	
-	if ((nLoadMenuGenreFilter & GBF_HORSHOOT)				&& (BurnDrvGetGenreFlags() & GBF_HORSHOOT))			return 1;
-	if ((nLoadMenuGenreFilter & GBF_VERSHOOT)				&& (BurnDrvGetGenreFlags() & GBF_VERSHOOT))			return 1;
-	if ((nLoadMenuGenreFilter & GBF_SCRFIGHT)				&& (BurnDrvGetGenreFlags() & GBF_SCRFIGHT))			return 1;
-	if ((nLoadMenuGenreFilter & GBF_VSFIGHT)				&& (BurnDrvGetGenreFlags() & GBF_VSFIGHT))			return 1;
-	if ((nLoadMenuGenreFilter & GBF_BIOS)					&& (BurnDrvGetGenreFlags() & GBF_BIOS))				return 1;
-	if ((nLoadMenuGenreFilter & GBF_BREAKOUT)				&& (BurnDrvGetGenreFlags() & GBF_BREAKOUT))			return 1;
-	if ((nLoadMenuGenreFilter & GBF_CASINO)					&& (BurnDrvGetGenreFlags() & GBF_CASINO))			return 1;
-	if ((nLoadMenuGenreFilter & GBF_BALLPADDLE)				&& (BurnDrvGetGenreFlags() & GBF_BALLPADDLE))		return 1;
-	if ((nLoadMenuGenreFilter & GBF_MAZE)					&& (BurnDrvGetGenreFlags() & GBF_MAZE))				return 1;
-	if ((nLoadMenuGenreFilter & GBF_MINIGAMES)				&& (BurnDrvGetGenreFlags() & GBF_MINIGAMES))		return 1;
-	if ((nLoadMenuGenreFilter & GBF_PINBALL)				&& (BurnDrvGetGenreFlags() & GBF_PINBALL))			return 1;
-	if ((nLoadMenuGenreFilter & GBF_PLATFORM)				&& (BurnDrvGetGenreFlags() & GBF_PLATFORM))			return 1;
-	if ((nLoadMenuGenreFilter & GBF_PUZZLE)					&& (BurnDrvGetGenreFlags() & GBF_PUZZLE))			return 1;
-	if ((nLoadMenuGenreFilter & GBF_QUIZ)					&& (BurnDrvGetGenreFlags() & GBF_QUIZ))				return 1;
-	if ((nLoadMenuGenreFilter & GBF_SPORTSMISC)				&& (BurnDrvGetGenreFlags() & GBF_SPORTSMISC))		return 1;
-	if ((nLoadMenuGenreFilter & GBF_SPORTSFOOTBALL) 		&& (BurnDrvGetGenreFlags() & GBF_SPORTSFOOTBALL))	return 1;
-	if ((nLoadMenuGenreFilter & GBF_MISC)					&& (BurnDrvGetGenreFlags() & GBF_MISC))				return 1;
-	if ((nLoadMenuGenreFilter & GBF_MAHJONG)				&& (BurnDrvGetGenreFlags() & GBF_MAHJONG))			return 1;
-	if ((nLoadMenuGenreFilter & GBF_RACING)					&& (BurnDrvGetGenreFlags() & GBF_RACING))			return 1;
-	if ((nLoadMenuGenreFilter & GBF_SHOOT)					&& (BurnDrvGetGenreFlags() & GBF_SHOOT))			return 1;
-	
+	if ((nLoadMenuFamilyFilter & FBF_SONIC)					&& (BurnDrvGetFamilyFlags() & FBF_SONIC))			return 1;
+	if ((nLoadMenuFamilyFilter & FBF_DONPACHI)				&& (BurnDrvGetFamilyFlags() & FBF_DONPACHI))		return 1;
+	if ((nLoadMenuFamilyFilter & FBF_MAHOU)					&& (BurnDrvGetFamilyFlags() & FBF_MAHOU))			return 1;
+
+	if ((nLoadMenuFamilyFilter & MASKFAMILYOTHER)			&& (!(BurnDrvGetFamilyFlags() & FBF_MSLUG))
+															&& (!(BurnDrvGetFamilyFlags() & FBF_SF))
+															&& (!(BurnDrvGetFamilyFlags() & FBF_KOF))
+															&& (!(BurnDrvGetFamilyFlags() & FBF_DSTLK))
+															&& (!(BurnDrvGetFamilyFlags() & FBF_FATFURY))
+															&& (!(BurnDrvGetFamilyFlags() & FBF_SAMSHO))
+															&& (!(BurnDrvGetFamilyFlags() & FBF_19XX))
+															&& (!(BurnDrvGetFamilyFlags() & FBF_SONICWI))
+															&& (!(BurnDrvGetFamilyFlags() & FBF_PWRINST))
+															&& (!(BurnDrvGetFamilyFlags() & FBF_SONIC))
+															&& (!(BurnDrvGetFamilyFlags() & FBF_DONPACHI))
+															&& (!(BurnDrvGetFamilyFlags() & FBF_MAHOU)) )		return 1;
+
+
+	// This filter supports multiple genre's per game
+	int bGenreOk = 0;
+	if ((~nLoadMenuGenreFilter & GBF_HORSHOOT)				&& (BurnDrvGetGenreFlags() & GBF_HORSHOOT))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_VERSHOOT)				&& (BurnDrvGetGenreFlags() & GBF_VERSHOOT))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_SCRFIGHT)				&& (BurnDrvGetGenreFlags() & GBF_SCRFIGHT))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_VSFIGHT)				&& (BurnDrvGetGenreFlags() & GBF_VSFIGHT))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_BIOS)					&& (BurnDrvGetGenreFlags() & GBF_BIOS))				bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_BREAKOUT)				&& (BurnDrvGetGenreFlags() & GBF_BREAKOUT))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_CASINO)				&& (BurnDrvGetGenreFlags() & GBF_CASINO))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_BALLPADDLE)			&& (BurnDrvGetGenreFlags() & GBF_BALLPADDLE))		bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_MAZE)					&& (BurnDrvGetGenreFlags() & GBF_MAZE))				bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_MINIGAMES)				&& (BurnDrvGetGenreFlags() & GBF_MINIGAMES))		bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_PINBALL)				&& (BurnDrvGetGenreFlags() & GBF_PINBALL))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_PLATFORM)				&& (BurnDrvGetGenreFlags() & GBF_PLATFORM))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_PUZZLE)				&& (BurnDrvGetGenreFlags() & GBF_PUZZLE))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_QUIZ)					&& (BurnDrvGetGenreFlags() & GBF_QUIZ))				bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_SPORTSMISC)			&& (BurnDrvGetGenreFlags() & GBF_SPORTSMISC))		bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_SPORTSFOOTBALL) 		&& (BurnDrvGetGenreFlags() & GBF_SPORTSFOOTBALL))	bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_MISC)					&& (BurnDrvGetGenreFlags() & GBF_MISC))				bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_MAHJONG)				&& (BurnDrvGetGenreFlags() & GBF_MAHJONG))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_RACING)				&& (BurnDrvGetGenreFlags() & GBF_RACING))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_SHOOT)					&& (BurnDrvGetGenreFlags() & GBF_SHOOT))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_ACTION)				&& (BurnDrvGetGenreFlags() & GBF_ACTION))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_RUNGUN)				&& (BurnDrvGetGenreFlags() & GBF_RUNGUN))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_STRATEGY)				&& (BurnDrvGetGenreFlags() & GBF_STRATEGY))			bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_RPG)					&& (BurnDrvGetGenreFlags() & GBF_RPG))				bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_SIM)					&& (BurnDrvGetGenreFlags() & GBF_SIM))				bGenreOk = 1;
+	if (bGenreOk == 0) return 1;
+
 	return 0;
+}
+
+static int ZipNames_qs_cmp_desc(const void *p0, const void *p1) {
+	struct NODEINFO *ni0 = (struct NODEINFO*) p0;
+	struct NODEINFO *ni1 = (struct NODEINFO*) p1;
+
+	return stricmp(ni1->pszROMName, ni0->pszROMName);
 }
 
 // Make a tree-view control with all drivers
 static int SelListMake()
 {
-	unsigned int i, j;
+	int i, j;
 	unsigned int nMissingDrvCount = 0;
-	
+
 	if (nBurnDrv) {
 		free(nBurnDrv);
 		nBurnDrv = NULL;
@@ -485,145 +603,161 @@ static int SelListMake()
 		return 1;
 	}
 
-	// Add all the driver names to the list
+	LoadFavorites();
 
+	// Get dialog search string
+	j = GetDlgItemText(hSelDlg, IDC_SEL_SEARCH, szSearchString, sizeof(szSearchString));
+	for (UINT32 k = 0; k < j; k++)
+		szSearchString[k] = _totlower(szSearchString[k]);
+
+	// pre-sort the list if using zip names
+	if (nLoadMenuShowY & SHOWSHORT)	{
+		// make a list of everything
+		if (nBurnZipListDrv) {
+			free(nBurnZipListDrv);
+			nBurnZipListDrv = NULL;
+		}
+		nBurnZipListDrv = (NODEINFO*)malloc(nBurnDrvCount * sizeof(NODEINFO));
+		memset(nBurnZipListDrv, 0, nBurnDrvCount * sizeof(NODEINFO));
+
+		for (i = nBurnDrvCount-1; i >= 0; i--) {
+			nBurnDrvActive = i;
+			nBurnZipListDrv[i].pszROMName = BurnDrvGetTextA(DRV_NAME);
+			nBurnZipListDrv[i].nBurnDrvNo = i;
+		}
+
+		// sort it in descending order (we add in descending order)
+		qsort(nBurnZipListDrv, nBurnDrvCount, sizeof(NODEINFO), ZipNames_qs_cmp_desc);
+	}
+
+	// Add all the driver names to the list
 	// 1st: parents
-	for (i = 0; i < nBurnDrvCount; i++) {
+	for (i = nBurnDrvCount-1; i >= 0; i--) {
 		TV_INSERTSTRUCT TvItem;
 
 		nBurnDrvActive = i;																// Switch to driver i
 
+		// if showing zip names get active entry from our sorted list
+		if (nLoadMenuShowY & SHOWSHORT) nBurnDrvActive = nBurnZipListDrv[nBurnDrvCount - 1 - i].nBurnDrvNo;
+
 		if (BurnDrvGetFlags() & BDF_BOARDROM) {
 			continue;
 		}
-		
+
 		if (BurnDrvGetText(DRV_PARENT) != NULL && (BurnDrvGetFlags() & BDF_CLONE)) {	// Skip clones
 			continue;
 		}
-		
-		if(!gameAv[i]) nMissingDrvCount++;
 
-		int nHardware = 1 << (BurnDrvGetHardwareCode() >> 24);
+		if(!gameAv[nBurnDrvActive]) nMissingDrvCount++;
+
+		UINT64 nHardware = (UINT64)1 << (BurnDrvGetHardwareCode() >> 24);
 		if ((nHardware & MASKALL) && ((nHardware & nLoadMenuShowX) || (nHardware & MASKALL) == 0)) {
 			continue;
 		}
-		
+
+		if (avOk && (!(nLoadMenuShowY & UNAVAILABLE)) && !gameAv[nBurnDrvActive]) {						// Skip non-available games if needed
+			continue;
+		}
+
+		if (avOk && (!(nLoadMenuShowY & AVAILABLE)) && gameAv[nBurnDrvActive]) {						// Skip available games if needed
+			continue;
+		}
+
 		if (DoExtraFilters()) continue;
-		
-		TCHAR szSearchString[256];
-		GetDlgItemText(hSelDlg, IDC_SEL_SEARCH, szSearchString, sizeof(szSearchString));
+
 		if (szSearchString[0]) {
 			TCHAR *StringFound = NULL;
 			TCHAR *StringFound2 = NULL;
 			TCHAR *StringFound3 = NULL;
-			TCHAR *StringFound4 = NULL;
 			TCHAR szDriverName[256] = { _T("") };
 			TCHAR szManufacturerName[256] = { _T("") };
-			TCHAR szSystemName[256] = { _T("") };
 			wcscpy(szDriverName, BurnDrvGetText(DRV_FULLNAME));
-			wcscpy(szManufacturerName, BurnDrvGetText(DRV_MANUFACTURER));
-			wcscpy(szSystemName, BurnDrvGetText(DRV_SYSTEM));
-			for (int k =0; k < 256; k++) {
-				szSearchString[k] = _totlower(szSearchString[k]);
+			swprintf(szManufacturerName, _T("%s %s"), BurnDrvGetText(DRV_MANUFACTURER), BurnDrvGetText(DRV_SYSTEM));
+			for (int k = 0; k < 256; k++) {
 				szDriverName[k] = _totlower(szDriverName[k]);
 				szManufacturerName[k] = _totlower(szManufacturerName[k]);
-				szSystemName[k] = _totlower(szSystemName[k]);
 			}
 			StringFound = wcsstr(szDriverName, szSearchString);
 			StringFound2 = wcsstr(BurnDrvGetText(DRV_NAME), szSearchString);
 			StringFound3 = wcsstr(szManufacturerName, szSearchString);
-			StringFound4 = wcsstr(szSystemName, szSearchString);
 
-			if (!StringFound && !StringFound2 && !StringFound3 && !StringFound4) continue;
-		}
-
-		if (avOk && (!(nLoadMenuShowX & UNAVAILABLE)) && !gameAv[i])	{						// Skip non-available games if needed
-			continue;
-		}
-		
-		if (avOk && (!(nLoadMenuShowX & AVAILABLE)) && gameAv[i])	{						// Skip available games if needed
-			continue;
+			if (!StringFound && !StringFound2 && !StringFound3) continue;
 		}
 
 		memset(&TvItem, 0, sizeof(TvItem));
 		TvItem.item.mask = TVIF_TEXT | TVIF_PARAM;
-		TvItem.hInsertAfter = TVI_SORT;
-		TvItem.item.pszText = (nLoadMenuShowX & SHOWSHORT) ? BurnDrvGetText(DRV_NAME) : MangleGamename(BurnDrvGetText(DRV_ASCIIONLY | DRV_FULLNAME), true);
+		TvItem.hInsertAfter = TVI_FIRST;
+		TvItem.item.pszText = (nLoadMenuShowY & SHOWSHORT) ? BurnDrvGetText(DRV_NAME) : RemoveSpace(BurnDrvGetText(DRV_ASCIIONLY | DRV_FULLNAME));
 		TvItem.item.lParam = (LPARAM)&nBurnDrv[nTmpDrvCount];
 		nBurnDrv[nTmpDrvCount].hTreeHandle = (HTREEITEM)SendMessage(hSelList, TVM_INSERTITEM, 0, (LPARAM)&TvItem);
-		nBurnDrv[nTmpDrvCount].nBurnDrvNo = i;
+		nBurnDrv[nTmpDrvCount].nBurnDrvNo = nBurnDrvActive;
 		nBurnDrv[nTmpDrvCount].pszROMName = BurnDrvGetTextA(DRV_NAME);
 		nBurnDrv[nTmpDrvCount].bIsParent = true;
 		nTmpDrvCount++;
 	}
 
 	// 2nd: clones
-	for (i = 0; i < nBurnDrvCount; i++) {
+	for (i = nBurnDrvCount-1; i >= 0; i--) {
 		TV_INSERTSTRUCT TvItem;
 
 		nBurnDrvActive = i;																// Switch to driver i
 
+		// if showing zip names get active entry from our sorted list
+		if (nLoadMenuShowY & SHOWSHORT) nBurnDrvActive = nBurnZipListDrv[nBurnDrvCount - 1 - i].nBurnDrvNo;
+
 		if (BurnDrvGetFlags() & BDF_BOARDROM) {
 			continue;
 		}
-		
+
 		if (BurnDrvGetTextA(DRV_PARENT) == NULL || !(BurnDrvGetFlags() & BDF_CLONE)) {	// Skip parents
 			continue;
 		}
-		
-		if(!gameAv[i]) nMissingDrvCount++;
 
-		int nHardware = 1 << (BurnDrvGetHardwareCode() >> 24);
+		if(!gameAv[nBurnDrvActive]) nMissingDrvCount++;
+
+		UINT64 nHardware = (UINT64)1 << (BurnDrvGetHardwareCode() >> 24);
 		if ((nHardware & MASKALL) && ((nHardware & nLoadMenuShowX) || ((nHardware & MASKALL) == 0))) {
 			continue;
 		}
-		
+
+		if (avOk && (!(nLoadMenuShowY & UNAVAILABLE)) && !gameAv[nBurnDrvActive]) {						// Skip non-available games if needed
+			continue;
+		}
+
+		if (avOk && (!(nLoadMenuShowY & AVAILABLE)) && gameAv[nBurnDrvActive]) {						// Skip available games if needed
+			continue;
+		}
+
 		if (DoExtraFilters()) continue;
-		
-		TCHAR szSearchString[256];
-		GetDlgItemText(hSelDlg, IDC_SEL_SEARCH, szSearchString, sizeof(szSearchString));
+
 		if (szSearchString[0]) {
 			TCHAR *StringFound = NULL;
 			TCHAR *StringFound2 = NULL;
 			TCHAR *StringFound3 = NULL;
-			TCHAR *StringFound4 = NULL;
-			TCHAR szDriverName[256];
+			TCHAR szDriverName[256] = { _T("") };
 			TCHAR szManufacturerName[256] = { _T("") };
-			TCHAR szSystemName[256] = { _T("") };
 			wcscpy(szDriverName, BurnDrvGetText(DRV_FULLNAME));
-			wcscpy(szManufacturerName, BurnDrvGetText(DRV_MANUFACTURER));
-			wcscpy(szSystemName, BurnDrvGetText(DRV_SYSTEM));
+			swprintf(szManufacturerName, _T("%s %s"), BurnDrvGetText(DRV_MANUFACTURER), BurnDrvGetText(DRV_SYSTEM));
 			for (int k =0; k < 256; k++) {
-				szSearchString[k] = _totlower(szSearchString[k]);
 				szDriverName[k] = _totlower(szDriverName[k]);
 				szManufacturerName[k] = _totlower(szManufacturerName[k]);
-				szSystemName[k] = _totlower(szSystemName[k]);
 			}
 			StringFound = wcsstr(szDriverName, szSearchString);
 			StringFound2 = wcsstr(BurnDrvGetText(DRV_NAME), szSearchString);
 			StringFound3 = wcsstr(szManufacturerName, szSearchString);
-			StringFound4 = wcsstr(szSystemName, szSearchString);
 
-			if (!StringFound && !StringFound2 && !StringFound3 && !StringFound4) continue;
-		}
-
-		if (avOk && (!(nLoadMenuShowX & UNAVAILABLE)) && !gameAv[i])	{						// Skip non-available games if needed
-			continue;
-		}
-		
-		if (avOk && (!(nLoadMenuShowX & AVAILABLE)) && gameAv[i])	{						// Skip available games if needed
-			continue;
+			if (!StringFound && !StringFound2 && !StringFound3) continue;
 		}
 
 		memset(&TvItem, 0, sizeof(TvItem));
 		TvItem.item.mask = TVIF_TEXT | TVIF_PARAM;
-		TvItem.hInsertAfter = TVI_SORT;
-		TvItem.item.pszText = (nLoadMenuShowX & SHOWSHORT) ? BurnDrvGetText(DRV_NAME) : MangleGamename(BurnDrvGetText(DRV_ASCIIONLY | DRV_FULLNAME), true);
+		TvItem.hInsertAfter = TVI_FIRST;
+		TvItem.item.pszText = (nLoadMenuShowY & SHOWSHORT) ? BurnDrvGetText(DRV_NAME) : RemoveSpace(BurnDrvGetText(DRV_ASCIIONLY | DRV_FULLNAME));
 
 		// Find the parent's handle
 		for (j = 0; j < nTmpDrvCount; j++) {
 			if (nBurnDrv[j].bIsParent) {
-				if (!_stricmp(BurnDrvGetTextA(DRV_PARENT), nBurnDrv[j].pszROMName)) {
+				if (!strcmp(BurnDrvGetTextA(DRV_PARENT), nBurnDrv[j].pszROMName)) {
 					TvItem.hParent = nBurnDrv[j].hTreeHandle;
 					break;
 				}
@@ -641,8 +775,9 @@ static int SelListMake()
 					TV_INSERTSTRUCT TempTvItem;
 					memset(&TempTvItem, 0, sizeof(TempTvItem));
 					TempTvItem.item.mask = TVIF_TEXT | TVIF_PARAM;
-					TempTvItem.hInsertAfter = TVI_SORT;
-					TempTvItem.item.pszText = (nLoadMenuShowX & SHOWSHORT) ? BurnDrvGetText(DRV_NAME) : MangleGamename(BurnDrvGetText(DRV_ASCIIONLY | DRV_FULLNAME), true);
+					//TempTvItem.hInsertAfter = TVI_FIRST;
+					TempTvItem.hInsertAfter = TVI_SORT; // only use the horribly-slow TVI_SORT for missing parents!
+					TempTvItem.item.pszText = (nLoadMenuShowY & SHOWSHORT) ? BurnDrvGetText(DRV_NAME) : RemoveSpace(BurnDrvGetText(DRV_ASCIIONLY | DRV_FULLNAME));
 					TempTvItem.item.lParam = (LPARAM)&nBurnDrv[nTmpDrvCount];
 					nBurnDrv[nTmpDrvCount].hTreeHandle = (HTREEITEM)SendMessage(hSelList, TVM_INSERTITEM, 0, (LPARAM)&TempTvItem);
 					nBurnDrv[nTmpDrvCount].nBurnDrvNo = j;
@@ -660,22 +795,22 @@ static int SelListMake()
 		TvItem.item.lParam = (LPARAM)&nBurnDrv[nTmpDrvCount];
 		nBurnDrv[nTmpDrvCount].hTreeHandle = (HTREEITEM)SendMessage(hSelList, TVM_INSERTITEM, 0, (LPARAM)&TvItem);
 		nBurnDrv[nTmpDrvCount].pszROMName = BurnDrvGetTextA(DRV_NAME);
-		nBurnDrv[nTmpDrvCount].nBurnDrvNo = i;
+		nBurnDrv[nTmpDrvCount].nBurnDrvNo = nBurnDrvActive;
 		nTmpDrvCount++;
 	}
 
 	for (i = 0; i < nTmpDrvCount; i++) {
-
 		// See if we need to expand the branch of an unavailable or non-working parent
-		if (nBurnDrv[i].bIsParent && ((nLoadMenuShowX & AUTOEXPAND) || !gameAv[nBurnDrv[i].nBurnDrvNo] || !CheckWorkingStatus(nBurnDrv[i].nBurnDrvNo))) {
+		if (nBurnDrv[i].bIsParent && ((nLoadMenuShowY & AUTOEXPAND) || !gameAv[nBurnDrv[i].nBurnDrvNo] || !CheckWorkingStatus(nBurnDrv[i].nBurnDrvNo))) {
 			for (j = 0; j < nTmpDrvCount; j++) {
 
-				// Expand the branch only if a working clone is available
-				if (gameAv[nBurnDrv[j].nBurnDrvNo]) {
+				// Expand the branch only if a working clone is available -or-
+				// If ROM Scanning is disabled (bSkipStartupCheck==1) and expand clones is set. -dink March 22, 2020
+				if ( gameAv[nBurnDrv[j].nBurnDrvNo] || (bSkipStartupCheck && (nLoadMenuShowY & AUTOEXPAND)) ) {
 					nBurnDrvActive = nBurnDrv[j].nBurnDrvNo;
 					if (BurnDrvGetTextA(DRV_PARENT)) {
 						if (strcmp(nBurnDrv[i].pszROMName, BurnDrvGetTextA(DRV_PARENT)) == 0) {
-							SendMessage(hSelList, TVM_EXPAND,TVE_EXPAND, (LPARAM)nBurnDrv[i].hTreeHandle);
+							SendMessage(hSelList, TVM_EXPAND, TVE_EXPAND, (LPARAM)nBurnDrv[i].hTreeHandle);
 							break;
 						}
 					}
@@ -683,10 +818,10 @@ static int SelListMake()
 			}
 		}
 	}
-	
+
 	// Update the status info
 	TCHAR szRomsAvailableInfo[128] = _T("");
-	
+
 	_stprintf(szRomsAvailableInfo, FBALoadStringEx(hAppInst, IDS_SEL_SETSTATUS, true), nTmpDrvCount, nBurnDrvCount - REDUCE_TOTAL_SETS_BIOS, nMissingDrvCount);
 	SendDlgItemMessage(hSelDlg, IDC_DRVCOUNT, WM_SETTEXT, 0, (LPARAM)(LPCTSTR)szRomsAvailableInfo);
 
@@ -699,7 +834,7 @@ static void MyEndDialog()
 		KillTimer(hSelDlg, nTimer);
 		nTimer = 0;
 	}
-	
+
 	if (nInitPreviewTimer) {
 		KillTimer(hSelDlg, nInitPreviewTimer);
 		nInitPreviewTimer = 0;
@@ -707,7 +842,7 @@ static void MyEndDialog()
 
 	SendDlgItemMessage(hSelDlg, IDC_SCREENSHOT_H, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)NULL);
 	SendDlgItemMessage(hSelDlg, IDC_SCREENSHOT_V, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)NULL);
-	
+
 	SendDlgItemMessage(hSelDlg, IDC_SCREENSHOT2_H, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)NULL);
 	SendDlgItemMessage(hSelDlg, IDC_SCREENSHOT2_V, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)NULL);
 
@@ -741,26 +876,26 @@ static void MyEndDialog()
 		hNotFoundNonEss = NULL;
 	}
 	if(hDrvIconMiss) {
-		DestroyIcon(hDrvIconMiss); 
+		DestroyIcon(hDrvIconMiss);
 		hDrvIconMiss = NULL;
 	}
-	
+
 	RECT rect;
 
 	GetClientRect(hSelDlg, &rect);
 	nSelDlgWidth = rect.right;
 	nSelDlgHeight = rect.bottom;
-	
+
 	EndDialog(hSelDlg, 0);
 }
 
 // User clicked ok for a driver in the list
 static void SelOkay()
-{	
+{
 	TV_ITEM TvItem;
 	unsigned int nSelect = 0;
 	HTREEITEM hSelectHandle = (HTREEITEM)SendMessage(hSelList, TVM_GETNEXTITEM, TVGN_CARET, ~0U);
-		
+
 	if (!hSelectHandle)	{			// Nothing is selected, return without closing the window
 		return;
 	}
@@ -807,28 +942,28 @@ static void RefreshPanel()
 		nTimer = 0;
 	}
 
-	
+
 	hPrevBmp = PNGLoadBitmap(hSelDlg, NULL, 213, 160, 2);
 	hTitleBmp = PNGLoadBitmap(hSelDlg, NULL, 213, 160, 2);
 
 	SendDlgItemMessage(hSelDlg, IDC_SCREENSHOT_H, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hPrevBmp);
 	SendDlgItemMessage(hSelDlg, IDC_SCREENSHOT_V, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)NULL);
-	
+
 	SendDlgItemMessage(hSelDlg, IDC_SCREENSHOT2_H, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hTitleBmp);
 	SendDlgItemMessage(hSelDlg, IDC_SCREENSHOT2_V, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)NULL);
-	
+
 	// Clear the things in our Info-box
 	for (int i = 0; i < 6; i++) {
 		SendMessage(hInfoText[i], WM_SETTEXT, (WPARAM)0, (LPARAM)_T(""));
 		EnableWindow(hInfoLabel[i], FALSE);
 	}
 
-	CheckDlgButton(hSelDlg, IDC_CHECKAUTOEXPAND, (nLoadMenuShowX & AUTOEXPAND) ? BST_CHECKED : BST_UNCHECKED);
-	CheckDlgButton(hSelDlg, IDC_CHECKAVAILABLE, (nLoadMenuShowX & AVAILABLE) ? BST_CHECKED : BST_UNCHECKED);
-	CheckDlgButton(hSelDlg, IDC_CHECKUNAVAILABLE, (nLoadMenuShowX & UNAVAILABLE) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hSelDlg, IDC_CHECKAUTOEXPAND, (nLoadMenuShowY & AUTOEXPAND) ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(hSelDlg, IDC_CHECKAVAILABLE, (nLoadMenuShowY & AVAILABLE) ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(hSelDlg, IDC_CHECKUNAVAILABLE, (nLoadMenuShowY & UNAVAILABLE) ? BST_CHECKED : BST_UNCHECKED);
 
-	CheckDlgButton(hSelDlg, IDC_SEL_SHORTNAME, nLoadMenuShowX & SHOWSHORT ? BST_CHECKED : BST_UNCHECKED);
-	CheckDlgButton(hSelDlg, IDC_SEL_ASCIIONLY, nLoadMenuShowX & ASCIIONLY ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(hSelDlg, IDC_SEL_SHORTNAME, nLoadMenuShowY & SHOWSHORT ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(hSelDlg, IDC_SEL_ASCIIONLY, nLoadMenuShowY & ASCIIONLY ? BST_CHECKED : BST_UNCHECKED);
 }
 
 FILE* OpenPreview(int nIndex, TCHAR *szPath)
@@ -854,7 +989,7 @@ FILE* OpenPreview(int nIndex, TCHAR *szPath)
 	if (nIndex <= 1) {
 		bTryParent = fp ? false : true;
 	}
-	
+
 	if (!fp && BurnDrvGetText(DRV_PARENT) && bTryParent) {						// Try the parent
 		_sntprintf(szBaseName, sizeof(szBaseName), _T("%s%s"), szPath, BurnDrvGetText(DRV_PARENT));
 		if (nIndex <= 1) {
@@ -878,20 +1013,20 @@ static VOID CALLBACK PreviewTimerProc(HWND, UINT, UINT_PTR, DWORD)
 static VOID CALLBACK InitPreviewTimerProc(HWND, UINT, UINT_PTR, DWORD)
 {
 	UpdatePreview(true, szAppPreviewsPath, IDC_SCREENSHOT_H, IDC_SCREENSHOT_V);
-	
+
 	if (GetIpsNumPatches()) {
 		if (!nShowMVSCartsOnly) EnableWindow(GetDlgItem(hSelDlg, IDC_SEL_IPSMANAGER), TRUE);
 	} else {
 		EnableWindow(GetDlgItem(hSelDlg, IDC_SEL_IPSMANAGER), FALSE);
 	}
-			
+
 	LoadIpsActivePatches();
 	if (GetIpsNumActivePatches()) {
 		if (!nShowMVSCartsOnly) EnableWindow(GetDlgItem(hSelDlg, IDC_SEL_APPLYIPS), TRUE);
 	} else {
 		EnableWindow(GetDlgItem(hSelDlg, IDC_SEL_APPLYIPS), FALSE);
 	}
-	
+
 	KillTimer(hSelDlg, nInitPreviewTimer);
 	nInitPreviewTimer = 0;
 }
@@ -903,7 +1038,7 @@ static int UpdatePreview(bool bReset, TCHAR *szPath, int HorCtrl, int VerCtrl)
 
 	FILE* fp = NULL;
 	HBITMAP hNewImage = NULL;
-	
+
 	if (HorCtrl == IDC_SCREENSHOT_H) {
 		nOldIndex = nIndex;
 		nIndex++;
@@ -924,6 +1059,13 @@ static int UpdatePreview(bool bReset, TCHAR *szPath, int HorCtrl, int VerCtrl)
 
 		BurnDrvGetAspect(&ax, &ay);
 
+		// If a game uses pixel aspect ratio (aspect ratio == pixel size) default to 4:3
+		// for Titles and Previews (otherwise the pictures weirdly draw ontop of the UI)
+		if (!_tcsncmp(BurnDrvGetText(DRV_NAME), _T("wrally2"), 7) || ax > 100) {
+			ax = 4;
+			ay = 3;
+		}
+
 		//if (BurnDrvGetFlags() & BDF_ORIENTATION_VERTICAL) {
 		if (ay > ax) {
 			bImageOrientation = TRUE;
@@ -936,7 +1078,7 @@ static int UpdatePreview(bool bReset, TCHAR *szPath, int HorCtrl, int VerCtrl)
 			x = 213;
 			y = x * ay / ax;
 		}
-		
+
 		if (HorCtrl == IDC_SCREENSHOT_H) {
 			fp = OpenPreview(nIndex, szPath);
 		} else {
@@ -952,8 +1094,8 @@ static int UpdatePreview(bool bReset, TCHAR *szPath, int HorCtrl, int VerCtrl)
 					nTimer = 0;
 				}
 
-				return 0;		
-			} 
+				return 0;
+			}
 
 			nIndex = 1;
 			fp = OpenPreview(nIndex, szPath);
@@ -1005,10 +1147,29 @@ static int UpdatePreview(bool bReset, TCHAR *szPath, int HorCtrl, int VerCtrl)
 		ShowWindow(GetDlgItem(hSelDlg, HorCtrl), SW_HIDE);
 		ShowWindow(GetDlgItem(hSelDlg, VerCtrl), SW_SHOW);
 	}
-	
+
 	UpdateWindow(hSelDlg);
 
 	return 0;
+}
+
+static unsigned __stdcall DoShellExThread(void *arg)
+{
+	ShellExecute(NULL, _T("open"), (TCHAR*)arg, NULL, NULL, SW_SHOWNORMAL);
+
+	return 0;
+}
+
+static void ViewEmma()
+{
+	HANDLE hThread = NULL;
+	unsigned ThreadID = 0;
+	TCHAR szShellExURL[MAX_PATH];
+
+	_stprintf(szShellExURL, _T("http://www.progettoemma.net/gioco.php?&game=%s"), BurnDrvGetText(DRV_NAME));
+
+	hThread = (HANDLE)_beginthreadex(NULL, 0, DoShellExThread, (void*)szShellExURL, 0, &ThreadID);
+	Sleep(150); // allow arguments to pass to ShellExecute() in new thread before they get disposed.
 }
 
 static void RebuildEverything()
@@ -1032,6 +1193,34 @@ static void RebuildEverything()
 	TreeBuilding = 0;
 }
 
+static int TvhFilterToBitmask(HTREEITEM hHandle)
+{
+	if (hHandle == hRoot)				return (1 << 0);
+	if (hHandle == hBoardType)			return (1 << 1);
+	if (hHandle == hFamily)				return (1 << 2);
+	if (hHandle == hGenre)				return (1 << 3);
+	if (hHandle == hHardware)			return (1 << 4);
+	if (hHandle == hFilterCapcomGrp)	return (1 << 5);
+	if (hHandle == hFilterSegaGrp)		return (1 << 6);
+
+	return 0;
+}
+
+static HTREEITEM TvBitTohFilter(int nBit)
+{
+	switch (nBit) {
+		case (1 << 0): return hRoot;
+		case (1 << 1): return hBoardType;
+		case (1 << 2): return hFamily;
+		case (1 << 3): return hGenre;
+		case (1 << 4): return hHardware;
+		case (1 << 5): return hFilterCapcomGrp;
+		case (1 << 6): return hFilterSegaGrp;
+	}
+
+	return 0;
+}
+
 #define _TVCreateFiltersA(a, b, c, d)								\
 {																	\
 	TvItem.hParent = a;												\
@@ -1040,25 +1229,44 @@ static void RebuildEverything()
 	_TreeView_SetCheckState(hFilterList, c, (d) ? FALSE : TRUE);	\
 }
 
-#define _TVCreateFiltersB(a, b, c)									\
-{																	\
+#define _TVCreateFiltersB(a, b, c)								\
+{																\
 	TvItem.hParent = a;												\
 	TvItem.item.pszText = FBALoadStringEx(hAppInst, b, true);		\
 	c = TreeView_InsertItem(hFilterList, &TvItem);					\
 }
 
+#define _TVCreateFiltersC(a, b, c, d)								\
+{																	\
+	TvItem.hParent = a;												\
+	TvItem.item.pszText = FBALoadStringEx(hAppInst, b, true);		\
+	c = TreeView_InsertItem(hFilterList, &TvItem);					\
+	_TreeView_SetCheckState(hFilterList, c, (d) ? FALSE : TRUE);	\
+}
+
+#define _TVCreateFiltersD(a, b, c, d)								\
+{																	\
+	TvItem.hParent = a;												\
+	TvItem.item.pszText = FBALoadStringEx(hAppInst, b, true);		\
+	c = TreeView_InsertItem(hFilterList, &TvItem);					\
+	_TreeView_SetCheckState(hFilterList, c, (d) ? FALSE : TRUE);	\
+}
+
 static void CreateFilters()
 {
-	TV_INSERTSTRUCT TvItem;	
+	TV_INSERTSTRUCT TvItem;
 	memset(&TvItem, 0, sizeof(TvItem));
 
-	hFilterList			= GetDlgItem(hSelDlg, IDC_TREE2);	
+	hFilterList			= GetDlgItem(hSelDlg, IDC_TREE2);
 
 	TvItem.item.mask	= TVIF_TEXT | TVIF_PARAM;
 	TvItem.hInsertAfter = TVI_LAST;
-	
-	_TVCreateFiltersB(TVI_ROOT		, IDS_SEL_FILTERS		, hRoot			);	
-	_TVCreateFiltersB(hRoot			, IDS_SEL_BOARDTYPE		, hBoardType	);
+
+	_TVCreateFiltersA(TVI_ROOT		, IDS_FAVORITES			, hFavorites            , !nLoadMenuFavoritesFilter                         );
+
+	_TVCreateFiltersB(TVI_ROOT		, IDS_SEL_FILTERS		, hRoot						);
+
+	_TVCreateFiltersC(hRoot			, IDS_SEL_BOARDTYPE		, hBoardType			, nLoadMenuBoardTypeFilter & MASKALLBOARD	);
 
 	_TVCreateFiltersA(hBoardType	, IDS_SEL_GENUINE		, hFilterGenuine		, nLoadMenuBoardTypeFilter & MASKBOARDTYPEGENUINE	);
 	_TVCreateFiltersA(hBoardType	, IDS_SEL_BOOTLEG		, hFilterBootleg		, nLoadMenuBoardTypeFilter & BDF_BOOTLEG			);
@@ -1066,24 +1274,27 @@ static void CreateFilters()
 	_TVCreateFiltersA(hBoardType	, IDS_SEL_HACK			, hFilterHack			, nLoadMenuBoardTypeFilter & BDF_HACK				);
 	_TVCreateFiltersA(hBoardType	, IDS_SEL_HOMEBREW		, hFilterHomebrew		, nLoadMenuBoardTypeFilter & BDF_HOMEBREW			);
 	_TVCreateFiltersA(hBoardType	, IDS_SEL_PROTOTYPE		, hFilterPrototype		, nLoadMenuBoardTypeFilter & BDF_PROTOTYPE			);
-	
-	_TVCreateFiltersB(hRoot			, IDS_FAMILY			, hFamily		);
-	
-	_TVCreateFiltersA(hFamily		, IDS_FAMILY_OTHER		, hFilterOtherFamily	, nLoadMenuFamilyFilter & MASKFAMILYOTHER			);
+
+	_TVCreateFiltersC(hRoot			, IDS_FAMILY			, hFamily				, nLoadMenuFamilyFilter & MASKALLFAMILY	);
+
 	_TVCreateFiltersA(hFamily		, IDS_FAMILY_19XX		, hFilter19xx			, nLoadMenuFamilyFilter & FBF_19XX					);
+	_TVCreateFiltersA(hFamily		, IDS_FAMILY_DONPACHI	, hFilterDonpachi		, nLoadMenuFamilyFilter & FBF_DONPACHI				);
 	_TVCreateFiltersA(hFamily		, IDS_FAMILY_SONICWI	, hFilterSonicwi		, nLoadMenuFamilyFilter & FBF_SONICWI				);
 	_TVCreateFiltersA(hFamily		, IDS_FAMILY_DSTLK		, hFilterDstlk			, nLoadMenuFamilyFilter & FBF_DSTLK					);
 	_TVCreateFiltersA(hFamily		, IDS_FAMILY_FATFURY	, hFilterFatfury		, nLoadMenuFamilyFilter & FBF_FATFURY				);
 	_TVCreateFiltersA(hFamily		, IDS_FAMILY_KOF		, hFilterKof			, nLoadMenuFamilyFilter & FBF_KOF					);
 	_TVCreateFiltersA(hFamily		, IDS_FAMILY_MSLUG		, hFilterMslug			, nLoadMenuFamilyFilter & FBF_MSLUG					);
+	_TVCreateFiltersA(hFamily		, IDS_FAMILY_MAHOU		, hFilterMahou			, nLoadMenuFamilyFilter & FBF_MAHOU					);
 	_TVCreateFiltersA(hFamily		, IDS_FAMILY_PWRINST	, hFilterPwrinst		, nLoadMenuFamilyFilter & FBF_PWRINST				);
 	_TVCreateFiltersA(hFamily		, IDS_FAMILY_SAMSHO		, hFilterSamsho			, nLoadMenuFamilyFilter & FBF_SAMSHO				);
+	_TVCreateFiltersA(hFamily		, IDS_FAMILY_SONIC		, hFilterSonic			, nLoadMenuFamilyFilter & FBF_SONIC					);
 	_TVCreateFiltersA(hFamily		, IDS_FAMILY_SF			, hFilterSf				, nLoadMenuFamilyFilter & FBF_SF					);
-	
-	_TVCreateFiltersB(hRoot			, IDS_GENRE				, hGenre		);
-	
+	_TVCreateFiltersA(hFamily		, IDS_FAMILY_OTHER		, hFilterOtherFamily	, nLoadMenuFamilyFilter & MASKFAMILYOTHER			);
+
+	_TVCreateFiltersC(hRoot			, IDS_GENRE				, hGenre				, nLoadMenuGenreFilter & MASKALLGENRE	);
+
+	_TVCreateFiltersA(hGenre		, IDS_GENRE_ACTION		, hFilterAction			, nLoadMenuGenreFilter & GBF_ACTION					);
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_BALLPADDLE	, hFilterBallpaddle		, nLoadMenuGenreFilter & GBF_BALLPADDLE				);
-	_TVCreateFiltersA(hGenre		, IDS_GENRE_BIOS		, hFilterBios			, nLoadMenuGenreFilter & GBF_BIOS					);
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_BREAKOUT	, hFilterBreakout		, nLoadMenuGenreFilter & GBF_BREAKOUT				);
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_CASINO		, hFilterCasino			, nLoadMenuGenreFilter & GBF_CASINO					);
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_SCRFIGHT	, hFilterScrfight		, nLoadMenuGenreFilter & GBF_SCRFIGHT				);
@@ -1097,49 +1308,94 @@ static void CreateFilters()
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_PUZZLE		, hFilterPuzzle			, nLoadMenuGenreFilter & GBF_PUZZLE					);
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_QUIZ		, hFilterQuiz			, nLoadMenuGenreFilter & GBF_QUIZ					);
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_RACING		, hFilterRacing			, nLoadMenuGenreFilter & GBF_RACING					);
-	_TVCreateFiltersA(hGenre		, IDS_GENRE_HORSHOOT	, hFilterHorshoot		, nLoadMenuGenreFilter & GBF_HORSHOOT				);
+	_TVCreateFiltersA(hGenre		, IDS_GENRE_RUNGUN		, hFilterRungun			, nLoadMenuGenreFilter & GBF_RUNGUN 				);
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_SHOOT		, hFilterShoot			, nLoadMenuGenreFilter & GBF_SHOOT					);
+	_TVCreateFiltersA(hGenre		, IDS_GENRE_HORSHOOT	, hFilterHorshoot		, nLoadMenuGenreFilter & GBF_HORSHOOT				);
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_VERSHOOT	, hFilterVershoot		, nLoadMenuGenreFilter & GBF_VERSHOOT				);
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_SPORTSMISC	, hFilterSportsmisc		, nLoadMenuGenreFilter & GBF_SPORTSMISC				);
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_SPORTSFOOTBALL, hFilterSportsfootball, nLoadMenuGenreFilter & GBF_SPORTSFOOTBALL		);
+	_TVCreateFiltersA(hGenre		, IDS_GENRE_STRATEGY	, hFilterStrategy   	, nLoadMenuGenreFilter & GBF_STRATEGY   			);
+	_TVCreateFiltersA(hGenre		, IDS_GENRE_RPG			, hFilterRpg   			, nLoadMenuGenreFilter & GBF_RPG   					);
+	_TVCreateFiltersA(hGenre		, IDS_GENRE_SIM			, hFilterSim   			, nLoadMenuGenreFilter & GBF_SIM   					);
+	_TVCreateFiltersA(hGenre		, IDS_GENRE_BIOS		, hFilterBios			, nLoadMenuGenreFilter & GBF_BIOS					);
 
-	_TVCreateFiltersB(hRoot			, IDS_SEL_HARDWARE, hHardware			);
-	
-	_TVCreateFiltersA(hHardware		, IDS_SEL_CAPCOM_MISC	, hFilterCapcomMisc		, nLoadMenuShowX & MASKCAPMISC						);
+	_TVCreateFiltersC(hRoot			, IDS_SEL_HARDWARE		, hHardware				, nLoadMenuShowX & MASKALL					);
+
+	_TVCreateFiltersD(hHardware		, IDS_SEL_CAPCOM_GRP	, hFilterCapcomGrp			, nLoadMenuShowX & MASKCAPGRP				);
+
+	_TVCreateFiltersA(hFilterCapcomGrp	, IDS_SEL_CPS1			, hFilterCps1			, nLoadMenuShowX & MASKCPS							);
+	_TVCreateFiltersA(hFilterCapcomGrp	, IDS_SEL_CPS2			, hFilterCps2			, nLoadMenuShowX & MASKCPS2							);
+	_TVCreateFiltersA(hFilterCapcomGrp	, IDS_SEL_CPS3			, hFilterCps3			, nLoadMenuShowX & MASKCPS3							);
+	_TVCreateFiltersA(hFilterCapcomGrp	, IDS_SEL_CAPCOM_MISC	, hFilterCapcomMisc		, nLoadMenuShowX & MASKCAPMISC						);
+
 	_TVCreateFiltersA(hHardware		, IDS_SEL_CAVE			, hFilterCave			, nLoadMenuShowX & MASKCAVE							);
-	_TVCreateFiltersA(hHardware		, IDS_SEL_CPS1			, hFilterCps1			, nLoadMenuShowX & MASKCPS							);
-	_TVCreateFiltersA(hHardware		, IDS_SEL_CPS2			, hFilterCps2			, nLoadMenuShowX & MASKCPS2							);
-	_TVCreateFiltersA(hHardware		, IDS_SEL_CPS3			, hFilterCps3			, nLoadMenuShowX & MASKCPS3							);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_DATAEAST		, hFilterDataeast		, nLoadMenuShowX & MASKDATAEAST						);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_GALAXIAN		, hFilterGalaxian		, nLoadMenuShowX & MASKGALAXIAN						);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_IREM			, hFilterIrem			, nLoadMenuShowX & MASKIREM							);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_KANEKO		, hFilterKaneko			, nLoadMenuShowX & MASKKANEKO						);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_KONAMI		, hFilterKonami			, nLoadMenuShowX & MASKKONAMI						);
+	_TVCreateFiltersA(hHardware		, IDS_SEL_MIDWAY		, hFilterMidway			, nLoadMenuShowX & MASKMIDWAY						);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_NEOGEO		, hFilterNeogeo			, nLoadMenuShowX & MASKNEOGEO						);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_PACMAN		, hFilterPacman			, nLoadMenuShowX & MASKPACMAN						);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_PGM			, hFilterPgm			, nLoadMenuShowX & MASKPGM							);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_PSIKYO		, hFilterPsikyo			, nLoadMenuShowX & MASKPSIKYO						);
-	_TVCreateFiltersA(hHardware		, IDS_SEL_SEGA			, hFilterSega			, nLoadMenuShowX & MASKSEGA							);
+
+	_TVCreateFiltersD(hHardware		, IDS_SEL_SEGA_GRP		, hFilterSegaGrp				, nLoadMenuShowX & MASKSEGAGRP				);
+
+	_TVCreateFiltersA(hFilterSegaGrp	, IDS_SEL_SG1000		, hFilterSg1000			, nLoadMenuShowX & MASKSG1000						);
+	_TVCreateFiltersA(hFilterSegaGrp	, IDS_SEL_SMS			, hFilterSms			, nLoadMenuShowX & MASKSMS							);
+	_TVCreateFiltersA(hFilterSegaGrp	, IDS_SEL_MEGADRIVE		, hFilterMegadrive		, nLoadMenuShowX & MASKMEGADRIVE					);
+	_TVCreateFiltersA(hFilterSegaGrp	, IDS_SEL_GG			, hFilterGg				, nLoadMenuShowX & MASKGG							);
+	_TVCreateFiltersA(hFilterSegaGrp	, IDS_SEL_SEGA			, hFilterSega			, nLoadMenuShowX & MASKSEGA							);
+
 	_TVCreateFiltersA(hHardware		, IDS_SEL_SETA			, hFilterSeta			, nLoadMenuShowX & MASKSETA							);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_TAITO			, hFilterTaito			, nLoadMenuShowX & MASKTAITO						);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_TECHNOS		, hFilterTechnos		, nLoadMenuShowX & MASKTECHNOS						);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_TOAPLAN		, hFilterToaplan		, nLoadMenuShowX & MASKTOAPLAN						);
+	_TVCreateFiltersA(hHardware		, IDS_SEL_PCE			, hFilterPce			, nLoadMenuShowX & MASKPCENGINE						);
+	_TVCreateFiltersA(hHardware		, IDS_SEL_COLECO		, hFilterColeco			, nLoadMenuShowX & MASKCOLECO						);
+	_TVCreateFiltersA(hHardware		, IDS_SEL_MSX			, hFilterMsx			, nLoadMenuShowX & MASKMSX							);
+	_TVCreateFiltersA(hHardware		, IDS_SEL_SPECTRUM		, hFilterSpectrum		, nLoadMenuShowX & MASKSPECTRUM						);
+	_TVCreateFiltersA(hHardware		, IDS_SEL_NES			, hFilterNes			, nLoadMenuShowX & MASKNES							);
+	_TVCreateFiltersA(hHardware		, IDS_SEL_FDS			, hFilterFds			, nLoadMenuShowX & MASKFDS							);
+	_TVCreateFiltersA(hHardware		, IDS_SEL_NGP			, hFilterNgp			, nLoadMenuShowX & MASKNGP							);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_MISCPRE90S	, hFilterMiscPre90s		, nLoadMenuShowX & MASKMISCPRE90S					);
 	_TVCreateFiltersA(hHardware		, IDS_SEL_MISCPOST90S	, hFilterMiscPost90s	, nLoadMenuShowX & MASKMISCPOST90S					);
-	_TVCreateFiltersA(hHardware		, IDS_SEL_SMS			, hFilterSms			, nLoadMenuShowX & MASKSMS							);
-	_TVCreateFiltersA(hHardware		, IDS_SEL_GG			, hFilterGg				, nLoadMenuShowX & MASKGG							);
-	_TVCreateFiltersA(hHardware		, IDS_SEL_MEGADRIVE		, hFilterMegadrive		, nLoadMenuShowX & MASKMEGADRIVE					);
-	_TVCreateFiltersA(hHardware		, IDS_SEL_PCE			, hFilterPce			, nLoadMenuShowX & MASKPCENGINE						);
-//	_TVCreateFiltersA(hHardware		, IDS_SEL_SNES			, hFilterSnes			, nLoadMenuShowX & MASKSNES							);
-	_TVCreateFiltersA(hHardware		, IDS_SEL_SG1000		, hFilterSg1000			, nLoadMenuShowX & MASKSG1000						);
-	_TVCreateFiltersA(hHardware		, IDS_SEL_COLECO		, hFilterColeco			, nLoadMenuShowX & MASKCOLECO						);
-	
-	SendMessage(hFilterList	, TVM_EXPAND,TVE_EXPAND, (LPARAM)hRoot);
-	SendMessage(hFilterList	, TVM_EXPAND,TVE_EXPAND, (LPARAM)hHardware);
+
+	// restore expanded filter nodes
+	for (INT32 i = 0; i < 16; i++)
+	{
+		if (nLoadMenuExpand & (1 << i))
+			SendMessage(hFilterList, TVM_EXPAND, TVE_EXPAND, (LPARAM)TvBitTohFilter(1 << i));
+	}
+	//SendMessage(hFilterList	, TVM_EXPAND,TVE_EXPAND, (LPARAM)hRoot);
+	//SendMessage(hFilterList	, TVM_EXPAND,TVE_EXPAND, (LPARAM)hHardware);
+	//SendMessage(hFilterList	, TVM_EXPAND,TVE_EXPAND, (LPARAM)hFavorites);
+	TreeView_SelectSetFirstVisible(hFilterList, hFavorites);
 }
 
-void LoadDrvIcons() 
+#define ICON_MAXCONSOLES 11
+
+enum {
+	ICON_MEGADRIVE = 0,
+	ICON_PCEFAM = 1,
+	ICON_SG1000 = 2,
+	ICON_COLECO = 3,
+	ICON_SMS = 4,
+	ICON_GG = 5,
+	ICON_MSX = 6,
+	ICON_SPECTRUM = 7,
+	ICON_NES = 8,
+	ICON_FDS = 9,
+	ICON_NGP = 10
+};
+
+static HICON hConsDrvIcon[ICON_MAXCONSOLES];
+
+void LoadDrvIcons()
 {
+	TCHAR szIcon[MAX_PATH];
+
 	if(nIconsSize == ICON_16x16) {
 		nIconsSizeXY	= 16;
 		nIconsYDiff		= 4;
@@ -1153,16 +1409,128 @@ void LoadDrvIcons()
 		nIconsYDiff		= 12;
 	}
 
+	{ // load default console images
+		_stprintf(szIcon, _T("%smegadrive_icon.ico"), szAppIconsPath);
+		hConsDrvIcon[ICON_MEGADRIVE] = (HICON)LoadImage(hAppInst, szIcon, IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_LOADFROMFILE);
+
+		_stprintf(szIcon, _T("%spce_icon.ico"), szAppIconsPath);
+		hConsDrvIcon[ICON_PCEFAM] = (HICON)LoadImage(hAppInst, szIcon, IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_LOADFROMFILE);
+
+		_stprintf(szIcon, _T("%ssg1000_icon.ico"), szAppIconsPath);
+		hConsDrvIcon[ICON_SG1000] = (HICON)LoadImage(hAppInst, szIcon, IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_LOADFROMFILE);
+
+		_stprintf(szIcon, _T("%scolecovision_icon.ico"), szAppIconsPath);
+		hConsDrvIcon[ICON_COLECO] = (HICON)LoadImage(hAppInst, szIcon, IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_LOADFROMFILE);
+
+		_stprintf(szIcon, _T("%ssms_icon.ico"), szAppIconsPath);
+		hConsDrvIcon[ICON_SMS] = (HICON)LoadImage(hAppInst, szIcon, IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_LOADFROMFILE);
+
+		_stprintf(szIcon, _T("%sgamegear_icon.ico"), szAppIconsPath);
+		hConsDrvIcon[ICON_GG] = (HICON)LoadImage(hAppInst, szIcon, IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_LOADFROMFILE);
+
+		_stprintf(szIcon, _T("%smsx_icon.ico"), szAppIconsPath);
+		hConsDrvIcon[ICON_MSX] = (HICON)LoadImage(hAppInst, szIcon, IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_LOADFROMFILE);
+
+		_stprintf(szIcon, _T("%sspectrum_icon.ico"), szAppIconsPath);
+		hConsDrvIcon[ICON_SPECTRUM] = (HICON)LoadImage(hAppInst, szIcon, IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_LOADFROMFILE);
+
+		_stprintf(szIcon, _T("%snes_icon.ico"), szAppIconsPath);
+		hConsDrvIcon[ICON_NES] = (HICON)LoadImage(hAppInst, szIcon, IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_LOADFROMFILE);
+
+		_stprintf(szIcon, _T("%sfds_icon.ico"), szAppIconsPath);
+		hConsDrvIcon[ICON_FDS] = (HICON)LoadImage(hAppInst, szIcon, IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_LOADFROMFILE);
+
+		_stprintf(szIcon, _T("%sngp_icon.ico"), szAppIconsPath);
+		hConsDrvIcon[ICON_NGP] = (HICON)LoadImage(hAppInst, szIcon, IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_LOADFROMFILE);
+	}
+
 	unsigned int nOldDrvSel = nBurnDrvActive;
 
-	for(unsigned int nDrvIndex = 0; nDrvIndex < nBurnDrvCount; nDrvIndex++) 
-	{		
-		nBurnDrvActive = nDrvIndex;	
-		TCHAR szIcon[MAX_PATH];
+	for(unsigned int nDrvIndex = 0; nDrvIndex < nBurnDrvCount; nDrvIndex++)
+	{
+		nBurnDrvActive = nDrvIndex;
+#if 0
+		if ((((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SEGA_MEGADRIVE)
+			 || ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_PCENGINE_PCENGINE)
+			 || ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_PCENGINE_TG16)
+			 || ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_PCENGINE_SGX)
+			 || ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SEGA_SG1000)
+			 || ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_COLECO)
+			 || ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SEGA_MASTER_SYSTEM)
+			 || ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SEGA_GAME_GEAR)
+			 || ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_MSX)
+			 || ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SPECTRUM)
+			 || ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_NES)
+			 || ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_FDS)
+			 || ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SNK_NGP)
+			)) {
+			continue; // Skip everything but arcade
+		}
+#endif
+		if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SEGA_MEGADRIVE) {
+			hDrvIcon[nDrvIndex] = hConsDrvIcon[ICON_MEGADRIVE];
+			continue;
+		}
+
+		if (((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_PCENGINE_PCENGINE) ||
+			((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_PCENGINE_TG16) ||
+			((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_PCENGINE_SGX)) {
+			hDrvIcon[nDrvIndex] = hConsDrvIcon[ICON_PCEFAM];
+			continue;
+		}
+
+		if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SEGA_SG1000) {
+			hDrvIcon[nDrvIndex] = hConsDrvIcon[ICON_SG1000];
+			continue;
+		}
+
+		if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_COLECO) {
+			hDrvIcon[nDrvIndex] = hConsDrvIcon[ICON_COLECO];
+			continue;
+		}
+
+		if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SEGA_MASTER_SYSTEM) {
+			hDrvIcon[nDrvIndex] = hConsDrvIcon[ICON_SMS];
+			continue;
+		}
+
+		if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SEGA_GAME_GEAR) {
+			hDrvIcon[nDrvIndex] = hConsDrvIcon[ICON_GG];
+			continue;
+		}
+
+		if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_MSX) {
+			hDrvIcon[nDrvIndex] = hConsDrvIcon[ICON_MSX];
+			continue;
+		}
+
+		if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SPECTRUM) {
+			hDrvIcon[nDrvIndex] = hConsDrvIcon[ICON_SPECTRUM];
+			continue;
+		}
+
+		if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_NES) {
+			hDrvIcon[nDrvIndex] = hConsDrvIcon[ICON_NES];
+			continue;
+		}
+
+		if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_FDS) {
+			hDrvIcon[nDrvIndex] = hConsDrvIcon[ICON_FDS];
+			continue;
+		}
+
+		if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SNK_NGP) {
+			hDrvIcon[nDrvIndex] = hConsDrvIcon[ICON_NGP];
+			continue;
+		}
+
+		if (bIconsOnlyParents && BurnDrvGetText(DRV_PARENT) != NULL && (BurnDrvGetFlags() & BDF_CLONE)) {	// Skip clones
+			continue;
+		}
 
 		_stprintf(szIcon, _T("%s%s.ico"), szAppIconsPath, BurnDrvGetText(DRV_NAME));
 		hDrvIcon[nDrvIndex] = (HICON)LoadImage(hAppInst, szIcon, IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_LOADFROMFILE);
-		
+
 		if(!hDrvIcon[nDrvIndex] && BurnDrvGetText(DRV_PARENT)) {
 			_stprintf(szIcon, _T("%s%s.ico"), szAppIconsPath, BurnDrvGetText(DRV_PARENT));
 			hDrvIcon[nDrvIndex] = (HICON)LoadImage(hAppInst, szIcon, IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_LOADFROMFILE);
@@ -1173,12 +1541,12 @@ void LoadDrvIcons()
 }
 
 void UnloadDrvIcons() {
-	
+
 	nIconsSizeXY	= 16;
 	nIconsYDiff		= 4;
 
-	for(unsigned int nDrvIndex = 0; nDrvIndex < nBurnDrvCount; nDrvIndex++) 
-	{		
+	for(unsigned int nDrvIndex = 0; nDrvIndex < nBurnDrvCount; nDrvIndex++)
+	{
 		DestroyIcon(hDrvIcon[nDrvIndex]);
 		hDrvIcon[nDrvIndex] = NULL;
 	}
@@ -1191,7 +1559,7 @@ void UnloadDrvIcons() {
 {																							\
 	nShowX ^= nMASK;																		\
 	_TreeView_SetCheckState(hFilterList, hItemChanged, (nShowX & nMASK) ? FALSE : TRUE);	\
-}	
+}
 
 static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
@@ -1200,13 +1568,13 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 		InitCommonControls();
 
 		hSelDlg = hDlg;
-		
+
 		SendDlgItemMessage(hDlg, IDC_SCREENSHOT_H, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)NULL);
 		SendDlgItemMessage(hDlg, IDC_SCREENSHOT_V, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)NULL);
-		
+
 		SendDlgItemMessage(hDlg, IDC_SCREENSHOT2_H, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)NULL);
 		SendDlgItemMessage(hDlg, IDC_SCREENSHOT2_V, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)NULL);
-		
+
 		hWhiteBGBrush	= CreateSolidBrush(RGB(0xFF,0xFF,0xFF));
 
 		hExpand			= (HICON)LoadImage(hAppInst, MAKEINTRESOURCE(IDI_TV_PLUS),			IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR);
@@ -1215,12 +1583,12 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 		hNotWorking		= (HICON)LoadImage(hAppInst, MAKEINTRESOURCE(IDI_TV_NOTWORKING),	IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_DEFAULTCOLOR);
 		hNotFoundEss	= (HICON)LoadImage(hAppInst, MAKEINTRESOURCE(IDI_TV_NOTFOUND_ESS),	IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_DEFAULTCOLOR);
 		hNotFoundNonEss = (HICON)LoadImage(hAppInst, MAKEINTRESOURCE(IDI_TV_NOTFOUND_NON),	IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_DEFAULTCOLOR);
-		
+
 		hDrvIconMiss	= (HICON)LoadImage(hAppInst, MAKEINTRESOURCE(IDI_APP),	IMAGE_ICON, nIconsSizeXY, nIconsSizeXY, LR_DEFAULTCOLOR);
 
 		TCHAR szOldTitle[1024] = _T(""), szNewTitle[1024] = _T("");
-		GetWindowText(hSelDlg, szOldTitle, 1024);		
-		_sntprintf(szNewTitle, 1024, _T(APP_TITLE) _T(SEPERATOR_1) _T("%s"), szOldTitle);		
+		GetWindowText(hSelDlg, szOldTitle, 1024);
+		_sntprintf(szNewTitle, 1024, _T(APP_TITLE) _T(SEPERATOR_1) _T("%s"), szOldTitle);
 		SetWindowText(hSelDlg, szNewTitle);
 
 		hSelList		= GetDlgItem(hSelDlg, IDC_TREE1);
@@ -1242,6 +1610,9 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 		EnableWindow(GetDlgItem(hDlg, IDC_SEL_ASCIIONLY), FALSE);
 #endif
 
+		bSearchStringInit = true; // so we don't set off the search timer during init w/SetDlgItemText() below
+		SetDlgItemText(hSelDlg, IDC_SEL_SEARCH, szSearchString); // Re-populate the search text
+
 		bool bFoundROMs = false;
 		for (unsigned int i = 0; i < nBurnDrvCount; i++) {
 			if (gameAv[i]) {
@@ -1249,20 +1620,21 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				break;
 			}
 		}
-		if (!bFoundROMs) {
+		if (!bFoundROMs && bSkipStartupCheck == false) {
 			RomsDirCreate(hSelDlg);
 		}
-		
+
 		// Icons size related -----------------------------------------
 		SHORT cyItem = nIconsSizeXY + 4;								// height (in pixels) of each item on the TreeView list
 		TreeView_SetItemHeight(hSelList, cyItem);
-		
+
 		SetFocus(hSelList);
-		
+
 		RebuildEverything();
-		
+
 		TreeView_SetItemHeight(hSelList, cyItem);
-		
+
+		if (nDialogSelect == -1) nDialogSelect = nOldDlgSelected;
 		if (nDialogSelect > -1) {
 			for (unsigned int i = 0; i < nTmpDrvCount; i++) {
 				if (nBurnDrv[i].nBurnDrvNo == nDialogSelect) {
@@ -1273,7 +1645,7 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 					break;
 				}
 			}
-			
+
 			// hack to load the preview image after a delay
 			nInitPreviewTimer = SetTimer(hSelDlg, 1, 20, InitPreviewTimerProc);
 		}
@@ -1282,25 +1654,25 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 		Style = GetWindowLongPtr (GetDlgItem(hSelDlg, IDC_TREE2), GWL_STYLE);
 		Style |= TVS_CHECKBOXES;
 		SetWindowLongPtr (GetDlgItem(hSelDlg, IDC_TREE2), GWL_STYLE, Style);
-		
+
 		CreateFilters();
-		
+
 		EnableWindow(GetDlgItem(hDlg, IDC_SEL_APPLYIPS), FALSE);
 		EnableWindow(GetDlgItem(hDlg, IDC_SEL_IPSMANAGER), FALSE);
 		bDoIpsPatch = FALSE;
 		IpsPatchExit();
-		
+
 		WndInMid(hDlg, hParent);
 
 		HICON hIcon = LoadIcon(hAppInst, MAKEINTRESOURCE(IDI_APP));
 		SendMessage(hSelDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);		// Set the Game Selection dialog icon.
-		
+
 		GetInitialPositions();
-		
+
 		SetWindowPos(hDlg, NULL, 0, 0, nSelDlgWidth, nSelDlgHeight, SWP_NOZORDER);
-		
+
 		WndInMid(hDlg, hParent);
-		
+
 		return TRUE;
 	}
 
@@ -1311,7 +1683,9 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 		if (hItemChanged == hHardware) {
 			if ((nLoadMenuShowX & MASKALL) == 0) {
 				_TreeView_SetCheckState(hFilterList, hItemChanged, FALSE);
-			
+
+				_TreeView_SetCheckState(hFilterList, hFilterSegaGrp, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterCapcomGrp, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterCapcomMisc, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterCave, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterCps1, FALSE);
@@ -1335,16 +1709,23 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				_TreeView_SetCheckState(hFilterList, hFilterMiscPost90s, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterMegadrive, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterPce, FALSE);
-//				_TreeView_SetCheckState(hFilterList, hFilterSnes, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterSms, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterGg, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterSg1000, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterColeco, FALSE);
-				
+				_TreeView_SetCheckState(hFilterList, hFilterMsx, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterSpectrum, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterNes, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterFds, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterNgp, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterMidway, FALSE);
+
 				nLoadMenuShowX |= MASKALL;
 			} else {
 				_TreeView_SetCheckState(hFilterList, hItemChanged, TRUE);
-			
+
+				_TreeView_SetCheckState(hFilterList, hFilterSegaGrp, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterCapcomGrp, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterCapcomMisc, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterCave, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterCps1, TRUE);
@@ -1368,87 +1749,157 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				_TreeView_SetCheckState(hFilterList, hFilterMiscPost90s, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterMegadrive, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterPce, TRUE);
-//				_TreeView_SetCheckState(hFilterList, hFilterSnes, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterSms, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterGg, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterSg1000, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterColeco, TRUE);
-				
-				nLoadMenuShowX &= (0xFFFFFFFF - MASKALL); //0xf8000000; make this dynamic for future hardware additions -dink
+				_TreeView_SetCheckState(hFilterList, hFilterMsx, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterSpectrum, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterNes, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterFds, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterNgp, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterMidway, TRUE);
+
+				nLoadMenuShowX &= ~MASKALL; //0xf8000000; make this dynamic for future hardware additions -dink
 			}
 		}
-		
+
 		if (hItemChanged == hBoardType) {
 			if ((nLoadMenuBoardTypeFilter & MASKALLBOARD) == 0) {
 				_TreeView_SetCheckState(hFilterList, hItemChanged, FALSE);
-			
+
 				_TreeView_SetCheckState(hFilterList, hFilterBootleg, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterDemo, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterHack, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterHomebrew, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterPrototype, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterGenuine, FALSE);
-				
+
 				nLoadMenuBoardTypeFilter = MASKALLBOARD;
 			} else {
 				_TreeView_SetCheckState(hFilterList, hItemChanged, TRUE);
-			
+
 				_TreeView_SetCheckState(hFilterList, hFilterBootleg, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterDemo, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterHack, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterHomebrew, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterPrototype, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterGenuine, TRUE);
-				
+
 				nLoadMenuBoardTypeFilter = 0;
 			}
 		}
-		
+
 		if (hItemChanged == hFamily) {
 			if ((nLoadMenuFamilyFilter & MASKALLFAMILY) == 0) {
 				_TreeView_SetCheckState(hFilterList, hItemChanged, FALSE);
-			
-				_TreeView_SetCheckState(hFilterList, hFilterOtherFamily, FALSE);	
-				_TreeView_SetCheckState(hFilterList, hFilterMslug, FALSE);	
-				_TreeView_SetCheckState(hFilterList, hFilterSf, FALSE);	
-				_TreeView_SetCheckState(hFilterList, hFilterKof, FALSE);	
-				_TreeView_SetCheckState(hFilterList, hFilterDstlk, FALSE);	
-				_TreeView_SetCheckState(hFilterList, hFilterFatfury, FALSE);	
-				_TreeView_SetCheckState(hFilterList, hFilterSamsho, FALSE);	
+
+				_TreeView_SetCheckState(hFilterList, hFilterOtherFamily, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterMslug, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterSf, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterKof, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterDstlk, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterFatfury, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterSamsho, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilter19xx, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterSonicwi, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterPwrinst, FALSE);
-				
+				_TreeView_SetCheckState(hFilterList, hFilterSonic, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterDonpachi, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterMahou, FALSE);
+
 				nLoadMenuFamilyFilter = MASKALLFAMILY;
 			} else {
 				_TreeView_SetCheckState(hFilterList, hItemChanged, TRUE);
-			
-				_TreeView_SetCheckState(hFilterList, hFilterOtherFamily, TRUE);	
-				_TreeView_SetCheckState(hFilterList, hFilterMslug, TRUE);	
-				_TreeView_SetCheckState(hFilterList, hFilterSf, TRUE);	
-				_TreeView_SetCheckState(hFilterList, hFilterKof, TRUE);	
-				_TreeView_SetCheckState(hFilterList, hFilterDstlk, TRUE);	
-				_TreeView_SetCheckState(hFilterList, hFilterFatfury, TRUE);	
-				_TreeView_SetCheckState(hFilterList, hFilterSamsho, TRUE);	
+
+				_TreeView_SetCheckState(hFilterList, hFilterOtherFamily, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterMslug, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterSf, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterKof, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterDstlk, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterFatfury, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterSamsho, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilter19xx, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterSonicwi, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterPwrinst, TRUE);
-				
+				_TreeView_SetCheckState(hFilterList, hFilterSonic, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterDonpachi, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterMahou, TRUE);
+
 				nLoadMenuFamilyFilter = 0;
 			}
 		}
-		
+
+		if (hItemChanged == hFavorites) {
+			if (nLoadMenuFavoritesFilter) {
+				_TreeView_SetCheckState(hFilterList, hItemChanged, FALSE);
+
+				nLoadMenuFavoritesFilter = 0;
+			} else {
+				_TreeView_SetCheckState(hFilterList, hItemChanged, TRUE);
+
+				nLoadMenuFavoritesFilter = 0xff;
+			}
+		}
+
+		if (hItemChanged == hFilterSegaGrp) {
+			if ((nLoadMenuShowX & MASKSEGAGRP) == 0) {
+				_TreeView_SetCheckState(hFilterList, hItemChanged, FALSE);
+
+				_TreeView_SetCheckState(hFilterList, hFilterSega, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterSg1000, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterSms, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterMegadrive, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterGg, FALSE);
+
+				nLoadMenuShowX &= ~MASKSEGAGRP;
+			} else {
+				_TreeView_SetCheckState(hFilterList, hItemChanged, TRUE);
+
+
+				_TreeView_SetCheckState(hFilterList, hFilterSega, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterSg1000, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterSms, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterMegadrive, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterGg, TRUE);
+
+				nLoadMenuShowX |= MASKSEGAGRP;
+			}
+		}
+
+		if (hItemChanged == hFilterCapcomGrp) {
+			if ((nLoadMenuShowX & MASKCAPGRP) == 0) {
+				_TreeView_SetCheckState(hFilterList, hItemChanged, FALSE);
+
+				_TreeView_SetCheckState(hFilterList, hFilterCapcomMisc, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterCps1, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterCps2, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterCps3, FALSE);
+
+				nLoadMenuShowX &= ~MASKCAPGRP;
+			} else {
+				_TreeView_SetCheckState(hFilterList, hItemChanged, TRUE);
+
+				_TreeView_SetCheckState(hFilterList, hFilterCapcomMisc, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterCps1, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterCps2, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterCps3, TRUE);
+
+				nLoadMenuShowX |= MASKCAPGRP;
+			}
+		}
+
 		if (hItemChanged == hGenre) {
 			if ((nLoadMenuGenreFilter & MASKALLGENRE) == 0) {
 				_TreeView_SetCheckState(hFilterList, hItemChanged, FALSE);
-			
-				_TreeView_SetCheckState(hFilterList, hFilterHorshoot, FALSE);	
-				_TreeView_SetCheckState(hFilterList, hFilterVershoot, FALSE);	
-				_TreeView_SetCheckState(hFilterList, hFilterScrfight, FALSE);	
-				_TreeView_SetCheckState(hFilterList, hFilterVsfight, FALSE);	
-				_TreeView_SetCheckState(hFilterList, hFilterBios, FALSE);	
-				_TreeView_SetCheckState(hFilterList, hFilterBreakout, FALSE);	
-				_TreeView_SetCheckState(hFilterList, hFilterCasino, FALSE);	
+
+				_TreeView_SetCheckState(hFilterList, hFilterHorshoot, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterVershoot, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterScrfight, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterVsfight, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterBios, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterBreakout, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterCasino, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterBallpaddle, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterMaze, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterMinigames, FALSE);
@@ -1462,18 +1913,23 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				_TreeView_SetCheckState(hFilterList, hFilterMahjong, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterRacing, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterShoot, FALSE);
-				
+				_TreeView_SetCheckState(hFilterList, hFilterAction, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterRungun, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterStrategy, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterRpg, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterSim, FALSE);
+
 				nLoadMenuGenreFilter = MASKALLGENRE;
 			} else {
 				_TreeView_SetCheckState(hFilterList, hItemChanged, TRUE);
-			
-				_TreeView_SetCheckState(hFilterList, hFilterHorshoot, TRUE);	
-				_TreeView_SetCheckState(hFilterList, hFilterVershoot, TRUE);	
-				_TreeView_SetCheckState(hFilterList, hFilterScrfight, TRUE);	
-				_TreeView_SetCheckState(hFilterList, hFilterVsfight, TRUE);	
-				_TreeView_SetCheckState(hFilterList, hFilterBios, TRUE);	
-				_TreeView_SetCheckState(hFilterList, hFilterBreakout, TRUE);	
-				_TreeView_SetCheckState(hFilterList, hFilterCasino, TRUE);	
+
+				_TreeView_SetCheckState(hFilterList, hFilterHorshoot, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterVershoot, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterScrfight, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterVsfight, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterBios, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterBreakout, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterCasino, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterBallpaddle, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterMaze, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterMinigames, TRUE);
@@ -1487,10 +1943,26 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				_TreeView_SetCheckState(hFilterList, hFilterMahjong, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterRacing, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterShoot, TRUE);
-				
+				_TreeView_SetCheckState(hFilterList, hFilterAction, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterRungun, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterStrategy, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterRpg, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterSim, TRUE);
+
 				nLoadMenuGenreFilter = 0;
 			}
 		}
+
+		if (hItemChanged == hFilterCapcomGrp)		_ToggleGameListing(nLoadMenuShowX, MASKCAPMISC);
+		if (hItemChanged == hFilterCapcomGrp)		_ToggleGameListing(nLoadMenuShowX, MASKCPS);
+		if (hItemChanged == hFilterCapcomGrp)		_ToggleGameListing(nLoadMenuShowX, MASKCPS2);
+		if (hItemChanged == hFilterCapcomGrp)		_ToggleGameListing(nLoadMenuShowX, MASKCPS3);
+
+		if (hItemChanged == hFilterSegaGrp)			_ToggleGameListing(nLoadMenuShowX, MASKSG1000);
+		if (hItemChanged == hFilterSegaGrp)			_ToggleGameListing(nLoadMenuShowX, MASKSMS);
+		if (hItemChanged == hFilterSegaGrp)			_ToggleGameListing(nLoadMenuShowX, MASKMEGADRIVE);
+		if (hItemChanged == hFilterSegaGrp)			_ToggleGameListing(nLoadMenuShowX, MASKGG);
+		if (hItemChanged == hFilterSegaGrp)			_ToggleGameListing(nLoadMenuShowX, MASKSEGA);
 
 		if (hItemChanged == hFilterCapcomMisc)		_ToggleGameListing(nLoadMenuShowX, MASKCAPMISC);
 		if (hItemChanged == hFilterCave)			_ToggleGameListing(nLoadMenuShowX, MASKCAVE);
@@ -1515,20 +1987,27 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 		if (hItemChanged == hFilterMiscPost90s)		_ToggleGameListing(nLoadMenuShowX, MASKMISCPOST90S);
 		if (hItemChanged == hFilterMegadrive)		_ToggleGameListing(nLoadMenuShowX, MASKMEGADRIVE);
 		if (hItemChanged == hFilterPce)				_ToggleGameListing(nLoadMenuShowX, MASKPCENGINE);
-//		if (hItemChanged == hFilterSnes)			_ToggleGameListing(nLoadMenuShowX, MASKSNES);
 		if (hItemChanged == hFilterSms)				_ToggleGameListing(nLoadMenuShowX, MASKSMS);
 		if (hItemChanged == hFilterGg)				_ToggleGameListing(nLoadMenuShowX, MASKGG);
 		if (hItemChanged == hFilterSg1000)			_ToggleGameListing(nLoadMenuShowX, MASKSG1000);
 		if (hItemChanged == hFilterColeco)			_ToggleGameListing(nLoadMenuShowX, MASKCOLECO);
-		
+		if (hItemChanged == hFilterMsx)				_ToggleGameListing(nLoadMenuShowX, MASKMSX);
+		if (hItemChanged == hFilterSpectrum)		_ToggleGameListing(nLoadMenuShowX, MASKSPECTRUM);
+		if (hItemChanged == hFilterNes)				_ToggleGameListing(nLoadMenuShowX, MASKNES);
+		if (hItemChanged == hFilterFds)				_ToggleGameListing(nLoadMenuShowX, MASKFDS);
+		if (hItemChanged == hFilterNgp)				_ToggleGameListing(nLoadMenuShowX, MASKNGP);
+		if (hItemChanged == hFilterMidway)			_ToggleGameListing(nLoadMenuShowX, MASKMIDWAY);
+
 		if (hItemChanged == hFilterBootleg)			_ToggleGameListing(nLoadMenuBoardTypeFilter, BDF_BOOTLEG);
 		if (hItemChanged == hFilterDemo)			_ToggleGameListing(nLoadMenuBoardTypeFilter, BDF_DEMO);
 		if (hItemChanged == hFilterHack)			_ToggleGameListing(nLoadMenuBoardTypeFilter, BDF_HACK);
 		if (hItemChanged == hFilterHomebrew)		_ToggleGameListing(nLoadMenuBoardTypeFilter, BDF_HOMEBREW);
 		if (hItemChanged == hFilterPrototype)		_ToggleGameListing(nLoadMenuBoardTypeFilter, BDF_PROTOTYPE);
 		if (hItemChanged == hFilterGenuine)			_ToggleGameListing(nLoadMenuBoardTypeFilter, MASKBOARDTYPEGENUINE);
-		
+
 		if (hItemChanged == hFilterOtherFamily)		_ToggleGameListing(nLoadMenuFamilyFilter, MASKFAMILYOTHER);
+		if (hItemChanged == hFilterMahou)			_ToggleGameListing(nLoadMenuFamilyFilter, FBF_MAHOU);
+		if (hItemChanged == hFilterDonpachi)		_ToggleGameListing(nLoadMenuFamilyFilter, FBF_DONPACHI);
 		if (hItemChanged == hFilterMslug)			_ToggleGameListing(nLoadMenuFamilyFilter, FBF_MSLUG);
 		if (hItemChanged == hFilterSf)				_ToggleGameListing(nLoadMenuFamilyFilter, FBF_SF);
 		if (hItemChanged == hFilterKof)				_ToggleGameListing(nLoadMenuFamilyFilter, FBF_KOF);
@@ -1538,7 +2017,8 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 		if (hItemChanged == hFilter19xx)			_ToggleGameListing(nLoadMenuFamilyFilter, FBF_19XX);
 		if (hItemChanged == hFilterSonicwi)			_ToggleGameListing(nLoadMenuFamilyFilter, FBF_SONICWI);
 		if (hItemChanged == hFilterPwrinst)			_ToggleGameListing(nLoadMenuFamilyFilter, FBF_PWRINST);
-		
+		if (hItemChanged == hFilterSonic)			_ToggleGameListing(nLoadMenuFamilyFilter, FBF_SONIC);
+
 		if (hItemChanged == hFilterHorshoot)		_ToggleGameListing(nLoadMenuGenreFilter, GBF_HORSHOOT);
 		if (hItemChanged == hFilterVershoot)		_ToggleGameListing(nLoadMenuGenreFilter, GBF_VERSHOOT);
 		if (hItemChanged == hFilterScrfight)		_ToggleGameListing(nLoadMenuGenreFilter, GBF_SCRFIGHT);
@@ -1559,15 +2039,26 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 		if (hItemChanged == hFilterMahjong)			_ToggleGameListing(nLoadMenuGenreFilter, GBF_MAHJONG);
 		if (hItemChanged == hFilterRacing)			_ToggleGameListing(nLoadMenuGenreFilter, GBF_RACING);
 		if (hItemChanged == hFilterShoot)			_ToggleGameListing(nLoadMenuGenreFilter, GBF_SHOOT);
-		
+		if (hItemChanged == hFilterAction)			_ToggleGameListing(nLoadMenuGenreFilter, GBF_ACTION);
+		if (hItemChanged == hFilterRungun)			_ToggleGameListing(nLoadMenuGenreFilter, GBF_RUNGUN);
+		if (hItemChanged == hFilterStrategy)		_ToggleGameListing(nLoadMenuGenreFilter, GBF_STRATEGY);
+		if (hItemChanged == hFilterRpg)				_ToggleGameListing(nLoadMenuGenreFilter, GBF_RPG);
+		if (hItemChanged == hFilterSim)				_ToggleGameListing(nLoadMenuGenreFilter, GBF_SIM);
+
 		RebuildEverything();
 	}
 
 	if (Msg == WM_COMMAND) {
 		if (HIWORD(wParam) == EN_CHANGE && LOWORD(wParam) == IDC_SEL_SEARCH) {
-			RebuildEverything();
+			if (bSearchStringInit) {
+				bSearchStringInit = false;
+				return 0;
+			}
+
+			KillTimer(hDlg, IDC_SEL_SEARCHTIMER);
+			SetTimer(hDlg, IDC_SEL_SEARCHTIMER, 500, (TIMERPROC)NULL);
 		}
-		
+
 		if (HIWORD(wParam) == BN_CLICKED) {
 			int wID = LOWORD(wParam);
 			switch (wID) {
@@ -1588,23 +2079,23 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 					SendMessage(hDlg, WM_CLOSE, 0, 0);
 					return 0;
 				case IDC_CHECKAVAILABLE:
-					nLoadMenuShowX ^= AVAILABLE;
+					nLoadMenuShowY ^= AVAILABLE;
 					RebuildEverything();
 					break;
 				case IDC_CHECKUNAVAILABLE:
-					nLoadMenuShowX ^= UNAVAILABLE;
+					nLoadMenuShowY ^= UNAVAILABLE;
 					RebuildEverything();
 					break;
 				case IDC_CHECKAUTOEXPAND:
-					nLoadMenuShowX ^= AUTOEXPAND;
+					nLoadMenuShowY ^= AUTOEXPAND;
 					RebuildEverything();
 					break;
 				case IDC_SEL_SHORTNAME:
-					nLoadMenuShowX ^= SHOWSHORT;
+					nLoadMenuShowY ^= SHOWSHORT;
 					RebuildEverything();
 					break;
 				case IDC_SEL_ASCIIONLY:
-					nLoadMenuShowX ^= ASCIIONLY;
+					nLoadMenuShowY ^= ASCIIONLY;
 					RebuildEverything();
 					break;
 				case IDGAMEINFO:
@@ -1616,15 +2107,17 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 					}
 					break;
 				case IDC_SEL_IPSMANAGER:
-					if (bDrvSelected) {
+                    if (bDrvSelected) {
+                        int nOldnBurnDrvActive = nBurnDrvActive;
 						IpsManagerCreate(hSelDlg);
+                        nBurnDrvActive = nOldnBurnDrvActive; // due to some weird bug in sel.cpp, nBurnDrvActive can sometimes change when clicking in new dialogs.
 						LoadIpsActivePatches();
 						if (GetIpsNumActivePatches()) {
 							EnableWindow(GetDlgItem(hDlg, IDC_SEL_APPLYIPS), TRUE);
 						} else {
 							EnableWindow(GetDlgItem(hDlg, IDC_SEL_APPLYIPS), FALSE);
 						}
-						SetFocus(hSelList);
+                        SetFocus(hSelList);
 					} else {
 						MessageBox(hSelDlg, FBALoadStringEx(hAppInst, IDS_ERR_NO_DRIVER_SELECTED, true), FBALoadStringEx(hAppInst, IDS_ERR_ERROR, true), MB_OK);
 					}
@@ -1633,6 +2126,57 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 					bDoIpsPatch = !bDoIpsPatch;
 					break;
 			}
+		}
+
+		int id = LOWORD(wParam);
+
+		switch (id) {
+			case GAMESEL_MENU_PLAY: {
+				SelOkay();
+				break;
+			}
+
+			case GAMESEL_MENU_GAMEINFO: {
+				/*UpdatePreview(true, hSelDlg, szAppPreviewsPath);
+				if (nTimer) {
+					KillTimer(hSelDlg, nTimer);
+					nTimer = 0;
+				}
+				GameInfoDialogCreate(hSelDlg, nBurnDrvSelect);*/
+				if (bDrvSelected) {
+					GameInfoDialogCreate(hSelDlg, nBurnDrvActive);
+					SetFocus(hSelList); // Update list for Rescan Romset button
+				} else {
+					MessageBox(hSelDlg, FBALoadStringEx(hAppInst, IDS_ERR_NO_DRIVER_SELECTED, true), FBALoadStringEx(hAppInst, IDS_ERR_ERROR, true), MB_OK);
+				}
+				break;
+			}
+
+			case GAMESEL_MENU_VIEWEMMA: {
+				if (!nVidFullscreen) {
+					ViewEmma();
+				}
+				break;
+			}
+
+			case GAMESEL_MENU_FAVORITE: { // toggle favorite status.
+				if (bDrvSelected) {
+					AddFavorite_Ext((CheckFavorites(BurnDrvGetTextA(DRV_NAME)) == -1) ? 1 : 0);
+				} else {
+					MessageBox(hSelDlg, FBALoadStringEx(hAppInst, IDS_ERR_NO_DRIVER_SELECTED, true), FBALoadStringEx(hAppInst, IDS_ERR_ERROR, true), MB_OK);
+				}
+
+				break;
+			}
+		}
+	}
+
+	if (Msg == WM_TIMER) {
+		switch (wParam) {
+			case IDC_SEL_SEARCHTIMER:
+				KillTimer(hDlg, IDC_SEL_SEARCHTIMER);
+				RebuildEverything();
+				break;
 		}
 	}
 
@@ -1650,58 +2194,58 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 		DeleteObject(hWhiteBGBrush);
 		return 0;
 	}
-	
+
 	if (Msg == WM_GETMINMAXINFO) {
 		MINMAXINFO *info = (MINMAXINFO*)lParam;
-		
+
 		info->ptMinTrackSize.x = nDlgInitialWidth;
 		info->ptMinTrackSize.y = nDlgInitialHeight;
-		
+
 		return 0;
 	}
-	
+
 	if (Msg == WM_WINDOWPOSCHANGED) {
 		RECT rc;
 		int xDelta;
 		int yDelta;
 		int xScrollBarDelta;
-		
+
 		if (nDlgInitialWidth == 0 || nDlgInitialHeight == 0) return 0;
 
 		GetClientRect(hDlg, &rc);
-		
+
 		xDelta = nDlgInitialWidth - rc.right;
 		yDelta = nDlgInitialHeight - rc.bottom;
-		
+
 		if (xDelta == 0 && yDelta == 0) return 0;
-				
+
 		SetControlPosAlignTopRight(IDC_STATIC_OPT, nDlgOptionsGrpInitialPos);
-		SetControlPosAlignTopRight(IDC_CHECKAVAILABLE, nDlgAvailableChbInitialPos);	
+		SetControlPosAlignTopRight(IDC_CHECKAVAILABLE, nDlgAvailableChbInitialPos);
 		SetControlPosAlignTopRight(IDC_CHECKUNAVAILABLE, nDlgUnavailableChbInitialPos);
 		SetControlPosAlignTopRight(IDC_CHECKAUTOEXPAND, nDlgAlwaysClonesChbInitialPos);
 		SetControlPosAlignTopRight(IDC_SEL_SHORTNAME, nDlgZipnamesChbInitialPos);
 		SetControlPosAlignTopRight(IDC_SEL_ASCIIONLY, nDlgLatinTextChbInitialPos);
 		SetControlPosAlignTopRight(IDROM, nDlgRomDirsBtnInitialPos);
 		SetControlPosAlignTopRight(IDRESCAN, nDlgScanRomsBtnInitialPos);
-		
+
 		SetControlPosAlignTopRightResizeVert(IDC_STATIC_SYS, nDlgFilterGrpInitialPos);
 		SetControlPosAlignTopRightResizeVert(IDC_TREE2, nDlgFilterTreeInitialPos);
-		
+
 		SetControlPosAlignBottomRight(IDC_SEL_IPSGROUP, nDlgIpsGrpInitialPos);
 		SetControlPosAlignBottomRight(IDC_SEL_APPLYIPS, nDlgApplyIpsChbInitialPos);
 		SetControlPosAlignBottomRight(IDC_SEL_IPSMANAGER, nDlgIpsManBtnInitialPos);
 		SetControlPosAlignBottomRight(IDC_SEL_SEARCHGROUP, nDlgSearchGrpInitialPos);
-		SetControlPosAlignBottomRight(IDC_SEL_SEARCH, nDlgSearchTxtInitialPos);	
+		SetControlPosAlignBottomRight(IDC_SEL_SEARCH, nDlgSearchTxtInitialPos);
 		SetControlPosAlignBottomRight(IDCANCEL, nDlgCancelBtnInitialPos);
 		SetControlPosAlignBottomRight(IDOK, nDlgPlayBtnInitialPos);
-		
-		SetControlPosAlignTopLeft(IDC_STATIC2, nDlgPreviewGrpInitialPos);
-		SetControlPosAlignTopLeft(IDC_SCREENSHOT_H, nDlgPreviewImgHInitialPos);
-		SetControlPosAlignTopLeft(IDC_SCREENSHOT_V, nDlgPreviewImgVInitialPos);
+
 		SetControlPosAlignTopLeft(IDC_STATIC3, nDlgTitleGrpInitialPos);
 		SetControlPosAlignTopLeft(IDC_SCREENSHOT2_H, nDlgTitleImgHInitialPos);
 		SetControlPosAlignTopLeft(IDC_SCREENSHOT2_V, nDlgTitleImgVInitialPos);
-		
+		SetControlPosAlignTopLeft(IDC_STATIC2, nDlgPreviewGrpInitialPos);
+		SetControlPosAlignTopLeft(IDC_SCREENSHOT_H, nDlgPreviewImgHInitialPos);
+		SetControlPosAlignTopLeft(IDC_SCREENSHOT_V, nDlgPreviewImgVInitialPos);
+
 		SetControlPosAlignBottomLeftResizeHor(IDC_STATIC_INFOBOX, nDlgWhiteBoxInitialPos);
 		SetControlPosAlignBottomLeftResizeHor(IDC_LABELCOMMENT, nDlgGameInfoLblInitialPos);
 		SetControlPosAlignBottomLeftResizeHor(IDC_LABELROMNAME, nDlgRomNameLblInitialPos);
@@ -1717,9 +2261,14 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 		SetControlPosAlignBottomLeftResizeHor(IDC_TEXTNOTES, nDlgNotesTxtInitialPos);
 		SetControlPosAlignBottomLeftResizeHor(IDC_DRVCOUNT, nDlgDrvCountTxtInitialPos);
 		SetControlPosAlignBottomRight(IDGAMEINFO, nDlgDrvRomInfoBtnInitialPos);
-		
+
 		SetControlPosAlignTopLeftResizeHorVert(IDC_STATIC1, nDlgSelectGameGrpInitialPos);
-		SetControlPosAlignTopLeftResizeHorVert(IDC_TREE1, nDlgSelectGameLstInitialPos);
+
+		if (bIsWindowsXP && nTmpDrvCount < 12) { // Fix an issue on WinXP where the scrollbar overwrites past the tree size when less then 12 items are in the list
+			SetControlPosAlignTopLeftResizeHorVertALT(IDC_TREE1, nDlgSelectGameLstInitialPos);
+		} else {
+			SetControlPosAlignTopLeftResizeHorVert(IDC_TREE1, nDlgSelectGameLstInitialPos);
+		}
 
 		InvalidateRect(hSelDlg, NULL, true);
 		UpdateWindow(hSelDlg);
@@ -1731,7 +2280,7 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 //		UpdatePreview(false, szAppPreviewsPath, IDC_SCREENSHOT_H, IDC_SCREENSHOT_V);
 //		return 0;
 //	}
-	
+
 	if (Msg == WM_CTLCOLORSTATIC) {
 		for (int i = 0; i < 6; i++) {
 			if ((HWND)lParam == hInfoLabel[i])	{ return (INT_PTR)hWhiteBGBrush; }
@@ -1740,9 +2289,25 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 	}
 
 	NMHDR* pNmHdr = (NMHDR*)lParam;
-	if (Msg == WM_NOTIFY) 
+	if (Msg == WM_NOTIFY)
 	{
-		if ((pNmHdr->code == NM_CLICK) && (pNmHdr->idFrom == IDC_TREE2)) 
+		if ((pNmHdr->code == TVN_ITEMEXPANDED) && (pNmHdr->idFrom == IDC_TREE2))
+		{
+			// save the expanded state of the filter nodes
+			NM_TREEVIEW *pnmtv = (NM_TREEVIEW *)lParam;
+			TV_ITEM curItem = pnmtv->itemNew;
+
+			if (pnmtv->action == TVE_COLLAPSE)
+			{
+				nLoadMenuExpand &= ~TvhFilterToBitmask(curItem.hItem);
+			}
+            else if (pnmtv->action == TVE_EXPAND)
+            {
+				nLoadMenuExpand |= TvhFilterToBitmask(curItem.hItem);
+			}
+		}
+
+		if ((pNmHdr->code == NM_CLICK) && (pNmHdr->idFrom == IDC_TREE2))
 		{
 			TVHITTESTINFO thi;
 			DWORD dwpos = GetMessagePos();
@@ -1760,16 +2325,16 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 
 		NMTREEVIEW* pnmtv = (NMTREEVIEW*)lParam;
 
-		if (!TreeBuilding && pnmtv->hdr.code == NM_DBLCLK && pnmtv->hdr.idFrom == IDC_TREE1) 
+		if (!TreeBuilding && pnmtv->hdr.code == NM_DBLCLK && pnmtv->hdr.idFrom == IDC_TREE1)
 		{
 			DWORD dwpos = GetMessagePos();
 
 			TVHITTESTINFO thi;
 			thi.pt.x	= GET_X_LPARAM(dwpos);
 			thi.pt.y	= GET_Y_LPARAM(dwpos);
-			
+
 			MapWindowPoints(HWND_DESKTOP, pNmHdr->hwndFrom, &thi.pt, 1);
-			
+
 			TreeView_HitTest(pNmHdr->hwndFrom, &thi);
 
 			HTREEITEM hSelectHandle = thi.hItem;
@@ -1784,7 +2349,7 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 					break;
 				}
 			}
-			
+
 			nDialogSelect	= nBurnDrvActive;
 			bDrvSelected	= true;
 
@@ -1795,12 +2360,12 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 
 			return 1;
 		}
-		
+
 		if (pNmHdr->code == NM_CUSTOMDRAW && LOWORD(wParam) == IDC_TREE1) {
 			LPNMLVCUSTOMDRAW lplvcd = (LPNMLVCUSTOMDRAW)lParam;
-			int nGetTextFlags = nLoadMenuShowX & ASCIIONLY ? DRV_ASCIIONLY : 0;
+			int nGetTextFlags = nLoadMenuShowY & ASCIIONLY ? DRV_ASCIIONLY : 0;
 			HTREEITEM hSelectHandle;
-			
+
 			switch (lplvcd->nmcd.dwDrawStage) {
 				case CDDS_PREPAINT: {
 					SetWindowLongPtr(hSelDlg, DWLP_MSGRESULT, CDRF_NOTIFYITEMDRAW);
@@ -1811,8 +2376,8 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 					hSelectHandle = (HTREEITEM)(lplvcd->nmcd.dwItemSpec);
 					HBRUSH hBackBrush;
 					RECT rect;
-					
-					// TVITEM (msdn.microsoft.com) This structure is identical to the TV_ITEM structure, but it has been renamed to 
+
+					// TVITEM (msdn.microsoft.com) This structure is identical to the TV_ITEM structure, but it has been renamed to
 					// follow current naming conventions. New applications should use this structure.
 
 					//TV_ITEM TvItem;
@@ -1844,7 +2409,7 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 					rect.bottom = lplvcd->nmcd.rc.bottom;
 
 					hBackBrush = CreateSolidBrush(lplvcd->clrTextBk);
-					
+
 					nBurnDrvActive = ((NODEINFO*)TvItem.lParam)->nBurnDrvNo;
 
 					{
@@ -1880,9 +2445,9 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 						SetBkMode(lplvcd->nmcd.hdc, TRANSPARENT);
 
 						// Display the short name if needed
-						if (nLoadMenuShowX & SHOWSHORT) {
+						if (nLoadMenuShowY & SHOWSHORT) {
 							DrawText(lplvcd->nmcd.hdc, BurnDrvGetText(DRV_NAME), -1, &rect, DT_NOPREFIX | DT_SINGLELINE | DT_LEFT | DT_VCENTER);
-							rect.left += 16 + 40 + 20 + 10;
+							rect.left += 16 + 40 + 20 + 20;
 						}
 
 						{
@@ -1891,25 +2456,25 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 								DrawIconEx(lplvcd->nmcd.hdc, rect.left, rect.top, hNotWorking, nIconsSizeXY, nIconsSizeXY, 0, NULL, DI_NORMAL);
 								rect.left += nIconsSizeXY + 4;
 							} else {
-								if (!(gameAv[((NODEINFO*)TvItem.lParam)->nBurnDrvNo])) {
+								if (!(gameAv[((NODEINFO*)TvItem.lParam)->nBurnDrvNo]) && !bSkipStartupCheck) {
 									DrawIconEx(lplvcd->nmcd.hdc, rect.left, rect.top, hNotFoundEss, nIconsSizeXY, nIconsSizeXY, 0, NULL, DI_NORMAL);
 									rect.left += nIconsSizeXY + 4;
 								} else {
-									if (!(nLoadMenuShowX & AVAILABLE) && !(gameAv[((NODEINFO*)TvItem.lParam)->nBurnDrvNo] & 2)) {
+									if (!(nLoadMenuShowY & AVAILABLE) && !(gameAv[((NODEINFO*)TvItem.lParam)->nBurnDrvNo] & 2)) {
 										DrawIconEx(lplvcd->nmcd.hdc, rect.left, rect.top, hNotFoundNonEss, nIconsSizeXY, nIconsSizeXY, 0, NULL, DI_NORMAL);
 										rect.left += nIconsSizeXY + 4;
 									}
 								}
 							}
 						}
-						
+
 						// Driver Icon drawing code...
 						if(bEnableIcons && bIconsLoaded) {
 							if(hDrvIcon[nBurnDrvActive]) {
 								DrawIconEx(lplvcd->nmcd.hdc, rect.left, rect.top, hDrvIcon[nBurnDrvActive], nIconsSizeXY, nIconsSizeXY, 0, NULL, DI_NORMAL);
 							}
 
-							if(!hDrvIcon[nBurnDrvActive]) {								
+							if(!hDrvIcon[nBurnDrvActive]) {
 								DrawIconEx(lplvcd->nmcd.hdc, rect.left, rect.top, hDrvIconMiss, nIconsSizeXY, nIconsSizeXY, 0, NULL, DI_NORMAL);
 							}
 							rect.left += nIconsSizeXY + 4;
@@ -1968,33 +2533,35 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 
 			// Search through nBurnDrv[] for the nBurnDrvNo according to the returned hSelectHandle
 			for (unsigned int i = 0; i < nTmpDrvCount; i++) {
-				if (hSelectHandle == nBurnDrv[i].hTreeHandle) 
-				{					
+				if (hSelectHandle == nBurnDrv[i].hTreeHandle)
+				{
 					nBurnDrvActive	= nBurnDrv[i].nBurnDrvNo;
-					nDialogSelect	= nBurnDrvActive;					
-					bDrvSelected	= true;	
+					nDialogSelect	= nBurnDrvActive;
+					bDrvSelected	= true;
 					UpdatePreview(true, szAppPreviewsPath, IDC_SCREENSHOT_H, IDC_SCREENSHOT_V);
 					UpdatePreview(false, szAppTitlesPath, IDC_SCREENSHOT2_H, IDC_SCREENSHOT2_V);
 					break;
 				}
 			}
-			
-			if (GetIpsNumPatches()) {
+
+            CheckDlgButton(hDlg, IDC_SEL_APPLYIPS, BST_UNCHECKED);
+
+            if (GetIpsNumPatches()) {
 				if (!nShowMVSCartsOnly) EnableWindow(GetDlgItem(hDlg, IDC_SEL_IPSMANAGER), TRUE);
 			} else {
 				EnableWindow(GetDlgItem(hDlg, IDC_SEL_IPSMANAGER), FALSE);
 			}
-			
+
 			LoadIpsActivePatches();
 			if (GetIpsNumActivePatches()) {
 				if (!nShowMVSCartsOnly) EnableWindow(GetDlgItem(hDlg, IDC_SEL_APPLYIPS), TRUE);
 			} else {
 				EnableWindow(GetDlgItem(hDlg, IDC_SEL_APPLYIPS), FALSE);
 			}
-			
+
 			// Get the text from the drivers via BurnDrvGetText()
 			for (int i = 0; i < 6; i++) {
-				int nGetTextFlags = nLoadMenuShowX & ASCIIONLY ? DRV_ASCIIONLY : 0;
+				int nGetTextFlags = nLoadMenuShowY & ASCIIONLY ? DRV_ASCIIONLY : 0;
 				TCHAR szItemText[256];
 				szItemText[0] = _T('\0');
 
@@ -2056,7 +2623,7 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 						if (BurnDrvGetFlags() & BDF_HOMEBREW) {
 							_stprintf(szItemText + _tcslen(szItemText), FBALoadStringEx(hAppInst, IDS_SEL_HOMEBREW, true), bUseInfo ? _T(", ") : _T(""));
 							bUseInfo = true;
-						}						
+						}
 						if (BurnDrvGetFlags() & BDF_DEMO) {
 							_stprintf(szItemText + _tcslen(szItemText), FBALoadStringEx(hAppInst, IDS_SEL_DEMO, true), bUseInfo ? _T(", ") : _T(""));
 							bUseInfo = true;
@@ -2116,7 +2683,7 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 						EnableWindow(hInfoLabel[i], TRUE);
 						break;
 					}
-					
+
 					case 5: {
 						_stprintf(szItemText, _T("%s"), DecorateGenreInfo());
 						SendMessage(hInfoText[i], WM_SETTEXT, (WPARAM)0, (LPARAM)szItemText);
@@ -2126,6 +2693,51 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				}
 			}
 		}
+
+		if(!TreeBuilding && pnmtv->hdr.code == NM_RCLICK && pnmtv->hdr.idFrom == IDC_TREE1)
+		{
+			DWORD dwpos = GetMessagePos();
+
+			TVHITTESTINFO thi;
+			thi.pt.x	= GET_X_LPARAM(dwpos);
+			thi.pt.y	= GET_Y_LPARAM(dwpos);
+
+			MapWindowPoints(HWND_DESKTOP, pNmHdr->hwndFrom, &thi.pt, 1);
+
+			TreeView_HitTest(pNmHdr->hwndFrom, &thi);
+
+			HTREEITEM hSelectHandle = thi.hItem;
+         	if(hSelectHandle == NULL) return 1;
+
+			TreeView_SelectItem(hSelList, hSelectHandle);
+
+			// Search through nBurnDrv[] for the nBurnDrvNo according to the returned hSelectHandle
+			for (unsigned int i = 0; i < nTmpDrvCount; i++) {
+				if (hSelectHandle == nBurnDrv[i].hTreeHandle) {
+					nBurnDrvSelect[0] = nBurnDrv[i].nBurnDrvNo;
+					break;
+				}
+			}
+
+			nDialogSelect	= nBurnDrvSelect[0];
+			bDrvSelected	= true;
+			UpdatePreview(true, szAppPreviewsPath, IDC_SCREENSHOT_H, IDC_SCREENSHOT_V);
+			UpdatePreview(false, szAppTitlesPath, IDC_SCREENSHOT2_H, IDC_SCREENSHOT2_V);
+
+			// Menu
+			POINT oPoint;
+			GetCursorPos(&oPoint);
+
+			HMENU hMenuLoad = FBALoadMenu(hAppInst, MAKEINTRESOURCE(IDR_MENU_GAMESEL));
+			HMENU hMenuX = GetSubMenu(hMenuLoad, 0);
+
+			CheckMenuItem(hMenuX, GAMESEL_MENU_FAVORITE, (CheckFavorites(BurnDrvGetTextA(DRV_NAME)) != -1) ? MF_CHECKED : MF_UNCHECKED);
+
+			TrackPopupMenu(hMenuX, TPM_LEFTALIGN | TPM_RIGHTBUTTON, oPoint.x, oPoint.y, 0, hSelDlg, NULL);
+			DestroyMenu(hMenuLoad);
+
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -2133,14 +2745,14 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 int SelDialog(int nMVSCartsOnly, HWND hParentWND)
 {
 	int nOldSelect = nBurnDrvActive;
-	
+
 	if(bDrvOkay) {
 		nOldDlgSelected = nBurnDrvActive;
 	}
 
 	hParent = hParentWND;
 	nShowMVSCartsOnly = nMVSCartsOnly;
-	
+
 	InitCommonControls();
 
 	FBADialogBox(hAppInst, MAKEINTRESOURCE(IDD_SELNEW), hParent, (DLGPROC)DialogProc);
@@ -2165,7 +2777,7 @@ static unsigned int nPrevDrvSelect[6];
 
 static void UpdateInfoROMInfo()
 {
-//	int nGetTextFlags = nLoadMenuShowX & ASCIIONLY ? DRV_ASCIIONLY : 0;
+//	int nGetTextFlags = nLoadMenuShowY & ASCIIONLY ? DRV_ASCIIONLY : 0;
 	TCHAR szItemText[256] = _T("");
 	bool bBracket = false;
 
@@ -2214,7 +2826,7 @@ static void UpdateInfoROMInfo()
 
 static void UpdateInfoRelease()
 {
-	int nGetTextFlags = nLoadMenuShowX & ASCIIONLY ? DRV_ASCIIONLY : 0;
+	int nGetTextFlags = nLoadMenuShowY & ASCIIONLY ? DRV_ASCIIONLY : 0;
 	TCHAR szItemText[256] = _T("");
 
 	TCHAR szUnknown[100];
@@ -2238,7 +2850,7 @@ static void UpdateInfoRelease()
 
 static void UpdateInfoGameInfo()
 {
-	int nGetTextFlags = nLoadMenuShowX & ASCIIONLY ? DRV_ASCIIONLY : 0;
+	int nGetTextFlags = nLoadMenuShowY & ASCIIONLY ? DRV_ASCIIONLY : 0;
 	TCHAR szText[1024] = _T("");
 	TCHAR* pszPosition = szText;
 	TCHAR* pszName = BurnDrvGetText(nGetTextFlags | DRV_FULLNAME);
@@ -2274,7 +2886,7 @@ static int MVSpreviewUpdateSlot(int nSlot, HWND hDlg)
 {
 	int nOldSelect = nBurnDrvActive;
 
-	if (nSlot >= 0 && nSlot <= 6) {
+	if (nSlot >= 0 && nSlot < 6) {
 		hInfoLabel[0] = 0; hInfoLabel[1] = 0; hInfoLabel[2] = 0; hInfoLabel[3] = 0;
 		hInfoText[0] = GetDlgItem(hDlg, IDC_MVS_TEXTROMNAME1 + nSlot);
 		hInfoText[1] = 0;
@@ -2367,10 +2979,10 @@ static INT_PTR CALLBACK MVSpreviewProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARA
 					SendMessage(hDlg, WM_CLOSE, 0, 0);
 					break;
 				}
-				
+
 				if (LOWORD(wParam) >= IDC_MVS_CLEAR1 && LOWORD(wParam) <= IDC_MVS_CLEAR6) {
 					int nSlot = LOWORD(wParam) - IDC_MVS_CLEAR1;
-					
+
 					nBurnDrvSelect[nSlot] = ~0U;
 					nPrevDrvSelect[nSlot] = ~0U;
 					MVSpreviewUpdateSlot(nSlot, hDlg);

@@ -8,6 +8,7 @@
 #define V33_TYPE 0
 #define V30_TYPE 8
 #define V20_TYPE 16
+#define i86_TYPE 32
 #define V25_TYPE (V20_TYPE|(1<<16))
 #define V35_TYPE (V30_TYPE|(1<<16))
 
@@ -33,6 +34,7 @@ void VezSetDecode(UINT8 *decode); // set opcode decode
 INT32 VezMemCallback(INT32 nStart,INT32 nEnd,INT32 nMode);
 INT32 VezMapArea(INT32 nStart, INT32 nEnd, INT32 nMode, UINT8 *Mem);
 INT32 VezMapArea(INT32 nStart, INT32 nEnd, INT32 nMode, UINT8 *Mem1, UINT8 *Mem2);
+INT32 VezMapMemory(UINT8 *Mem, INT32 nStart, INT32 nEnd, INT32 nMode);
 
 void VezSetReadHandler(UINT8 (__fastcall*)(UINT32));
 void VezSetWriteHandler(void (__fastcall*)(UINT32, UINT8));
@@ -66,3 +68,10 @@ INT32 VezRun(INT32 nCycles);
 
 void VezSetIRQLineAndVector(const INT32 line, const INT32 vector, const INT32 status);
 
+void VezCheatWrite(UINT32 a, UINT8 d); // cheat core
+
+extern struct cpu_core_config VezConfig;
+
+// depreciate this and use BurnTimerAttach directly!
+#define BurnTimerAttachVez(clock)	\
+	BurnTimerAttach(&VezConfig, clock)

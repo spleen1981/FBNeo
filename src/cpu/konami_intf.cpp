@@ -25,10 +25,35 @@ static INT32 (*irqcallback)(INT32);
 
 void konami_set_irq_line(INT32 irqline, INT32 state);
 void konami_init(INT32 (*irqcallback)(INT32));
+void konami_set_irq_hold(INT32 irq);
+
+static void core_set_irq(INT32 /*cpu*/, INT32 line, INT32 state)
+{
+	konamiSetIrqLine(line, state);
+}
+
+cpu_core_config konamiCPUConfig =
+{
+	"konami",
+	konamiOpen,
+	konamiClose,
+	konami_cheat_read,
+	konami_write_rom,
+	konamiGetActive,
+	konamiTotalCycles,
+	konamiNewFrame,
+	konamiIdle,
+	core_set_irq,
+	konamiRun,
+	konamiRunEnd,
+	konamiReset,
+	0x10000,
+	0
+};
 
 void konamiMapMemory(UINT8 *src, UINT16 start, UINT16 finish, INT32 type)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_KonamiInitted) bprintf(PRINT_ERROR, _T("konamiMapMemory called without init\n"));
 #endif
 
@@ -50,7 +75,7 @@ INT32 konamiDummyIrqCallback(INT32)
 
 void konamiSetIrqCallbackHandler(INT32 (*callback)(INT32))
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_KonamiInitted) bprintf(PRINT_ERROR, _T("konamiSetIrqCallbackHandler called without init\n"));
 #endif
 
@@ -59,7 +84,7 @@ void konamiSetIrqCallbackHandler(INT32 (*callback)(INT32))
 
 void konamiSetWriteHandler(void (*write)(UINT16, UINT8))
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_KonamiInitted) bprintf(PRINT_ERROR, _T("konamiSetWriteHandler called without init\n"));
 #endif
 
@@ -68,16 +93,16 @@ void konamiSetWriteHandler(void (*write)(UINT16, UINT8))
 
 void konamiSetReadHandler(UINT8 (*read)(UINT16))
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_KonamiInitted) bprintf(PRINT_ERROR, _T("konamiSetReadHandler called without init\n"));
 #endif
 
 	pkonamiRead = read;
 }
 
-static void konami_write_rom(UINT32 address, UINT8 data)
+void konami_write_rom(UINT32 address, UINT8 data)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_KonamiInitted) bprintf(PRINT_ERROR, _T("konami_write_rom called without init\n"));
 #endif
 
@@ -143,10 +168,14 @@ UINT8 konamiFetch(UINT16 address)
 
 void konamiSetIrqLine(INT32 line, INT32 state)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_KonamiInitted) bprintf(PRINT_ERROR, _T("konamiSetIrqLine called without init\n"));
 #endif
 
+	if (state == CPU_IRQSTATUS_HOLD) {
+		konami_set_irq_line(line, CPU_IRQSTATUS_ACK);
+		konami_set_irq_hold(line);
+	} else
 	if (state == CPU_IRQSTATUS_AUTO) {
 		konami_set_irq_line(line, CPU_IRQSTATUS_ACK);
 		konamiRun(0);
@@ -156,33 +185,12 @@ void konamiSetIrqLine(INT32 line, INT32 state)
 	}
 }
 
-void konamiRunEnd()
-{
-	// nothing atm
-}
-
-static UINT8 konami_cheat_read(UINT32 a)
+UINT8 konami_cheat_read(UINT32 a)
 {
 	return konamiRead(a);
 }
 
-static cpu_core_config konamiCheatCpuConfig =
-{
-	konamiOpen,
-	konamiClose,
-	konami_cheat_read,
-	konami_write_rom,
-	konamiGetActive,
-	konamiTotalCycles,
-	konamiNewFrame,
-	konamiRun,
-	konamiRunEnd,
-	konamiReset,
-	1<<16,
-	0
-};
-
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 void konamiInit(INT32 nCpu) // only 1 cpu (No examples exist of multi-cpu konami games)
 #else
 void konamiInit(INT32 /*nCpu*/) // only 1 cpu (No examples exist of multi-cpu konami games)
@@ -190,7 +198,7 @@ void konamiInit(INT32 /*nCpu*/) // only 1 cpu (No examples exist of multi-cpu ko
 {
 	DebugCPU_KonamiInitted = 1;
 
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (nCpu >= MAX_CPU) bprintf(PRINT_ERROR, _T("konamiInit nCpu is more than MAX_CPU (%d), MAX IS %d\n"), nCpu, MAX_CPU);
 #endif
 
@@ -203,12 +211,12 @@ void konamiInit(INT32 /*nCpu*/) // only 1 cpu (No examples exist of multi-cpu ko
 		}
 	}
 
-	CpuCheatRegister(0, &konamiCheatCpuConfig);
+	CpuCheatRegister(0, &konamiCPUConfig);
 }
 
 void konamiExit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_KonamiInitted) bprintf(PRINT_ERROR, _T("konamiExit called without init\n"));
 #endif
 
@@ -221,7 +229,7 @@ void konamiExit()
 
 void konamiOpen(INT32 num)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_KonamiInitted) bprintf(PRINT_ERROR, _T("konamiOpen called without init\n"));
 #endif
 
@@ -230,7 +238,7 @@ void konamiOpen(INT32 num)
 
 void konamiClose()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_KonamiInitted) bprintf(PRINT_ERROR, _T("konamiClose called without init\n"));
 #endif
 
@@ -239,7 +247,7 @@ void konamiClose()
 
 INT32 konamiGetActive()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_KonamiInitted) bprintf(PRINT_ERROR, _T("konamiGetActive called without init\n"));
 #endif
 

@@ -12,7 +12,6 @@
 
 //#include <QDebug>
 #include <iostream>
-#include <cstdint>
 #include "mips3.h"
 #include "mipsdef.h"
 #include "mips3_memory.h"
@@ -42,6 +41,7 @@ mips3::mips3() : m_tlb_entries(48)
 
 mips3::~mips3()
 {
+    tlb_exit();
 }
 
 void mips3::reset()

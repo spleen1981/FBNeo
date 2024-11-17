@@ -6,11 +6,8 @@
 #include "z80_intf.h"
 #include "sn76496.h"
 #include "dac.h"
-#include "driver.h"
 #include "bitswap.h"
-extern "C" {
 #include "ay8910.h"
-}
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;
@@ -37,8 +34,6 @@ static UINT8 *DrvBitmapRAM;
 static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
-static INT16 *pAY8910Buffer[6];
-
 static UINT8 back_color;
 static UINT8 soundlatch;
 static UINT8 chip_data;
@@ -61,103 +56,103 @@ INT32 previous_coin = 0;
 static INT32 game_select = 0; // 0 = lasso, 1 = chameleo, 2 - wwjgtin, 3 - pinbo
 
 static struct BurnInputInfo LassoInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 5,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 5,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 7,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 4,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Lasso)
 
 static struct BurnInputInfo WwjgtinInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 5,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 5,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 6,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 4,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 7,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Wwjgtin)
 
 static struct BurnInputInfo PinboInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 5,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 5,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 7,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 4,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Pinbo)
 
 static struct BurnInputInfo ChameleoInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 5,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 5,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 7,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 4,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Chameleo)
@@ -314,11 +309,7 @@ static void lasso_main_write(UINT16 address, UINT8 data)
 			if (game_select == 3) {
 				ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 			} else {
-				M6502Close();
-				M6502Open(1);
-				M6502SetIRQLine(0, CPU_IRQSTATUS_ACK);
-				M6502Close();
-				M6502Open(0);
+				M6502SetIRQLine(1, 0, CPU_IRQSTATUS_ACK);
 			}
 		}
 		return;
@@ -463,7 +454,6 @@ static INT32 DrvSyncDAC()
 	return (INT32)(float)(nBurnSoundLen * (M6502TotalCycles() / (6000000.000 / (nBurnFPS / 100.000))));
 }
 
-
 static INT32 LassoDoReset()
 {
 	memset (AllRam, 0, RamEnd - AllRam);
@@ -518,10 +508,10 @@ static INT32 MemIndex()
 {
 	UINT8 *Next; Next = AllMem;
 
-	DrvM6502ROM0		= Next; Next += 0x010000;
+	DrvM6502ROM0	= Next; Next += 0x010000;
 	DrvZ80ROM		= Next;
-	DrvM6502ROM1		= Next; Next += 0x010000;
-	DrvM6502ROM2		= Next; Next += 0x010000;
+	DrvM6502ROM1	= Next; Next += 0x010000;
+	DrvM6502ROM2	= Next; Next += 0x010000;
 
 	DrvGfxROM0		= Next; Next += 0x020000;
 	DrvGfxROM1		= Next; Next += 0x020000;
@@ -534,23 +524,16 @@ static INT32 MemIndex()
 
 	AllRam			= Next;
 
-	DrvM6502RAM0		= Next; Next += 0x000800;
+	DrvM6502RAM0	= Next; Next += 0x000800;
 	DrvZ80RAM		= Next;
-	DrvM6502RAM1		= Next; Next += 0x001000;
+	DrvM6502RAM1	= Next; Next += 0x001000;
 	DrvVidRAM		= Next; Next += 0x000400;
 	DrvColRAM		= Next; Next += 0x000400;
 	DrvSprRAM		= Next; Next += 0x000100;
 	DrvShareRAM		= Next; Next += 0x000800;
-	DrvBitmapRAM		= Next; Next += 0x002000;
+	DrvBitmapRAM	= Next; Next += 0x002000;
 
 	RamEnd			= Next;
-
-	pAY8910Buffer[0]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[1]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[2]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[3]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[4]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[5]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
 
 	MemEnd			= Next;
 
@@ -639,32 +622,28 @@ static INT32 LassoInit()
 	M6502Init(0, TYPE_M6502);
 	M6502Open(0);
 	M6502MapMemory(DrvM6502RAM0,		0x0000, 0x03ff, MAP_RAM);
-	M6502MapMemory(DrvVidRAM,		0x0400, 0x07ff, MAP_RAM);
-	M6502MapMemory(DrvColRAM,		0x0800, 0x0bff, MAP_RAM);
-	M6502MapMemory(DrvSprRAM,		0x0c00, 0x0cff, MAP_RAM);
-	M6502MapMemory(DrvShareRAM,		0x1000, 0x17ff, MAP_RAM);
+	M6502MapMemory(DrvVidRAM,			0x0400, 0x07ff, MAP_RAM);
+	M6502MapMemory(DrvColRAM,			0x0800, 0x0bff, MAP_RAM);
+	M6502MapMemory(DrvSprRAM,			0x0c00, 0x0cff, MAP_RAM);
+	M6502MapMemory(DrvShareRAM,			0x1000, 0x17ff, MAP_RAM);
 	M6502MapMemory(DrvM6502ROM0,		0x8000, 0xbfff, MAP_ROM);
 	M6502MapMemory(DrvM6502ROM0,		0xc000, 0xffff, MAP_ROM);
 	M6502SetWriteHandler(lasso_main_write);
 	M6502SetReadHandler(lasso_main_read);
-	M6502SetWriteMemIndexHandler(lasso_main_write);
-	M6502SetReadMemIndexHandler(lasso_main_read);
 	M6502Close();
 
 	M6502Init(1, TYPE_M6502);
 	M6502Open(1);
-	M6502MapMemory(DrvM6502RAM1,		0x0000, 0x01ff, MAP_RAM);
+	M6502MapMemory(DrvM6502RAM1,			0x0000, 0x01ff, MAP_RAM);
 	M6502MapMemory(DrvM6502ROM1 + 0x1000,	0x1000, 0x7fff, MAP_ROM);
 	M6502MapMemory(DrvM6502ROM1 + 0x7000,	0xf000, 0xffff, MAP_ROM);
 	M6502SetWriteHandler(lasso_sound_write);
 	M6502SetReadHandler(lasso_sound_read);
-	M6502SetWriteMemIndexHandler(lasso_sound_write);
-	M6502SetReadMemIndexHandler(lasso_sound_read);
 	M6502Close();
 
 	M6502Init(2, TYPE_M6502);
 	M6502Open(2);
-	M6502MapMemory(DrvShareRAM,		0x0000, 0x07ff, MAP_RAM);
+	M6502MapMemory(DrvShareRAM,			0x0000, 0x07ff, MAP_RAM);
 	M6502MapMemory(DrvBitmapRAM,		0x2000, 0x3fff, MAP_RAM);
 	M6502MapMemory(DrvM6502ROM2,		0x8000, 0x8fff, MAP_ROM);
 	M6502MapMemory(DrvM6502ROM2,		0x9000, 0x9fff, MAP_ROM);
@@ -680,6 +659,7 @@ static INT32 LassoInit()
 	SN76489Init(1, 2000000, 1);
 	SN76496SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
 	SN76496SetRoute(1, 1.00, BURN_SND_ROUTE_BOTH);
+	SN76496SetBuffered(M6502TotalCycles, 600000);
 
 	GenericTilesInit();
 
@@ -736,34 +716,31 @@ static INT32 ChameleoInit()
 
 	M6502Init(0, TYPE_M6502);
 	M6502Open(0);
-	M6502MapMemory(DrvM6502RAM0,		0x0000, 0x03ff, MAP_RAM);
+	M6502MapMemory(DrvM6502RAM0,	0x0000, 0x03ff, MAP_RAM);
 	M6502MapMemory(DrvVidRAM,		0x0400, 0x07ff, MAP_RAM);
 	M6502MapMemory(DrvColRAM,		0x0800, 0x0bff, MAP_RAM);
 	M6502MapMemory(DrvShareRAM,		0x0c00, 0x0fff, MAP_RAM); // not shared
 	M6502MapMemory(DrvSprRAM,		0x1000, 0x10ff, MAP_RAM); // 0-7f
-	M6502MapMemory(DrvM6502ROM0,		0x4000, 0xbfff, MAP_ROM);
+	M6502MapMemory(DrvM6502ROM0,	0x4000, 0xbfff, MAP_ROM);
 	M6502MapMemory(DrvM6502ROM0 + 0x6000,	0xe000, 0xffff, MAP_ROM);
 	M6502SetWriteHandler(lasso_main_write);
 	M6502SetReadHandler(lasso_main_read);
-	M6502SetWriteMemIndexHandler(lasso_main_write);
-	M6502SetReadMemIndexHandler(lasso_main_read);
 	M6502Close();
 
 	M6502Init(1, TYPE_M6502);
 	M6502Open(1);
-	M6502MapMemory(DrvM6502RAM1,		0x0000, 0x01ff, MAP_RAM);
+	M6502MapMemory(DrvM6502RAM1,			0x0000, 0x01ff, MAP_RAM);
 	M6502MapMemory(DrvM6502ROM1 + 0x1000,	0x1000, 0x7fff, MAP_ROM);
 	M6502MapMemory(DrvM6502ROM1 + 0x7000,	0xf000, 0xffff, MAP_ROM);
 	M6502SetWriteHandler(lasso_sound_write);
 	M6502SetReadHandler(lasso_sound_read);
-	M6502SetWriteMemIndexHandler(lasso_sound_write);
-	M6502SetReadMemIndexHandler(lasso_sound_read);
 	M6502Close();
 
 	SN76489Init(0, 2000000, 0);
 	SN76489Init(1, 2000000, 1);
 	SN76496SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
 	SN76496SetRoute(1, 1.00, BURN_SND_ROUTE_BOTH);
+	SN76496SetBuffered(M6502TotalCycles, 600000);
 
 	GenericTilesInit();
 
@@ -831,34 +808,31 @@ static INT32 WwjgtinInit()
 
 	M6502Init(0, TYPE_M6502);
 	M6502Open(0);
-	M6502MapMemory(DrvM6502RAM0,		0x0000, 0x07ff, MAP_RAM);
+	M6502MapMemory(DrvM6502RAM0,	0x0000, 0x07ff, MAP_RAM);
 	M6502MapMemory(DrvVidRAM,		0x0800, 0x0bff, MAP_RAM);
 	M6502MapMemory(DrvColRAM,		0x0c00, 0x0fff, MAP_RAM);
-	//M6502MapMemory(DrvShareRAM,		0x0c00, 0x0fff, MAP_RAM); // not shared
+	//M6502MapMemory(DrvShareRAM,	0x0c00, 0x0fff, MAP_RAM); // not shared
 	M6502MapMemory(DrvSprRAM,		0x1000, 0x10ff, MAP_RAM);
-	M6502MapMemory(DrvM6502ROM0,		0x4000, 0xbfff, MAP_ROM);
+	M6502MapMemory(DrvM6502ROM0,	0x4000, 0xbfff, MAP_ROM);
 	M6502MapMemory(DrvM6502ROM0 + 0x4000,	0xc000, 0xffff, MAP_ROM);
 	M6502SetWriteHandler(lasso_main_write);
 	M6502SetReadHandler(lasso_main_read);
-	M6502SetWriteMemIndexHandler(lasso_main_write);
-	M6502SetReadMemIndexHandler(lasso_main_read);
 	M6502Close();
 
 	M6502Init(1, TYPE_M6502);
 	M6502Open(1);
-	M6502MapMemory(DrvM6502RAM1,		0x0000, 0x01ff, MAP_RAM);
+	M6502MapMemory(DrvM6502RAM1,			0x0000, 0x01ff, MAP_RAM);
 	M6502MapMemory(DrvM6502ROM1 + 0x4000,	0x4000, 0x7fff, MAP_ROM);
 	M6502MapMemory(DrvM6502ROM1 + 0x4000,	0xc000, 0xffff, MAP_ROM);
 	M6502SetWriteHandler(lasso_sound_write);
 	M6502SetReadHandler(lasso_sound_read);
-	M6502SetWriteMemIndexHandler(lasso_sound_write);
-	M6502SetReadMemIndexHandler(lasso_sound_read);
 	M6502Close();
 
 	SN76489Init(0, 2000000, 0);
 	SN76489Init(1, 2000000, 1);
 	SN76496SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
 	SN76496SetRoute(1, 1.00, BURN_SND_ROUTE_BOTH);
+	SN76496SetBuffered(M6502TotalCycles, 600000);
 
 	DACInit(0, 0, 1, DrvSyncDAC);
 	DACSetRoute(0, 1.0, BURN_SND_ROUTE_BOTH);
@@ -927,25 +901,13 @@ static INT32 PinboInit()
 		memcpy(DrvGfxROM0 + 0x9800, tmp + 0xb000, 0x800);
 		memcpy(DrvGfxROM0 + 0xb800, tmp + 0xb800, 0x800);
 		BurnFree(tmp);
-#if 0
-	ROM_LOAD( "rom7.d1",     0x8000, 0x0800, CRC(327a3c21) SHA1(e938915d28ac4ec033b20d33728788493e3f30f6) ) /* 3rd bitplane */
-	ROM_CONTINUE(            0xa000, 0x0800 )
-	ROM_CONTINUE(            0x8800, 0x0800 )
-	ROM_CONTINUE(            0xa800, 0x0800 )
-	ROM_CONTINUE(            0x9000, 0x0800 )
-	ROM_CONTINUE(            0xb000, 0x0800 )
-	ROM_CONTINUE(            0x9800, 0x0800 )
-	ROM_CONTINUE(            0xb800, 0x0800 )
-#endif
-		//DrvGfxDescramble(DrvGfxROM0 + 0x0000, 0x4000);
-		//DrvGfxDescramble(DrvGfxROM0 + 0x4000, 0x4000);
-		//DrvGfxDescramble(DrvGfxROM0 + 0x8000, 0x4000);
+
 		LassoGfxDecode(0xc000);
 	}
 
 	M6502Init(0, TYPE_M6502);
 	M6502Open(0);
-	M6502MapMemory(DrvM6502RAM0,		0x0000, 0x03ff, MAP_RAM);
+	M6502MapMemory(DrvM6502RAM0,	0x0000, 0x03ff, MAP_RAM);
 	M6502MapMemory(DrvVidRAM,		0x0400, 0x07ff, MAP_RAM);
 	M6502MapMemory(DrvColRAM,		0x0800, 0x0bff, MAP_RAM);
 	M6502MapMemory(DrvSprRAM,		0x1000, 0x10ff, MAP_RAM);
@@ -954,8 +916,6 @@ static INT32 PinboInit()
 	M6502MapMemory(DrvM6502ROM0 + 0xa000,	0xe000, 0xffff, MAP_ROM);
 	M6502SetWriteHandler(lasso_main_write);
 	M6502SetReadHandler(lasso_main_read);
-	M6502SetWriteMemIndexHandler(lasso_main_write);
-	M6502SetReadMemIndexHandler(lasso_main_read);
 	M6502Close();
 
 	ZetInit(0);
@@ -966,10 +926,11 @@ static INT32 PinboInit()
 	ZetSetOutHandler(pinbo_sound_write);
 	ZetClose();
 
-	AY8910Init(0, 1500000, nBurnSoundRate, NULL, NULL, NULL, NULL);
-	AY8910Init(1, 1500000, nBurnSoundRate, NULL, NULL, NULL, NULL);
+	AY8910Init(0, 1500000, 0);
+	AY8910Init(1, 1500000, 1);
 	AY8910SetAllRoutes(0, 0.30, BURN_SND_ROUTE_BOTH);
 	AY8910SetAllRoutes(1, 0.30, BURN_SND_ROUTE_BOTH);
+	AY8910SetBuffered(ZetTotalCycles, 3000000);
 
 	GenericTilesInit();
 
@@ -1284,9 +1245,7 @@ static INT32 LassoFrame()
 			DrvInputs[2] ^= (DrvJoy3[i] & 1) << i;
 		}
 		if ((DrvInputs[2] & 0x30) != previous_coin) {
-			M6502Open(0);
-			M6502SetIRQLine(0x20, (DrvInputs[2] & 0x30) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
-			M6502Close();
+			M6502SetIRQLine(0, 0x20, (DrvInputs[2] & 0x30) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 			previous_coin = DrvInputs[2] & 0x30;
 		}
 	}
@@ -1294,45 +1253,29 @@ static INT32 LassoFrame()
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[3] = { (11289000/16) / 60, 600000 / 60, (11289000/16) / 60 };
 	INT32 nCyclesDone[3] = { 0, 0, 0 };
-	INT32 nSoundBufferPos = 0;
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		M6502Open(0);
-		nCyclesDone[0] += M6502Run(nCyclesTotal[0] / nInterleave);
-		if (i == 240) M6502SetIRQLine(0, CPU_IRQSTATUS_AUTO);
+		CPU_RUN(0, M6502);
+		if (i == 240) M6502SetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		M6502Close();
 
 		M6502Open(1);
-		nCyclesDone[1] += M6502Run(nCyclesTotal[1] / nInterleave);
+		CPU_RUN(1, M6502);
 		M6502Close();
 
 		if (game_select == 0) {
 			M6502Open(2);
-			nCyclesDone[2] += M6502Run(nCyclesTotal[2] / nInterleave);
+			CPU_RUN(2, M6502);
 			M6502Close();
-		}
-
-		// Render Sound Segment
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			SN76496Update(0, pSoundBuf, nSegmentLength);
-			SN76496Update(1, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
 		}
 	}
 
 	M6502Open(1);
 
-	// Make sure the buffer is entirely filled.
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		if (nSegmentLength) {
-			SN76496Update(0, pSoundBuf, nSegmentLength);
-			SN76496Update(1, pSoundBuf, nSegmentLength);
-		}
+		SN76496Update(pBurnSoundOut, nBurnSoundLen);
 		if (game_select == 2) DACUpdate(pBurnSoundOut, nBurnSoundLen);
 	}
 
@@ -1351,6 +1294,8 @@ static INT32 PinboFrame()
 		LassoDoReset();
 	}
 
+	ZetNewFrame();
+
 	{
 		memset (DrvInputs, 0, 3);
 		for (INT32 i = 0; i < 8; i++) {
@@ -1359,9 +1304,7 @@ static INT32 PinboFrame()
 			DrvInputs[2] ^= (DrvJoy3[i] & 1) << i;
 		}
 		if ((DrvInputs[2] & 0x30) != previous_coin) {
-			M6502Open(0);
-			M6502SetIRQLine(0x20, (DrvInputs[2] & 0x30) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
-			M6502Close();
+			M6502SetIRQLine(0, 0x20, (DrvInputs[2] & 0x30) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 			previous_coin = DrvInputs[2] & 0x30;
 		}
 	}
@@ -1375,17 +1318,17 @@ static INT32 PinboFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += M6502Run(nCyclesTotal[0] / nInterleave);
+		CPU_RUN(0, M6502);
 		if (i == (nInterleave - 1)) M6502SetIRQLine(0, CPU_IRQSTATUS_AUTO);
 
-		nCyclesDone[1] += ZetRun(nCyclesTotal[1] / nInterleave);
+		CPU_RUN(1, Zet);
 	}
 
 	ZetClose();
 	M6502Close();
 
 	if (pBurnSoundOut) {
-		AY8910Render(&pAY8910Buffer[0], pBurnSoundOut, nBurnSoundLen, 0);
+		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	if (pBurnDraw) {
@@ -1463,8 +1406,8 @@ struct BurnDriver BurnDrvLasso = {
 	"lasso", NULL, NULL, NULL, "1982",
 	"Lasso\0", NULL, "SNK", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, lassoRomInfo, lassoRomName, NULL, NULL, LassoInputInfo, LassoDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_ACTION, 0,
+	NULL, lassoRomInfo, lassoRomName, NULL, NULL, NULL, NULL, LassoInputInfo, LassoDIPInfo,
 	LassoInit, LassoExit, LassoFrame, LassoDraw, LassoScan, &DrvRecalc, 0x40,
 	224, 256, 3, 4
 };
@@ -1496,8 +1439,8 @@ struct BurnDriver BurnDrvChameleo = {
 	"chameleo", NULL, NULL, NULL, "1983",
 	"Chameleon\0", NULL, "Jaleco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, chameleoRomInfo, chameleoRomName, NULL, NULL, ChameleoInputInfo, ChameleoDIPInfo,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, chameleoRomInfo, chameleoRomName, NULL, NULL, NULL, NULL, ChameleoInputInfo, ChameleoDIPInfo,
 	ChameleoInit, LassoExit, LassoFrame, LassoDraw, LassoScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
 };
@@ -1531,8 +1474,8 @@ struct BurnDriver BurnDrvWwjgtin = {
 	"wwjgtin", NULL, NULL, NULL, "1984",
 	"Wai Wai Jockey Gate-In!\0", NULL, "Jaleco / Casio", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, wwjgtinRomInfo, wwjgtinRomName, NULL, NULL, WwjgtinInputInfo, WwjgtinDIPInfo,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	NULL, wwjgtinRomInfo, wwjgtinRomName, NULL, NULL, NULL, NULL, WwjgtinInputInfo, WwjgtinDIPInfo,
 	WwjgtinInit, LassoExit, LassoFrame, WwjgtinDraw, LassoScan, &DrvRecalc, 0x140,
 	256, 224, 4, 3
 };
@@ -1566,8 +1509,8 @@ struct BurnDriver BurnDrvPhotof = {
 	"photof", "wwjgtin", NULL, NULL, "1991",
 	"Photo Finish (bootleg?)\0", NULL, "Jaleco / Casio", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, photofRomInfo, photofRomName, NULL, NULL, WwjgtinInputInfo, WwjgtinDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	NULL, photofRomInfo, photofRomName, NULL, NULL, NULL, NULL, WwjgtinInputInfo, WwjgtinDIPInfo,
 	WwjgtinInit, LassoExit, LassoFrame, WwjgtinDraw, LassoScan, &DrvRecalc, 0x140,
 	256, 224, 4, 3
 };
@@ -1599,8 +1542,8 @@ struct BurnDriver BurnDrvPinbo = {
 	"pinbo", NULL, NULL, NULL, "1984",
 	"Pinbo (set 1)\0", NULL, "Jaleco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, pinboRomInfo, pinboRomName, NULL, NULL, PinboInputInfo, PinboDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PINBALL, 0,
+	NULL, pinboRomInfo, pinboRomName, NULL, NULL, NULL, NULL, PinboInputInfo, PinboDIPInfo,
 	PinboInit, LassoExit, PinboFrame, PinboDraw, LassoScan, &DrvRecalc, 0x100,
 	224, 256, 3, 4
 };

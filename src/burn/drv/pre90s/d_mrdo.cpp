@@ -10,18 +10,19 @@ static UINT8 *MemEnd;
 static UINT8 *AllRam;
 static UINT8 *RamEnd;
 
-static UINT8 *DrvROM;
-static UINT8 *DrvRAM;
+static UINT8 *DrvZ80ROM;
+static UINT8 *DrvZ80RAM;
 static UINT8 *DrvFGVidRAM;
 static UINT8 *DrvBGVidRAM;
 static UINT8 *DrvSpriteRAM;
-static UINT8 *Gfx0;
-static UINT8 *Gfx1;
-static UINT8 *Gfx2;
-static UINT8 *Prom;
+static UINT8 *DrvGfxROM0;
+static UINT8 *DrvGfxROM1;
+static UINT8 *DrvGfxROM2;
+static UINT8 *DrvColPROM;
 static UINT32 *Palette;
 static UINT8 DrvRecalc;
 
+static UINT8 DrvInput[2];
 static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
 static UINT8 DrvReset;
@@ -120,7 +121,7 @@ static struct BurnDIPInfo DrvDIPList[]=
 
 STDDIPINFO(Drv)
 
-void __fastcall mrdo_write(UINT16 address, UINT8 data)
+static void __fastcall mrdo_write(UINT16 address, UINT8 data)
 {
 	if ((address & 0xf000) == 0xf000) address &= 0xf800;
 
@@ -130,11 +131,11 @@ void __fastcall mrdo_write(UINT16 address, UINT8 data)
 			flipscreen = data & 1;
 		break;
 
-		case 0x9801: 
+		case 0x9801:
 			SN76496Write(0, data);
 		break;
 
-		case 0x9802:		
+		case 0x9802:
 			SN76496Write(1, data);
 		break;
 
@@ -148,26 +149,18 @@ void __fastcall mrdo_write(UINT16 address, UINT8 data)
 	}
 }
 
-UINT8 __fastcall mrdo_read(UINT16 address)
+static UINT8 __fastcall mrdo_read(UINT16 address)
 {
-	UINT8 ret = 0xff;
-
 	switch (address)
 	{
 		case 0x9803: // Protection
-			return DrvROM[ZetHL(-1)];
+			return DrvZ80ROM[ZetHL(-1)];
 
 		case 0xa000:
-		{
-			for (INT32 i = 0; i < 8; i++) ret ^= DrvJoy1[i] << i;
-			return ret;
-		}
+			return DrvInput[0];
 
 		case 0xa001:
-		{
-			for (INT32 i = 0; i < 8; i++) ret ^= DrvJoy2[i] << i;
-			return ret;
-		}
+			return DrvInput[1];
 
 		case 0xa002:
 			return DrvDips[0];
@@ -199,16 +192,16 @@ static INT32 DrvDoReset()
 
 static void mrdo_palette_init()
 {
-	const UINT8 *color_prom = Prom;
-	int i;
+	const UINT8 *color_prom = DrvColPROM;
+	INT32 i;
 
-	const int R1 = 150;
-	const int R2 = 120;
-	const int R3 = 100;
-	const int R4 = 75;
-	const int pull = 220;
+	const INT32 R1 = 150;
+	const INT32 R2 = 120;
+	const INT32 R3 = 100;
+	const INT32 R4 = 75;
+	const INT32 pull = 220;
 	float pot[16];
-	int weight[16];
+	INT32 weight[16];
 	const float potadjust = 0.7f;
 
 	for (i = 0x0f; i >= 0; i--)
@@ -232,24 +225,22 @@ static void mrdo_palette_init()
 
 	for (i = 0; i < 0x100; i++)
 	{
-		int a1,a2;
-		int bits0, bits2;
-		int r, g, b;
+		INT32 bits0, bits2;
 
-		a1 = ((i >> 3) & 0x1c) + (i & 0x03) + 0x20;
-		a2 = ((i >> 0) & 0x1c) + (i & 0x03);
+		INT32 a1 = ((i >> 3) & 0x1c) + (i & 0x03) + 0x20;
+		INT32 a2 = ((i >> 0) & 0x1c) + (i & 0x03);
 
 		bits0 = (color_prom[a1] >> 0) & 0x03;
 		bits2 = (color_prom[a2] >> 0) & 0x03;
-		r = weight[bits0 + (bits2 << 2)];
+		INT32 r = weight[bits0 + (bits2 << 2)];
 
 		bits0 = (color_prom[a1] >> 2) & 0x03;
 		bits2 = (color_prom[a2] >> 2) & 0x03;
-		g = weight[bits0 + (bits2 << 2)];
+		INT32 g = weight[bits0 + (bits2 << 2)];
 
 		bits0 = (color_prom[a1] >> 4) & 0x03;
 		bits2 = (color_prom[a2] >> 4) & 0x03;
-		b = weight[bits0 + (bits2 << 2)];
+		INT32 b = weight[bits0 + (bits2 << 2)];
 
 		Palette[i] = BurnHighCol(r, g, b, 0);
 	}
@@ -282,17 +273,17 @@ static void mrdo_gfx_decode()
 	UINT8 *tmp = (UINT8*)BurnMalloc(0x2000);
 	if (!tmp) return;
 
-	memcpy (tmp, Gfx0, 0x2000);
+	memcpy (tmp, DrvGfxROM0, 0x2000);
 
-	GfxDecode(0x200, 2,  8,  8, CharPlane, CharXOffs, CharYOffs, 0x040, tmp, Gfx0);
+	GfxDecode(0x200, 2,  8,  8, CharPlane, CharXOffs, CharYOffs, 0x040, tmp, DrvGfxROM0);
 
-	memcpy (tmp, Gfx1, 0x2000);
+	memcpy (tmp, DrvGfxROM1, 0x2000);
 
-	GfxDecode(0x200, 2,  8,  8, CharPlane, CharXOffs, CharYOffs, 0x040, tmp, Gfx1);
+	GfxDecode(0x200, 2,  8,  8, CharPlane, CharXOffs, CharYOffs, 0x040, tmp, DrvGfxROM1);
 
-	memcpy (tmp, Gfx2, 0x2000);
+	memcpy (tmp, DrvGfxROM2, 0x2000);
 
-	GfxDecode(0x080, 2, 16, 16, SpriPlane, SpriXOffs, SpriYOffs, 0x200, tmp, Gfx2);
+	GfxDecode(0x080, 2, 16, 16, SpriPlane, SpriXOffs, SpriYOffs, 0x200, tmp, DrvGfxROM2);
 
 	BurnFree (tmp);
 }
@@ -301,19 +292,19 @@ static INT32 MemIndex()
 {
 	UINT8 *Next; Next = AllMem;
 
-	DrvROM          = Next; Next += 0x10000;
+	DrvZ80ROM       = Next; Next += 0x10000;
 
-	Gfx0            = Next; Next += 0x08000;
-	Gfx1            = Next; Next += 0x08000;
-	Gfx2            = Next; Next += 0x08000;
+	DrvGfxROM0      = Next; Next += 0x08000;
+	DrvGfxROM1      = Next; Next += 0x08000;
+	DrvGfxROM2      = Next; Next += 0x08000;
 
-	Prom            = Next; Next += 0x00080;
+	DrvColPROM      = Next; Next += 0x00080;
 
 	Palette	        = (UINT32 *)Next; Next += 0x00140 * sizeof(UINT32);
 
 	AllRam			= Next;
 
-	DrvRAM          = Next; Next += 0x01000;
+	DrvZ80RAM       = Next; Next += 0x01000;
 	DrvFGVidRAM     = Next; Next += 0x00800;
 	DrvBGVidRAM     = Next; Next += 0x00800;
 	DrvSpriteRAM    = Next; Next += 0x00100;
@@ -337,14 +328,14 @@ static INT32 DrvInit()
 
 	{
 		for (INT32 i = 0; i < 4; i++) {
-			if(BurnLoadRom(DrvROM + (i * 0x2000),  0 + i, 1)) return 1;
-			if(BurnLoadRom(Prom + (i * 0x0020), 10 + i, 1)) return 1;
+			if(BurnLoadRom(DrvZ80ROM + (i * 0x2000),  0 + i, 1)) return 1;
+			if(BurnLoadRom(DrvColPROM + (i * 0x0020), 10 + i, 1)) return 1;
 		}
 
 		for (INT32 i = 0; i < 2; i++) {
-			if(BurnLoadRom(Gfx0 + (i * 0x1000),  4 + i, 1)) return 1;
-			if(BurnLoadRom(Gfx1 + (i * 0x1000),  6 + i, 1)) return 1;
-			if(BurnLoadRom(Gfx2 + (i * 0x1000),  8 + i, 1)) return 1;
+			if(BurnLoadRom(DrvGfxROM0 + (i * 0x1000),  4 + i, 1)) return 1;
+			if(BurnLoadRom(DrvGfxROM1 + (i * 0x1000),  6 + i, 1)) return 1;
+			if(BurnLoadRom(DrvGfxROM2 + (i * 0x1000),  8 + i, 1)) return 1;
 		}
 
 		mrdo_palette_init();
@@ -355,11 +346,11 @@ static INT32 DrvInit()
 	ZetOpen(0);
 	ZetSetReadHandler(mrdo_read);
 	ZetSetWriteHandler(mrdo_write);
-	ZetMapMemory(DrvROM,            0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80ROM,         0x0000, 0x7fff, MAP_ROM);
 	ZetMapMemory(DrvBGVidRAM,       0x8000, 0x87ff, MAP_RAM);
 	ZetMapMemory(DrvFGVidRAM,       0x8800, 0x8fff, MAP_RAM);
 	ZetMapMemory(DrvSpriteRAM,      0x9000, 0x90ff, MAP_RAM);
-	ZetMapMemory(DrvRAM,            0xe000, 0xefff, MAP_RAM);
+	ZetMapMemory(DrvZ80RAM,         0xe000, 0xefff, MAP_RAM);
 	ZetClose();
 
 	SN76489Init(0, 4000000, 0);
@@ -368,7 +359,7 @@ static INT32 DrvInit()
 	SN76496SetRoute(1, 0.45, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
- 
+
 	DrvDoReset();
 
 	return 0;
@@ -409,15 +400,15 @@ static void draw_sprites()
 
 			if (flipy) {
 				if (flipx) {
-					Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x100, Gfx2);
+					Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x100, DrvGfxROM2);
 				} else {
-					Render16x16Tile_Mask_FlipY_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x100, Gfx2);
+					Render16x16Tile_Mask_FlipY_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x100, DrvGfxROM2);
 				}
 			} else {
 				if (flipx) {
-					Render16x16Tile_Mask_FlipX_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x100, Gfx2);
+					Render16x16Tile_Mask_FlipX_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x100, DrvGfxROM2);
 				} else {
-					Render16x16Tile_Mask_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x100, Gfx2);
+					Render16x16Tile_Mask_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x100, DrvGfxROM2);
 				}
 			}
 		}
@@ -460,8 +451,8 @@ static INT32 DrvDraw()
 
 	BurnTransferClear();
 
-	if (nBurnLayer & 2) draw_8x8_tiles(DrvBGVidRAM, Gfx1, scroll_x, scroll_y);
-	if (nBurnLayer & 4) draw_8x8_tiles(DrvFGVidRAM, Gfx0, 0, 0);
+	if (nBurnLayer & 2) draw_8x8_tiles(DrvBGVidRAM, DrvGfxROM1, scroll_x, scroll_y);
+	if (nBurnLayer & 4) draw_8x8_tiles(DrvFGVidRAM, DrvGfxROM0, 0, 0);
 	if (nBurnLayer & 8) draw_sprites();
 
 	BurnTransferCopy(Palette);
@@ -473,6 +464,15 @@ static INT32 DrvFrame()
 {
 	if (DrvReset) {
 		DrvDoReset();
+	}
+
+	{
+		DrvInput[0] = DrvInput[1] = 0xff; // active low
+
+		for (INT32 i = 0; i < 8; i++) {
+			DrvInput[0] ^= (DrvJoy1[i] << i);
+			DrvInput[1] ^= (DrvJoy2[i] << i);
+		}
 	}
 
 	INT32 nInterleave = 10;
@@ -546,6 +546,8 @@ static struct BurnRomInfo mrdoRomDesc[] = {
 	{ "t02--3.bin",   0x0020, 0xae263dc0, 5 | BRF_GRA },	       // 11 Palette (low bits)
 	{ "f10--1.bin",   0x0020, 0x16ee4ca2, 5 | BRF_GRA },	       // 12 Sprite color lookup table
 	{ "j10--4.bin",   0x0020, 0xff7fe284, 5 | BRF_GRA },	       // 13 Timing (not used)
+	
+	{ "j2-u001.bin",  0x0117, 0xbadf5876, 0 | BRF_OPT },
 };
 
 STD_ROM_PICK(mrdo)
@@ -555,8 +557,8 @@ struct BurnDriver BurnDrvmrdo = {
 	"mrdo", NULL, NULL, NULL, "1982",
 	"Mr. Do!\0", NULL, "Universal", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
-	NULL, mrdoRomInfo, mrdoRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
+	NULL, mrdoRomInfo, mrdoRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x140,
 	192, 240, 3, 4
 };
@@ -583,6 +585,8 @@ static struct BurnRomInfo mrdotRomDesc[] = {
 	{ "t02--3.bin",   0x0020, 0xae263dc0, 5 | BRF_GRA },	       // 11 Palette (low bits)
 	{ "f10--1.bin",   0x0020, 0x16ee4ca2, 5 | BRF_GRA },	       // 12 Sprite color lookup table
 	{ "j10--4.bin",   0x0020, 0xff7fe284, 5 | BRF_GRA },	       // 13 Timing (not used)
+	
+	{ "j2-u001.bin",  0x0117, 0xbadf5876, 0 | BRF_OPT },
 };
 
 STD_ROM_PICK(mrdot)
@@ -592,8 +596,8 @@ struct BurnDriver BurnDrvmrdot = {
 	"mrdot", "mrdo", NULL, NULL, "1982",
 	"Mr. Do! (Taito license)\0", NULL, "Universal (Taito license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
-	NULL, mrdotRomInfo, mrdotRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
+	NULL, mrdotRomInfo, mrdotRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x140,
 	192, 240, 3, 4
 };
@@ -619,6 +623,8 @@ static struct BurnRomInfo mrdofixRomDesc[] = {
 	{ "t02--3.bin",   0x0020, 0xae263dc0, 5 | BRF_GRA },	       // 11 Palette (low bits)
 	{ "f10--1.bin",   0x0020, 0x16ee4ca2, 5 | BRF_GRA },	       // 12 Sprite color lookup table
 	{ "j10--4.bin",   0x0020, 0xff7fe284, 5 | BRF_GRA },	       // 13 Timing (not used)
+	
+	{ "j2-u001.bin",  0x0117, 0xbadf5876, 0 | BRF_OPT },
 };
 
 STD_ROM_PICK(mrdofix)
@@ -628,8 +634,8 @@ struct BurnDriver BurnDrvmrdofix = {
 	"mrdofix", "mrdo", NULL, NULL, "1982",
 	"Mr. Do! (bugfixed)\0", NULL, "Universal (Taito license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
-	NULL, mrdofixRomInfo, mrdofixRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
+	NULL, mrdofixRomInfo, mrdofixRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x140,
 	192, 240, 3, 4
 };
@@ -665,8 +671,8 @@ struct BurnDriver BurnDrvmrlo = {
 	"mrlo", "mrdo", NULL, NULL, "1982",
 	"Mr. Lo!\0", NULL, "Bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
-	NULL, mrloRomInfo, mrloRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
+	NULL, mrloRomInfo, mrloRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x140,
 	192, 240, 3, 4
 };
@@ -693,6 +699,8 @@ static struct BurnRomInfo mrduRomDesc[] = {
 	{ "t02--3.bin",   0x0020, 0xae263dc0, 5 | BRF_GRA },	       // 11 Palette (low bits)
 	{ "f10--1.bin",   0x0020, 0x16ee4ca2, 5 | BRF_GRA },	       // 12 Sprite color lookup table
 	{ "j10--4.bin",   0x0020, 0xff7fe284, 5 | BRF_GRA },	       // 13 Timing (not used)
+	
+	{ "j2-u001.bin",  0x0117, 0xbadf5876, 0 | BRF_OPT },
 };
 
 STD_ROM_PICK(mrdu)
@@ -702,8 +710,8 @@ struct BurnDriver BurnDrvmrdu = {
 	"mrdu", "mrdo", NULL, NULL, "1982",
 	"Mr. Du!\0", NULL, "Bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
-	NULL, mrduRomInfo, mrduRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
+	NULL, mrduRomInfo, mrduRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x140,
 	192, 240, 3, 4
 };
@@ -730,6 +738,8 @@ static struct BurnRomInfo mrdoyRomDesc[] = {
 	{ "t02--3.bin",   0x0020, 0xae263dc0, 5 | BRF_GRA },	       // 11 Palette (low bits)
 	{ "f10--1.bin",   0x0020, 0x16ee4ca2, 5 | BRF_GRA },	       // 12 Sprite color lookup table
 	{ "j10--4.bin",   0x0020, 0xff7fe284, 5 | BRF_GRA },	       // 13 Timing (not used)
+	
+	{ "j2-u001.bin",  0x0117, 0xbadf5876, 0 | BRF_OPT },
 };
 
 STD_ROM_PICK(mrdoy)
@@ -739,8 +749,89 @@ struct BurnDriver BurnDrvmrdoy = {
 	"mrdoy", "mrdo", NULL, NULL, "1982",
 	"Mr. Do! (prototype)\0", NULL, "Universal", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
-	NULL, mrdoyRomInfo, mrdoyRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
+	NULL, mrdoyRomInfo, mrdoyRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x140,
+	192, 240, 3, 4
+};
+
+
+// Mr. Do! (Fabremar bootleg)
+/* The white garbled graphics on the title screen should be the Fabremar logo (32px height), but it's drawn as
+   16px height, like the original Taito logo. Since the F4 ROM had a different label than the others and it matches
+   with 'mrdot', someone probably replaced the original F4 Fabremar ROM with the one from Taito. */
+   
+static struct BurnRomInfo mrdofabrRomDesc[] = {
+	{ "md_fabre.a4",  0x2000, 0x62593aed, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 Code
+	{ "md_fabre.b4",  0x2000, 0x710058d8, 1 | BRF_ESS | BRF_PRG }, //  1
+	{ "md_fabre.c4",  0x2000, 0x467d12d8, 1 | BRF_ESS | BRF_PRG }, //  2
+	{ "md_fabre.f4",  0x2000, 0xfce9afeb, 1 | BRF_ESS | BRF_PRG }, //  3
+
+	{ "md_fabre.t8",  0x1000, 0xf2dff901, 2 | BRF_GRA },	       //  4 FG Tiles
+	{ "md_fabre.u8",  0x1000, 0xf3e443bd, 2 | BRF_GRA },	       //  5
+
+	{ "md_fabre.r8",  0x1000, 0xdbdc9ffa, 3 | BRF_GRA },	       //  6 BG Tiles
+	{ "md_fabre.n8",  0x1000, 0x4b9973db, 3 | BRF_GRA },	       //  7
+
+	{ "md_fabre.h5",  0x1000, 0xe1218cc5, 4 | BRF_GRA },	       //  8 Sprite Tiles
+	{ "md_fabre.k5",  0x1000, 0xb1f68b04, 4 | BRF_GRA },	       //  9
+
+	{ "82s123.u2",    0x0020, 0x238a65d7, 5 | BRF_GRA },	       // 10 Palette (high bits)
+	{ "82s123.t2",    0x0020, 0xae263dc0, 5 | BRF_GRA },	       // 11 Palette (low bits)
+	{ "82s123.f10n",  0x0020, 0x16ee4ca2, 5 | BRF_GRA },	       // 12 Sprite color lookup table
+	{ "82s123.j10",   0x0020, 0xff7fe284, 5 | BRF_GRA },	       // 13 Timing (not used)
+	
+	{ "pal16r6.j2",   0x0117, 0xbadf5876, 0 | BRF_OPT },
+};
+
+STD_ROM_PICK(mrdofabr)
+STD_ROM_FN(mrdofabr)
+
+struct BurnDriver BurnDrvmrdofabr = {
+	"mrdofabr", "mrdo", NULL, NULL, "1982",
+	"Mr. Do! (Fabremar bootleg)\0", NULL, "Bootleg (Fabremar)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
+	NULL, mrdofabrRomInfo, mrdofabrRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x140,
+	192, 240, 3, 4
+};
+
+
+// Mr. Do! (bootleg)
+
+static struct BurnRomInfo mrdoblRomDesc[] = {
+	{ "d1.a4",        0x2000, 0x03dcfba2, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 Code
+	{ "d2.c4",        0x2000, 0x0ecdd39c, 1 | BRF_ESS | BRF_PRG }, //  1
+	{ "d3.e4",        0x2000, 0xafc518e3, 1 | BRF_ESS | BRF_PRG }, //  2
+	{ "d4.f4",        0x2000, 0xf4190cfc, 1 | BRF_ESS | BRF_PRG }, //  3
+
+	{ "d9.s8",        0x1000, 0xaa80c5b6, 2 | BRF_GRA },	       //  4 FG Tiles
+	{ "d10.u8",       0x1000, 0xd20ec85b, 2 | BRF_GRA },	       //  5
+
+	{ "d8.r8",        0x1000, 0xdbdc9ffa, 3 | BRF_GRA },	       //  6 BG Tiles
+	{ "d7.n8",        0x1000, 0x4b9973db, 3 | BRF_GRA },	       //  7
+
+	{ "d5.h5",        0x1000, 0xe1218cc5, 4 | BRF_GRA },	       //  8 Sprite Tiles
+	{ "d6.k5",        0x1000, 0xb1f68b04, 4 | BRF_GRA },	       //  9
+
+	{ "2_18s030.u2",  0x0020, 0x238a65d7, 5 | BRF_GRA },	       // 10 Palette (high bits)
+	{ "1_18s030.t2",  0x0020, 0xae263dc0, 5 | BRF_GRA },	       // 11 Palette (low bits)
+	{ "7603-5.e10",   0x0020, 0x16ee4ca2, 5 | BRF_GRA },	       // 12 Sprite color lookup table
+	{ "82s123.j10",   0x0020, 0xff7fe284, 5 | BRF_GRA },	       // 13 Timing (not used)
+	
+	{ "u001_pal16r6cn.j2",  0x0104, 0x84dbe498, 0 | BRF_OPT },
+};
+
+STD_ROM_PICK(mrdobl)
+STD_ROM_FN(mrdobl)
+
+struct BurnDriver BurnDrvmrdobl = {
+	"mrdobl", "mrdo", NULL, NULL, "1982",
+	"Mr. Do! (bootleg)\0", NULL, "Bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
+	NULL, mrdoblRomInfo, mrdoblRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x140,
 	192, 240, 3, 4
 };
@@ -767,6 +858,8 @@ static struct BurnRomInfo yankeedoRomDesc[] = {
 	{ "t02--3.bin",   0x0020, 0xae263dc0, 5 | BRF_GRA },	       // 11 Palette (low bits)
 	{ "f10--1.bin",   0x0020, 0x16ee4ca2, 5 | BRF_GRA },	       // 12 Sprite color lookup table
 	{ "j10--4.bin",   0x0020, 0xff7fe284, 5 | BRF_GRA },	       // 13 Timing (not used)
+	
+	{ "j2-u001.bin",  0x0117, 0xbadf5876, 0 | BRF_OPT },
 };
 
 STD_ROM_PICK(yankeedo)
@@ -776,8 +869,8 @@ struct BurnDriver BurnDrvyankeedo = {
 	"yankeedo", "mrdo", NULL, NULL, "1982",
 	"Yankee DO!\0", NULL, "hack", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
-	NULL, yankeedoRomInfo, yankeedoRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
+	NULL, yankeedoRomInfo, yankeedoRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x140,
 	192, 240, 3, 4
 };

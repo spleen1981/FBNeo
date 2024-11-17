@@ -344,7 +344,7 @@ UINT8 __fastcall crimfght_sound_read(UINT16 address)
 	{
 		case 0xa000:
 		case 0xa001:
-			return BurnYM2151ReadStatus();
+			return BurnYM2151Read();
 
 		case 0xc000:
 			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
@@ -418,6 +418,7 @@ static INT32 DrvDoReset()
 	ZetReset();
 	ZetClose();
 
+	K007232Reset(0);
 	BurnYM2151Reset();
 
 	KonamiICReset();
@@ -666,7 +667,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		konamiCpuScan(nAction);
 		ZetScan(nAction);
 
-		BurnYM2151Scan(nAction);
+		BurnYM2151Scan(nAction, pnMin);
 		K007232Scan(nAction, pnMin);
 
 		KonamiICScan(nAction);
@@ -709,7 +710,7 @@ struct BurnDriver BurnDrvCrimfght = {
 	"Crime Fighters (World 2 players)\0", NULL, "Konami", "GX821",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, crimfghtRomInfo, crimfghtRomName, NULL, NULL, CrimfghtInputInfo, CrimfghtDIPInfo,
+	NULL, crimfghtRomInfo, crimfghtRomName, NULL, NULL, NULL, NULL, CrimfghtInputInfo, CrimfghtDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 224, 4, 3
 };
@@ -741,7 +742,7 @@ struct BurnDriver BurnDrvCrimfghtj = {
 	"Crime Fighters (Japan 2 Players)\0", NULL, "Konami", "GX821",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, crimfghtjRomInfo, crimfghtjRomName, NULL, NULL, CrimfghtInputInfo, CrimfghtDIPInfo,
+	NULL, crimfghtjRomInfo, crimfghtjRomName, NULL, NULL, NULL, NULL, CrimfghtInputInfo, CrimfghtDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 224, 4, 3
 };
@@ -773,7 +774,7 @@ struct BurnDriver BurnDrvCrimfghtu = {
 	"Crime Fighters (US 4 Players)\0", NULL, "Konami", "GX821",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, crimfghtuRomInfo, crimfghtuRomName, NULL, NULL, CrimfghtuInputInfo, CrimfghtuDIPInfo,
+	NULL, crimfghtuRomInfo, crimfghtuRomName, NULL, NULL, NULL, NULL, CrimfghtuInputInfo, CrimfghtuDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 224, 4, 3
 };

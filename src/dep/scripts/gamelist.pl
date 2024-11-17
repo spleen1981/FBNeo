@@ -128,7 +128,7 @@ foreach my $filename ( @Filelist ) {
 			# We now have the complete Burndriver structure without comments
 
 			# Extract the strings from the variable
-			$struct =~ /\s*(".*"|null|0)\s*,\s*(".*"|null|0)\s*,\s*(".*"|null|0)\s*,\s*(".*"|null|0)\s*,\s*(".*"|null|0)\s*,\s*(".*"|null|0)\s*,\s*(".*"|null|0)\s*,\s*(".*"|null|0)\s*,\s*(".*"|null|0),\s*(L".*"|null|0)\s*,\s*(L".*"|null|0)\s*,\s*(L".*"|null|0)\s*,\s*(L".*"|null|0)\s*,\s*(\d|[^,]*)/si;
+			$struct =~ /\s*(".*"|null|0)\s*,\s*(".*"|null|0)\s*,\s*(".*"|null|0)\s*,\s*(".*"|null|0)\s*,\s*(".*"|null|0)\s*,\s*(".*"|null|0)\s*,\s*(".*"|null|0)\s*,\s*(".*"|null|0)\s*,\s*(".*"|null|0),\s*(L".*"|null|0)\s*,\s*(L".*"|null|0)\s*,\s*(L".*"|null|0)\s*,\s*(L".*"|null)\s*,\s*(\d|[^,]*)/si;
 
 			$Drivers{$name}[1] = $1;						# Name
 			$Drivers{$name}[2] = $6;						# Full name
@@ -208,7 +208,7 @@ foreach my $name ( @Driverlist ) {
 		if ( $Drivers{$name}[0] eq "D" ) {
 			unless ( $Debug == 1) {
 				$Debug = 1;
-				print OUTFILE "#if defined FBA_DEBUG\n";
+				print OUTFILE "#if defined FBNEO_DEBUG\n";
 			}
 		} else {
 			if ( $Debug == 1 ) {
@@ -259,7 +259,7 @@ foreach my $name ( @Driverlist ) {
 		if ( $Drivers{$name}[0] eq "D" ) {
 			unless ( $Debug == 1) {
 				$Debug = 1;
-				print OUTFILE "#if defined FBA_DEBUG\n";
+				print OUTFILE "#if defined FBNEO_DEBUG\n";
 			}
 		} else {
 			if ( $Debug == 1 ) {
@@ -313,7 +313,7 @@ if ( $Listfile ) {
 
 	print "Generating gamelist.txt...\n";
 
-	print OUTFILE "This list contains all games supported by FB Alpha.\x0d\x0a\x0d\x0a";
+	print OUTFILE "This list contains all games supported by FinalBurn Neo.\x0d\x0a\x0d\x0a";
 
 	print OUTFILE scalar @Driverlist . " games supported in total; ";
 	print OUTFILE "X = excluded from build; ";

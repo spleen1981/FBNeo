@@ -10,6 +10,8 @@ static HWND hParent = NULL;
 char* gameAv = NULL;
 bool avOk = false;
 
+bool bSkipStartupCheck = false;
+
 static unsigned ScanThreadId = 0;
 static HANDLE hScanThread = NULL;
 static int nOldSelect = 0;
@@ -42,7 +44,7 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 			// Setup the tabs
 			hTabControl = GetDlgItem(hDlg, IDC_ROMPATH_TAB);
 
-			TC_ITEM tcItem; 
+			TC_ITEM tcItem;
 			tcItem.mask = TCIF_TEXT;
 
 			UINT idsString[20] = { IDS_ROMPATH_1,IDS_ROMPATH_2,IDS_ROMPATH_3,IDS_ROMPATH_4,IDS_ROMPATH_5,IDS_ROMPATH_6,IDS_ROMPATH_7,IDS_ROMPATH_8,IDS_ROMPATH_9,IDS_ROMPATH_10,IDS_ROMPATH_11,IDS_ROMPATH_12,IDS_ROMPATH_13,IDS_ROMPATH_14,IDS_ROMPATH_15,IDS_ROMPATH_16,IDS_ROMPATH_17,IDS_ROMPATH_18,IDS_ROMPATH_19,IDS_ROMPATH_20 };
@@ -53,7 +55,7 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 			}
 
 			int TabPage = TabCtrl_GetCurSel(hTabControl);
-			
+
 			// hide all controls excluding the selected controls
 			for(int x = 0; x < 20; x++) {
 				if(x != TabPage) {
@@ -78,7 +80,7 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 			if (pNmHdr->code == TCN_SELCHANGE) {
 
 				int TabPage = TabCtrl_GetCurSel(hTabControl);
-				
+
 				// hide all controls excluding the selected controls
 				for(int x = 0; x < 20; x++) {
 					if(x != TabPage) {
@@ -90,7 +92,7 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				// Show the proper controls
 				ShowWindow(GetDlgItem(hDlg, IDC_ROMSDIR_BR1 + TabPage), SW_SHOW);		// browse buttons
 				ShowWindow(GetDlgItem(hDlg, IDC_ROMSDIR_EDIT1 + TabPage), SW_SHOW);		// edit controls
-				
+
 				UpdateWindow(hDlg);
 
 				return FALSE;
@@ -170,7 +172,7 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 int RomsDirCreate(HWND hParentWND)
 {
 	hParent = hParentWND;
-	
+
 	FBADialogBox(hAppInst, MAKEINTRESOURCE(IDD_ROMSDIR), hParent, (DLGPROC)DefInpProc);
 	return 1;
 }
@@ -274,7 +276,7 @@ int CheckGameAvb()
 	CreateRomDatName(szRomDat);
 
 	if ((h = _tfopen(szRomDat, _T("r"))) == NULL) {
-		if (buffer) 
+		if (buffer)
 		{
 			free(buffer);
 			buffer = NULL;
@@ -366,14 +368,17 @@ static unsigned __stdcall AnalyzingRoms(void*)
 	return 0;
 }
 
-static INT_PTR CALLBACK WaitProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM)		// LPARAM lParam
+//Add these two static variables
+static int xClick;
+static int yClick;
+
+static INT_PTR CALLBACK WaitProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lParam)		// LPARAM lParam
 {
 	switch (Msg) {
-		case WM_INITDIALOG:
+		case WM_INITDIALOG: {
 			hRomsDlg = hDlg;
 			nOldSelect = nBurnDrvActive;
-			//memset(gameAv, 0, sizeof(gameAv)); // sizeof(gameAv) is 4!! -dink
-			memset(gameAv, 0, nBurnDrvCount);
+			memset(gameAv, 0, nBurnDrvCount); // clear game list
 			SendDlgItemMessage(hDlg, IDC_WAIT_PROG, PBM_SETRANGE, 0, MAKELPARAM(0, nBurnDrvCount));
 			SendDlgItemMessage(hDlg, IDC_WAIT_PROG, PBM_SETSTEP, (WPARAM)1, 0);
 
@@ -385,7 +390,7 @@ static INT_PTR CALLBACK WaitProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM)		//
 			hScanThread = (HANDLE)_beginthreadex(NULL, 0, AnalyzingRoms, NULL, 0, &ScanThreadId);
 
 			hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-			
+
 			if (hParent == NULL) {
 				RECT rect;
 				int x, y;
@@ -405,19 +410,49 @@ static INT_PTR CALLBACK WaitProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM)		//
 			}
 
 			break;
+		}
 
-		case WM_COMMAND:
+		case WM_LBUTTONDOWN: {
+			SetCapture(hDlg);
+
+			xClick = GET_X_LPARAM(lParam);
+			yClick = GET_Y_LPARAM(lParam);
+			break;
+		}
+
+		case WM_LBUTTONUP: {
+			ReleaseCapture();
+			break;
+		}
+
+		case WM_MOUSEMOVE: {
+			if (GetCapture() == hDlg) {
+				RECT rcWindow;
+				GetWindowRect(hDlg,&rcWindow);
+
+				int xMouse = GET_X_LPARAM(lParam);
+				int yMouse = GET_Y_LPARAM(lParam);
+				int xWindow = rcWindow.left + xMouse - xClick;
+				int yWindow = rcWindow.top + yMouse - yClick;
+
+				SetWindowPos(hDlg,NULL,xWindow,yWindow,0,0,SWP_NOSIZE|SWP_NOZORDER);
+			}
+			break;
+		}
+
+		case WM_COMMAND: {
 			if (LOWORD(wParam) == IDCANCEL) {
 				PostMessage(hDlg, WM_CLOSE, 0, 0);
 			}
 			break;
+		}
 
-		case WM_CLOSE:
+		case WM_CLOSE: {
 			QuitRomsScan();
 			EndDialog(hDlg, 0);
 			hRomsDlg = NULL;
 			hParent = NULL;
-
+		}
 	}
 
 	return 0;
@@ -426,15 +461,18 @@ static INT_PTR CALLBACK WaitProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM)		//
 int CreateROMInfo(HWND hParentWND)
 {
 	hParent = hParentWND;
-	
+	bool bStarting = 0;
+
 	if (gameAv == NULL) {
 		gameAv = (char*)malloc(nBurnDrvCount);
 		memset(gameAv, 0, nBurnDrvCount);
+		bStarting = 1;
 	}
 
 	if (gameAv) {
 		if (CheckGameAvb() || bRescanRoms) {
-			FBADialogBox(hAppInst, MAKEINTRESOURCE(IDD_WAIT), hParent, (DLGPROC)WaitProc);
+			if ((bStarting && bSkipStartupCheck == false) || bRescanRoms)
+				FBADialogBox(hAppInst, MAKEINTRESOURCE(IDD_WAIT), hParent, (DLGPROC)WaitProc);
 		}
 	}
 

@@ -7,6 +7,7 @@
 #include "burn_ym2203.h"
 #include "burn_ym3812.h"
 #include "msm6295.h"
+#include "decobac06.h"
 
 static UINT8 *AllMem		= NULL;
 static UINT8 *AllRam		= NULL;
@@ -47,57 +48,57 @@ static UINT8 DrvInputs[3];
 static UINT8 DrvReset;
 
 static struct BurnInputInfo ActfancrInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Actfancr)
 
 static struct BurnInputInfo TriothepInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Triothep)
@@ -119,7 +120,7 @@ static struct BurnDIPInfo ActfancrDIPList[]=
 	{0x12, 0x01, 0x0c, 0x0c, "1 Coin  1 Credits"	},
 	{0x12, 0x01, 0x0c, 0x08, "1 Coin  2 Credits"	},
 
-	{0   , 0xfe, 0   ,    0, "Demo Sounds"		},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x12, 0x01, 0x20, 0x00, "Off"			},
 	{0x12, 0x01, 0x20, 0x20, "On"			},
 
@@ -133,7 +134,7 @@ static struct BurnDIPInfo ActfancrDIPList[]=
 	{0x12, 0x01, 0x80, 0x80, "Cocktail"		},
 #endif
 
-	{0   , 0xfe, 0   ,    2, "Lives"		},
+	{0   , 0xfe, 0   ,    4, "Lives"		},
 	{0x13, 0x01, 0x03, 0x03, "3"			},
 	{0x13, 0x01, 0x03, 0x02, "4"			},
 	{0x13, 0x01, 0x03, 0x01, "5"			},
@@ -145,7 +146,7 @@ static struct BurnDIPInfo ActfancrDIPList[]=
 	{0x13, 0x01, 0x0c, 0x08, "Hard"			},
 	{0x13, 0x01, 0x0c, 0x00, "Hardest"		},
 
-	{0   , 0xfe, 0   ,    4, "Bonus Life"		},
+	{0   , 0xfe, 0   ,    2, "Bonus Life"		},
 	{0x13, 0x01, 0x20, 0x20, "800000"		},
 	{0x13, 0x01, 0x20, 0x00, "None"			},
 };
@@ -169,7 +170,7 @@ static struct BurnDIPInfo TriothepDIPList[]=
 	{0x14, 0x01, 0x0c, 0x0c, "1 Coin  1 Credits"	},
 	{0x14, 0x01, 0x0c, 0x08, "1 Coin  2 Credits"	},
 
-	{0   , 0xfe, 0   ,    0, "Demo Sounds"		},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x14, 0x01, 0x20, 0x00, "Off"			},
 	{0x14, 0x01, 0x20, 0x20, "On"			},
 
@@ -215,7 +216,7 @@ static inline void palette_update(INT32 offset)
 	DrvPalette[offset/2] = BurnHighCol((r << 4) | r, (g << 4) | g, (b << 4) | b, 0);
 }
 
-void actfan_main_write(UINT32 address, UINT8 data)
+static void actfan_main_write(UINT32 address, UINT8 data)
 {
 	if ((address & 0xffffe0) == 0x060000) {
 		DrvPfCtrl[0][address & 0x1f] = data;
@@ -249,7 +250,7 @@ void actfan_main_write(UINT32 address, UINT8 data)
 	}
 }
 
-UINT8 actfan_main_read(UINT32 address)
+static UINT8 actfan_main_read(UINT32 address)
 {
 	switch (address)
 	{
@@ -269,7 +270,7 @@ UINT8 actfan_main_read(UINT32 address)
 	return 0;
 }
 
-void triothep_main_write(UINT32 address, UINT8 data)
+static void triothep_main_write(UINT32 address, UINT8 data)
 {
 	if ((address & 0xffffe0) == 0x060000) {
 		DrvPfCtrl[0][address & 0x1f] = data;
@@ -318,7 +319,7 @@ void triothep_main_write(UINT32 address, UINT8 data)
 	}
 }
 
-UINT8 triothep_main_read(UINT32 address)
+static UINT8 triothep_main_read(UINT32 address)
 {
 	switch (address)
 	{
@@ -359,7 +360,7 @@ static void Dec0_sound_write(UINT16 address, UINT8 data)
 		return;
 
 		case 0x3800:
-			MSM6295Command(0, data);
+			MSM6295Write(0, data);
 		return;
 	}
 }
@@ -373,34 +374,15 @@ static UINT8 Dec0_sound_read(UINT16 address)
 			return *soundlatch;
 
 		case 0x3800:
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 	}
 
 	return 0;
 }
 
-inline static INT32 Dec0YM2203SynchroniseStream(INT32 nSoundRate)
-{
-	return (INT64)h6280TotalCycles() * nSoundRate / 7159066;
-}
-
-inline static double Dec0YM2203GetTime()
-{
-	return (double)h6280TotalCycles() / 7159066.0;
-}
-
 static void Dec0YM3812IRQHandler(INT32, INT32 nStatus)
 {
-	if (nStatus) {
-		M6502SetIRQLine(M6502_IRQ_LINE, CPU_IRQSTATUS_ACK);
-	} else {
-		M6502SetIRQLine(M6502_IRQ_LINE, CPU_IRQSTATUS_NONE);
-	}
-}
-
-static INT32 Dec0YM3812SynchroniseStream(INT32 nSoundRate)
-{
-	return (INT64)M6502TotalCycles() * nSoundRate / 1500000;
+	M6502SetIRQLine(M6502_IRQ_LINE, (nStatus) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 }
 
 static INT32 DrvDoReset()
@@ -432,12 +414,12 @@ static INT32 MemIndex()
 	Drv6502ROM	= Next; Next += 0x010000;
 
 	DrvGfxROM0	= Next; Next += 0x040000;
-	DrvGfxROM1	= Next; Next += 0x0c0000;
+	DrvGfxROM1	= Next; Next += 0x100000;
 	DrvGfxROM2	= Next; Next += 0x080000;
 
 	MSM6295ROM	= Next; Next += 0x040000;
 
-        DrvPalette	= (UINT32*)Next; Next += 0x0400 * sizeof(INT32);
+	DrvPalette	= (UINT32*)Next; Next += 0x0400 * sizeof(INT32);
 
 	AllRam		= Next;
 
@@ -476,7 +458,7 @@ static INT32 DrvGfxDecode()
 	INT32 XOffs[16] = { STEP8(16*8, 1), STEP8(0, 1) };
 	INT32 YOffs[16] = { STEP16(0, 8) };
 
-	UINT8 *tmp = (UINT8*)malloc(0x60000);
+	UINT8 *tmp = (UINT8*)BurnMalloc(0x60000);
 	if (tmp == NULL) {
 		return 1;
 	}
@@ -493,7 +475,7 @@ static INT32 DrvGfxDecode()
 
 	GfxDecode(0x0800, 4, 16, 16, Plane2, XOffs + 0, YOffs, 0x100, tmp, DrvGfxROM2);
 
-	free (tmp);
+	BurnFree (tmp);
 
 	return 0;
 }
@@ -508,15 +490,15 @@ static void Dec0SoundInit()
 	M6502SetReadHandler(Dec0_sound_read);
 	M6502Close();
 	
-	BurnYM2203Init(1, 1500000, NULL, Dec0YM2203SynchroniseStream, Dec0YM2203GetTime, 0);
+	BurnYM2203Init(1, 1500000, NULL, 0);
 	BurnTimerAttachH6280(7159066);
 	BurnYM2203SetRoute(0, BURN_SND_YM2203_YM2203_ROUTE, 0.50, BURN_SND_ROUTE_BOTH);
 	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_1, 0.90, BURN_SND_ROUTE_BOTH);
 	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_2, 0.90, BURN_SND_ROUTE_BOTH);
 	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_3, 0.90, BURN_SND_ROUTE_BOTH);
 
-	BurnYM3812Init(1, 3000000, &Dec0YM3812IRQHandler, &Dec0YM3812SynchroniseStream, 1);
-	BurnTimerAttachM6502YM3812(1500000);
+	BurnYM3812Init(1, 3000000, &Dec0YM3812IRQHandler, 1);
+	BurnTimerAttachYM3812(&M6502Config, 1500000);
 	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 0.90, BURN_SND_ROUTE_BOTH);
 
 	MSM6295Init(0, 1024188 / 132, 1);
@@ -528,7 +510,7 @@ static INT32 ActfanInit()
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -592,7 +574,7 @@ static INT32 TriothepInit()
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -664,8 +646,7 @@ static INT32 DrvExit()
 	h6280Exit();
 	M6502Exit();
 
-	free (AllMem);
-	AllMem = NULL;
+	BurnFree (AllMem);
 
 	return 0;
 }
@@ -939,7 +920,7 @@ static INT32 DrvFrame()
 static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
-	
+
 	if (pnMin != NULL) {
 		*pnMin = 0x029721;
 	}
@@ -953,27 +934,26 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 	}
 
 	if (nAction & ACB_DRIVER_DATA) {
-		h6280CpuScan(nAction);
+		h6280Scan(nAction);
 		M6502Scan(nAction);
 
 		BurnYM2203Scan(nAction, pnMin);
 		BurnYM3812Scan(nAction, pnMin);
-		MSM6295Scan(0, nAction);
+		MSM6295Scan(nAction, pnMin);
 
-                SCAN_VAR(control_select);
-                DrvRecalc = 1; // April 3, 2014 - Fix palette problem on state load - dink & iq_132
+		SCAN_VAR(control_select);
 	}
 
 	return 0;
 }
 
 
-// Act-Fancer Cybernetick Hyper Weapon (World revision 2)
+// Act-Fancer Cybernetick Hyper Weapon (World revision 3)
 
 static struct BurnRomInfo actfancrRomDesc[] = {
-	{ "fe08-2.bin",	0x10000, 0x0d36fbfa, 1 | BRF_PRG | BRF_ESS }, //  0 h6280 Code
-	{ "fe09-2.bin",	0x10000, 0x27ce2bb1, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "10",		0x10000, 0xcabad137, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "fe08-3.bin", 0x10000, 0x35f1999d, 1 | BRF_PRG | BRF_ESS }, //  0 h6280 Code
+	{ "fe09-3.bin",	0x10000, 0xd21416ca, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "fe10-3.bin",	0x10000, 0x85535fcc, 1 | BRF_PRG | BRF_ESS }, //  2
 
 	{ "17-1",	0x08000, 0x289ad106, 2 | BRF_PRG | BRF_ESS }, //  3 m6502 Code
 
@@ -1002,10 +982,10 @@ STD_ROM_FN(actfancr)
 
 struct BurnDriver BurnDrvActfancr = {
 	"actfancr", NULL, NULL, NULL, "1989",
-	"Act-Fancer Cybernetick Hyper Weapon (World revision 2)\0", NULL, "Data East Corporation", "Miscellaneous",
+	"Act-Fancer Cybernetick Hyper Weapon (World revision 3)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_HORSHOOT, 0,
-	NULL, actfancrRomInfo, actfancrRomName, NULL, NULL, ActfancrInputInfo, ActfancrDIPInfo,
+	NULL, actfancrRomInfo, actfancrRomName, NULL, NULL, NULL, NULL, ActfancrInputInfo, ActfancrDIPInfo,
 	ActfanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	256, 240, 4, 3
 };
@@ -1048,7 +1028,50 @@ struct BurnDriver BurnDrvActfancr1 = {
 	"Act-Fancer Cybernetick Hyper Weapon (World revision 1)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_HORSHOOT, 0,
-	NULL, actfancr1RomInfo, actfancr1RomName, NULL, NULL, ActfancrInputInfo, ActfancrDIPInfo,
+	NULL, actfancr1RomInfo, actfancr1RomName, NULL, NULL, NULL, NULL, ActfancrInputInfo, ActfancrDIPInfo,
+	ActfanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
+	256, 240, 4, 3
+};
+
+
+// Act-Fancer Cybernetick Hyper Weapon (World revision 2)
+
+static struct BurnRomInfo actfancr2RomDesc[] = {
+	{ "fe08-2.bin",	0x10000, 0x0d36fbfa, 1 | BRF_PRG | BRF_ESS }, //  0 h6280 Code
+	{ "fe09-2.bin",	0x10000, 0x27ce2bb1, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "10",		0x10000, 0xcabad137, 1 | BRF_PRG | BRF_ESS }, //  2
+
+	{ "17-1",	0x08000, 0x289ad106, 2 | BRF_PRG | BRF_ESS }, //  3 m6502 Code
+
+	{ "15",		0x10000, 0xa1baf21e, 3 | BRF_GRA },           //  4 Characters
+	{ "16",		0x10000, 0x22e64730, 3 | BRF_GRA },           //  5
+
+	{ "02",		0x10000, 0xb1db0efc, 4 | BRF_GRA },           //  6 Sprites
+	{ "03",		0x08000, 0xf313e04f, 4 | BRF_GRA },           //  7
+	{ "06",		0x10000, 0x8cb6dd87, 4 | BRF_GRA },           //  8
+	{ "07",		0x08000, 0xdd345def, 4 | BRF_GRA },           //  9
+	{ "00",		0x10000, 0xd50a9550, 4 | BRF_GRA },           // 10
+	{ "01",		0x08000, 0x34935e93, 4 | BRF_GRA },           // 11
+	{ "04",		0x10000, 0xbcf41795, 4 | BRF_GRA },           // 12
+	{ "05",		0x08000, 0xd38b94aa, 4 | BRF_GRA },           // 13
+
+	{ "14",		0x10000, 0xd6457420, 5 | BRF_GRA },           // 14 Background Layer
+	{ "12",		0x10000, 0x08787b7a, 5 | BRF_GRA },           // 15
+	{ "13",		0x10000, 0xc30c37dc, 5 | BRF_GRA },           // 16
+	{ "11",		0x10000, 0x1f006d9f, 5 | BRF_GRA },           // 17
+
+	{ "18",		0x10000, 0x5c55b242, 6 | BRF_SND },           // 18 Samples
+};
+
+STD_ROM_PICK(actfancr2)
+STD_ROM_FN(actfancr2)
+
+struct BurnDriver BurnDrvActfancr2 = {
+	"actfancr2", "actfancr", NULL, NULL, "1989",
+	"Act-Fancer Cybernetick Hyper Weapon (World revision 2)\0", NULL, "Data East Corporation", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_HORSHOOT, 0,
+	NULL, actfancr2RomInfo, actfancr2RomName, NULL, NULL, NULL, NULL, ActfancrInputInfo, ActfancrDIPInfo,
 	ActfanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	256, 240, 4, 3
 };
@@ -1091,7 +1114,7 @@ struct BurnDriver BurnDrvActfancrj = {
 	"Act-Fancer Cybernetick Hyper Weapon (Japan revision 1)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_HORSHOOT, 0,
-	NULL, actfancrjRomInfo, actfancrjRomName, NULL, NULL, ActfancrInputInfo, ActfancrDIPInfo,
+	NULL, actfancrjRomInfo, actfancrjRomName, NULL, NULL, NULL, NULL, ActfancrInputInfo, ActfancrDIPInfo,
 	ActfanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	256, 240, 4, 3
 };
@@ -1134,7 +1157,7 @@ struct BurnDriver BurnDrvTriothep = {
 	"Trio The Punch - Never Forget Me... (World)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
-	NULL, triothepRomInfo, triothepRomName, NULL, NULL, TriothepInputInfo, TriothepDIPInfo,
+	NULL, triothepRomInfo, triothepRomName, NULL, NULL, NULL, NULL, TriothepInputInfo, TriothepDIPInfo,
 	TriothepInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	256, 240, 4, 3
 };
@@ -1177,7 +1200,7 @@ struct BurnDriver BurnDrvTriothepj = {
 	"Trio The Punch - Never Forget Me... (Japan)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
-	NULL, triothepjRomInfo, triothepjRomName, NULL, NULL, TriothepInputInfo, TriothepDIPInfo,
+	NULL, triothepjRomInfo, triothepjRomName, NULL, NULL, NULL, NULL, TriothepInputInfo, TriothepDIPInfo,
 	TriothepInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	256, 240, 4, 3
 };

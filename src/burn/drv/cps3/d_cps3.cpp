@@ -1,6 +1,8 @@
 // ------------------------------------------------------------------------------------
 // Capcom Play System III Drivers for FB Alpha (2007 - 2008).
 // ------------------------------------------------------------------------------------
+//     Based on MAME driver by David Haywood, Andreas Naive, El Semi, Philip Bennett,
+//	and Tomasz Slanina
 //
 //	v1	[ OopsWare ]
 //     - Original drivers release.
@@ -21,11 +23,13 @@
 //     - Updated comments & organized structures of code.
 //     - Revised code for compatibility with FB Alpha Enhanced.
 //
-//	More info: http://neosource.1emu.net/forums/index.php
+//	More info: https://neo-source.com/
 //
 // ------------------------------------------------------------------------------------
 
 #include "cps3.h"
+
+#define LESS_ACCURATE 0
 
 static struct BurnInputInfo cps3InputList[] = {
 	{"P1 Coin",			BIT_DIGITAL,	Cps3But2 +  8,	"p1 coin"	},
@@ -60,9 +64,48 @@ static struct BurnInputInfo cps3InputList[] = {
 	{"Diagnostic",		BIT_DIGITAL,	Cps3But2 +  1,	"diag"		},
 	{"Service",			BIT_DIGITAL,	Cps3But2 +  0,	"service"	},
 	{"Region",			BIT_DIPSWITCH,	&cps3_dip,		"dip"		},
+	{"Fake Dip",		BIT_DIPSWITCH,	&cps3_fake_dip,	"dip"		},
 };
 
 STDINPUTINFO(cps3)
+
+static struct BurnInputInfo jojoInputList[] = {
+	{"P1 Coin",			BIT_DIGITAL,	Cps3But2 +  8,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	Cps3But2 + 12,	"p1 start"	},
+
+	{"P1 Up",			BIT_DIGITAL,	Cps3But1 +  0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	Cps3But1 +  1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	Cps3But1 +  2,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	Cps3But1 +  3,	"p1 right"	},
+	{"P1 Weak Attack",	BIT_DIGITAL,	Cps3But1 +  4,	"p1 fire 1"	},
+	{"P1 Medium Attack",BIT_DIGITAL,	Cps3But1 +  5,	"p1 fire 2"	},
+	{"P1 Strong Attack",BIT_DIGITAL,	Cps3But1 +  6,	"p1 fire 3"	},
+	{"P1 Stand",		BIT_DIGITAL,	Cps3But3 +  3,	"p1 fire 4"	},
+	{"P1 All Attacks (Fake)",	BIT_DIGITAL,	Cps3But3 +  2,	"p1 fire 5"	},
+	{"P1 Not in use 2",	BIT_DIGITAL,	Cps3But3 +  1,	"p1 fire 6"	},
+
+	{"P2 Coin",			BIT_DIGITAL,	Cps3But2 +  9,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	Cps3But2 + 13,	"p2 start"	},
+
+	{"P2 Up",			BIT_DIGITAL,	Cps3But1 +  8,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	Cps3But1 +  9,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	Cps3But1 + 10,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	Cps3But1 + 11,	"p2 right"	},
+	{"P2 Weak Attack",	BIT_DIGITAL,	Cps3But1 + 12,	"p2 fire 1"	},
+	{"P2 Medium Attack",BIT_DIGITAL,	Cps3But1 + 13,	"p2 fire 2"	},
+	{"P2 Strong Attack",BIT_DIGITAL,	Cps3But1 + 14,	"p2 fire 3"	},
+	{"P2 Stand",		BIT_DIGITAL,	Cps3But3 +  4,	"p2 fire 4"	},
+	{"P2 All Attacks (Fake)",	BIT_DIGITAL,	Cps3But3 +  5,	"p2 fire 5"	},
+	{"P2 Not in use 2",	BIT_DIGITAL,	Cps3But2 + 10,	"p2 fire 6"	},
+
+	{"Reset",			BIT_DIGITAL,	&cps3_reset,	"reset"		},
+	{"Diagnostic",		BIT_DIGITAL,	Cps3But2 +  1,	"diag"		},
+	{"Service",			BIT_DIGITAL,	Cps3But2 +  0,	"service"	},
+	{"Region",			BIT_DIPSWITCH,	&cps3_dip,		"dip"		},
+	{"Fake Dip",		BIT_DIPSWITCH,	&cps3_fake_dip,	"dip"		},
+};
+
+STDINPUTINFO(jojo)
 
 // ------------------------------------------------------------------------------------
 
@@ -79,6 +122,10 @@ static struct BurnDIPInfo regionDIPList[] = {
 	{0x1B,	0x01, 0xFF,	0x07, "Oceania"},
 	{0x1B,	0x01, 0xFF,	0x08, "Asia"},
 	{0x1B,	0x01, 0xFF,	0x00, "XXXXXX"},
+
+	{0,		0xFE, 0,	2,	  "Less sprite lag"},
+	{0x1C,	0x01, 0x01,	0x00, "No"},
+	{0x1C,	0x01, 0x01,	0x01, "Yes"},
 
 //	{0,		0xFE, 0,	2,		"NO CD"},
 //	{0x1B,	0x01, 0x10, 0x00,	"No"},
@@ -98,6 +145,10 @@ static struct BurnDIPInfo jojobaRegionDIPList[] = {
 	{0x1B,	0x01, 0xFF,	0x07, "Oceania"},
 	{0x1B,	0x01, 0xFF,	0x08, "Korea"}, // fake region?
 	{0x1B,	0x01, 0xFF,	0x00, "XXXXXX"},
+
+	{0,		0xFE, 0,	2,	  "Less sprite lag"},
+	{0x1C,	0x01, 0x01,	0x00, "No"},
+	{0x1C,	0x01, 0x01,	0x01, "Yes"},
 };
 
 static struct BurnDIPInfo redeartnRegionDIPList[] = {
@@ -113,9 +164,13 @@ static struct BurnDIPInfo redeartnRegionDIPList[] = {
 	{0x1B,	0x01, 0xFF,	0x57, "Oceania"},
 	{0x1B,	0x01, 0xFF,	0x58, "Asia"},
 	{0x1B,	0x01, 0xFF,	0x50, "Japan"},
+
+	{0,		0xFE, 0,	2,	  "Less sprite lag"},
+	{0x1C,	0x01, 0x01,	0x00, "No"},
+	{0x1C,	0x01, 0x01,	0x01, "Yes"},
 };
 
-static struct BurnDIPInfo sfiiiDIPList[] = {
+static struct BurnDIPInfo sfiiiwideDIPList[] = {
 
 	// Region
 	{0,		0xFD, 0,	7,	  "Region"},
@@ -129,9 +184,13 @@ static struct BurnDIPInfo sfiiiDIPList[] = {
 	{0x1B,	0x01, 0x0F,	0x08, "Asia"},
 	{0x1B,	0x01, 0x0F,	0x00, "XXXXXX"},
 	
-	{0,		0xFD, 0,	2,	  "Fake Widescreen DIP"},
-	{0x1B,	0x01, 0x80,	0x80, "Widescreen"},
+	{0,		0xFD, 0,	2,	  "Screen mode"},
+	{0x1B,	0x01, 0x80,	0x80, "Wide"},
 	{0x1B,	0x01, 0x80,	0x00, "Normal"},
+
+	{0,		0xFE, 0,	2,	  "Less sprite lag"},
+	{0x1C,	0x01, 0x01,	0x00, "No"},
+	{0x1C,	0x01, 0x01,	0x01, "Yes"},
 
 //	{0,		0xFE, 0,	2,		"NO CD"},
 //	{0x1B,	0x01, 0x10, 0x00,	"No"},
@@ -142,42 +201,77 @@ static struct BurnDIPInfo japanRegionDIPList[] = {
 
 	// Defaults
 	{0x1B,	0xFF, 0xFF,	0x01, NULL},
+#if LESS_ACCURATE
+	{0x1C,  0xFF, 0xFF, 0x01, NULL},
+#else
+	{0x1C,  0xFF, 0xFF, 0x00, NULL},
+#endif
 };
 
 static struct BurnDIPInfo asiaRegionDIPList[] = {
 
 	// Defaults
 	{0x1B,	0xFF, 0xFF,	0x02, NULL},
+#if LESS_ACCURATE
+	{0x1C,  0xFF, 0xFF, 0x01, NULL},
+#else
+	{0x1C,  0xFF, 0xFF, 0x00, NULL},
+#endif
 };
 
 static struct BurnDIPInfo euroRegionDIPList[] = {
 
 	// Defaults
 	{0x1B,	0xFF, 0xFF,	0x03, NULL},
+#if LESS_ACCURATE
+	{0x1C,  0xFF, 0xFF, 0x01, NULL},
+#else
+	{0x1C,  0xFF, 0xFF, 0x00, NULL},
+#endif
 };
 
 static struct BurnDIPInfo usaRegionDIPList[] = {
 
 	// Defaults
 	{0x1B,	0xFF, 0xFF,	0x04, NULL},
+#if LESS_ACCURATE
+	{0x1C,  0xFF, 0xFF, 0x01, NULL},
+#else
+	{0x1C,  0xFF, 0xFF, 0x00, NULL},
+#endif
 };
 
 static struct BurnDIPInfo hispanicRegionDIPList[] = {
 
 	// Defaults
 	{0x1B,	0xFF, 0xFF,	0x05, NULL},
+#if LESS_ACCURATE
+	{0x1C,  0xFF, 0xFF, 0x01, NULL},
+#else
+	{0x1C,  0xFF, 0xFF, 0x00, NULL},
+#endif
 };
 
 static struct BurnDIPInfo euroRedeartnDIPList[] = {
 
 	// Defaults
 	{0x1B,	0xFF, 0xFF,	0x53, NULL},
+#if LESS_ACCURATE
+	{0x1C,  0xFF, 0xFF, 0x01, NULL},
+#else
+	{0x1C,  0xFF, 0xFF, 0x00, NULL},
+#endif
 };
 
 static struct BurnDIPInfo japanwarzardDIPList[] = {
 
 	// Defaults
 	{0x1B,	0xFF, 0xFF,	0x51, NULL},
+#if LESS_ACCURATE
+	{0x1C,  0xFF, 0xFF, 0x01, NULL},
+#else
+	{0x1C,  0xFF, 0xFF, 0x00, NULL},
+#endif
 };
 
 STDDIPINFOEXT(japan, region, japanRegion)
@@ -188,11 +282,11 @@ STDDIPINFOEXT(jojoba, jojobaRegion, japanRegion)
 STDDIPINFOEXT(jojobane, jojobaRegion, euroRegion)
 STDDIPINFOEXT(redearth, redeartnRegion, euroRedeartn)
 STDDIPINFOEXT(warzard, redeartnRegion, japanwarzard)
-STDDIPINFOEXT(sfiiihispanic, sfiii, hispanicRegion)
-STDDIPINFOEXT(sfiiijapan, sfiii, japanRegion)
-STDDIPINFOEXT(sfiiiasia, sfiii, asiaRegion)
-STDDIPINFOEXT(sfiiiusa, sfiii, usaRegion)
-STDDIPINFOEXT(sfiiieuro, sfiii, euroRegion)
+STDDIPINFOEXT(sfiiiwidehispanic, sfiiiwide, hispanicRegion)
+STDDIPINFOEXT(sfiiiwidejapan, sfiiiwide, japanRegion)
+STDDIPINFOEXT(sfiiiwideasia, sfiiiwide, asiaRegion)
+STDDIPINFOEXT(sfiiiwideusa, sfiiiwide, usaRegion)
+STDDIPINFOEXT(sfiiiwideeuro, sfiiiwide, euroRegion)
 
 // -------------------------------------------
 // Street Fighter III: New Generation (970204)
@@ -227,7 +321,7 @@ STDDIPINFOEXT(sfiiieuro, sfiii, euroRegion)
 // -----------------------------------------------
 static struct BurnRomInfo sfiiiRomDesc[] = {
 
-	{ "sfiii_euro.29f400.u2",			0x080000, 0x27699ddc, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "sfiii_euro.29f400.u2",				0x080000, 0x27699ddc, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 
 #if !defined ROM_VERIFY
 	SFIII_970204_FLASH
@@ -272,7 +366,7 @@ STD_ROM_FN(sfiiia)
 // -------------------------------------------------
 static struct BurnRomInfo sfiiijRomDesc[] = {
 
-	{ "sfiii_japan.29f400.u2",			0x080000, 0x74205250, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "sfiii_japan.29f400.u2",				0x080000, 0x74205250, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	SFIII_970204_FLASH
@@ -287,7 +381,7 @@ STD_ROM_FN(sfiiij)
 // ----------------------------------------------------
 static struct BurnRomInfo sfiiihRomDesc[] = {
 
-	{ "sfiii_hispanic.29f400.u2",		0x080000, 0xd2b3cd48, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "sfiii_hispanic.29f400.u2",			0x080000, 0xd2b3cd48, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 
 #if !defined ROM_VERIFY
 	SFIII_970204_FLASH
@@ -302,7 +396,7 @@ STD_ROM_FN(sfiiih)
 // -------------------------------------------------------------------
 static struct BurnRomInfo sfiiinRomDesc[] = {
 
-	{ "sfiii_asia_nocd.29f400.u2",		0x080000, 0xca2b715f, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "sfiii_asia_nocd.29f400.u2",			0x080000, 0xca2b715f, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 	SFIII_970204_FLASH
 };
@@ -315,7 +409,7 @@ STD_ROM_FN(sfiiin)
 // -------------------------------------------------------------------
 static struct BurnRomInfo sfiiinaRomDesc[] = {
 
-	{ "sfiii_asia_nocd.29f400.u2",		0x080000, 0x73e32463, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "sfiii_asia_nocd.29f400.u2",			0x080000, 0x73e32463, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 	SFIII_970204_FLASH
 };
@@ -366,7 +460,7 @@ STD_ROM_FN(sfiiina)
 // --------------------------------------------------------
 static struct BurnRomInfo sfiii2RomDesc[] = {
 
-	{ "sfiii2_usa.29f400.u2",			0x080000, 0x75dd72e0, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "sfiii2_usa.29f400.u2",				0x080000, 0x75dd72e0, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 					  
 #if !defined ROM_VERIFY
 	SFIII2_970930_FLASH
@@ -381,7 +475,7 @@ STD_ROM_FN(sfiii2)
 // ----------------------------------------------------------
 static struct BurnRomInfo sfiii2jRomDesc[] = {
 
-	{ "sfiii2_japan.29f400.u2",			0x080000, 0xfaea0a3e, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "sfiii2_japan.29f400.u2",				0x080000, 0xfaea0a3e, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	SFIII2_970930_FLASH
@@ -396,7 +490,7 @@ STD_ROM_FN(sfiii2j)
 // ----------------------------------------------------------------
 static struct BurnRomInfo sfiii2nRomDesc[] = {
 
-	{ "sfiii2_asia_nocd.29f400.u2",		0x080000, 0xfd297c0d, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "sfiii2_asia_nocd.29f400.u2",			0x080000, 0xfd297c0d, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 	SFIII2_970930_FLASH
 };
@@ -455,7 +549,7 @@ STD_ROM_FN(sfiii2n)
 // -----------------------------------------------------------------
 static struct BurnRomInfo sfiii3RomDesc[] = {
 
-	{ "sfiii3_euro.29f400.u2",			0x080000, 0x30bbf293, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "sfiii3_euro.29f400.u2",				0x080000, 0x30bbf293, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	SFIII3_990608_FLASH
@@ -470,7 +564,7 @@ STD_ROM_FN(sfiii3)
 // ----------------------------------------------------------------
 static struct BurnRomInfo sfiii3uRomDesc[] = {
 
-	{ "sfiii3_usa.29f400.u2",			0x080000, 0xecc545c1, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "sfiii3_usa.29f400.u2",				0x080000, 0xecc545c1, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	SFIII3_990608_FLASH
@@ -481,11 +575,26 @@ STD_ROM_PICK(sfiii3u)
 STD_ROM_FN(sfiii3u)
 
 // -------------------------------------------------------------------------
+// Street Fighter III 3rd Strike: Fight for the Future (Japan 990608)
+// -------------------------------------------------------------------------
+static struct BurnRomInfo sfiii3jRomDesc[] = {
+
+	{ "sfiii3_japan.29f400.u2",				0x080000, 0x63f23d1f, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+
+#if !defined ROM_VERIFY	
+	SFIII3_990608_FLASH
+#endif
+};
+
+STD_ROM_PICK(sfiii3j)
+STD_ROM_FN(sfiii3j)
+
+// -------------------------------------------------------------------------
 // Street Fighter III 3rd Strike: Fight for the Future (Japan 990608, NO CD)
 // -------------------------------------------------------------------------
 static struct BurnRomInfo sfiii3nRomDesc[] = {
 
-	{ "sfiii3_japan_nocd.29f400.u2",	0x080000, 0x1edc6366, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "sfiii3_japan_nocd.29f400.u2",		0x080000, 0x1edc6366, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 	SFIII3_990608_FLASH
 };
@@ -544,7 +653,7 @@ STD_ROM_FN(sfiii3n)
 // -----------------------------------------------------------------
 static struct BurnRomInfo sfiii3r1RomDesc[] = {
 
-	{ "sfiii3_euro.29f400.u2",			0x080000, 0x30bbf293, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "sfiii3_euro.29f400.u2",				0x080000, 0x30bbf293, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	SFIII3_990512_FLASH
@@ -559,7 +668,7 @@ STD_ROM_FN(sfiii3r1)
 // ----------------------------------------------------------------
 static struct BurnRomInfo sfiii3ur1RomDesc[] = {
 
-	{ "sfiii3_usa.29f400.u2",			0x080000, 0xecc545c1, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "sfiii3_usa.29f400.u2",				0x080000, 0xecc545c1, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	SFIII3_990512_FLASH
@@ -570,11 +679,26 @@ STD_ROM_PICK(sfiii3ur1)
 STD_ROM_FN(sfiii3ur1)
 
 // -------------------------------------------------------------------------
+// Street Fighter III 3rd Strike: Fight for the Future (Japan 990512)
+// -------------------------------------------------------------------------
+static struct BurnRomInfo sfiii3jr1RomDesc[] = {
+
+	{ "sfiii3_japan.29f400.u2",				0x080000, 0x63f23d1f, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	
+#if !defined ROM_VERIFY
+	SFIII3_990512_FLASH
+#endif
+};
+
+STD_ROM_PICK(sfiii3jr1)
+STD_ROM_FN(sfiii3jr1)
+
+// -------------------------------------------------------------------------
 // Street Fighter III 3rd Strike: Fight for the Future (Japan 990512, NO CD)
 // -------------------------------------------------------------------------
 static struct BurnRomInfo sfiii3nr1RomDesc[] = {
 
-	{ "sfiii3_japan_nocd.29f400.u2",	0x080000, 0x1edc6366, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "sfiii3_japan_nocd.29f400.u2",		0x080000, 0x1edc6366, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 	SFIII3_990512_FLASH
 };
@@ -615,11 +739,11 @@ STD_ROM_FN(sfiii3nr1)
 	{ "jojo-simm5.1",			0x200000, 0x734fd162, BRF_GRA },
 	
 // -----------------------------------------------------
-// JoJo no Kimyou na Bouken / JoJo's Venture (USA 990128)
+// JoJo no Kimyou na Bouken / JoJo's Venture (Euro 990128)
 // -----------------------------------------------------
 static struct BurnRomInfo jojoRomDesc[] = {
 
-	{ "jojo_usa.29f400.u2",				0x080000, 0x8d40f7be, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "jojo_euro.29f400.u2",				0x080000, 0x513e40ec, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	JOJO_990128_FLASH
@@ -630,11 +754,26 @@ STD_ROM_PICK(jojo)
 STD_ROM_FN(jojo)
 
 // -------------------------------------------------------
+// JoJo no Kimyou na Bouken / JoJo's Venture (USA 990128)
+// -------------------------------------------------------
+static struct BurnRomInfo jojouRomDesc[] = {
+
+	{ "jojo_usa.29f400.u2",					0x080000, 0x8d40f7be, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	
+#if !defined ROM_VERIFY
+	JOJO_990128_FLASH
+#endif
+};
+
+STD_ROM_PICK(jojou)
+STD_ROM_FN(jojou)
+
+// -------------------------------------------------------
 // JoJo no Kimyou na Bouken / JoJo's Venture (Japan 990128)
 // -------------------------------------------------------
 static struct BurnRomInfo jojojRomDesc[] = {
 
-	{ "jojo_japan.29f400.u2",			0x080000, 0x02778f60, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "jojo_japan.29f400.u2",				0x080000, 0x02778f60, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	JOJO_990128_FLASH
@@ -649,7 +788,7 @@ STD_ROM_FN(jojoj)
 // -------------------------------------------------------------
 static struct BurnRomInfo jojonRomDesc[] = {
 
-	{ "jojo_asia_nocd.29f400.u2",		0x080000, 0x05b4f953, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "jojo_asia_nocd.29f400.u2",			0x080000, 0x05b4f953, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 	JOJO_990128_FLASH
 };
@@ -690,11 +829,11 @@ STD_ROM_FN(jojon)
 	{ "jojo-simm5.1",			0x200000, 0x734fd162, BRF_GRA },
 
 // -----------------------------------------------------
-// JoJo no Kimyou na Bouken / JoJo's Venture (USA 990108)
+// JoJo no Kimyou na Bouken / JoJo's Venture (Euro 990108)
 // -----------------------------------------------------
 static struct BurnRomInfo jojor1RomDesc[] = {
 
-	{ "jojo_usa.29f400.u2",				0x080000, 0x8d40f7be, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "jojo_euro.29f400.u2",				0x080000, 0x513e40ec, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	JOJO_990108_FLASH
@@ -704,12 +843,27 @@ static struct BurnRomInfo jojor1RomDesc[] = {
 STD_ROM_PICK(jojor1)
 STD_ROM_FN(jojor1)
 
+// -----------------------------------------------------
+// JoJo no Kimyou na Bouken / JoJo's Venture (USA 990108)
+// -----------------------------------------------------
+static struct BurnRomInfo jojour1RomDesc[] = {
+
+	{ "jojo_usa.29f400.u2",					0x080000, 0x8d40f7be, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	
+#if !defined ROM_VERIFY
+	JOJO_990108_FLASH
+#endif
+};
+
+STD_ROM_PICK(jojour1)
+STD_ROM_FN(jojour1)
+
 // -------------------------------------------------------
 // JoJo no Kimyou na Bouken / JoJo's Venture (Japan 990108)
 // -------------------------------------------------------
 static struct BurnRomInfo jojojr1RomDesc[] = {
 
-	{ "jojo_japan.29f400.u2",			0x080000, 0x02778f60, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "jojo_japan.29f400.u2",				0x080000, 0x02778f60, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	JOJO_990108_FLASH
@@ -724,7 +878,7 @@ STD_ROM_FN(jojojr1)
 // -------------------------------------------------------------
 static struct BurnRomInfo jojonr1RomDesc[] = {
 
-	{ "jojo_asia_nocd.29f400.u2",		0x080000, 0x05b4f953, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "jojo_asia_nocd.29f400.u2",			0x080000, 0x05b4f953, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 	JOJO_990108_FLASH
 };
@@ -765,11 +919,11 @@ STD_ROM_FN(jojonr1)
 	{ "jojo-simm5.1",			0x200000, 0x734fd162, BRF_GRA },
 
 // -----------------------------------------------------
-// JoJo no Kimyou na Bouken / JoJo's Venture (USA 981202)
+// JoJo no Kimyou na Bouken / JoJo's Venture (Euro 981202)
 // -----------------------------------------------------
 static struct BurnRomInfo jojor2RomDesc[] = {
 
-	{ "jojo_usa.29f400.u2",				0x080000, 0x8d40f7be, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "jojo_euro.29f400.u2",				0x080000, 0x513e40ec, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	JOJO_981202_FLASH
@@ -779,12 +933,27 @@ static struct BurnRomInfo jojor2RomDesc[] = {
 STD_ROM_PICK(jojor2)
 STD_ROM_FN(jojor2)
 
+// -----------------------------------------------------
+// JoJo no Kimyou na Bouken / JoJo's Venture (USA 981202)
+// -----------------------------------------------------
+static struct BurnRomInfo jojour2RomDesc[] = {
+
+	{ "jojo_usa.29f400.u2",					0x080000, 0x8d40f7be, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	
+#if !defined ROM_VERIFY
+	JOJO_981202_FLASH
+#endif
+};
+
+STD_ROM_PICK(jojour2)
+STD_ROM_FN(jojour2)
+
 // -------------------------------------------------------
 // JoJo no Kimyou na Bouken / JoJo's Venture (Japan 981202)
 // -------------------------------------------------------
 static struct BurnRomInfo jojojr2RomDesc[] = {
 
-	{ "jojo_japan.29f400.u2",			0x080000, 0x02778f60, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "jojo_japan.29f400.u2",				0x080000, 0x02778f60, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	JOJO_981202_FLASH
@@ -799,7 +968,7 @@ STD_ROM_FN(jojojr2)
 // -------------------------------------------------------------
 static struct BurnRomInfo jojonr2RomDesc[] = {
 
-	{ "jojo_asia_nocd.29f400.u2",		0x080000, 0x05b4f953, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "jojo_asia_nocd.29f400.u2",			0x080000, 0x05b4f953, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 	JOJO_981202_FLASH
 };
@@ -845,13 +1014,13 @@ STD_ROM_FN(jojonr2)
 	{ "jojoba-simm5.6",			0x200000, 0x4fb32906, BRF_GRA }, \
 	{ "jojoba-simm5.7",			0x200000, 0x8c8be520, BRF_GRA },
 
-// ---------------------------------------------------------------------------------
-// JoJo no Kimyou na Bouken: Mirai e no Isan / JoJo's Bizarre Adventure (Japan 990927)
-// ---------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
+// JoJo's Bizarre Adventure / JoJo no Kimyou na Bouken: Mirai e no Isan (Euro 990927)
+// ----------------------------------------------------------------------------------
 static struct BurnRomInfo jojobaRomDesc[] = {
 
-	{ "jojoba_japan.29f400.u2",			0x080000, 0x3085478c, BRF_ESS | BRF_BIOS },	// SH-2 Bios
-					  
+	{ "jojoba_euro_.29f400.u2",				0x080000, 0x63cc8800, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	
 #if !defined ROM_VERIFY
 	JOJOBA_990927_FLASH
 #endif
@@ -860,12 +1029,27 @@ static struct BurnRomInfo jojobaRomDesc[] = {
 STD_ROM_PICK(jojoba)
 STD_ROM_FN(jojoba)
 
+// ----------------------------------------------------------------------------------
+// JoJo no Kimyou na Bouken: Mirai e no Isan / JoJo's Bizarre Adventure (Japan 990927)
+// ----------------------------------------------------------------------------------
+static struct BurnRomInfo jojobajRomDesc[] = {
+
+	{ "jojoba_japan.29f400.u2",				0x080000, 0x3085478c, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+					  
+#if !defined ROM_VERIFY
+	JOJOBA_990927_FLASH
+#endif
+};
+
+STD_ROM_PICK(jojobaj)
+STD_ROM_FN(jojobaj)
+
 // ----------------------------------------------------------------------------------------
 // JoJo no Kimyou na Bouken: Mirai e no Isan / JoJo's Bizarre Adventure (Japan 990927, NO CD)
 // ----------------------------------------------------------------------------------------
 static struct BurnRomInfo jojobanRomDesc[] = {
 
-	{ "jojoba_japan_nocd.29f400.u2",	0x080000, 0x4dab19f5, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "jojoba_japan_nocd.29f400.u2",		0x080000, 0x4dab19f5, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 	JOJOBA_990927_FLASH
 };
@@ -878,7 +1062,7 @@ STD_ROM_FN(jojoban)
 // ---------------------------------------------------------------------------------------
 static struct BurnRomInfo jojobaneRomDesc[] = {
 
-	{ "jojoba_euro_nocd.29f400.u2",		0x080000, 0x1ee2d679, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "jojoba_euro_nocd.29f400.u2",			0x080000, 0x1ee2d679, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 	JOJOBA_990927_FLASH
 };
@@ -924,13 +1108,13 @@ STD_ROM_FN(jojobane)
 	{ "jojoba-simm5.6",			0x200000, 0x4fb32906, BRF_GRA }, \
 	{ "jojoba-simm5.7",			0x200000, 0x8c8be520, BRF_GRA },
 
-// ---------------------------------------------------------------------------------
-// JoJo no Kimyou na Bouken: Mirai e no Isan / JoJo's Bizarre Adventure (Japan 990913)
-// ---------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
+// JoJo's Bizarre Adventure / JoJo no Kimyou na Bouken: Mirai e no Isan (Euro 990913)
+// ----------------------------------------------------------------------------------
 static struct BurnRomInfo jojobar1RomDesc[] = {
 
-	{ "jojoba_japan.29f400.u2",			0x080000, 0x3085478c, BRF_ESS | BRF_BIOS },	// SH-2 Bios
-					  
+	{ "jojoba_euro.29f400.u2",				0x080000, 0x63cc8800, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	
 #if !defined ROM_VERIFY
 	JOJOBA_990913_FLASH
 #endif
@@ -939,12 +1123,27 @@ static struct BurnRomInfo jojobar1RomDesc[] = {
 STD_ROM_PICK(jojobar1)
 STD_ROM_FN(jojobar1)
 
+// ---------------------------------------------------------------------------------
+// JoJo no Kimyou na Bouken: Mirai e no Isan / JoJo's Bizarre Adventure (Japan 990913)
+// ---------------------------------------------------------------------------------
+static struct BurnRomInfo jojobajr1RomDesc[] = {
+
+	{ "jojoba_japan.29f400.u2",				0x080000, 0x3085478c, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+					  
+#if !defined ROM_VERIFY
+	JOJOBA_990913_FLASH
+#endif
+};
+
+STD_ROM_PICK(jojobajr1)
+STD_ROM_FN(jojobajr1)
+
 // ----------------------------------------------------------------------------------------
 // JoJo no Kimyou na Bouken: Mirai e no Isan / JoJo's Bizarre Adventure (Japan 990913, NO CD)
 // ----------------------------------------------------------------------------------------
 static struct BurnRomInfo jojobanr1RomDesc[] = {
 
-	{ "jojoba_japan_nocd.29f400.u2",	0x080000, 0x4dab19f5, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "jojoba_japan_nocd.29f400.u2",		0x080000, 0x4dab19f5, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 	JOJOBA_990913_FLASH
 };
@@ -957,7 +1156,7 @@ STD_ROM_FN(jojobanr1)
 // ---------------------------------------------------------------------------------------
 static struct BurnRomInfo jojobaner1RomDesc[] = {
 
-	{ "jojoba_euro_nocd.29f400.u2",		0x080000, 0x1ee2d679, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "jojoba_euro_nocd.29f400.u2",			0x080000, 0x1ee2d679, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 	JOJOBA_990913_FLASH
 };
@@ -998,7 +1197,7 @@ STD_ROM_FN(jojobaner1)
 // ----------------------------------
 static struct BurnRomInfo redearthRomDesc[] = {
 
-	{ "redearth_euro.29f400.u2",		0x080000, 0x02e0f336, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "redearth_euro.29f400.u2",			0x080000, 0x02e0f336, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	REDEARTH_961121_FLASH
@@ -1013,7 +1212,7 @@ STD_ROM_FN(redearth)
 // -----------------------------------
 static struct BurnRomInfo warzardRomDesc[] = {
 
-	{ "warzard_japan.29f400.u2",		0x080000, 0xf8e2f0c6, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "warzard_japan.29f400.u2",			0x080000, 0xf8e2f0c6, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	REDEARTH_961121_FLASH
@@ -1056,7 +1255,7 @@ STD_ROM_FN(warzard)
 // ----------------------------------
 static struct BurnRomInfo redearthr1RomDesc[] = {
 
-	{ "redearth_euro.29f400.u2",		0x080000, 0x02e0f336, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "redearth_euro.29f400.u2",			0x080000, 0x02e0f336, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	REDEARTH_961023_FLASH
@@ -1071,7 +1270,7 @@ STD_ROM_FN(redearthr1)
 // -----------------------------------
 static struct BurnRomInfo warzardr1RomDesc[] = {
 
-	{ "warzard_japan.29f400.u2",		 0x080000, 0xf8e2f0c6, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+	{ "warzard_japan.29f400.u2",		 	0x080000, 0xf8e2f0c6, BRF_ESS | BRF_BIOS },	// SH-2 Bios
 	
 #if !defined ROM_VERIFY
 	REDEARTH_961023_FLASH
@@ -1214,9 +1413,9 @@ struct BurnDriver BurnDrvSfiii = {
 	"sfiii", NULL, NULL, NULL, "1997",
 	"Street Fighter III: New Generation (Euro 970204)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiiiRomInfo, sfiiiRomName, NULL, NULL, cps3InputInfo, sfiiieuroDIPInfo,
-	sfiiiInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiiiRomInfo, sfiiiRomName, NULL, NULL, NULL, NULL, cps3InputInfo, sfiiiwideeuroDIPInfo,
+	sfiiiInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1224,9 +1423,9 @@ struct BurnDriver BurnDrvSfiiiu = {
 	"sfiiiu", "sfiii", NULL, NULL, "1997",
 	"Street Fighter III: New Generation (USA 970204)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiiiuRomInfo, sfiiiuRomName, NULL, NULL, cps3InputInfo, sfiiiusaDIPInfo,
-	sfiiiInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiiiuRomInfo, sfiiiuRomName, NULL, NULL, NULL, NULL, cps3InputInfo, sfiiiwideusaDIPInfo,
+	sfiiiInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1234,9 +1433,9 @@ struct BurnDriver BurnDrvSfiiia = {
 	"sfiiia", "sfiii", NULL, NULL, "1997",
 	"Street Fighter III: New Generation (Asia 970204)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiiiaRomInfo, sfiiiaRomName, NULL, NULL, cps3InputInfo, sfiiiasiaDIPInfo,
-	sfiiiInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiiiaRomInfo, sfiiiaRomName, NULL, NULL, NULL, NULL, cps3InputInfo, sfiiiwideasiaDIPInfo,
+	sfiiiInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1244,9 +1443,9 @@ struct BurnDriver BurnDrvSfiiij = {
 	"sfiiij", "sfiii", NULL, NULL, "1997",
 	"Street Fighter III: New Generation (Japan 970204)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiiijRomInfo, sfiiijRomName, NULL, NULL, cps3InputInfo, sfiiijapanDIPInfo,
-	sfiiiInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiiijRomInfo, sfiiijRomName, NULL, NULL, NULL, NULL, cps3InputInfo, sfiiiwidejapanDIPInfo,
+	sfiiiInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1254,9 +1453,9 @@ struct BurnDriver BurnDrvSfiiih = {
 	"sfiiih", "sfiii", NULL, NULL, "1997",
 	"Street Fighter III: New Generation (Hispanic 970204)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiiihRomInfo, sfiiihRomName, NULL, NULL, cps3InputInfo, sfiiihispanicDIPInfo,
-	sfiiiInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiiihRomInfo, sfiiihRomName, NULL, NULL, NULL, NULL, cps3InputInfo, sfiiiwidehispanicDIPInfo,
+	sfiiiInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1264,9 +1463,9 @@ struct BurnDriver BurnDrvSfiiin = {
 	"sfiiin", "sfiii", NULL, NULL, "1997",
 	"Street Fighter III: New Generation (Asia 970204, NO CD, bios set 1)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiiinRomInfo, sfiiinRomName, NULL, NULL, cps3InputInfo, sfiiiasiaDIPInfo,
-	sfiiiInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiiinRomInfo, sfiiinRomName, NULL, NULL, NULL, NULL, cps3InputInfo, sfiiiwideasiaDIPInfo,
+	sfiiiInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1274,9 +1473,9 @@ struct BurnDriver BurnDrvSfiiina = {
 	"sfiiina", "sfiii", NULL, NULL, "1997",
 	"Street Fighter III: New Generation (Asia 970204, NO CD, bios set 2)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiiinaRomInfo, sfiiinaRomName, NULL, NULL, cps3InputInfo, sfiiiasiaDIPInfo,
-	sfiiiInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiiinaRomInfo, sfiiinaRomName, NULL, NULL, NULL, NULL, cps3InputInfo, sfiiiwideasiaDIPInfo,
+	sfiiiInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1284,9 +1483,9 @@ struct BurnDriver BurnDrvSfiii2 = {
 	"sfiii2", NULL, NULL, NULL, "1997",
 	"Street Fighter III 2nd Impact: Giant Attack (USA 970930)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiii2RomInfo, sfiii2RomName, NULL, NULL, cps3InputInfo, usaDIPInfo,
-	sfiii2Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiii2RomInfo, sfiii2RomName, NULL, NULL, NULL, NULL, cps3InputInfo, sfiiiwideusaDIPInfo,
+	sfiii2Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1294,9 +1493,9 @@ struct BurnDriver BurnDrvSfiii2j = {
 	"sfiii2j", "sfiii2", NULL, NULL, "1997",
 	"Street Fighter III 2nd Impact: Giant Attack (Japan 970930)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiii2jRomInfo, sfiii2jRomName, NULL, NULL, cps3InputInfo, japanDIPInfo,
-	sfiii2Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiii2jRomInfo, sfiii2jRomName, NULL, NULL, NULL, NULL, cps3InputInfo, sfiiiwidejapanDIPInfo,
+	sfiii2Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1304,9 +1503,9 @@ struct BurnDriver BurnDrvSfiii2n = {
 	"sfiii2n", "sfiii2", NULL, NULL, "1997",
 	"Street Fighter III 2nd Impact: Giant Attack (Asia 970930, NO CD)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiii2nRomInfo, sfiii2nRomName, NULL, NULL, cps3InputInfo, asiaDIPInfo,
-	sfiii2Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiii2nRomInfo, sfiii2nRomName, NULL, NULL, NULL, NULL, cps3InputInfo, sfiiiwideasiaDIPInfo,
+	sfiii2Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1314,9 +1513,9 @@ struct BurnDriver BurnDrvSfiii3 = {
 	"sfiii3", NULL, NULL, NULL, "1999",
 	"Street Fighter III 3rd Strike: Fight for the Future (Euro 990608)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiii3RomInfo, sfiii3RomName, NULL, NULL, cps3InputInfo, euroDIPInfo,
-	sfiii3Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiii3RomInfo, sfiii3RomName, NULL, NULL, NULL, NULL, cps3InputInfo, euroDIPInfo,
+	sfiii3Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1324,9 +1523,19 @@ struct BurnDriver BurnDrvSfiii3u = {
 	"sfiii3u", "sfiii3", NULL, NULL, "1999",
 	"Street Fighter III 3rd Strike: Fight for the Future (USA 990608)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiii3uRomInfo, sfiii3uRomName, NULL, NULL, cps3InputInfo, usaDIPInfo,
-	sfiii3Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiii3uRomInfo, sfiii3uRomName, NULL, NULL, NULL, NULL, cps3InputInfo, usaDIPInfo,
+	sfiii3Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
+	384, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvSfiii3j = {
+	"sfiii3j", "sfiii3", NULL, NULL, "1999",
+	"Street Fighter III 3rd Strike: Fight for the Future (Japan 990608)\0", NULL, "Capcom", "CPS-3",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiii3jRomInfo, sfiii3jRomName, NULL, NULL, NULL, NULL, cps3InputInfo, japanDIPInfo,
+	sfiii3Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1334,9 +1543,9 @@ struct BurnDriver BurnDrvSfiii3n = {
 	"sfiii3n", "sfiii3", NULL, NULL, "1999",
 	"Street Fighter III 3rd Strike: Fight for the Future (Japan 990608, NO CD)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiii3nRomInfo, sfiii3nRomName, NULL, NULL, cps3InputInfo, japanDIPInfo,
-	sfiii3Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiii3nRomInfo, sfiii3nRomName, NULL, NULL, NULL, NULL, cps3InputInfo, japanDIPInfo,
+	sfiii3Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1344,9 +1553,9 @@ struct BurnDriver BurnDrvSfiii3r1 = {
 	"sfiii3r1", "sfiii3", NULL, NULL, "1999",
 	"Street Fighter III 3rd Strike: Fight for the Future (Euro 990512)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiii3r1RomInfo, sfiii3r1RomName, NULL, NULL, cps3InputInfo, euroDIPInfo,
-	sfiii3Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiii3r1RomInfo, sfiii3r1RomName, NULL, NULL, NULL, NULL, cps3InputInfo, euroDIPInfo,
+	sfiii3Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1354,9 +1563,19 @@ struct BurnDriver BurnDrvSfiii3ur1 = {
 	"sfiii3ur1", "sfiii3", NULL, NULL, "1999",
 	"Street Fighter III 3rd Strike: Fight for the Future (USA 990512)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiii3ur1RomInfo, sfiii3ur1RomName, NULL, NULL, cps3InputInfo, usaDIPInfo,
-	sfiii3Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiii3ur1RomInfo, sfiii3ur1RomName, NULL, NULL, NULL, NULL, cps3InputInfo, usaDIPInfo,
+	sfiii3Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
+	384, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvSfiii3jr1 = {
+	"sfiii3jr1", "sfiii3", NULL, NULL, "1999",
+	"Street Fighter III 3rd Strike: Fight for the Future (Japan 990512)\0", NULL, "Capcom", "CPS-3",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiii3jr1RomInfo, sfiii3jr1RomName, NULL, NULL, NULL, NULL, cps3InputInfo, japanDIPInfo,
+	sfiii3Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1364,19 +1583,29 @@ struct BurnDriver BurnDrvSfiii3nr1 = {
 	"sfiii3nr1", "sfiii3", NULL, NULL, "1999",
 	"Street Fighter III 3rd Strike: Fight for the Future (Japan 990512, NO CD)\0", NULL, "Capcom", "CPS-3",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, FBF_SF,
-	NULL, sfiii3nr1RomInfo, sfiii3nr1RomName, NULL, NULL, cps3InputInfo, japanDIPInfo,
-	sfiii3Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiii3nr1RomInfo, sfiii3nr1RomName, NULL, NULL, NULL, NULL, cps3InputInfo, japanDIPInfo,
+	sfiii3Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
 struct BurnDriver BurnDrvJojo = {
 	"jojo", NULL, NULL, NULL, "1998",
+	"JoJo's Venture / JoJo no Kimyou na Bouken (Euro 990128)\0", NULL, "Capcom", "CPS-3",
+	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A\0JoJo's Venture (Euro 990128)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, jojoRomInfo, jojoRomName, NULL, NULL, NULL, NULL, jojoInputInfo, euroDIPInfo,
+	jojor1Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
+	384, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvJojou = {
+	"jojou", "jojo", NULL, NULL, "1998",
 	"JoJo's Venture / JoJo no Kimyou na Bouken (USA 990128)\0", NULL, "Capcom", "CPS-3",
 	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A\0JoJo's Venture (USA 990128)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
-	NULL, jojoRomInfo, jojoRomName, NULL, NULL, cps3InputInfo, usaDIPInfo,
-	jojor1Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, jojouRomInfo, jojouRomName, NULL, NULL, NULL, NULL, jojoInputInfo, usaDIPInfo,
+	jojor1Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1384,9 +1613,9 @@ struct BurnDriver BurnDrvJojoj = {
 	"jojoj", "jojo", NULL, NULL, "1998",
 	"JoJo's Venture / JoJo no Kimyou na Bouken (Japan 990128)\0", NULL, "Capcom", "CPS-3",
 	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A\0JoJo's Venture (Japan 990128)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
-	NULL, jojojRomInfo, jojojRomName, NULL, NULL, cps3InputInfo, japanDIPInfo,
-	jojor1Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, jojojRomInfo, jojojRomName, NULL, NULL, NULL, NULL, jojoInputInfo, japanDIPInfo,
+	jojor1Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1394,19 +1623,29 @@ struct BurnDriver BurnDrvJojon = {
 	"jojon", "jojo", NULL, NULL, "1998",
 	"JoJo's Venture / JoJo no Kimyou na Bouken (Asia 990128, NO CD)\0", NULL, "Capcom", "CPS-3",
 	L"JoJo's Venture\0\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A (Asia 990128, NO CD)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, 0,
-	NULL, jojonRomInfo, jojonRomName, NULL, NULL, cps3InputInfo, asiaDIPInfo,
-	jojor1Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, 0,
+	NULL, jojonRomInfo, jojonRomName, NULL, NULL, NULL, NULL, jojoInputInfo, asiaDIPInfo,
+	jojor1Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
 struct BurnDriver BurnDrvJojor1 = {
 	"jojor1", "jojo", NULL, NULL, "1998",
+	"JoJo's Venture / JoJo no Kimyou na Bouken (Euro 990108)\0", NULL, "Capcom", "CPS-3",
+	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A\0JoJo's Venture (Euro 990108)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, jojor1RomInfo, jojor1RomName, NULL, NULL, NULL, NULL, jojoInputInfo, euroDIPInfo,
+	jojor1Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
+	384, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvJojour1 = {
+	"jojour1", "jojo", NULL, NULL, "1998",
 	"JoJo's Venture / JoJo no Kimyou na Bouken (USA 990108)\0", NULL, "Capcom", "CPS-3",
 	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A\0JoJo's Venture (USA 990108)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
-	NULL, jojor1RomInfo, jojor1RomName, NULL, NULL, cps3InputInfo, usaDIPInfo,
-	jojor1Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, jojour1RomInfo, jojour1RomName, NULL, NULL, NULL, NULL, jojoInputInfo, usaDIPInfo,
+	jojor1Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1414,9 +1653,9 @@ struct BurnDriver BurnDrvJojojr1 = {
 	"jojojr1", "jojo", NULL, NULL, "1998",
 	"JoJo's Venture / JoJo no Kimyou na Bouken (Japan 990108)\0", NULL, "Capcom", "CPS-3",
 	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A\0JoJo's Venture (Japan 990108)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
-	NULL, jojojr1RomInfo, jojojr1RomName, NULL, NULL, cps3InputInfo, japanDIPInfo,
-	jojor1Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, jojojr1RomInfo, jojojr1RomName, NULL, NULL, NULL, NULL, jojoInputInfo, japanDIPInfo,
+	jojor1Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1424,19 +1663,29 @@ struct BurnDriver BurnDrvJojonr1 = {
 	"jojonr1", "jojo", NULL, NULL, "1998",
 	"JoJo's Venture / JoJo no Kimyou na Bouken (Asia 990108, NO CD)\0", NULL, "Capcom", "CPS-3",
 	L"JoJo's Venture\0\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A (Asia 990108, NO CD)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, 0,
-	NULL, jojonr1RomInfo, jojonr1RomName, NULL, NULL, cps3InputInfo, asiaDIPInfo,
-	jojor1Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, 0,
+	NULL, jojonr1RomInfo, jojonr1RomName, NULL, NULL, NULL, NULL, jojoInputInfo, asiaDIPInfo,
+	jojor1Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
 struct BurnDriver BurnDrvJojor2 = {
 	"jojor2", "jojo", NULL, NULL, "1998",
+	"JoJo's Venture / JoJo no Kimyou na Bouken (Euro 981202)\0", NULL, "Capcom", "CPS-3",
+	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A\0JoJo's Venture (Euro 981202)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, jojor2RomInfo, jojor2RomName, NULL, NULL, NULL, NULL, jojoInputInfo, euroDIPInfo,
+	jojor2Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
+	384, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvJojour2 = {
+	"jojour2", "jojo", NULL, NULL, "1998",
 	"JoJo's Venture / JoJo no Kimyou na Bouken (USA 981202)\0", NULL, "Capcom", "CPS-3",
 	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A\0JoJo's Venture (USA 981202)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
-	NULL, jojor2RomInfo, jojor2RomName, NULL, NULL, cps3InputInfo, usaDIPInfo,
-	jojor2Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, jojour2RomInfo, jojour2RomName, NULL, NULL, NULL, NULL, jojoInputInfo, usaDIPInfo,
+	jojor2Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1444,9 +1693,9 @@ struct BurnDriver BurnDrvJojojr2 = {
 	"jojojr2", "jojo", NULL, NULL, "1998",
 	"JoJo's Venture / JoJo no Kimyou na Bouken (Japan 981202)\0", NULL, "Capcom", "CPS-3",
 	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A\0JoJo's Venture (Japan 981202)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
-	NULL, jojojr2RomInfo, jojojr2RomName, NULL, NULL, cps3InputInfo, japanDIPInfo,
-	jojor2Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, jojojr2RomInfo, jojojr2RomName, NULL, NULL, NULL, NULL, jojoInputInfo, japanDIPInfo,
+	jojor2Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1454,19 +1703,29 @@ struct BurnDriver BurnDrvJojonr2 = {
 	"jojonr2", "jojo", NULL, NULL, "1998",
 	"JoJo's Venture / JoJo no Kimyou na Bouken (Asia 981202, NO CD)\0", NULL, "Capcom", "CPS-3",
 	L"JoJo's Venture\0\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A (Asia 981202, NO CD)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, 0,
-	NULL, jojonr2RomInfo, jojonr2RomName, NULL, NULL, cps3InputInfo, asiaDIPInfo,
-	jojor2Init, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, 0,
+	NULL, jojonr2RomInfo, jojonr2RomName, NULL, NULL, NULL, NULL, jojoInputInfo, asiaDIPInfo,
+	jojor2Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
 struct BurnDriver BurnDrvJojoba = {
 	"jojoba", NULL, NULL, NULL, "1999",
+	"JoJo's Bizarre Adventure: Heritage for the Future / JoJo no Kimyou na Bouken: Mirai e no Isan (Euro 990927)\0", NULL, "Capcom", "CPS-3",
+	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A: \u672A\u6765\u3078\u306E\u907A\u7523\0JoJo's Bizarre Adventure (Euro 990927)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, jojobaRomInfo, jojobaRomName, NULL, NULL, NULL, NULL, jojoInputInfo, jojobaneDIPInfo,
+	jojobaInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
+	384, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvJojobaj = {
+	"jojobaj", "jojoba", NULL, NULL, "1999",
 	"JoJo's Bizarre Adventure: Heritage for the Future / JoJo no Kimyou na Bouken: Mirai e no Isan (Japan 990927)\0", NULL, "Capcom", "CPS-3",
 	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A: \u672A\u6765\u3078\u306E\u907A\u7523\0JoJo's Bizarre Adventure (Japan 990927)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
-	NULL, jojobaRomInfo, jojobaRomName, NULL, NULL, cps3InputInfo, jojobaDIPInfo,
-	jojobaInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, jojobajRomInfo, jojobajRomName, NULL, NULL, NULL, NULL, jojoInputInfo, jojobaDIPInfo,
+	jojobaInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1474,9 +1733,9 @@ struct BurnDriver BurnDrvJojoban = {
 	"jojoban", "jojoba", NULL, NULL, "1999",
 	"JoJo's Bizarre Adventure: Heritage for the Future / JoJo no Kimyou na Bouken: Mirai e no Isan (Japan 990927, NO CD)\0", NULL, "Capcom", "CPS-3",
 	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A: \u672A\u6765\u3078\u306E\u907A\u7523\0JoJo's Bizarre Adventure (Japan 990927, NO CD)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, 0,
-	NULL, jojobanRomInfo, jojobanRomName, NULL, NULL, cps3InputInfo, jojobaDIPInfo,
-	jojobaInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, 0,
+	NULL, jojobanRomInfo, jojobanRomName, NULL, NULL, NULL, NULL, jojoInputInfo, jojobaDIPInfo,
+	jojobaInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1484,19 +1743,29 @@ struct BurnDriver BurnDrvJojobane = {
 	"jojobane", "jojoba", NULL, NULL, "1999",
 	"JoJo's Bizarre Adventure: Heritage for the Future / JoJo no Kimyou na Bouken: Mirai e no Isan (Euro 990927, NO CD)\0", NULL, "Capcom", "CPS-3",
 	L"JoJo's Bizarre Adventure\0\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A: \u672A\u6765\u3078\u306E\u907A\u7523 (Euro 990927, NO CD)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, 0,
-	NULL, jojobaneRomInfo, jojobaneRomName, NULL, NULL, cps3InputInfo, jojobaneDIPInfo,
-	jojobaInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, 0,
+	NULL, jojobaneRomInfo, jojobaneRomName, NULL, NULL, NULL, NULL, jojoInputInfo, jojobaneDIPInfo,
+	jojobaInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
 struct BurnDriver BurnDrvJojobar1 = {
 	"jojobar1", "jojoba", NULL, NULL, "1999",
+	"JoJo's Bizarre Adventure: Heritage for the Future / JoJo no Kimyou na Bouken: Mirai e no Isan (Euro 990913)\0", NULL, "Capcom", "CPS-3",
+	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A: \u672A\u6765\u3078\u306E\u907A\u7523\0JoJo's Bizarre Adventure (Euro 990913)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, jojobar1RomInfo, jojobar1RomName, NULL, NULL, NULL, NULL, jojoInputInfo, jojobaneDIPInfo,
+	jojobaInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
+	384, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvJojobajr1 = {
+	"jojobajr1", "jojoba", NULL, NULL, "1999",
 	"JoJo's Bizarre Adventure: Heritage for the Future / JoJo no Kimyou na Bouken: Mirai e no Isan (Japan 990913)\0", NULL, "Capcom", "CPS-3",
 	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A: \u672A\u6765\u3078\u306E\u907A\u7523\0JoJo's Bizarre Adventure (Japan 990913)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
-	NULL, jojobar1RomInfo, jojobar1RomName, NULL, NULL, cps3InputInfo, jojobaDIPInfo,
-	jojobaInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, jojobajr1RomInfo, jojobajr1RomName, NULL, NULL, NULL, NULL, jojoInputInfo, jojobaDIPInfo,
+	jojobaInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1504,9 +1773,9 @@ struct BurnDriver BurnDrvJojobanr1 = {
 	"jojobanr1", "jojoba", NULL, NULL, "1999",
 	"JoJo's Bizarre Adventure: Heritage for the Future / JoJo no Kimyou na Bouken: Mirai e no Isan (Japan 990913, NO CD)\0", NULL, "Capcom", "CPS-3",
 	L"\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A: \u672A\u6765\u3078\u306E\u907A\u7523\0JoJo's Bizarre Adventure (Japan 990913, NO CD)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, 0,
-	NULL, jojobanr1RomInfo, jojobanr1RomName, NULL, NULL, cps3InputInfo, jojobaDIPInfo,
-	jojobaInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, 0,
+	NULL, jojobanr1RomInfo, jojobanr1RomName, NULL, NULL, NULL, NULL, jojoInputInfo, jojobaDIPInfo,
+	jojobaInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1514,9 +1783,9 @@ struct BurnDriver BurnDrvJojobaner1 = {
 	"jojobaner1", "jojoba", NULL, NULL, "1999",
 	"JoJo's Bizarre Adventure: Heritage for the Future / JoJo no Kimyou na Bouken: Mirai e no Isan (Euro 990913, NO CD)\0", NULL, "Capcom", "CPS-3",
 	L"JoJo's Bizarre Adventure\0\u30B8\u30E7\u30B8\u30E7\u306E \u5947\u5999\u306A\u5192\u967A: \u672A\u6765\u3078\u306E\u907A\u7523 (Euro 990913, NO CD)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, 0,
-	NULL, jojobaner1RomInfo, jojobaner1RomName, NULL, NULL, cps3InputInfo, jojobaneDIPInfo,
-	jojobaInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, 0,
+	NULL, jojobaner1RomInfo, jojobaner1RomName, NULL, NULL, NULL, NULL, jojoInputInfo, jojobaneDIPInfo,
+	jojobaInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1524,9 +1793,9 @@ struct BurnDriver BurnDrvRedearth = {
 	"redearth", NULL, NULL, NULL, "1996",
 	"Red Earth / War-Zard (Euro 961121)\0", NULL, "Capcom", "CPS-3",
 	L"Red Earth\0War-Zard (Euro 961121)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
-	NULL, redearthRomInfo, redearthRomName, NULL, NULL, cps3InputInfo, redearthDIPInfo,
-	redearthInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, redearthRomInfo, redearthRomName, NULL, NULL, NULL, NULL, cps3InputInfo, redearthDIPInfo,
+	redearthInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1534,9 +1803,9 @@ struct BurnDriver BurnDrvWarzard = {
 	"warzard", "redearth", NULL, NULL, "1996",
 	"War-Zard / Red Earth (Japan 961121)\0", NULL, "Capcom", "CPS-3",
 	L"War-Zard\0Red Earth (Japan 961121)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
-	NULL, warzardRomInfo, warzardRomName, NULL, NULL, cps3InputInfo, warzardDIPInfo,
-	redearthInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, warzardRomInfo, warzardRomName, NULL, NULL, NULL, NULL, cps3InputInfo, warzardDIPInfo,
+	redearthInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1544,9 +1813,9 @@ struct BurnDriver BurnDrvRedearthr1 = {
 	"redearthr1", "redearth", NULL, NULL, "1996",
 	"Red Earth / War-Zard (Euro 961023)\0", NULL, "Capcom", "CPS-3",
 	L"Red Earth\0War-Zard (Euro 961023)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
-	NULL, redearthr1RomInfo, redearthr1RomName, NULL, NULL, cps3InputInfo, redearthDIPInfo,
-	redearthInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, redearthr1RomInfo, redearthr1RomName, NULL, NULL, NULL, NULL, cps3InputInfo, redearthDIPInfo,
+	redearthInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };
 
@@ -1554,8 +1823,73 @@ struct BurnDriver BurnDrvWarzardr1 = {
 	"warzardr1", "redearth", NULL, NULL, "1996",
 	"War-Zard / Red Earth (Japan 961023)\0", NULL, "Capcom", "CPS-3",
 	L"War-Zard\0Red Earth (Japan 961023)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
-	NULL, warzardr1RomInfo, warzardr1RomName, NULL, NULL, cps3InputInfo, warzardDIPInfo,
-	redearthInit, cps3Exit, cps3Frame, NULL, cps3Scan, &cps3_palette_change, 0x40000,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAPCOM_CPS3, GBF_VSFIGHT, 0,
+	NULL, warzardr1RomInfo, warzardr1RomName, NULL, NULL, NULL, NULL, cps3InputInfo, warzardDIPInfo,
+	redearthInit, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
+	384, 224, 4, 3
+};
+
+// CPS-3 Hacks
+
+// -------------------------------------------------------------------------
+// Street Fighter III 3rd Strike: Fight for the Future (4rd Arrange Edition 2013)
+// -------------------------------------------------------------------------
+
+static struct BurnRomInfo sfiii4nRomDesc[] = {
+
+	{ "sfiii3_japan_nocd.29f400.u2",	0x080000, 0x1edc6366, BRF_ESS | BRF_BIOS },	// SH-2 Bios
+
+	{ "4rd-simm1.0",					0x200000, 0xca97f95e, BRF_ESS | BRF_PRG },
+	{ "4rd-simm1.1",					0x200000, 0x5bc7faa6, BRF_ESS | BRF_PRG },
+	{ "4rd-simm1.2",					0x200000, 0xec2eaa29, BRF_ESS | BRF_PRG },
+	{ "4rd-simm1.3",					0x200000, 0x41c4ce7c, BRF_ESS | BRF_PRG },
+	{ "sfiii3-simm2.0",					0x200000, 0x06eb969e, BRF_ESS | BRF_PRG },
+	{ "sfiii3-simm2.1",					0x200000, 0xe7039f82, BRF_ESS | BRF_PRG },
+	{ "sfiii3-simm2.2",					0x200000, 0x645c96f7, BRF_ESS | BRF_PRG },
+	{ "sfiii3-simm2.3",					0x200000, 0x610efab1, BRF_ESS | BRF_PRG },
+	{ "sfiii3-simm3.0",					0x200000, 0x7baa1f79, BRF_GRA },
+	{ "sfiii3-simm3.1",					0x200000, 0x234bf8fe, BRF_GRA },
+	{ "sfiii3-simm3.2",					0x200000, 0xd9ebc308, BRF_GRA },
+	{ "sfiii3-simm3.3",					0x200000, 0x293cba77, BRF_GRA },
+	{ "sfiii3-simm3.4",					0x200000, 0x6055e747, BRF_GRA },
+	{ "sfiii3-simm3.5",					0x200000, 0x499aa6fc, BRF_GRA },
+	{ "sfiii3-simm3.6",					0x200000, 0x6c13879e, BRF_GRA },
+	{ "sfiii3-simm3.7",					0x200000, 0xcf4f8ede, BRF_GRA },
+	{ "sfiii3-simm4.0",					0x200000, 0x091fd5ba, BRF_GRA },
+	{ "sfiii3-simm4.1",					0x200000, 0x0bca8917, BRF_GRA },
+	{ "sfiii3-simm4.2",					0x200000, 0xa0fd578b, BRF_GRA },
+	{ "sfiii3-simm4.3",					0x200000, 0x4bf8c699, BRF_GRA },
+	{ "sfiii3-simm4.4",					0x200000, 0x137b8785, BRF_GRA },
+	{ "sfiii3-simm4.5",					0x200000, 0x4fb70671, BRF_GRA },
+	{ "sfiii3-simm4.6",					0x200000, 0x832374a4, BRF_GRA },
+	{ "sfiii3-simm4.7",					0x200000, 0x1c88576d, BRF_GRA },
+	{ "sfiii3-simm5.0",					0x200000, 0xc67d9190, BRF_GRA },
+	{ "sfiii3-simm5.1",					0x200000, 0x6cb79868, BRF_GRA },
+	{ "sfiii3-simm5.2",					0x200000, 0xdf69930e, BRF_GRA },
+	{ "sfiii3-simm5.3",					0x200000, 0x333754e0, BRF_GRA },
+	{ "sfiii3-simm5.4",					0x200000, 0x78f6d417, BRF_GRA },
+	{ "sfiii3-simm5.5",					0x200000, 0x8ccad9b1, BRF_GRA },
+	{ "4rd-simm5.6",					0x200000, 0xe9b61a56, BRF_GRA },
+	{ "4rd-simm5.7",					0x200000, 0x8db3a249, BRF_GRA },
+	{ "sfiii3-simm6.0",					0x200000, 0x8da69042, BRF_GRA },
+	{ "sfiii3-simm6.1",					0x200000, 0x1c8c7ac4, BRF_GRA },
+	{ "sfiii3-simm6.2",					0x200000, 0xa671341d, BRF_GRA },
+	{ "sfiii3-simm6.3",					0x200000, 0x1a990249, BRF_GRA },
+	{ "sfiii3-simm6.4",					0x200000, 0x20cb39ac, BRF_GRA },
+	{ "sfiii3-simm6.5",					0x200000, 0x5f844b2f, BRF_GRA },
+	{ "sfiii3-simm6.6",					0x200000, 0x450e8d28, BRF_GRA },
+	{ "sfiii3-simm6.7",					0x200000, 0xcc5f4187, BRF_GRA }
+};
+
+STD_ROM_PICK(sfiii4n)
+STD_ROM_FN(sfiii4n)
+
+struct BurnDriver BurnDrvSfiii4n = {
+	"sfiii4n", "sfiii3", NULL, NULL, "2013",
+	"Street Fighter III 3rd Strike: Fight for the Future (4rd Arrange Edition 2013)\0", NULL, "hack", "CPS-3",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_CLONE | BDF_HACK, 2, HARDWARE_CAPCOM_CPS3 | HARDWARE_CAPCOM_CPS3_NO_CD, GBF_VSFIGHT, FBF_SF,
+	NULL, sfiii4nRomInfo, sfiii4nRomName, NULL, NULL, NULL, NULL, cps3InputInfo, japanDIPInfo,
+	sfiii3Init, cps3Exit, cps3Frame, DrvCps3Draw, cps3Scan, &cps3_palette_change, 0x40000,
 	384, 224, 4, 3
 };

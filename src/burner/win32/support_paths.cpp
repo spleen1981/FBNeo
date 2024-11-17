@@ -10,6 +10,7 @@ TCHAR szAppTitlesPath[MAX_PATH]		= _T("support/titles/");
 TCHAR szAppCheatsPath[MAX_PATH]		= _T("support/cheats/");
 TCHAR szAppHiscorePath[MAX_PATH]	= _T("support/hiscores/");
 TCHAR szAppSamplesPath[MAX_PATH]	= _T("support/samples/");
+TCHAR szAppHDDPath[MAX_PATH]		= _T("support/hdd/");
 TCHAR szAppIpsPath[MAX_PATH]		= _T("support/ips/");
 TCHAR szAppIconsPath[MAX_PATH]		= _T("support/icons/");
 TCHAR szAppBlendPath[MAX_PATH]		= _T("support/blend/");
@@ -25,6 +26,7 @@ TCHAR szAppControlsPath[MAX_PATH]	= _T("support/cpanel/");
 TCHAR szAppCabinetsPath[MAX_PATH]	= _T("support/cabinets/");
 TCHAR szAppPCBsPath[MAX_PATH]		= _T("support/pcbs/");
 TCHAR szAppHistoryPath[MAX_PATH]	= _T("support/history/");
+TCHAR szAppEEPROMPath[MAX_PATH]		= _T("config/games/");
 
 static TCHAR szCheckIconsPath[MAX_PATH];
 
@@ -41,7 +43,7 @@ static void IconsDirPathChanged() {
 		// load icons
 		LoadDrvIcons();
 		bIconsLoaded = 1;
-	}	
+	}
 }
 
 static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
@@ -72,24 +74,26 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 			SetDlgItemText(hDlg, IDC_SUPPORTDIR_EDIT20, szAppCabinetsPath);
 			SetDlgItemText(hDlg, IDC_SUPPORTDIR_EDIT21, szAppPCBsPath);
 			SetDlgItemText(hDlg, IDC_SUPPORTDIR_EDIT22, szAppHistoryPath);
+			SetDlgItemText(hDlg, IDC_SUPPORTDIR_EDIT23, szAppEEPROMPath);
+			SetDlgItemText(hDlg, IDC_SUPPORTDIR_EDIT24, szAppHDDPath);
 
 			// Setup the tabs
 			hTabControl = GetDlgItem(hDlg, IDC_SPATH_TAB);
 
-			TC_ITEM tcItem; 
+			TC_ITEM tcItem;
 			tcItem.mask = TCIF_TEXT;
 
-			UINT idsString[22] = { IDS_SPATH_PREVIEW, IDS_SPATH_TITLES, IDS_SPATH_ICONS, IDS_SPATH_CHEATS, IDS_SPATH_HISCORE, IDS_SPATH_SAMPLES, IDS_SPATH_IPS, IDS_SPATH_NGCD_ISOS, IDS_SPATH_NGCD_COVERS, IDS_SPATH_BLEND, IDS_SPATH_SELECT, IDS_SPATH_VERSUS, IDS_SPATH_HOWTO, IDS_SPATH_SCORES, IDS_SPATH_BOSSES, IDS_SPATH_GAMEOVER, IDS_SPATH_FLYERS, IDS_SPATH_MARQUEES, IDS_SPATH_CONTROLS, IDS_SPATH_CABINETS, IDS_SPATH_PCBS, IDS_SPATH_HISTORY };
-			
-			for(int nIndex = 0; nIndex < 22; nIndex++) {
+			UINT idsString[24] = { IDS_SPATH_PREVIEW, IDS_SPATH_TITLES, IDS_SPATH_ICONS, IDS_SPATH_CHEATS, IDS_SPATH_HISCORE, IDS_SPATH_SAMPLES, IDS_SPATH_IPS, IDS_SPATH_NGCD_ISOS, IDS_SPATH_NGCD_COVERS, IDS_SPATH_BLEND, IDS_SPATH_SELECT, IDS_SPATH_VERSUS, IDS_SPATH_HOWTO, IDS_SPATH_SCORES, IDS_SPATH_BOSSES, IDS_SPATH_GAMEOVER, IDS_SPATH_FLYERS, IDS_SPATH_MARQUEES, IDS_SPATH_CONTROLS, IDS_SPATH_CABINETS, IDS_SPATH_PCBS, IDS_SPATH_HISTORY, IDS_SPATH_EEPROM, IDS_SPATH_HDD };
+
+			for(int nIndex = 0; nIndex < 24; nIndex++) {
 				tcItem.pszText = FBALoadStringEx(hAppInst, idsString[nIndex], true);
 				TabCtrl_InsertItem(hTabControl, nIndex, &tcItem);
 			}
 
 			int TabPage = TabCtrl_GetCurSel(hTabControl);
-			
+
 			// hide all controls excluding the selected controls
-			for(int x = 0; x < 22; x++) {
+			for(int x = 0; x < 24; x++) {
 				if(x != TabPage) {
 					ShowWindow(GetDlgItem(hDlg, IDC_SUPPORTDIR_BR1 + x), SW_HIDE);		// browse buttons
 					ShowWindow(GetDlgItem(hDlg, IDC_SUPPORTDIR_EDIT1 + x), SW_HIDE);	// edit controls
@@ -102,11 +106,11 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 
 			WndInMid(hDlg, hParent);
 			SetFocus(hDlg);											// Enable Esc=close
-			
+
 			if (nInitTabSelect) {
 				SendMessage(hTabControl, TCM_SETCURSEL, nInitTabSelect, 0);
 				// hide all controls excluding the selected controls
-				for(int x = 0; x < 22; x++) {
+				for(int x = 0; x < 24; x++) {
 					if(x != nInitTabSelect) {
 						ShowWindow(GetDlgItem(hDlg, IDC_SUPPORTDIR_BR1 + x), SW_HIDE);		// browse buttons
 						ShowWindow(GetDlgItem(hDlg, IDC_SUPPORTDIR_EDIT1 + x), SW_HIDE);	// edit controls
@@ -116,7 +120,7 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 					}
 				}
 			}
-				
+
 			break;
 		}
 
@@ -127,9 +131,9 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 			if (pNmHdr->code == TCN_SELCHANGE) {
 
 				int TabPage = TabCtrl_GetCurSel(hTabControl);
-				
+
 				// hide all controls excluding the selected controls
-				for(int x = 0; x < 22; x++) {
+				for(int x = 0; x < 24; x++) {
 					if(x != TabPage) {
 						ShowWindow(GetDlgItem(hDlg, IDC_SUPPORTDIR_BR1 + x), SW_HIDE);		// browse buttons
 						ShowWindow(GetDlgItem(hDlg, IDC_SUPPORTDIR_EDIT1 + x), SW_HIDE);	// edit controls
@@ -139,7 +143,7 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				// Show the proper controls
 				ShowWindow(GetDlgItem(hDlg, IDC_SUPPORTDIR_BR1 + TabPage), SW_SHOW);		// browse buttons
 				ShowWindow(GetDlgItem(hDlg, IDC_SUPPORTDIR_EDIT1 + TabPage), SW_SHOW);		// edit controls
-				
+
 				UpdateWindow(hDlg);
 
 				return FALSE;
@@ -152,7 +156,7 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 			BROWSEINFO bInfo;
 			ITEMIDLIST* pItemIDList = NULL;
 			TCHAR buffer[MAX_PATH];
-			
+
 			if (LOWORD(wParam) == IDOK) {
 				GetDlgItemText(hDlg, IDC_SUPPORTDIR_EDIT1, szAppPreviewsPath,	sizeof(szAppPreviewsPath));
 				GetDlgItemText(hDlg, IDC_SUPPORTDIR_EDIT2, szAppTitlesPath,		sizeof(szAppTitlesPath));
@@ -176,11 +180,13 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				GetDlgItemText(hDlg, IDC_SUPPORTDIR_EDIT20, szAppCabinetsPath,	sizeof(szAppCabinetsPath));
 				GetDlgItemText(hDlg, IDC_SUPPORTDIR_EDIT21, szAppPCBsPath,		sizeof(szAppPCBsPath));
 				GetDlgItemText(hDlg, IDC_SUPPORTDIR_EDIT22, szAppHistoryPath,	sizeof(szAppHistoryPath));
+				GetDlgItemText(hDlg, IDC_SUPPORTDIR_EDIT23, szAppEEPROMPath,	sizeof(szAppEEPROMPath));
+				GetDlgItemText(hDlg, IDC_SUPPORTDIR_EDIT24, szAppHDDPath,		sizeof(szAppHDDPath));
 
 				SendMessage(hDlg, WM_CLOSE, 0, 0);
 				break;
 			} else {
-				if (LOWORD(wParam) >= IDC_SUPPORTDIR_BR1 && LOWORD(wParam) <= IDC_SUPPORTDIR_BR22) {
+				if (LOWORD(wParam) >= IDC_SUPPORTDIR_BR1 && LOWORD(wParam) <= IDC_SUPPORTDIR_BR24) {
 					var = IDC_SUPPORTDIR_EDIT1 + LOWORD(wParam) - IDC_SUPPORTDIR_BR1;
 				} else {
 					if (HIWORD(wParam) == BN_CLICKED && LOWORD(wParam) == IDCANCEL) {
@@ -189,7 +195,7 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 					break;
 				}
 			}
-			
+
 			SHGetMalloc(&pMalloc);
 
 			memset(&bInfo, 0, sizeof(bInfo));
@@ -214,10 +220,10 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				pMalloc->Free(pItemIDList);
 			}
 			pMalloc->Release();
-			
+
 			break;
 		}
-		
+
 		case WM_CLOSE: {
 			EndDialog(hDlg, 0);
 			// If Icons directory path has been changed do the proper action
@@ -234,19 +240,19 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 int SupportDirCreate(HWND hParentWND)
 {
 	hParent = hParentWND;
-	
+
 	_stprintf(szCheckIconsPath, szAppIconsPath);
-	
+
 	return FBADialogBox(hAppInst, MAKEINTRESOURCE(IDD_SUPPORTDIR), hParentWND, (DLGPROC)DefInpProc);
 }
 
 int SupportDirCreateTab(int nTab, HWND hParentWND)
 {
 	nInitTabSelect = nTab - IDC_SUPPORTDIR_EDIT1;
-	
+
 	hParent = hParentWND;
-	
+
 	_stprintf(szCheckIconsPath, szAppIconsPath);
-	
+
 	return FBADialogBox(hAppInst, MAKEINTRESOURCE(IDD_SUPPORTDIR), hParentWND, (DLGPROC)DefInpProc);
 }

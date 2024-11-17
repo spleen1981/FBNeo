@@ -1,4 +1,4 @@
-// FB Alpha - Emulator for MC68000/Z80 based arcade games
+// FinalBurn Neo - Emulator for MC68000/Z80 based arcade games
 //            Refer to the "license.txt" file for more info
 #pragma once
 #include <limits.h>
@@ -40,7 +40,9 @@ typedef struct tagIMAGE {
 
 #if defined (BUILD_WIN32)
  #include "burner_win32.h"
-#elif defined (BUILD_SDL)
+#elif defined (BUILD_MACOS)
+ #include "burner_macos.h"
+#elif defined (BUILD_SDL) || defined (BUILD_SDL2)
  #include "burner_sdl.h"
 #elif defined (_XBOX) && !defined(__LIBRETRO__)
  #include "burner_xbox.h"
@@ -74,8 +76,11 @@ void img_free(IMAGE* img);
 INT32 img_alloc(IMAGE* img);
 
 bool PNGIsImage(FILE* fp);
+bool PNGIsImageBuffer(unsigned char* buffer, int bufferLength);
 INT32 PNGLoad(IMAGE* img, FILE* fp, INT32 nPreset);
+INT32 PNGLoadBuffer(IMAGE* img, unsigned char* buffer, int bufferLength, INT32 nPreset);
 INT32 PNGGetInfo(IMAGE* img, FILE *fp);
+INT32 PNGGetInfoBuffer(IMAGE* img, unsigned char* buffer, int bufferLength);
 
 // gami.cpp
 extern struct GameInp* GameInp;
@@ -95,6 +100,9 @@ INT32 GameInpExit();
 TCHAR* InputCodeDesc(INT32 c);
 TCHAR* InpToDesc(struct GameInp* pgi);
 TCHAR* InpMacroToDesc(struct GameInp* pgi);
+TCHAR* InputNumToName(UINT32 i);
+TCHAR* InpToString(struct GameInp* pgi);
+TCHAR* InpMacroToString(struct GameInp* pgi);
 #ifndef __LIBRETRO__
 void GameInpCheckLeftAlt();
 void GameInpCheckMouse();
@@ -106,14 +114,23 @@ INT32 GameInpDefault();
 INT32 GameInpWrite(FILE* h);
 INT32 GameInpRead(TCHAR* szVal, bool bOverWrite);
 INT32 GameInpMacroRead(TCHAR* szVal, bool bOverWrite);
+INT32 GameMacroAutofireRead(TCHAR* szVal, bool bOverWrite);
 INT32 GameInpCustomRead(TCHAR* szVal, bool bOverWrite);
+
+struct tIniStruct {
+	TCHAR system[80];
+	TCHAR ini[MAX_PATH];
+	INT32 hw[8];
+};
+
+extern tIniStruct gamehw_cfg[];
 
 // inp_interface.cpp
 extern INT32 nAutoFireRate;
 
 // Player Default Controls
-extern INT32 nPlayerDefaultControls[4];
-extern TCHAR szPlayerDefaultIni[4][MAX_PATH];
+extern INT32 nPlayerDefaultControls[5];
+extern TCHAR szPlayerDefaultIni[5][MAX_PATH];
 
 // mappable System Macros for the Input Dialogue
 extern UINT8 macroSystemPause;
@@ -150,6 +167,10 @@ TCHAR* LabelCheck(TCHAR* s, TCHAR* pszLabel);
 TCHAR* ExtractFilename(TCHAR* fullname);
 TCHAR* DriverToName(UINT32 nDrv);
 UINT32 NameToDriver(TCHAR* szName);
+TCHAR *StrReplace(TCHAR *str, TCHAR find, TCHAR replace);
+TCHAR *StrLower(TCHAR *str);
+TCHAR *FileExt(TCHAR *str);
+bool IsFileExt(TCHAR *str, TCHAR *ext);
 
 extern INT32 bDoGamma;
 extern INT32 bHardwareGammaOnly;
@@ -170,6 +191,12 @@ void ComputeGammaLUT();
 #define DAT_COLECO_ONLY		6
 #define DAT_MASTERSYSTEM_ONLY		7
 #define DAT_GAMEGEAR_ONLY		8
+#define DAT_MSX_ONLY        9
+#define DAT_SPECTRUM_ONLY   10
+#define DAT_NEOGEO_ONLY		11
+#define DAT_NES_ONLY        12
+#define DAT_FDS_ONLY        13
+#define DAT_NGP_ONLY        14
 
 INT32 write_datfile(INT32 bType, FILE* fDat);
 INT32 create_datfile(TCHAR* szFilename, INT32 bType);

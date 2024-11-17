@@ -151,7 +151,7 @@ void __fastcall hexion_write(UINT16 address, UINT8 data)
 		return;
 
 		case 0xf200:
-			MSM6295Command(0, data);
+			MSM6295Write(0, data);
 		return;
 
 		case 0xf480:
@@ -176,7 +176,7 @@ void __fastcall hexion_write(UINT16 address, UINT8 data)
 
 		case 0xf5c0:
 			if (is_bootleg) {
-				MSM6295Command(1, data);
+				MSM6295Write(1, data);
 			}
 		return;
 	}
@@ -279,8 +279,7 @@ static INT32 DrvDoReset()
 
 	K051649Reset();
 
-	MSM6295Reset(0);
-	MSM6295Reset(1);
+	MSM6295Reset();
 
 	cpubank = 0;
 	bankctrl = 0;
@@ -430,8 +429,7 @@ static INT32 DrvExit()
 {
 	GenericTilesExit();
 
-	MSM6295Exit(0);
-	MSM6295Exit(1);
+	MSM6295Exit();
 	K051649Exit();
 
 	ZetExit();
@@ -547,8 +545,7 @@ static INT32 DrvFrame()
 			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
 			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 			memset (pSoundBuf, 0, nSegmentLength * 2 * 2);
-			MSM6295Render(0, pSoundBuf, nSegmentLength);
-			MSM6295Render(1, pSoundBuf, nSegmentLength);
+			MSM6295Render(pSoundBuf, nSegmentLength);
 			if (is_bootleg == 0) {
 				K051649Update(pSoundBuf, nSegmentLength);
 			}
@@ -562,8 +559,7 @@ static INT32 DrvFrame()
 		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 		if (nSegmentLength) {
 			memset (pSoundBuf, 0, nSegmentLength * 2 * 2);
-			MSM6295Render(0, pSoundBuf, nSegmentLength);
-			MSM6295Render(1, pSoundBuf, nSegmentLength);
+			MSM6295Render(pSoundBuf, nSegmentLength);
 			if (is_bootleg == 0) {
 				K051649Update(pSoundBuf, nSegmentLength);
 			}
@@ -596,8 +592,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 	if (nAction & ACB_DRIVER_DATA) {
 		ZetScan(nAction);
 
-		MSM6295Scan(0, nAction);
-		MSM6295Scan(1, nAction);
+		MSM6295Scan(nAction, pnMin);
 		K051649Scan(nAction, pnMin);
 
 		SCAN_VAR(cpubank);
@@ -640,7 +635,7 @@ struct BurnDriver BurnDrvHexion = {
 	"Hexion (Japan ver. JAB)\0", NULL, "Konami", "GX122",
 	L"Hexion  (Japan ver. JAB)\0\u30D8\u30AF\u30B7\u30AA\u30F3 (Japan ver. JAB)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_KONAMI, GBF_PUZZLE, 0,
-	NULL, hexionRomInfo, hexionRomName, NULL, NULL, HexionInputInfo, HexionDIPInfo,
+	NULL, hexionRomInfo, hexionRomName, NULL, NULL, NULL, NULL, HexionInputInfo, HexionDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	512, 256, 4, 3
 };
@@ -671,7 +666,7 @@ struct BurnDriver BurnDrvHexionb = {
 	"Hexion (Bootleg, Asia ver. AAA)\0", NULL, "Bootleg", "GX122",
 	L"Hexion  (Bootleg, Asia ver. AAA)\0\u30D8\u30AF\u30B7\u30AA\u30F3 (Bootleg, Asia ver. AAA)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_PREFIX_KONAMI, GBF_PUZZLE, 0,
-	NULL, hexionbRomInfo, hexionbRomName, NULL, NULL, HexionInputInfo, HexionDIPInfo,
+	NULL, hexionbRomInfo, hexionbRomName, NULL, NULL, NULL, NULL, HexionInputInfo, HexionDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	512, 256, 4, 3
 };

@@ -1,4 +1,5 @@
 // Kaneko Pandora module
+// Based on MAME sources by David Haywood, Luca Elia
 
 #include "tiles_generic.h"
 
@@ -14,7 +15,7 @@ INT32 pandora_flipscreen;
 
 void pandora_set_clear(INT32 clear)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_PandoraInitted) bprintf(PRINT_ERROR, _T("pandora_set_clear called without init\n"));
 #endif
 
@@ -23,7 +24,7 @@ void pandora_set_clear(INT32 clear)
 
 void pandora_update(UINT16 *dest)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_PandoraInitted) bprintf(PRINT_ERROR, _T("pandora_update called without init\n"));
 #endif
 
@@ -36,7 +37,7 @@ void pandora_update(UINT16 *dest)
 
 void pandora_buffer_sprites()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_PandoraInitted) bprintf(PRINT_ERROR, _T("pandora_buffer_sprites called without init\n"));
 #endif
 
@@ -125,20 +126,17 @@ void pandora_init(UINT8 *ram, UINT8 *gfx, INT32 gfx_mod, INT32 color_offset, INT
 		BurnDrvGetVisibleSize(&nScreenWidth, &nScreenHeight);
 	}
 
-	pandora_temp = (UINT16*)malloc(nScreenWidth * nScreenHeight * sizeof(UINT16));
+	pandora_temp = (UINT16*)BurnMalloc(nScreenWidth * nScreenHeight * sizeof(UINT16));
 	pandora_clear = 1;
 }
 
 void pandora_exit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_PandoraInitted) bprintf(PRINT_ERROR, _T("pandora_exit called without init\n"));
 #endif
 
-	if (pandora_temp) {
-		free (pandora_temp);
-		pandora_temp = NULL;
-	}
+	BurnFree (pandora_temp);
 
 	pandora_ram = pandora_gfx = NULL;
 	

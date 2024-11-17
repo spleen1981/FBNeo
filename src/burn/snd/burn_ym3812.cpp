@@ -1,13 +1,5 @@
 #include "burnint.h"
-#include "burn_sound.h"
 #include "burn_ym3812.h"
-#include "m68000_intf.h"
-#include "z80_intf.h"
-#include "m6809_intf.h"
-#include "hd6309_intf.h"
-#include "m6800_intf.h"
-#include "m6502_intf.h"
-#include "h6280_intf.h"
 
 #define MAX_YM3812	2
 
@@ -185,112 +177,21 @@ INT32 BurnTimerInitYM3812(INT32 (*pOverCallback)(INT32, INT32), double (*pTimeCa
 	return 0;
 }
 
-INT32 BurnTimerAttachSekYM3812(INT32 nClockspeed)
+INT32 BurnTimerAttachYM3812(cpu_core_config *ptr, INT32 nClockspeed)
 {
 	nCPUClockspeed = nClockspeed;
-	pCPUTotalCycles = SekTotalCycles;
-	pCPURun = SekRun;
-	pCPURunEnd = SekRunEnd;
+	pCPUTotalCycles = ptr->totalcycles;
+	pCPURun = ptr->run;
+	pCPURunEnd = ptr->runend;
 
 	nTicksExtra = MAKE_TIMER_TICKS(1, nCPUClockspeed) - 1;
 
 	return 0;
 }
 
-INT32 BurnTimerAttachZetYM3812(INT32 nClockspeed)
+static INT32 YM3812SynchroniseStream(INT32 nSoundRate)
 {
-	nCPUClockspeed = nClockspeed;
-	pCPUTotalCycles = ZetTotalCycles;
-	pCPURun = ZetRun;
-	pCPURunEnd = ZetRunEnd;
-
-	nTicksExtra = MAKE_TIMER_TICKS(1, nCPUClockspeed) - 1;
-
-	return 0;
-}
-
-INT32 BurnTimerAttachM6809YM3812(INT32 nClockspeed)
-{
-	nCPUClockspeed = nClockspeed;
-	pCPUTotalCycles = M6809TotalCycles;
-	pCPURun = M6809Run;
-	pCPURunEnd = M6809RunEnd;
-
-	nTicksExtra = MAKE_TIMER_TICKS(1, nCPUClockspeed) - 1;
-
-	return 0;
-}
-
-INT32 BurnTimerAttachHD6309YM3812(INT32 nClockspeed)
-{
-	nCPUClockspeed = nClockspeed;
-	pCPUTotalCycles = HD6309TotalCycles;
-	pCPURun = HD6309Run;
-	pCPURunEnd = HD6309RunEnd;
-
-	nTicksExtra = MAKE_TIMER_TICKS(1, nCPUClockspeed) - 1;
-
-	return 0;
-}
-
-INT32 BurnTimerAttachM6800YM3812(INT32 nClockspeed)
-{
-	nCPUClockspeed = nClockspeed;
-	pCPUTotalCycles = M6800TotalCycles;
-	pCPURun = M6800Run;
-	pCPURunEnd = M6800RunEnd;
-
-	nTicksExtra = MAKE_TIMER_TICKS(1, nCPUClockspeed) - 1;
-
-	return 0;
-}
-
-INT32 BurnTimerAttachHD63701YM3812(INT32 nClockspeed)
-{
-	nCPUClockspeed = nClockspeed;
-	pCPUTotalCycles = M6800TotalCycles;
-	pCPURun = HD63701Run;
-	pCPURunEnd = HD63701RunEnd;
-
-	nTicksExtra = MAKE_TIMER_TICKS(1, nCPUClockspeed) - 1;
-
-	return 0;
-}
-
-INT32 BurnTimerAttachM6803YM3812(INT32 nClockspeed)
-{
-	nCPUClockspeed = nClockspeed;
-	pCPUTotalCycles = M6800TotalCycles;
-	pCPURun = M6803Run;
-	pCPURunEnd = M6803RunEnd;
-
-	nTicksExtra = MAKE_TIMER_TICKS(1, nCPUClockspeed) - 1;
-
-	return 0;
-}
-
-INT32 BurnTimerAttachM6502YM3812(INT32 nClockspeed)
-{
-	nCPUClockspeed = nClockspeed;
-	pCPUTotalCycles = M6502TotalCycles;
-	pCPURun = M6502Run;
-	pCPURunEnd = M6502RunEnd; // doesn't do anything...
-
-	nTicksExtra = MAKE_TIMER_TICKS(1, nCPUClockspeed) - 1;
-
-	return 0;
-}
-
-INT32 BurnTimerAttachH6280YM3812(INT32 nClockspeed)
-{
-	nCPUClockspeed = nClockspeed;
-	pCPUTotalCycles = h6280TotalCycles;
-	pCPURun = h6280Run;
-	pCPURunEnd = h6280RunEnd;
-
-	nTicksExtra = MAKE_TIMER_TICKS(1, nCPUClockspeed) - 1;
-
-	return 0;
+	return (INT64)(pCPUTotalCycles() * nSoundRate / nCPUClockspeed);
 }
 
 // Sound Related
@@ -333,7 +234,7 @@ static INT32 YM3812StreamCallbackDummy(INT32)
 
 static void YM3812Render(INT32 nSegmentLength)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM3812Initted) bprintf(PRINT_ERROR, _T("YM3812Render called without init\n"));
 #endif
 
@@ -357,7 +258,7 @@ static void YM3812Render(INT32 nSegmentLength)
 
 static void YM3812UpdateResample(INT16* pSoundBuf, INT32 nSegmentEnd)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM3812Initted) bprintf(PRINT_ERROR, _T("YM3812UpdateResample called without init\n"));
 #endif
 
@@ -446,7 +347,7 @@ static void YM3812UpdateResample(INT16* pSoundBuf, INT32 nSegmentEnd)
 
 static void YM3812UpdateNormal(INT16* pSoundBuf, INT32 nSegmentEnd)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM3812Initted) bprintf(PRINT_ERROR, _T("YM3812UpdateNormal called without init\n"));
 #endif
 
@@ -520,7 +421,7 @@ static void YM3812UpdateNormal(INT16* pSoundBuf, INT32 nSegmentEnd)
 
 void BurnYM3812UpdateRequest(INT32, INT32)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM3812Initted) bprintf(PRINT_ERROR, _T("BurnYM3812UpdateRequest called without init\n"));
 #endif
 
@@ -532,7 +433,7 @@ void BurnYM3812UpdateRequest(INT32, INT32)
 
 void BurnYM3812Reset()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM3812Initted) bprintf(PRINT_ERROR, _T("BurnYM3812Reset called without init\n"));
 #endif
 
@@ -545,23 +446,27 @@ void BurnYM3812Reset()
 
 void BurnYM3812Exit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM3812Initted) bprintf(PRINT_ERROR, _T("BurnYM3812Exit called without init\n"));
 #endif
+
+	if (!DebugSnd_YM3812Initted) return;
 
 	YM3812Shutdown();
 
 	BurnTimerExitYM3812();
 
-	if (pBuffer) {
-		free(pBuffer);
-		pBuffer = NULL;
-	}
+	BurnFree(pBuffer);
 	
 	nNumChips = 0;
 	bYM3812AddSignal = 0;
 	
 	DebugSnd_YM3812Initted = 0;
+}
+
+INT32 BurnYM3812Init(INT32 num, INT32 nClockFrequency, OPL_IRQHANDLER IRQCallback, INT32 bAddSignal)
+{
+	return BurnYM3812Init(num, nClockFrequency, IRQCallback, YM3812SynchroniseStream, bAddSignal);
 }
 
 INT32 BurnYM3812Init(INT32 num, INT32 nClockFrequency, OPL_IRQHANDLER IRQCallback, INT32 (*StreamCallback)(INT32), INT32 bAddSignal)
@@ -606,7 +511,7 @@ INT32 BurnYM3812Init(INT32 num, INT32 nClockFrequency, OPL_IRQHANDLER IRQCallbac
 	YM3812SetTimerHandler(0, &BurnOPLTimerCallbackYM3812, 0);
 	YM3812SetUpdateHandler(0, &BurnYM3812UpdateRequest, 0);
 
-	pBuffer = (INT16*)malloc(4096 * num * sizeof(INT16));
+	pBuffer = (INT16*)BurnMalloc(4096 * num * sizeof(INT16));
 	memset(pBuffer, 0, 4096 * num * sizeof(INT16));
 
 	nYM3812Position = 0;
@@ -630,7 +535,7 @@ INT32 BurnYM3812Init(INT32 num, INT32 nClockFrequency, OPL_IRQHANDLER IRQCallbac
 
 void BurnYM3812SetRoute(INT32 nChip, INT32 nIndex, double nVolume, INT32 nRouteDir)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM3812Initted) bprintf(PRINT_ERROR, _T("BurnYM3812SetRoute called without init\n"));
 	if (nIndex < 0 || nIndex > 1) bprintf(PRINT_ERROR, _T("BurnYM3812SetRoute called with invalid index %i\n"), nIndex);
 	if (nChip >= nNumChips) bprintf(PRINT_ERROR, _T("BurnYM3812SetRoute called with invalid chip %i\n"), nChip);
@@ -649,7 +554,7 @@ void BurnYM3812SetRoute(INT32 nChip, INT32 nIndex, double nVolume, INT32 nRouteD
 
 void BurnYM3812Scan(INT32 nAction, INT32* pnMin)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM3812Initted) bprintf(PRINT_ERROR, _T("BurnYM3812Scan called without init\n"));
 #endif
 

@@ -50,11 +50,15 @@ typedef struct {
     UINT8   ir;     /* instruction register */
     UINT16  ras[8]; /* 8 return address stack entries */
 	UINT8	irq_state;
+	UINT32	total_cycles;
+	INT32   end_run;
+
 }   s2650_Regs;
 
 static s2650_Regs S;
 static s2650_Regs Store[MAX_S2650];
 int nActiveS2650 = -1;
+static INT32 cycles_slice;
 
 /* condition code changes for a byte */
 static const UINT8 ccc[0x200] = {
@@ -805,7 +809,7 @@ static void s2650_set_context(void *src)
 */
 void s2650SetIRQLine(int irqline, int state)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_S2650Initted) bprintf(PRINT_ERROR, _T("s2650SetIRQLine called without init\n"));
 	if (nActiveS2650 == -1) bprintf(PRINT_ERROR, _T("s2650SetIRQLine called when no CPU open\n"));
 #endif
@@ -851,12 +855,15 @@ static int s2650_get_sense(void)
 
 int s2650Run(int cycles)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_S2650Initted) bprintf(PRINT_ERROR, _T("s2650Run called without init\n"));
 	if (nActiveS2650 == -1) bprintf(PRINT_ERROR, _T("s2650Run called when no CPU open\n"));
 #endif
 
-	s2650_ICount = cycles;
+	s2650_ICount = cycles_slice = cycles;
+
+	S.end_run = 0;
+
 	do
 	{
 		S.ppc = S.page + S.iar;
@@ -1459,14 +1466,43 @@ int s2650Run(int cycles)
 				M_BRA( --S.reg[S.r] );
 				break;
 		}
-	} while( s2650_ICount > 0 );
+	} while( s2650_ICount > 0 && !S.end_run );
 
-	return cycles - s2650_ICount;
+	INT32 ret = cycles - s2650_ICount;
+
+	S.total_cycles += ret;
+
+	cycles_slice = 0;
+	s2650_ICount = 0;
+
+	return ret;
+}
+
+INT32 s2650TotalCycles()
+{
+	return S.total_cycles + (cycles_slice - s2650_ICount);
+}
+
+void s2650NewFrame()
+{
+	S.total_cycles = 0;
+}
+
+void s2650RunEnd()
+{
+	S.end_run = 1;
+}
+
+INT32 s2650Idle(INT32 cycles)
+{
+	S.total_cycles += cycles;
+
+	return cycles;
 }
 
 int s2650Scan(int nAction)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_S2650Initted) bprintf(PRINT_ERROR, _T("s2650Scan called without init\n"));
 	if (nActiveS2650 == -1) bprintf(PRINT_ERROR, _T("s2650Scan called when no CPU open\n"));
 #endif
@@ -1478,7 +1514,7 @@ int s2650Scan(int nAction)
 
 		ba.Data	  = &Store;
 		ba.nLen	  = sizeof(S) * MAX_S2650;
-		ba.szName = "All Ram";
+		ba.szName = "s2650 CPU Regs";
 		BurnAcb(&ba);
 	}
 

@@ -29,29 +29,15 @@
  *
  *****************************************************************************/
 
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <string.h>
-
 #include "burnint.h"
 #include "sh2_intf.h"
-
-//#include "tchar.h"
-//extern int (__cdecl *bprintf) (int nStatus, TCHAR* szFormat, ...);
+#include <stddef.h>
 
 int has_sh2;
 INT32 cps3speedhack; // must be set _after_ Sh2Init();
+INT32 sh2_busyloop_speedhack_mode2;
 
-/*typedef signed char INT8;
-typedef unsigned char UINT8;
-typedef signed short INT16;
-typedef unsigned short UINT16;
-typedef signed int INT32;
-typedef unsigned int UINT32;
-typedef signed long long INT64;
-typedef unsigned long long UINT64;*/
-
-#define BUSY_LOOP_HACKS 	1
+#define BUSY_LOOP_HACKS     1
 #define FAST_OP_FETCH		1
 #define USE_JUMPTABLE		0
 
@@ -81,8 +67,8 @@ typedef unsigned long long UINT64;*/
 
 typedef struct
 {
-	int irq_vector;
-	int irq_priority;
+	INT32 irq_vector;
+	INT32 irq_priority;
 } irq_entry;
 
 typedef struct
@@ -110,29 +96,30 @@ typedef struct
 	UINT16 	ocra, ocrb, icr;
 	UINT32 	frc_base;
 
-	int		frt_input;
-	int 	internal_irq_level;
-	int 	internal_irq_vector;
+	INT32	frt_input;
+	INT32 	internal_irq_level;
+	INT32 	internal_irq_vector;
 
 //	emu_timer *timer;
 	UINT32 	timer_cycles;
 	UINT32 	timer_base;
-	int     timer_active;
+	INT32   timer_active;
 	
 //	emu_timer *dma_timer[2];
 	UINT32 	dma_timer_cycles[2];
 	UINT32 	dma_timer_base[2];
-	int     dma_timer_active[2];
+	INT32   dma_timer_active[2];
 
 //	int     is_slave, cpu_number;
 	
-	UINT32	cycle_counts;
+	UINT32	cycle_counts; // used internally for timers / sh2_GetTotalCycles()
 	UINT32	sh2_cycles_to_run;
 	INT32	sh2_icount;
-	int     sh2_total_cycles;
-	
-	int 	(*irq_callback)(int irqline);
+	INT32   sh2_total_cycles; // used externally (drivers/etc)
+	INT32   sh2_eat_cycles;
+	INT32   end_run;
 
+	int 	(*irq_callback)(int irqline);
 } SH2;
 
 static SH2 * sh2;
@@ -142,7 +129,7 @@ static UINT32 sh2_GetTotalCycles()
 	return sh2->cycle_counts + sh2->sh2_cycles_to_run - sh2->sh2_icount;
 }
 
-static const int div_tab[4] = { 3, 5, 3, 0 };
+static const int div_tab[4] = { 3, 5, 7, 0 };
 
 enum {
 	ICF  = 0x00800000,
@@ -200,6 +187,37 @@ typedef struct
 static SH2EXT * pSh2Ext;
 static SH2EXT * Sh2Ext = NULL;
 
+static INT32 core_idle(INT32 cycles)
+{
+	Sh2Idle(cycles);
+
+	return cycles;
+}
+
+static void core_set_irq(INT32 /*cpu*/, INT32 line, INT32 state)
+{
+	Sh2SetIRQLine(line, state);
+}
+
+cpu_core_config Sh2Config =
+{
+	"SH-2",
+	Sh2Open,
+	Sh2Close,
+	Sh2CheatReadByte,
+	Sh2CheatWriteByte,
+	Sh2GetActive,
+	Sh2TotalCycles,
+	Sh2NewFrame,
+	core_idle,
+	core_set_irq,
+	Sh2Run,
+	Sh2StopRun,
+	Sh2Reset,
+	0xffffffff,
+	0
+};
+
 /* SH-2 Memory Map:
  * 0x00000000 ~ 0x07ffffff : user
  * 0x08000000 ~ 0x0fffffff : user ( mirror )
@@ -216,7 +234,7 @@ static SH2EXT * Sh2Ext = NULL;
  
 int Sh2MapMemory(unsigned char* pMemory, unsigned int nStart, unsigned int nEnd, int nType)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2MapMemory called without init\n"));
 #endif
 
@@ -264,7 +282,7 @@ int Sh2MapMemory(unsigned char* pMemory, unsigned int nStart, unsigned int nEnd,
 
 int Sh2MapHandler(uintptr_t nHandler, unsigned int nStart, unsigned int nEnd, int nType)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2MapHandler called without init\n"));
 #endif
 
@@ -312,7 +330,7 @@ int Sh2MapHandler(uintptr_t nHandler, unsigned int nStart, unsigned int nEnd, in
 
 int Sh2SetReadByteHandler(int i, pSh2ReadByteHandler pHandler)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2SetReadByteHandler called without init\n"));
 	if (i >= SH2_MAXHANDLER) bprintf(PRINT_ERROR, _T("Sh2SetReadByteHandler called with invalid index %x\n"), i);
 #endif
@@ -324,7 +342,7 @@ int Sh2SetReadByteHandler(int i, pSh2ReadByteHandler pHandler)
 
 int Sh2SetWriteByteHandler(int i, pSh2WriteByteHandler pHandler)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2SetWriteByteHandler called without init\n"));
 	if (i >= SH2_MAXHANDLER) bprintf(PRINT_ERROR, _T("Sh2SetWriteByteHandler called with invalid index %x\n"), i);
 #endif
@@ -336,7 +354,7 @@ int Sh2SetWriteByteHandler(int i, pSh2WriteByteHandler pHandler)
 
 int Sh2SetReadWordHandler(int i, pSh2ReadWordHandler pHandler)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2SetReadWordHandler called without init\n"));
 	if (i >= SH2_MAXHANDLER) bprintf(PRINT_ERROR, _T("Sh2SetReadWordHandler called with invalid index %x\n"), i);
 #endif
@@ -348,7 +366,7 @@ int Sh2SetReadWordHandler(int i, pSh2ReadWordHandler pHandler)
 
 int Sh2SetWriteWordHandler(int i, pSh2WriteWordHandler pHandler)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2SetWriteWordHandler called without init\n"));
 	if (i >= SH2_MAXHANDLER) bprintf(PRINT_ERROR, _T("Sh2SetWriteWordHandler called with invalid index %x\n"), i);
 #endif
@@ -360,7 +378,7 @@ int Sh2SetWriteWordHandler(int i, pSh2WriteWordHandler pHandler)
 
 int Sh2SetReadLongHandler(int i, pSh2ReadLongHandler pHandler)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2SetReadLongHandler called without init\n"));
 	if (i >= SH2_MAXHANDLER) bprintf(PRINT_ERROR, _T("Sh2SetReadLongHandler called with invalid index %x\n"), i);
 #endif
@@ -372,7 +390,7 @@ int Sh2SetReadLongHandler(int i, pSh2ReadLongHandler pHandler)
 
 int Sh2SetWriteLongHandler(int i, pSh2WriteLongHandler pHandler)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2SetWriteLongHandler called without init\n"));
 	if (i >= SH2_MAXHANDLER) bprintf(PRINT_ERROR, _T("Sh2SetWriteLongHandler called with invalid index %x\n"), i);
 #endif
@@ -384,7 +402,7 @@ int Sh2SetWriteLongHandler(int i, pSh2WriteLongHandler pHandler)
 
 unsigned char  __fastcall Sh2InnerReadByte(unsigned int a) 
 { 
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2InnerReadByte called without init\n"));
 #endif
 
@@ -393,7 +411,7 @@ unsigned char  __fastcall Sh2InnerReadByte(unsigned int a)
 
 unsigned short __fastcall Sh2InnerReadWord(unsigned int a) 
 { 
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2InnerReadWord called without init\n"));
 #endif
 
@@ -402,7 +420,7 @@ unsigned short __fastcall Sh2InnerReadWord(unsigned int a)
 
 unsigned int   __fastcall Sh2InnerReadLong(unsigned int a) 
 { 
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2InnerReadLong called without init\n"));
 #endif
 
@@ -411,7 +429,7 @@ unsigned int   __fastcall Sh2InnerReadLong(unsigned int a)
 
 void __fastcall Sh2InnerWriteByte(unsigned int a, unsigned char d) 
 { 
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2InnerWriteByte called without init\n"));
 #endif
 
@@ -421,7 +439,7 @@ void __fastcall Sh2InnerWriteByte(unsigned int a, unsigned char d)
 
 void __fastcall Sh2InnerWriteWord(unsigned int a, unsigned short d) 
 { 
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2InnerWriteWord called without init\n"));
 #endif
 
@@ -430,7 +448,7 @@ void __fastcall Sh2InnerWriteWord(unsigned int a, unsigned short d)
 
 void __fastcall Sh2InnerWriteLong(unsigned int a, unsigned int d) 
 { 
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2InnerWriteLong called without init\n"));
 #endif
 
@@ -446,7 +464,7 @@ void __fastcall Sh2EmptyWriteLong(unsigned int, unsigned int) { }
 
 int Sh2Exit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2Exit called without init\n"));
 #endif
 
@@ -463,38 +481,24 @@ int Sh2Exit()
 	return 0;
 }
 
-static void Sh2CheatWriteByte(UINT32 a, UINT8 d)
+void Sh2CheatWriteByte(UINT32 a, UINT8 d)
 {
 	Sh2WriteByte(a,d);
 }
 
-static UINT8 Sh2CheatReadByte(UINT32 a)
+UINT8 Sh2CheatReadByte(UINT32 a)
 {
 	return Sh2ReadByte(a);
 }
-
-static cpu_core_config Sh2CheatCpuConfig =
-{
-	Sh2Open,
-	Sh2Close,
-	Sh2CheatReadByte,
-	Sh2CheatWriteByte,
-	Sh2GetActive,
-	Sh2TotalCycles,
-	Sh2NewFrame,
-	Sh2Run,
-	Sh2StopRun,
-	Sh2Reset,
-	0xffffffff,
-	0
-};
 
 int Sh2Init(int nCount)
 {
 	DebugCPU_SH2Initted = 1;
 
 	has_sh2 = 1;
+
 	cps3speedhack = 0;
+	sh2_busyloop_speedhack_mode2 = 0;
 
 	Sh2Ext = (SH2EXT *)malloc(sizeof(SH2EXT) * nCount);
 	if (Sh2Ext == NULL) {
@@ -506,7 +510,9 @@ int Sh2Init(int nCount)
 	// init default memory handler
 	for (int i=0; i<nCount; i++) {
 		pSh2Ext = Sh2Ext + i;
-		//sh2 = & pSh2Ext->sh2;
+		sh2 = & (pSh2Ext->sh2);
+
+		sh2->sh2_eat_cycles = 1;
 
 		Sh2MapHandler(SH2_MAXHANDLER - 1, 0xE0000000, 0xFFFFFFFF, 0x07);
 		Sh2MapHandler(SH2_MAXHANDLER - 2, 0x40000000, 0xBFFFFFFF, 0x07);
@@ -526,7 +532,7 @@ int Sh2Init(int nCount)
 		Sh2SetWriteWordHandler(SH2_MAXHANDLER - 2, Sh2EmptyWriteWord);
 		Sh2SetWriteLongHandler(SH2_MAXHANDLER - 2, Sh2EmptyWriteLong);
 
-		CpuCheatRegister(i, &Sh2CheatCpuConfig);
+		CpuCheatRegister(i, &Sh2Config);
 	}
 
 	return 0;
@@ -534,7 +540,7 @@ int Sh2Init(int nCount)
 
 void Sh2Open(const int i)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2Open called without init\n"));
 #endif
 
@@ -544,14 +550,23 @@ void Sh2Open(const int i)
 
 void Sh2Close()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2Close called without init\n"));
 #endif
 }
 
+void Sh2SetEatCycles(int i)
+{
+#if defined FBNEO_DEBUG
+	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2SetEatCycles called without init\n"));
+#endif
+
+	sh2->sh2_eat_cycles = i;
+}
+
 int Sh2GetActive()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2GetActive called without init\n"));
 #endif
 
@@ -560,11 +575,17 @@ int Sh2GetActive()
 
 void Sh2Reset(unsigned int pc, unsigned r15)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2Reset called without init\n"));
 #endif
 
-	memset(sh2, 0, sizeof(SH2) - 4);
+	INT32 tmp_eat_cycles = sh2->sh2_eat_cycles;
+	int (*tmp_irq_callback)(int irqline) = sh2->irq_callback;
+
+	memset(sh2, 0, sizeof(SH2));
+
+	sh2->sh2_eat_cycles = tmp_eat_cycles; // save & restore init-time variables
+	sh2->irq_callback = tmp_irq_callback;
 
 	sh2->pc = pc;
 	sh2->r[15] = r15;
@@ -603,8 +624,6 @@ void program_write_word_32be(unsigned int /*A*/, unsigned short /*V*/)
 void program_write_dword_32be(unsigned int /*A*/, unsigned int /*V*/)
 {
 }
-
-//pSh2Ext->opbase
 
 #if FAST_OP_FETCH
 
@@ -986,16 +1005,17 @@ SH2_INLINE void BRA(UINT32 d)
 	if (disp == -2)
 	{
 		UINT32 next_opcode = RW(sh2->ppc & AM);
-		//UINT32 next_opcode = OPRW(sh2->ppc & AM);
-		
 		/* BRA  $
          * NOP
          */
-		if (next_opcode == 0x0009){
-			//bprintf(0, _T("SH2: BUSY_LOOP_HACKS %d\n"), sh2->sh2_icount);
-			sh2->sh2_total_cycles += sh2->sh2_icount;
-			sh2->sh2_icount %= 3;	/* cycles for BRA $ and NOP taken (3) */
-			sh2->sh2_total_cycles -= sh2->sh2_icount;
+		if (next_opcode == 0x0009) {
+			//bprintf(0, _T("SH2: BUSY_LOOP_HACKS: %d\n"), sh2->sh2_icount);
+			if (sh2_busyloop_speedhack_mode2) {
+				sh2->sh2_icount -= 10;
+			} else {
+				sh2->sh2_total_cycles += sh2->sh2_icount;
+				sh2->sh2_icount %= 3;	/* cycles for BRA $ and NOP taken (3) */
+			}
 		}
 	}
 #endif
@@ -1421,13 +1441,12 @@ SH2_INLINE void DT(UINT32 n)
 #if BUSY_LOOP_HACKS
 	{
 		UINT32 next_opcode = RW(sh2->ppc & AM);
-		//UINT32 next_opcode = OPRW(sh2->ppc & AM);
 		/* DT   Rn
-         * BF   $-2
-         */
+		 * BF   $-2
+		 */
 		if (next_opcode == 0x8bfd)
 		{
-			//bprintf(0, _T("SH2: BUSY_LOOP_HACKS (%d)--; \n"), sh2->r[n], sh2->sh2_icount);
+			//bprintf(0, _T("SH2: BUSY_LOOP_HACKS %d (%d)--; \n"), sh2->r[n], sh2->sh2_icount);
 			while (sh2->r[n] > 1 && sh2->sh2_icount > 4)
 			{
 				sh2->r[n]--;
@@ -2031,7 +2050,6 @@ SH2_INLINE void OR(UINT32 m, UINT32 n)
 SH2_INLINE void ORI(UINT32 i)
 {
 	sh2->r[0] |= i;
-	sh2->sh2_icount -= 2;
 }
 
 /*  OR.B    #imm,@(R0,GBR) */
@@ -2043,6 +2061,7 @@ SH2_INLINE void ORM(UINT32 i)
 	temp = RB( sh2->ea );
 	temp |= i;
 	WB( sh2->ea, temp );
+	sh2->sh2_icount -= 2;
 }
 
 /*  ROTCL   Rn */
@@ -2771,11 +2790,16 @@ SH2_INLINE void op1111(UINT16 /*opcode*/)
 static void sh2_timer_resync(void)
 {
 	int divider = div_tab[(sh2->m[5] >> 8) & 3];
-	UINT32 cur_time = sh2_GetTotalCycles();
+	UINT64 cur_time = sh2_GetTotalCycles();
+	UINT64 add = (cur_time - sh2->frc_base) >> divider;
 
-	if(divider)
-		sh2->frc += (cur_time - sh2->frc_base) >> divider;
-	sh2->frc_base = cur_time;
+	if (add > 0)
+	{
+		if(divider)
+			sh2->frc += add;
+
+		sh2->frc_base = cur_time;
+	}
 }
 
 static void sh2_timer_activate(void)
@@ -2820,7 +2844,6 @@ static void sh2_timer_activate(void)
 			sh2->timer_base = sh2->frc_base;
 			
 		} else {
-//			logerror("SH2.%d: Timer event in %d cycles of external clock", sh2->cpu_number, max_delta);
 			//bprintf(0, _T("SH2.0: Timer event in %d cycles of external clock\n"), max_delta);
 		}
 	}
@@ -2875,7 +2898,8 @@ static void sh2_timer_callback()
 {
 	UINT16 frc;
 //	int cpunum = param;
-//	cpuintrf_push_context(cpunum);
+	//	cpuintrf_push_context(cpunum);
+	//bprintf(0, _T(" - timer callback\n"));
 	sh2_timer_resync();
 
 	frc = sh2->frc;
@@ -2896,7 +2920,6 @@ static void sh2_timer_callback()
 
 	sh2_recalc_irq();
 	sh2_timer_activate();
-
 //	cpuintrf_pop_context();
 }
 
@@ -2905,7 +2928,7 @@ static void sh2_dmac_callback(int dma)
 //	cpuintrf_push_context(cpunum);
 
 //	LOG(("SH2.%d: DMA %d complete\n", cpunum, dma));
-//	bprintf(0, _T("SH2: DMA %d complete at %d\n"), dma, sh2_GetTotalCycles());
+	//bprintf(0, _T("SH2: DMA %d complete at %d\n"), dma, sh2_GetTotalCycles());
 
 	sh2->m[0x63+4*dma] |= 2;
 	sh2->dma_timer_active[dma] = 0;
@@ -2957,7 +2980,8 @@ static void sh2_dmac_check(int dma)
 						src --;
 					if(incd == 2)
 						dst --;
-					program_write_byte_32be(dst, program_read_byte_32be(src));
+					//program_write_byte_32be(dst, program_read_byte_32be(src));
+					WB(dst, RB(src));
 					if(incs == 1)
 						src ++;
 					if(incd == 1)
@@ -2973,7 +2997,8 @@ static void sh2_dmac_check(int dma)
 						src -= 2;
 					if(incd == 2)
 						dst -= 2;
-					program_write_word_32be(dst, program_read_word_32be(src));
+					//program_write_word_32be(dst, program_read_word_32be(src));
+					WW(dst, RW(src));
 					if(incs == 1)
 						src += 2;
 					if(incd == 1)
@@ -3008,10 +3033,14 @@ static void sh2_dmac_check(int dma)
 				{
 					if(incd == 2)
 						dst -= 16;
-					program_write_dword_32be(dst, program_read_dword_32be(src));
-					program_write_dword_32be(dst+4, program_read_dword_32be(src+4));
-					program_write_dword_32be(dst+8, program_read_dword_32be(src+8));
-					program_write_dword_32be(dst+12, program_read_dword_32be(src+12));
+					WL(dst, RL(src));
+					WL(dst+4, RL(src+4));
+					WL(dst+8, RL(src+8));
+					WL(dst+12, RL(src+12));
+					//program_write_dword_32be(dst, program_read_dword_32be(src));
+					//program_write_dword_32be(dst+4, program_read_dword_32be(src+4));
+					//program_write_dword_32be(dst+8, program_read_dword_32be(src+8));
+					//program_write_dword_32be(dst+12, program_read_dword_32be(src+12));
 					src += 16;
 					if(incd == 1)
 						dst += 16;
@@ -3048,7 +3077,7 @@ static void sh2_internal_w(UINT32 offset, UINT32 data, UINT32 mem_mask)
 	case 0x04: // TIER, FTCSR, FRC
 		if((mem_mask & 0x00ffffff) != 0xffffff)
 			sh2_timer_resync();
-		//logerror("SH2.%d: TIER write %04x @ %04x\n", sh2->cpu_number, data >> 16, mem_mask>>16);
+		//bprintf(0, _T("SH2: TIER write %04x @ %04x\n"), data >> 16, mem_mask>>16);
 		sh2->m[4] = (sh2->m[4] & ~(ICF|OCFA|OCFB|OVF)) | (old & sh2->m[4] & (ICF|OCFA|OCFB|OVF));
 		COMBINE_DATA(&sh2->frc);
 		if((mem_mask & 0x00ffffff) != 0xffffff)
@@ -3056,7 +3085,7 @@ static void sh2_internal_w(UINT32 offset, UINT32 data, UINT32 mem_mask)
 		sh2_recalc_irq();
 		break;
 	case 0x05: // OCRx, TCR, TOCR
-		//logerror("SH2.%d: TCR write %08x @ %08x\n", sh2->cpu_number, data, mem_mask);
+		//bprintf(0, _T("SH2: TCR write %08x @ %08x\n"), data, mem_mask);
 		sh2_timer_resync();
 		if(sh2->m[5] & 0x10)
 			sh2->ocrb = (sh2->ocrb & (mem_mask >> 16)) | ((data & ~mem_mask) >> 16);
@@ -3225,8 +3254,8 @@ static UINT32 sh2_internal_r(UINT32 offset, UINT32 /*mem_mask*/)
 		return (sh2->m[0x38] & 0x7fffffff) | 0x80000000;
 
 	case 0x78: // BCR1
-//		return sh2->is_slave ? 0x00008000 : 0;
-		return 0;
+		return /*(m_is_slave ? 0x00008000 : 0)*/ 0 | (sh2->m[0x78] & 0x7fff);
+		//return 0;
 
 	case 0x41: // dvdntl mirrors
 	case 0x47:
@@ -3240,86 +3269,15 @@ static UINT32 sh2_internal_r(UINT32 offset, UINT32 /*mem_mask*/)
 
 // -------------------------------------------------------
 
-#if USE_JUMPTABLE
-
 int Sh2Run(int cycles)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2Run called without init\n"));
 #endif
 
 	sh2->sh2_icount = cycles;
 	sh2->sh2_cycles_to_run = cycles;
-
-	do
-	{
-		if ( pSh2Ext->suspend ) {
-			sh2->sh2_total_cycles += cycles;
-			sh2->sh2_icount = 0;
-			break;
-		}
-
-		UINT16 opcode;
-
-		if (sh2->delay) {
-			//opcode = cpu_readop16(WORD_XOR_BE((UINT32)(sh2->delay & AM)));
-			opcode = cpu_readop16(sh2->delay & AM);
-			change_pc(sh2->pc & AM);
-			sh2->delay = 0;
-		} else {
-			//opcode = cpu_readop16(WORD_XOR_BE((UINT32)(sh2->pc & AM)));
-			opcode = cpu_readop16(sh2->pc & AM);
-			sh2->pc += 2;
-		}
-
-		sh2->ppc = sh2->pc;
-
-		opcode_jumptable[opcode](opcode);
-
-		if(sh2->test_irq && !sh2->delay)
-		{
-			CHECK_PENDING_IRQ(/*"mame_sh2_execute"*/);
-			sh2->test_irq = 0;
-		}
-
-		sh2->sh2_icount--;
-		
-		// timer check 
-		
-		{
-			unsigned int cy = sh2_GetTotalCycles();
-
-			if (sh2->dma_timer_active[0])
-				if ((cy - sh2->dma_timer_base[0]) >= sh2->dma_timer_cycles[0])
-					sh2_dmac_callback(0);
-
-			if (sh2->dma_timer_active[1])
-				if ((cy - sh2->dma_timer_base[1]) >= sh2->dma_timer_cycles[1])
-					sh2_dmac_callback(1);
-	
-			if ( sh2->timer_active )
-				if ((cy - sh2->timer_base) >= sh2->timer_cycles)
-					sh2_timer_callback();
-		}
-		
-		
-	} while( sh2->sh2_icount > 0 );
-	
-	sh2->cycle_counts += cycles - (UINT32)sh2->sh2_icount;
-
-	return cycles - sh2->sh2_icount;
-}
-
-#else
-
-int Sh2Run(int cycles)
-{
-#if defined FBA_DEBUG
-	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2Run called without init\n"));
-#endif
-
-	sh2->sh2_icount = cycles;
-	sh2->sh2_cycles_to_run = cycles;
+	sh2->end_run = 0;
 
 	do
 	{
@@ -3329,7 +3287,7 @@ int Sh2Run(int cycles)
 			break;
 		}
 
-		if (!pSh2Ext->suspend) {
+		if (pSh2Ext->suspend == 0) {
 			UINT16 opcode;
 
 			if (sh2->delay) {
@@ -3363,7 +3321,6 @@ int Sh2Run(int cycles)
 			default: op1111(opcode); break;
 			}
 		}
-#endif
 
 		if(sh2->test_irq && !sh2->delay)
 		{
@@ -3372,9 +3329,9 @@ int Sh2Run(int cycles)
 		}
 
 		sh2->sh2_total_cycles++;
-		sh2->sh2_icount--;
+		sh2->sh2_icount -= sh2->sh2_eat_cycles;
 		
-		// timer check 
+		// timer check
 		
 		{
 			unsigned int cy = sh2_GetTotalCycles();
@@ -3387,28 +3344,26 @@ int Sh2Run(int cycles)
 			if (sh2->dma_timer_active[1])
 				if ((cy - sh2->dma_timer_base[1]) >= sh2->dma_timer_cycles[1])
 					sh2_dmac_callback(1);
-	
+
 			if ( sh2->timer_active )
 				if ((cy - sh2->timer_base) >= sh2->timer_cycles)
 					sh2_timer_callback();
 		}
 		
 		
-	} while( sh2->sh2_icount > 0 );
-	
-	sh2->cycle_counts += cycles - (UINT32)sh2->sh2_icount;
-	
-	sh2->sh2_cycles_to_run = sh2->sh2_icount;
+	} while( sh2->sh2_icount > 0 && !sh2->end_run );
 
-	return cycles - sh2->sh2_icount;
+	cycles = cycles - sh2->sh2_icount;
+
+	sh2->cycle_counts += cycles;
+	
+	sh2->sh2_cycles_to_run = sh2->sh2_icount = 0;
+
+	return cycles;
 }
 
-void Sh2SetIRQLine(const int line, const int state)
+static void Sh2SetIRQLine_Internal(const int line, const int state)
 {
-#if defined FBA_DEBUG
-	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2SetIRQLine called without init\n"));
-#endif
-
 	if (sh2->irq_line_state[line] == state) return;
 	sh2->irq_line_state[line] = state;
 
@@ -3428,9 +3383,28 @@ void Sh2SetIRQLine(const int line, const int state)
 
 }
 
+void Sh2SetIRQLine(const int line, const int state)
+{
+#if defined FBNEO_DEBUG
+	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2SetIRQLine called without init\n"));
+#endif
+
+	switch (state) {
+		case CPU_IRQSTATUS_AUTO:
+			Sh2SetIRQLine_Internal(line, CPU_IRQSTATUS_ACK);
+			Sh2Run(0);
+			Sh2SetIRQLine_Internal(line, CPU_IRQSTATUS_NONE);
+			break;
+
+    	default:
+			Sh2SetIRQLine_Internal(line, state);
+			break;
+	}
+}
+
 unsigned int Sh2GetPC(int)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2GetPC called without init\n"));
 #endif
 
@@ -3439,7 +3413,7 @@ unsigned int Sh2GetPC(int)
 
 void Sh2SetVBR(unsigned int i)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2SetVBR called without init\n"));
 #endif
 
@@ -3448,7 +3422,7 @@ void Sh2SetVBR(unsigned int i)
 
 void Sh2BurnUntilInt(int)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2BurnUntilInt called without init\n"));
 #endif
 
@@ -3457,18 +3431,16 @@ void Sh2BurnUntilInt(int)
 
 void Sh2StopRun()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2StopRun called without init\n"));
 #endif
 
-	sh2->sh2_total_cycles += sh2->sh2_icount;
-	sh2->sh2_icount = 0;
-	sh2->sh2_cycles_to_run = 0;
+	sh2->end_run = 1;
 }
 
-int Sh2TotalCycles()
+INT32 Sh2TotalCycles()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2TotalCycles called without init\n"));
 #endif
 
@@ -3477,7 +3449,7 @@ int Sh2TotalCycles()
 
 void Sh2NewFrame()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2NewFrame called without init\n"));
 #endif
 
@@ -3486,7 +3458,7 @@ void Sh2NewFrame()
 
 void Sh2BurnCycles(int cycles)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2BurnCycles called without init\n"));
 #endif
 
@@ -3494,9 +3466,19 @@ void Sh2BurnCycles(int cycles)
 	sh2->sh2_total_cycles += cycles;
 }
 
+void Sh2Idle(int cycles)
+{
+#if defined FBNEO_DEBUG
+	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2Idle called without init\n"));
+#endif
+
+	sh2->sh2_total_cycles += cycles;
+	sh2->cycle_counts += cycles;
+}
+
 void __fastcall Sh2WriteByte(unsigned int a, unsigned char d)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2WriteByte called without init\n"));
 #endif
 
@@ -3506,7 +3488,7 @@ void __fastcall Sh2WriteByte(unsigned int a, unsigned char d)
 
 unsigned char __fastcall Sh2ReadByte(unsigned int a)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2ReadByte called without init\n"));
 #endif
 
@@ -3522,25 +3504,29 @@ void Sh2Reset()
 
 int Sh2Scan(int nAction)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugCPU_SH2Initted) bprintf(PRINT_ERROR, _T("Sh2Scan called without init\n"));
 #endif
 
 	if (nAction & ACB_DRIVER_DATA) {
-	
 		char szText[] = "SH2 #0";
 
 		for (int i = 0; i < 1 /*nCPUCount*/; i++) {
-			szText[5] = '1' + i;
-			ScanVar(& ( Sh2Ext[i].sh2 ), sizeof(SH2) - 4, szText);
-			
+			struct BurnArea ba;
+
+			szText[5] = '0' + i;
+
+			memset(&ba, 0, sizeof(ba));
+			ba.Data	  = &Sh2Ext[i].sh2;
+			ba.nLen	  = STRUCT_SIZE_HELPER(SH2, sh2_eat_cycles);
+			ba.szName = szText;
+			BurnAcb(&ba);
+
 			SCAN_VAR (Sh2Ext[i].suspend);
-			SCAN_VAR (Sh2Ext[i].opbase);
-			
+
 #if FAST_OP_FETCH
-			//	Sh2Ext[i].opbase
 			if (nAction & ACB_WRITE) {
-				change_pc(sh2->pc & AM);
+				change_pc(sh2->pc & AM); // re-load the opbase
 			}
 #endif
 		}

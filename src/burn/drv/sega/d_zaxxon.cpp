@@ -1013,9 +1013,7 @@ static INT32 DrvInit()
 	ZetClose();
 
 	ppi8255_init(1);
-	PPI0PortWriteA = ZaxxonPPIWriteA;
-	PPI0PortWriteB = ZaxxonPPIWriteB;
-	PPI0PortWriteC = ZaxxonPPIWriteC;
+	ppi8255_set_write_ports(0, ZaxxonPPIWriteA, ZaxxonPPIWriteB, ZaxxonPPIWriteC);
 
 	BurnSampleInit(0);
 
@@ -1116,16 +1114,15 @@ static INT32 CongoInit()
 	ZetClose();
 
 	ppi8255_init(1);
-	PPI0PortReadA = CongoPPIReadA;
-	PPI0PortWriteA = NULL;
-	PPI0PortWriteB = CongoPPIWriteB;
-	PPI0PortWriteC = CongoPPIWriteC;
+	ppi8255_set_write_ports(0, NULL, CongoPPIWriteB, CongoPPIWriteC);
+	ppi8255_set_read_ports(0, CongoPPIReadA, NULL, NULL);
 
 	BurnSampleInit(1);
 	BurnSampleSetAllRoutesAllSamples(0.10, BURN_SND_ROUTE_BOTH);
 
 	SN76489AInit(0, 4000000,     0);
 	SN76489AInit(1, 4000000 / 4, 1);
+    SN76496SetBuffered(ZetTotalCycles, 4000000);
 
 	GenericTilesInit();
 
@@ -1418,42 +1415,25 @@ static INT32 CongoFrame()
 		zaxxon_coin_lockout();
 	}
 
-	INT32 nCyclesSegment;
 	INT32 nInterleave = 32;
 	INT32 nCyclesTotal[2] = { 3041250 / 60, 4000000 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
-	INT32 nSoundBufferPos = 0;
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		ZetOpen(0);
-		nCyclesSegment = nCyclesTotal[0] / nInterleave;
-		nCyclesDone[0] += ZetRun(nCyclesSegment);
-		if (i == nInterleave-1 && *interrupt_enable) ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
+        CPU_RUN(0, Zet);
+        if (i == nInterleave-1 && *interrupt_enable) ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 		ZetClose();
 
 		ZetOpen(1);
-		nCyclesSegment = nCyclesTotal[1] / nInterleave;
-		nCyclesDone[1] += ZetRun(nCyclesSegment);
-		if ((i%7)==0) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
+        CPU_RUN(1, Zet);
+        if ((i%7)==0) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
-
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			SN76496Update(0, pSoundBuf, nSegmentLength);
-			SN76496Update(1, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
 	}
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		if (nSegmentLength) {
-			SN76496Update(0, pSoundBuf, nSegmentLength);
-			SN76496Update(1, pSoundBuf, nSegmentLength);
-		}
+        SN76496Update(pBurnSoundOut, nBurnSoundLen);
 		BurnSampleRender(pBurnSoundOut, nBurnSoundLen);
 	}
 
@@ -1526,31 +1506,31 @@ STD_SAMPLE_PICK(congo)
 STD_SAMPLE_FN(congo)
 
 
-// Zaxxon (set 1)
+// Zaxxon (set 1, rev D)
 
 static struct BurnRomInfo zaxxonRomDesc[] = {
-	{ "zaxxon3.u27",	0x2000, 0x6e2b4a30, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
-	{ "zaxxon2.u28",	0x2000, 0x1c9ea398, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "zaxxon1.u29",	0x1000, 0x1c123ef9, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "zaxxon_rom3d.u27",	0x2000, 0x6e2b4a30, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
+	{ "zaxxon_rom2d.u28",	0x2000, 0x1c9ea398, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "zaxxon_rom1d.u29",	0x1000, 0x1c123ef9, 1 | BRF_PRG | BRF_ESS }, //  2
 
-	{ "zaxxon14.u68",	0x0800, 0x07bf8c52, 2 | BRF_GRA },           //  3 Characters
-	{ "zaxxon15.u69",	0x0800, 0xc215edcb, 2 | BRF_GRA },           //  4
+	{ "zaxxon_rom14.u68",	0x0800, 0x07bf8c52, 2 | BRF_GRA },           //  3 Characters
+	{ "zaxxon_rom15.u69",	0x0800, 0xc215edcb, 2 | BRF_GRA },           //  4
 
-	{ "zaxxon6.u113",	0x2000, 0x6e07bb68, 3 | BRF_GRA },           //  5 Background Tiles
-	{ "zaxxon5.u112",	0x2000, 0x0a5bce6a, 3 | BRF_GRA },           //  6
-	{ "zaxxon4.u111",	0x2000, 0xa5bf1465, 3 | BRF_GRA },           //  7
+	{ "zaxxon_rom6.u113",	0x2000, 0x6e07bb68, 3 | BRF_GRA },           //  5 Background Tiles
+	{ "zaxxon_rom5.u112",	0x2000, 0x0a5bce6a, 3 | BRF_GRA },           //  6
+	{ "zaxxon_rom4.u111",	0x2000, 0xa5bf1465, 3 | BRF_GRA },           //  7
 
-	{ "zaxxon11.u77",	0x2000, 0xeaf0dd4b, 4 | BRF_GRA },           //  8 Sprites
-	{ "zaxxon12.u78",	0x2000, 0x1c5369c7, 4 | BRF_GRA },           //  9
-	{ "zaxxon13.u79",	0x2000, 0xab4e8a9a, 4 | BRF_GRA },           // 10
+	{ "zaxxon_rom11.u77",	0x2000, 0xeaf0dd4b, 4 | BRF_GRA },           //  8 Sprites
+	{ "zaxxon_rom12.u78",	0x2000, 0x1c5369c7, 4 | BRF_GRA },           //  9
+	{ "zaxxon_rom13.u79",	0x2000, 0xab4e8a9a, 4 | BRF_GRA },           // 10
 
-	{ "zaxxon8.u91",	0x2000, 0x28d65063, 5 | BRF_GRA },           // 11 Tilemaps
-	{ "zaxxon7.u90",	0x2000, 0x6284c200, 5 | BRF_GRA },           // 12
-	{ "zaxxon10.u93",	0x2000, 0xa95e61fd, 5 | BRF_GRA },           // 13
-	{ "zaxxon9.u92",	0x2000, 0x7e42691f, 5 | BRF_GRA },           // 14
+	{ "zaxxon_rom8.u91",	0x2000, 0x28d65063, 5 | BRF_GRA },           // 11 Tilemaps
+	{ "zaxxon_rom7.u90",	0x2000, 0x6284c200, 5 | BRF_GRA },           // 12
+	{ "zaxxon_rom10.u93",	0x2000, 0xa95e61fd, 5 | BRF_GRA },           // 13
+	{ "zaxxon_rom9.u92",	0x2000, 0x7e42691f, 5 | BRF_GRA },           // 14
 
-	{ "zaxxon.u98",		0x0100, 0x6cc6695b, 6 | BRF_GRA },           // 15 Color Proms
-	{ "zaxxon.u72",		0x0100, 0xdeaa21f7, 6 | BRF_GRA },           // 16
+	{ "mro16.u76",			0x0100, 0x6cc6695b, 6 | BRF_GRA },           // 15 Color Proms
+	{ "zaxxon.u72",			0x0100, 0xdeaa21f7, 6 | BRF_GRA },           // 16
 };
 
 STD_ROM_PICK(zaxxon)
@@ -1558,40 +1538,40 @@ STD_ROM_FN(zaxxon)
 
 struct BurnDriver BurnDrvZaxxon = {
 	"zaxxon", NULL, NULL, "zaxxon", "1982",
-	"Zaxxon (set 1)\0", NULL, "Sega", "Zaxxon",
+	"Zaxxon (set 1, rev D)\0", NULL, "Sega", "Zaxxon",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
-	NULL, zaxxonRomInfo, zaxxonRomName, zaxxonSampleInfo, zaxxonSampleName, ZaxxonInputInfo, ZaxxonDIPInfo,
+	NULL, zaxxonRomInfo, zaxxonRomName, NULL, NULL, zaxxonSampleInfo, zaxxonSampleName, ZaxxonInputInfo, ZaxxonDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
 
 
-// Zaxxon (set 2)
+// Zaxxon (set 2, unknown rev)
 
 static struct BurnRomInfo zaxxon2RomDesc[] = {
-	{ "zaxxon3a.u27",	0x2000, 0xb18e428a, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
-	{ "zaxxon2.u28",	0x2000, 0x1c9ea398, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "zaxxon1a.u29",	0x1000, 0x1977d933, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "zaxxon_rom3a.u27",	0x2000, 0xb18e428a, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
+	{ "zaxxon_rom2a.u28",	0x2000, 0x1c9ea398, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "zaxxon_rom1a.u29",	0x1000, 0x1977d933, 1 | BRF_PRG | BRF_ESS }, //  2
 
-	{ "zaxxon14.u68",	0x0800, 0x07bf8c52, 2 | BRF_GRA },           //  3 Characters
-	{ "zaxxon15.u69",	0x0800, 0xc215edcb, 2 | BRF_GRA },           //  4
+	{ "zaxxon_rom14.u68",	0x0800, 0x07bf8c52, 2 | BRF_GRA },           //  3 Characters
+	{ "zaxxon_rom15.u69",	0x0800, 0xc215edcb, 2 | BRF_GRA },           //  4
 
-	{ "zaxxon6.u113",	0x2000, 0x6e07bb68, 3 | BRF_GRA },           //  5 Background Tiles
-	{ "zaxxon5.u112",	0x2000, 0x0a5bce6a, 3 | BRF_GRA },           //  6
-	{ "zaxxon4.u111",	0x2000, 0xa5bf1465, 3 | BRF_GRA },           //  7
+	{ "zaxxon_rom6.u113",	0x2000, 0x6e07bb68, 3 | BRF_GRA },           //  5 Background Tiles
+	{ "zaxxon_rom5.u112",	0x2000, 0x0a5bce6a, 3 | BRF_GRA },           //  6
+	{ "zaxxon_rom4.u111",	0x2000, 0xa5bf1465, 3 | BRF_GRA },           //  7
 
-	{ "zaxxon11.u77",	0x2000, 0xeaf0dd4b, 4 | BRF_GRA },           //  8 Sprites
-	{ "zaxxon12.u78",	0x2000, 0x1c5369c7, 4 | BRF_GRA },           //  9
-	{ "zaxxon13.u79",	0x2000, 0xab4e8a9a, 4 | BRF_GRA },           // 10
+	{ "zaxxon_rom11.u77",	0x2000, 0xeaf0dd4b, 4 | BRF_GRA },           //  8 Sprites
+	{ "zaxxon_rom12.u78",	0x2000, 0x1c5369c7, 4 | BRF_GRA },           //  9
+	{ "zaxxon_rom13.u79",	0x2000, 0xab4e8a9a, 4 | BRF_GRA },           // 10
 
-	{ "zaxxon8.u91",	0x2000, 0x28d65063, 5 | BRF_GRA },           // 11 Tilemaps
-	{ "zaxxon7.u90",	0x2000, 0x6284c200, 5 | BRF_GRA },           // 12
-	{ "zaxxon10.u93",	0x2000, 0xa95e61fd, 5 | BRF_GRA },           // 13
-	{ "zaxxon9.u92",	0x2000, 0x7e42691f, 5 | BRF_GRA },           // 14
+	{ "zaxxon_rom8.u91",	0x2000, 0x28d65063, 5 | BRF_GRA },           // 11 Tilemaps
+	{ "zaxxon_rom7.u90",	0x2000, 0x6284c200, 5 | BRF_GRA },           // 12
+	{ "zaxxon_rom10.u93",	0x2000, 0xa95e61fd, 5 | BRF_GRA },           // 13
+	{ "zaxxon_rom9.u92",	0x2000, 0x7e42691f, 5 | BRF_GRA },           // 14
 
-	{ "zaxxon.u98",		0x0100, 0x6cc6695b, 6 | BRF_GRA },           // 15 Color Proms
-	{ "j214a2.72",		0x0100, 0xa9e1fb43, 6 | BRF_GRA },           // 16
+	{ "mro16.u76",			0x0100, 0x6cc6695b, 6 | BRF_GRA },           // 15 Color Proms
+	{ "mro17.u41",			0x0100, 0xa9e1fb43, 6 | BRF_GRA },           // 16
 };
 
 STD_ROM_PICK(zaxxon2)
@@ -1599,40 +1579,40 @@ STD_ROM_FN(zaxxon2)
 
 struct BurnDriver BurnDrvZaxxon2 = {
 	"zaxxon2", "zaxxon", NULL, "zaxxon", "1982",
-	"Zaxxon (set 2)\0", NULL, "Sega", "Zaxxon",
+	"Zaxxon (set 2, unknown rev)\0", NULL, "Sega", "Zaxxon",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
-	NULL, zaxxon2RomInfo, zaxxon2RomName, zaxxonSampleInfo, zaxxonSampleName, ZaxxonInputInfo, ZaxxonDIPInfo,
+	NULL, zaxxon2RomInfo, zaxxon2RomName, NULL, NULL, zaxxonSampleInfo, zaxxonSampleName, ZaxxonInputInfo, ZaxxonDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
 
 
-// Zaxxon (set 3)
+// Zaxxon (set 3, unknown rev)
 
 static struct BurnRomInfo zaxxon3RomDesc[] = {
 	{ "zaxxon3_alt.u27",	0x2000, 0x2f2f2b7c, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
 	{ "zaxxon2_alt.u28",	0x2000, 0xae7e1c38, 1 | BRF_PRG | BRF_ESS }, //  1
 	{ "zaxxon1_alt.u29",	0x1000, 0xcc67c097, 1 | BRF_PRG | BRF_ESS }, //  2
 
-	{ "zaxxon14.u68",	0x0800, 0x07bf8c52, 2 | BRF_GRA },           //  3 Characters
-	{ "zaxxon15.u69",	0x0800, 0xc215edcb, 2 | BRF_GRA },           //  4
+	{ "zaxxon_rom14.u68",	0x0800, 0x07bf8c52, 2 | BRF_GRA },           //  3 Characters
+	{ "zaxxon_rom15.u69",	0x0800, 0xc215edcb, 2 | BRF_GRA },           //  4
 
-	{ "zaxxon6.u113",	0x2000, 0x6e07bb68, 3 | BRF_GRA },           //  5 Background Tiles
-	{ "zaxxon5.u112",	0x2000, 0x0a5bce6a, 3 | BRF_GRA },           //  6
-	{ "zaxxon4.u111",	0x2000, 0xa5bf1465, 3 | BRF_GRA },           //  7
+	{ "zaxxon_rom6.u113",	0x2000, 0x6e07bb68, 3 | BRF_GRA },           //  5 Background Tiles
+	{ "zaxxon_rom5.u112",	0x2000, 0x0a5bce6a, 3 | BRF_GRA },           //  6
+	{ "zaxxon_rom4.u111",	0x2000, 0xa5bf1465, 3 | BRF_GRA },           //  7
 
-	{ "zaxxon11.u77",	0x2000, 0xeaf0dd4b, 4 | BRF_GRA },           //  8 Sprites
-	{ "zaxxon12.u78",	0x2000, 0x1c5369c7, 4 | BRF_GRA },           //  9
-	{ "zaxxon13.u79",	0x2000, 0xab4e8a9a, 4 | BRF_GRA },           // 10
+	{ "zaxxon_rom11.u77",	0x2000, 0xeaf0dd4b, 4 | BRF_GRA },           //  8 Sprites
+	{ "zaxxon_rom12.u78",	0x2000, 0x1c5369c7, 4 | BRF_GRA },           //  9
+	{ "zaxxon_rom13.u79",	0x2000, 0xab4e8a9a, 4 | BRF_GRA },           // 10
 
-	{ "zaxxon8.u91",	0x2000, 0x28d65063, 5 | BRF_GRA },           // 11 Tilemaps
-	{ "zaxxon7.u90",	0x2000, 0x6284c200, 5 | BRF_GRA },           // 12
-	{ "zaxxon10.u93",	0x2000, 0xa95e61fd, 5 | BRF_GRA },           // 13
-	{ "zaxxon9.u92",	0x2000, 0x7e42691f, 5 | BRF_GRA },           // 14
+	{ "zaxxon_rom8.u91",	0x2000, 0x28d65063, 5 | BRF_GRA },           // 11 Tilemaps
+	{ "zaxxon_rom7.u90",	0x2000, 0x6284c200, 5 | BRF_GRA },           // 12
+	{ "zaxxon_rom10.u93",	0x2000, 0xa95e61fd, 5 | BRF_GRA },           // 13
+	{ "zaxxon_rom9.u92",	0x2000, 0x7e42691f, 5 | BRF_GRA },           // 14
 
-	{ "zaxxon.u98",		0x0100, 0x6cc6695b, 6 | BRF_GRA },           // 15 Color Proms
-	{ "j214a2.72",		0x0100, 0xa9e1fb43, 6 | BRF_GRA },           // 16
+	{ "mro16.u76",			0x0100, 0x6cc6695b, 6 | BRF_GRA },           // 15 Color Proms
+	{ "mro17.u41",			0x0100, 0xa9e1fb43, 6 | BRF_GRA },           // 16
 };
 
 STD_ROM_PICK(zaxxon3)
@@ -1640,10 +1620,10 @@ STD_ROM_FN(zaxxon3)
 
 struct BurnDriver BurnDrvZaxxon3 = {
 	"zaxxon3", "zaxxon", NULL, "zaxxon", "1982",
-	"Zaxxon (set 3)\0", NULL, "Sega", "Zaxxon",
+	"Zaxxon (set 3, unknown rev)\0", NULL, "Sega", "Zaxxon",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
-	NULL, zaxxon3RomInfo, zaxxon3RomName, zaxxonSampleInfo, zaxxonSampleName, ZaxxonInputInfo, ZaxxonDIPInfo,
+	NULL, zaxxon3RomInfo, zaxxon3RomName, NULL, NULL, zaxxonSampleInfo, zaxxonSampleName, ZaxxonInputInfo, ZaxxonDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -1672,8 +1652,8 @@ static struct BurnRomInfo zaxxonjRomDesc[] = {
 	{ "zaxxon_rom10.u60",	0x2000, 0xa95e61fd, 5 | BRF_GRA },           // 13
 	{ "zaxxon_rom9.u59",	0x2000, 0x7e42691f, 5 | BRF_GRA },           // 14
 
-	{ "mro_16.u76",		0x0100, 0x6cc6695b, 6 | BRF_GRA },           // 15 Color Proms
-	{ "mro_17.u41",		0x0100, 0xa9e1fb43, 6 | BRF_GRA },           // 16
+	{ "mro16.u76",			0x0100, 0x6cc6695b, 6 | BRF_GRA },           // 15 Color Proms
+	{ "mro17.u41",			0x0100, 0xa9e1fb43, 6 | BRF_GRA },           // 16
 };
 
 STD_ROM_PICK(zaxxonj)
@@ -1749,7 +1729,7 @@ struct BurnDriver BurnDrvZaxxonj = {
 	"Zaxxon (Japan)\0", NULL, "Sega", "Zaxxon",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
-	NULL, zaxxonjRomInfo, zaxxonjRomName, zaxxonSampleInfo, zaxxonSampleName, ZaxxonInputInfo, ZaxxonDIPInfo,
+	NULL, zaxxonjRomInfo, zaxxonjRomName, NULL, NULL, zaxxonSampleInfo, zaxxonSampleName, ZaxxonInputInfo, ZaxxonDIPInfo,
 	ZaxxonjInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -1758,28 +1738,28 @@ struct BurnDriver BurnDrvZaxxonj = {
 // Jackson
 
 static struct BurnRomInfo zaxxonbRomDesc[] = {
-	{ "zaxxonb3.u27",	0x2000, 0x125bca1c, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
-	{ "zaxxonb2.u28",	0x2000, 0xc088df92, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "zaxxonb1.u29",	0x1000, 0xe7bdc417, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "jackson_rom3.u27",	0x2000, 0x125bca1c, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
+	{ "jackson_rom2.u28",	0x2000, 0xc088df92, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "jackson_rom1.u29",	0x1000, 0xe7bdc417, 1 | BRF_PRG | BRF_ESS }, //  2
 
-	{ "zaxxon14.u68",	0x0800, 0x07bf8c52, 2 | BRF_GRA },           //  3 Characters
-	{ "zaxxon15.u69",	0x0800, 0xc215edcb, 2 | BRF_GRA },           //  4
+	{ "zaxxon_rom14.u54",	0x0800, 0x07bf8c52, 2 | BRF_GRA },           //  3 Characters
+	{ "zaxxon_rom15.u55",	0x0800, 0xc215edcb, 2 | BRF_GRA },           //  4
 
-	{ "zaxxon6.u113",	0x2000, 0x6e07bb68, 3 | BRF_GRA },           //  5 Background Tiles
-	{ "zaxxon5.u112",	0x2000, 0x0a5bce6a, 3 | BRF_GRA },           //  6
-	{ "zaxxon4.u111",	0x2000, 0xa5bf1465, 3 | BRF_GRA },           //  7
+	{ "zaxxon_rom6.u70",	0x2000, 0x6e07bb68, 3 | BRF_GRA },           //  5 Background Tiles
+	{ "zaxxon_rom5.u69",	0x2000, 0x0a5bce6a, 3 | BRF_GRA },           //  6
+	{ "zaxxon_rom4.u68",	0x2000, 0xa5bf1465, 3 | BRF_GRA },           //  7
 
-	{ "zaxxon11.u77",	0x2000, 0xeaf0dd4b, 4 | BRF_GRA },           //  8 Sprites
-	{ "zaxxon12.u78",	0x2000, 0x1c5369c7, 4 | BRF_GRA },           //  9
-	{ "zaxxon13.u79",	0x2000, 0xab4e8a9a, 4 | BRF_GRA },           // 10
+	{ "zaxxon_rom11.u59",	0x2000, 0xeaf0dd4b, 4 | BRF_GRA },           //  8 Sprites
+	{ "zaxxon_rom12.u60",	0x2000, 0x1c5369c7, 4 | BRF_GRA },           //  9
+	{ "zaxxon_rom13.u61",	0x2000, 0xab4e8a9a, 4 | BRF_GRA },           // 10
 
-	{ "zaxxon8.u91",	0x2000, 0x28d65063, 5 | BRF_GRA },           // 11 Tilemaps
-	{ "zaxxon7.u90",	0x2000, 0x6284c200, 5 | BRF_GRA },           // 12
-	{ "zaxxon10.u93",	0x2000, 0xa95e61fd, 5 | BRF_GRA },           // 13
-	{ "zaxxon9.u92",	0x2000, 0x7e42691f, 5 | BRF_GRA },           // 14
+	{ "zaxxon_rom8.u58",	0x2000, 0x28d65063, 5 | BRF_GRA },           // 11 Tilemaps
+	{ "zaxxon_rom7.u57",	0x2000, 0x6284c200, 5 | BRF_GRA },           // 12
+	{ "zaxxon_rom10.u60",	0x2000, 0xa95e61fd, 5 | BRF_GRA },           // 13
+	{ "zaxxon_rom9.u59",	0x2000, 0x7e42691f, 5 | BRF_GRA },           // 14
 
-	{ "zaxxon.u98",		0x0100, 0x6cc6695b, 6 | BRF_GRA },           // 15 Color Proms
-	{ "zaxxon.u72",		0x0100, 0xdeaa21f7, 6 | BRF_GRA },           // 16
+	{ "mro16.u76",			0x0100, 0x6cc6695b, 6 | BRF_GRA },           // 15 Color Proms
+	{ "zaxxon.u72",			0x0100, 0xdeaa21f7, 6 | BRF_GRA },           // 16
 };
 
 STD_ROM_PICK(zaxxonb)
@@ -1790,7 +1770,7 @@ struct BurnDriver BurnDrvZaxxonb = {
 	"Jackson\0", NULL, "bootleg", "Zaxxon",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
-	NULL, zaxxonbRomInfo, zaxxonbRomName, zaxxonSampleInfo, zaxxonSampleName, ZaxxonInputInfo, ZaxxonDIPInfo,
+	NULL, zaxxonbRomInfo, zaxxonbRomName, NULL, NULL, zaxxonSampleInfo, zaxxonSampleName, ZaxxonInputInfo, ZaxxonDIPInfo,
 	ZaxxonjInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -1911,7 +1891,7 @@ struct BurnDriver BurnDrvSzaxxon = {
 	"Super Zaxxon\0", NULL, "Sega", "Zaxxon",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
-	NULL, szaxxonRomInfo, szaxxonRomName, zaxxonSampleInfo, zaxxonSampleName, ZaxxonInputInfo, SzaxxonDIPInfo,
+	NULL, szaxxonRomInfo, szaxxonRomName, NULL, NULL, zaxxonSampleInfo, zaxxonSampleName, ZaxxonInputInfo, SzaxxonDIPInfo,
 	sZaxxonInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -1993,7 +1973,7 @@ struct BurnDriver BurnDrvFutspy = {
 	"Future Spy\0", NULL, "Sega", "Zaxxon",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
-	NULL, futspyRomInfo, futspyRomName, zaxxonSampleInfo, zaxxonSampleName, FutspyInputInfo, FutspyDIPInfo,
+	NULL, futspyRomInfo, futspyRomName, NULL, NULL, zaxxonSampleInfo, zaxxonSampleName, FutspyInputInfo, FutspyDIPInfo,
 	futspyInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -2079,7 +2059,7 @@ struct BurnDriver BurnDrvRazmataz = {
 	"Razzmatazz\0", NULL, "Sega", "Zaxxon",
 	NULL, NULL, NULL, NULL,
 	0 | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_MISC, 0,
-	NULL, razmatazRomInfo, razmatazRomName, NULL, NULL, ZaxxonInputInfo, ZaxxonDIPInfo, //RazmatazInputInfo, RazmatazDIPInfo,
+	NULL, razmatazRomInfo, razmatazRomName, NULL, NULL, NULL, NULL, ZaxxonInputInfo, ZaxxonDIPInfo, //RazmatazInputInfo, RazmatazDIPInfo,
 	razmatazInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -2136,7 +2116,7 @@ struct BurnDriver BurnDrvIxion = {
 	"Ixion (prototype)\0", NULL, "Sega", "Zaxxon",
 	NULL, NULL, NULL, NULL,
 	0 | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_MISC, 0,
-	NULL, ixionRomInfo, ixionRomName, NULL, NULL, ZaxxonInputInfo, ZaxxonDIPInfo, //RazmatazInputInfo, RazmatazDIPInfo,
+	NULL, ixionRomInfo, ixionRomName, NULL, NULL, NULL, NULL, ZaxxonInputInfo, ZaxxonDIPInfo, //RazmatazInputInfo, RazmatazDIPInfo,
 	ixionInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -2179,7 +2159,7 @@ struct BurnDriver BurnDrvCongo = {
 	"Congo Bongo\0", NULL, "Sega", "Zaxxon",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_PLATFORM, 0,
-	NULL, congoRomInfo, congoRomName, congoSampleInfo, congoSampleName, CongoBongoInputInfo, CongoBongoDIPInfo,
+	NULL, congoRomInfo, congoRomName, NULL, NULL, congoSampleInfo, congoSampleName, CongoBongoInputInfo, CongoBongoDIPInfo,
 	CongoInit, DrvExit, CongoFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -2222,7 +2202,7 @@ struct BurnDriver BurnDrvCongoa = {
 	"Congo Bongo (Rev C, 3 board stack)\0", NULL, "Sega", "Zaxxon",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_PLATFORM, 0,
-	NULL, congoaRomInfo, congoaRomName, congoSampleInfo, congoSampleName, CongoBongoInputInfo, CongoBongoDIPInfo,
+	NULL, congoaRomInfo, congoaRomName, NULL, NULL, congoSampleInfo, congoSampleName, CongoBongoInputInfo, CongoBongoDIPInfo,
 	CongoInit, DrvExit, CongoFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -2265,7 +2245,7 @@ struct BurnDriver BurnDrvTiptop = {
 	"Tip Top\0", NULL, "Sega", "Zaxxon",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_PLATFORM, 0,
-	NULL, tiptopRomInfo, tiptopRomName, congoSampleInfo, congoSampleName, CongoBongoInputInfo, CongoBongoDIPInfo,
+	NULL, tiptopRomInfo, tiptopRomName, NULL, NULL, congoSampleInfo, congoSampleName, CongoBongoInputInfo, CongoBongoDIPInfo,
 	CongoInit, DrvExit, CongoFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };

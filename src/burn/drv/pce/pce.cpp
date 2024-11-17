@@ -61,6 +61,7 @@ static UINT8 system_identify;
 static INT32 pce_sf2 = 0;
 static INT32 pce_sf2_bank;
 static UINT8 bram_locked = 1;
+static INT32 wondermomohack = 0;
 
 INT32 PceGetZipName(char** pszName, UINT32 i)
 {
@@ -77,13 +78,14 @@ INT32 PceGetZipName(char** pszName, UINT32 i)
 		pszGameName = BurnDrvGetTextA(DRV_PARENT);
 	}
 
-	if (pszGameName == NULL) {
+	if (pszGameName == NULL || i > 1) {
 		*pszName = NULL;
 		return 1;
 	}
 
 	// remove the "pce_"
-	for (UINT32 j = 0; j < strlen(pszGameName); j++) {
+	memset(szFilename, 0, MAX_PATH);
+	for (UINT32 j = 0; j < (strlen(pszGameName) - 4); j++) {
 		szFilename[j] = pszGameName[j + 4];
 	}
 
@@ -107,13 +109,14 @@ INT32 TgGetZipName(char** pszName, UINT32 i)
 		pszGameName = BurnDrvGetTextA(DRV_PARENT);
 	}
 
-	if (pszGameName == NULL) {
+	if (pszGameName == NULL || i > 1) {
 		*pszName = NULL;
 		return 1;
 	}
 
 	// remove the "tg_"
-	for (UINT32 j = 0; j < strlen(pszGameName); j++) {
+	memset(szFilename, 0, MAX_PATH);
+	for (UINT32 j = 0; j < (strlen(pszGameName) - 3); j++) {
 		szFilename[j] = pszGameName[j + 3];
 	}
 
@@ -137,13 +140,14 @@ INT32 SgxGetZipName(char** pszName, UINT32 i)
 		pszGameName = BurnDrvGetTextA(DRV_PARENT);
 	}
 
-	if (pszGameName == NULL) {
+	if (pszGameName == NULL || i > 1) {
 		*pszName = NULL;
 		return 1;
 	}
 
 	// remove the "sgx_"
-	for (UINT32 j = 0; j < strlen(pszGameName); j++) {
+	memset(szFilename, 0, MAX_PATH);
+	for (UINT32 j = 0; j < (strlen(pszGameName) - 4); j++) {
 		szFilename[j] = pszGameName[j + 4];
 	}
 
@@ -560,6 +564,12 @@ INT32 populousInit()
 	return nRet;
 }
 
+INT32 wondermomoInit()
+{
+	wondermomohack = 1;
+	return PCEInit();
+}
+
 INT32 PCEExit()
 {
 	GenericTilesExit();
@@ -572,6 +582,7 @@ INT32 PCEExit()
 	BurnFree (AllMem);
 
 	pce_sf2 = 0;
+	wondermomohack = 0;
 
 	return 0;
 }
@@ -584,9 +595,9 @@ INT32 PCEDraw()
 	}
 
 	{
-		UINT16 *src = vdc_tmp_draw + (14 * 684) + 86;
+		UINT16 *src = vdc_tmp_draw + ((14+2) * 684) + 86;
 		UINT16 *dst = pTransDraw;
-	
+
 		for (INT32 y = 0; y < nScreenHeight; y++) {
 			for (INT32 x = 0; x < nScreenWidth; x++) {
 				dst[x] = src[x];
@@ -624,18 +635,17 @@ INT32 PCEFrame()
 
 	PCECompileInputs();
 
-	INT32 nCyclesTotal = (INT32)((INT64)7159090 * nBurnCPUSpeedAdjust / (0x0100 * 60));
-	INT32 nCyclesDone = 0;
-	INT32 nCyclesSegment = 0;
+	INT32 nInterleave = 262;
+	INT32 nCyclesTotal[1] = { (INT32)((INT64)7159090 * nBurnCPUSpeedAdjust / (0x0100 * 60)) };
+	INT32 nCyclesDone[1] = { 0 };
+
+	if (wondermomohack) nCyclesTotal[0] += 1000;
 
 	h6280Open(0);
 
-	for (INT32 i = 0; i < 262; i++)
+	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		INT32 nNext;
-		nNext = (i + 1) * nCyclesTotal / 262;
-		nCyclesSegment = nNext - nCyclesDone;
-		nCyclesDone += h6280Run(nCyclesSegment);
+		CPU_RUN(0, h6280);
 		interrupt();
 	}
 
@@ -669,7 +679,7 @@ INT32 PCEScan(INT32 nAction, INT32 *pnMin)
 	}
 
 	if (nAction & ACB_DRIVER_DATA) {
-		h6280CpuScan(nAction);
+		h6280Scan(nAction);
 
 		vdc_scan(nAction, pnMin);
 		c6280_scan(nAction, pnMin);

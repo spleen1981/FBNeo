@@ -561,7 +561,7 @@
 			if(CPU_STOPPED) \
 			{ \
 				SET_CYCLES(0); \
-				return m68ki_initial_cycles; \
+				return m68ki_cpu.initial_cycles; \
 			} \
 		}
 
@@ -894,9 +894,14 @@ struct _m68ki_cpu_core
 	uint cyc_shift;
 	uint cyc_reset;
 
+	sint initial_cycles;
+	sint end_run;
+
 	/* Virtual IRQ lines state */
 	uint virq_state;
 	uint nmi_pending;
+
+	uint sleepuntilint;
 
 	/* Designates the end of the CPU context variables and beginning of system-specific pointers */
 	uint8 pointer_block_divider;                      /* Used to calculate the context-size for savestates */
@@ -931,6 +936,7 @@ extern const uint8    m68ki_ea_idx_cycle_table[];
 extern uint           m68ki_aerr_address;
 extern uint           m68ki_aerr_write_mode;
 extern uint           m68ki_aerr_fc;
+extern int            megadrive_sr_checkint_mode;
 
 /* Read data immediately after the program counter */
 INLINE uint m68ki_read_imm_16(void);
@@ -1534,7 +1540,12 @@ INLINE void m68ki_set_sr_noint_nosp(uint value)
 INLINE void m68ki_set_sr(uint value)
 {
 	m68ki_set_sr_noint(value);
-	m68ki_check_interrupts();
+	if (megadrive_sr_checkint_mode) {
+		if (GET_CYCLES() >= 0)
+			m68ki_check_interrupts();
+	} else {
+			m68ki_check_interrupts();
+	}
 }
 
 

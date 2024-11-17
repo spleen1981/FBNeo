@@ -551,7 +551,7 @@ static UINT8 jackal_sub_read(UINT16 address)
 	{
 		case 0x2000:
 		case 0x2001:
-			return BurnYM2151ReadStatus();
+			return BurnYM2151Read();
 	}
 
 	return 0;
@@ -715,7 +715,7 @@ static INT32 DrvInit()
 	DrvGfxDecode();
 	DrvPaletteInit();
 
-	M6809Init(2);
+	M6809Init(0);
 	M6809Open(0);
 	M6809MapMemory(DrvShareRAM + 0x100,	0x0100, 0x1fff, MAP_RAM);
 	M6809MapMemory(DrvVORAM,		0x2000, 0x2fff, MAP_RAM);
@@ -725,6 +725,7 @@ static INT32 DrvInit()
 	M6809SetReadHandler(jackal_main_read);
 	M6809Close();
 
+	M6809Init(1);
 	M6809Open(1);
 	M6809MapMemory(DrvPalRAM,		0x4000, 0x43ff, MAP_RAM);
 	M6809MapMemory(DrvShareRAM,		0x6000, 0x7fff, MAP_RAM);
@@ -1061,7 +1062,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		M6809Scan(nAction);
 
-		BurnYM2151Scan(nAction);
+		BurnYM2151Scan(nAction, pnMin);
 
 		SCAN_VAR(DrvZRAMBank);
 		SCAN_VAR(DrvVORAMBank);
@@ -1139,6 +1140,50 @@ static struct BurnRomInfo jackaljRomDesc[] = {
 STD_ROM_PICK(jackalj)
 STD_ROM_FN(jackalj)
 
+// Jackal (bootleg, Rotary Joystick)
+// This is based on jackalr. Was dumped from 2 different PCBs.
+
+static struct BurnRomInfo jackalblRomDesc[] = {
+	{ "epr-a-3.bin",	0x8000, 0x5fffee27, 0 | BRF_PRG | BRF_ESS }, 		// 0 - M6809 #0 Code
+	{ "epr-a-4.bin",	0x8000, 0x976c8431, 0 | BRF_PRG | BRF_ESS }, 		// 1
+	{ "epr-a-2.bin",	0x4000, 0xae2a290a, 0 | BRF_PRG | BRF_ESS }, 		// 2
+
+	{ "epr-a-1.bin",	0x8000, 0x54aa2d29, 1 | BRF_PRG | BRF_ESS }, 		// 3 - M6809 #1 Code
+
+	{ "epr-a-17.bin",	0x8000, 0xa96720b6, 2 | BRF_GRA },           		// 4 - Graphics Tiles
+	{ "epr-a-18.bin",	0x8000, 0x932d0ecb, 2 | BRF_GRA },           		// 5
+	{ "epr-a-19.bin",	0x8000, 0x1e3412e7, 2 | BRF_GRA },           		// 6
+	{ "epr-a-20.bin",	0x8000, 0x4b0d15be, 2 | BRF_GRA },           		// 7
+	{ "epr-a-6.bin",	0x8000, 0xec7141ad, 2 | BRF_GRA },           		// 8
+	{ "epr-a-5.bin",	0x8000, 0xc6375c74, 2 | BRF_GRA },           		// 9
+	{ "epr-a-7.bin",	0x8000, 0x03e1de04, 2 | BRF_GRA },           		// 10
+	{ "epr-a-8.bin",	0x8000, 0xf946ada7, 2 | BRF_GRA },           		// 11
+	{ "epr-a-13.bin",	0x8000, 0x7c29c59e, 2 | BRF_GRA },           		// 12
+	{ "epr-a-14.bin",	0x8000, 0xf2bbff39, 2 | BRF_GRA },           		// 13
+	{ "epr-a-15.bin",	0x8000, 0x594dbaaf, 2 | BRF_GRA },           		// 14
+	{ "epr-a-16.bin",	0x8000, 0x069bf945, 2 | BRF_GRA },           		// 15
+	{ "epr-a-9.bin",	0x8000, 0xc00cef79, 2 | BRF_GRA },           		// 16
+	{ "epr-a-10.bin",	0x8000, 0x0aed6cd7, 2 | BRF_GRA },           		// 17
+	{ "epr-a-11.bin",	0x8000, 0xa48e9f60, 2 | BRF_GRA },           		// 18
+	{ "epr-a-12.bin",	0x8000, 0x79b7c71c, 2 | BRF_GRA },           		// 19
+
+	{ "n82s129n.prom2",	0x0100, 0x7553a172, 3 | BRF_GRA },           		// 20 - Color PROMs
+	{ "n82s129n.prom1",	0x0100, 0xa74dd86c, 3 | BRF_GRA },           		// 21
+	
+	/* currently not used by the emulation */
+	{ "pal16r6cn.pal1", 	0x0104, 0x9bba948f, 4 | BRF_OPT },		 		// 22 - Pals
+	{ "ampal16l8pc.pal2", 	0x0104, 0x17c9de2f, 4 | BRF_OPT },		 		// 23
+	{ "ampal16r4pc.pal3", 	0x0104, 0xe54cd288, 4 | BRF_OPT },		 		// 24
+	{ "pal16r8acn.pal4", 	0x0104, 0x5cc45e00, 4 | BRF_OPT },		 		// 25
+	{ "pal20l8a-2cns.pal5", 0x0144, 0x00000000, 4 | BRF_OPT | BRF_NODUMP },	// 26
+	{ "pal20l8acns.pal6", 	0x0144, 0x00000000, 4 | BRF_OPT | BRF_NODUMP },	// 27
+	{ "pal16l8pc.pal7", 	0x0104, 0xe8cdc259, 4 | BRF_OPT },		 		// 28
+	{ "d5c121.ep1200", 		0x0200, 0x00000000, 4 | BRF_OPT | BRF_NODUMP },	// 29
+};
+
+STD_ROM_PICK(jackalbl)
+STD_ROM_FN(jackalbl)
+
 // Top Gunner (US, 8-way Joystick)
 
 static struct BurnRomInfo topgunrRomDesc[] = {
@@ -1211,8 +1256,8 @@ struct BurnDriver BurnDrvJackal = {
 	"jackal", NULL, NULL, NULL, "1986",
 	"Jackal (World, 8-way Joystick)\0", NULL, "Konami", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_VERSHOOT, 0,
-	NULL, jackalRomInfo, jackalRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, jackalRomInfo, jackalRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 240, 3, 4
 };
@@ -1221,8 +1266,8 @@ struct BurnDriver BurnDrvJackalr = {
 	"jackalr", "jackal", NULL, NULL, "1986",
 	"Jackal (World, Rotary Joystick)\0", NULL, "Konami", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_VERSHOOT, 0,
-	NULL, jackalrRomInfo, jackalrRomName, NULL, NULL, DrvrotateInputInfo, DrvrotateDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, jackalrRomInfo, jackalrRomName, NULL, NULL, NULL, NULL, DrvrotateInputInfo, DrvrotateDIPInfo,
 	DrvInitRo, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 240, 3, 4
 };
@@ -1231,9 +1276,19 @@ struct BurnDriver BurnDrvJackalj = {
 	"jackalj", "jackal", NULL, NULL, "1986",
 	"Tokushu Butai Jackal (Japan, 8-way Joystick)\0", NULL, "Konami", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_VERSHOOT, 0,
-	NULL, jackaljRomInfo, jackaljRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, jackaljRomInfo, jackaljRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
+	224, 240, 3, 4
+};
+
+struct BurnDriver BurnDrvJackalbl = {
+	"jackalbl", "jackal", NULL, NULL, "1986",
+	"Jackal (bootleg, Rotary Joystick)\0", NULL, "bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, jackalblRomInfo, jackalblRomName, NULL, NULL, NULL, NULL, DrvrotateInputInfo, DrvrotateDIPInfo,
+	DrvInitbl, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 240, 3, 4
 };
 
@@ -1241,8 +1296,8 @@ struct BurnDriver BurnDrvTopgunr = {
 	"topgunr", "jackal", NULL, NULL, "1986",
 	"Top Gunner (US, 8-way Joystick)\0", NULL, "Konami", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_VERSHOOT, 0,
-	NULL, topgunrRomInfo, topgunrRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, topgunrRomInfo, topgunrRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 240, 3, 4
 };
@@ -1251,8 +1306,8 @@ struct BurnDriver BurnDrvTopgunbl = {
 	"topgunbl", "jackal", NULL, NULL, "1986",
 	"Top Gunner (bootleg, Rotary Joystick)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_VERSHOOT, 0,
-	NULL, topgunblRomInfo, topgunblRomName, NULL, NULL, DrvrotateInputInfo, DrvrotateDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, topgunblRomInfo, topgunblRomName, NULL, NULL, NULL, NULL, DrvrotateInputInfo, DrvrotateDIPInfo,
 	DrvInitbl, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 240, 3, 4
 };

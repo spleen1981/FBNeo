@@ -1,3 +1,6 @@
+// license:BSD-3-Clause
+// copyright-holders:Fabio Priuli,Acho A. Tang, R. Belmont
+
 #include "tiles_generic.h"
 #include "konamiic.h"
 
@@ -5,24 +8,17 @@ static UINT16 *K051316TileMap[3];
 static void (*K051316Callback[3])(INT32 *code,INT32 *color,INT32 *flags);
 static INT32 K051316Depth[3];
 static INT32 K051316TransColor[3];
+static UINT32 K051316TransMask[3];
 static UINT8 *K051316Gfx[3];
 static UINT8 *K051316GfxExp[3];
 static INT32 K051316Mask[3];
 static INT32 K051316Offs[3][2];
 
+static INT32 force_update[3];
+
 static UINT8 *K051316Ram[3];
 static UINT8 K051316Ctrl[3][16];
 static UINT8 K051316Wrap[3];
-
-// Decode 4bpp graphics
-static void K051316GfxExpand(UINT8 *src, UINT8 *dst, INT32 len)
-{
-	for (INT32 i = 0; i < len; i++) {
-		INT32 d = src[i];
-		dst[i * 2 + 0] = d >> 4;
-		dst[i * 2 + 1] = d & 0x0f;
-	}
-}
 
 void K051316Init(INT32 chip, UINT8 *gfx, UINT8 *gfxexp, INT32 mask, void (*callback)(INT32 *code,INT32 *color,INT32 *flags), INT32 bpp, INT32 transp)
 {
@@ -31,6 +27,8 @@ void K051316Init(INT32 chip, UINT8 *gfx, UINT8 *gfxexp, INT32 mask, void (*callb
 
 	K051316Callback[chip] = callback;	
 
+	if (gfxexp == NULL) gfxexp = gfx;
+
 	K051316Depth[chip] = bpp;
 	K051316Gfx[chip] = gfx;
 	K051316GfxExp[chip] = gfxexp;
@@ -38,7 +36,7 @@ void K051316Init(INT32 chip, UINT8 *gfx, UINT8 *gfxexp, INT32 mask, void (*callb
 	K051316Mask[chip] = mask;
 
 	if (bpp == 4) {
-		K051316GfxExpand(gfx, gfxexp, mask+1);
+		BurnNibbleExpand(gfx, gfxexp, mask+1, 0, 0);
 	}
 
 	KonamiAllocateBitmaps();
@@ -47,7 +45,13 @@ void K051316Init(INT32 chip, UINT8 *gfx, UINT8 *gfxexp, INT32 mask, void (*callb
 
 	K051316Offs[chip][0] = K051316Offs[chip][1] = 0;
 
-	K051316TransColor[chip] = transp;
+	K051316TransMask[chip] = 0;
+	K051316TransColor[chip] = transp & 0xff;
+
+	if (transp & 0x200) {
+		K051316TransMask[chip] = transp & 0xff;
+		K051316TransColor[chip] = 0;
+	}
 }
 
 void K051316Reset()
@@ -55,7 +59,8 @@ void K051316Reset()
 	for (INT32 i = 0; i < 3; i++)
 	{
 		if (K051316Ram[i]) {
-			memset (K051316Ram[i], 0, 0x800);
+			memset (K051316Ram[i], 0xff, 0x800);
+			force_update[i] = 1;
 		}
 
 		memset (K051316Ctrl[i], 0, 16);
@@ -126,6 +131,8 @@ static inline void K051316_write_tile(INT32 offset, INT32 chip)
 	if (flipx) flipx = 0x0f;
 	if (flipy) flipy = 0x0f;
 
+	INT32 tmask = K051316TransMask[chip];
+
 	for (INT32 y = 0; y < 16; y++, sy++)
 	{
 		dst = K051316TileMap[chip] + ((sy << 9) + sx);
@@ -134,10 +141,18 @@ static inline void K051316_write_tile(INT32 offset, INT32 chip)
 		{
 			INT32 pxl = src[((y^flipy) << 4) | (x ^ flipx)];
 
-			if (pxl != K051316TransColor[chip]) {
-				dst[x] = color | pxl;
+			if (tmask) {
+				if ((pxl & tmask) == tmask) {
+					dst[x] = color | pxl;
+				} else {
+					dst[x] = 0x8000 | color | pxl;
+				}
 			} else {
-				dst[x] = 0x8000 | color | pxl;
+				if (pxl != K051316TransColor[chip]) {
+					dst[x] = color | pxl;
+				} else {
+					dst[x] = 0x8000 | color | pxl;
+				}
 			}
 		}
 	}
@@ -145,24 +160,36 @@ static inline void K051316_write_tile(INT32 offset, INT32 chip)
 
 void K051316Write(INT32 chip, INT32 offset, INT32 data)
 {
-	K051316Ram[chip][offset] = data;
-	K051316_write_tile(offset & 0x3ff, chip);
+	if (K051316Ram[chip][offset] != data) {
+		K051316Ram[chip][offset] = data;
+		K051316_write_tile(offset & 0x3ff, chip);
+	}
+	force_update[chip] = 1;
+}
+
+UINT8 K051316ReadCtrl(INT32 chip, INT32 offset)
+{
+	return K051316Ctrl[chip][offset & 0x0f];
 }
 
 void K051316WriteCtrl(INT32 chip, INT32 offset, INT32 data)
 {
 	K051316Ctrl[chip][offset & 0x0f] = data;
+	force_update[chip] = 1;
 }
 
 void K051316WrapEnable(INT32 chip, INT32 status)
 {
 	K051316Wrap[chip] = status;
+	force_update[chip] = 1;
 }
 
 static inline void copy_roz(INT32 chip, UINT32 startx, UINT32 starty, INT32 incxx, INT32 incxy, INT32 incyx, INT32 incyy, INT32 wrap, INT32 transp, INT32 flags)
 {
 	UINT32 hshift = 512 << 16;
 	UINT32 wshift = 512 << 16;
+
+	if (flags & 0x200) transp = 0; // force opaque
 
 	INT32 priority = flags & 0xff;
 
@@ -290,15 +317,18 @@ void K051316_zoom_draw(INT32 chip, INT32 flags)
 	startx -= (89 + K051316Offs[chip][0]) * incxx;
 	starty -= (89 + K051316Offs[chip][0]) * incxy;
 
-	copy_roz(chip, startx << 5,starty << 5,incxx << 5,incxy << 5,incyx << 5,incyy << 5, K051316Wrap[chip], K051316TransColor[chip]+1, flags); // transp..
+	INT32 transp = K051316TransColor[chip] + 1;
+
+	copy_roz(chip, startx << 5,starty << 5,incxx << 5,incxy << 5,incyx << 5,incyy << 5, K051316Wrap[chip], transp, flags); // transp..
 }
 
 void K051316RedrawTiles(INT32 chip)
 {
-	if (K051316Ram[chip]) {
+	if (K051316Ram[chip] && force_update[chip]) {
 		for (INT32 j = 0; j < 0x400; j++) {
 			K051316_write_tile(j, chip);
 		}
+		force_update[chip] = 0;
 	}
 }
 
@@ -331,6 +361,9 @@ void K051316Scan(INT32 nAction)
 	}
 
 	if (nAction & ACB_WRITE) {
+		force_update[0] = 1;
+		force_update[1] = 1;
+		force_update[2] = 1;
 		K051316RedrawTiles(0);
 		K051316RedrawTiles(1);
 		K051316RedrawTiles(2);

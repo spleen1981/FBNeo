@@ -4,10 +4,7 @@
 #include "tiles_generic.h"
 #include "m6502_intf.h"
 #include "bitswap.h"
-#include "driver.h"
-extern "C" {
 #include "ay8910.h"
-}
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;
@@ -20,9 +17,6 @@ static UINT8 *DrvColPROM;
 static UINT8 *DrvVidRAM;
 static UINT8 *Drv6502RAM;
 static UINT8 *DrvColRAM;
-
-static INT16 *pAY8910Buffer[6];
-static INT16 *pFMBuffer = NULL;
 
 static UINT32 *DrvPalette;
 static UINT8  DrvRecalc;
@@ -100,22 +94,6 @@ static struct BurnDIPInfo DrvDIPList[]=
 
 STDDIPINFO(Drv)
 
-// Delay allocation of buffer. This allows us to use the proper frames/sec frame rate.
-static inline void DrvDelayAY8910BufferAllocation()
-{
-	if (pFMBuffer == NULL && pBurnSoundOut)
-	{
-		pFMBuffer = (INT16*)BurnMalloc(nBurnSoundLen * sizeof(INT16) * 6);
-
-		pAY8910Buffer[0] = pFMBuffer + nBurnSoundLen * 0;
-		pAY8910Buffer[1] = pFMBuffer + nBurnSoundLen * 1;
-		pAY8910Buffer[2] = pFMBuffer + nBurnSoundLen * 2;
-		pAY8910Buffer[3] = pFMBuffer + nBurnSoundLen * 3;
-		pAY8910Buffer[4] = pFMBuffer + nBurnSoundLen * 4;
-		pAY8910Buffer[5] = pFMBuffer + nBurnSoundLen * 5;
-	}
-}
-
 static inline INT32 calc_mirror_offset(UINT16 address)
 {
 	return ((address >> 5) & 0x1f) + ((address & 0x1f) << 5);
@@ -123,11 +101,11 @@ static inline INT32 calc_mirror_offset(UINT16 address)
 
 static UINT8 eggs_read(UINT16 address)
 {
-	if ((address & 0xf800) == 0x1800) {
+	if ((address & 0xfc00) == 0x1800) {
     		return DrvVidRAM[calc_mirror_offset(address)];
 	}
 
-	if ((address & 0xf800) == 0x1c00) {
+	if ((address & 0xfc00) == 0x1c00) {
     		return DrvColRAM[calc_mirror_offset(address)];
 	}
 
@@ -299,8 +277,6 @@ static void scregg6502Init()
 	M6502MapMemory(DrvColRAM,           0x1400, 0x17ff, MAP_RAM);
 	M6502MapMemory(Drv6502ROM + 0x3000, 0x3000, 0x7fff, MAP_ROM);
 	M6502MapMemory(Drv6502ROM + 0x7000, 0xf000, 0xffff, MAP_ROM);
-	M6502SetWriteMemIndexHandler(eggs_write);
-	M6502SetReadMemIndexHandler(eggs_read);
 	M6502SetReadOpArgHandler(eggs_read);
 	M6502SetWriteHandler(eggs_write);
 	M6502SetReadOpHandler(eggs_read);
@@ -316,8 +292,6 @@ static void dommy6502Init()
 	M6502MapMemory(DrvVidRAM,           0x2000, 0x23ff, MAP_RAM);
 	M6502MapMemory(DrvColRAM,           0x2400, 0x27ff, MAP_RAM);
 	M6502MapMemory(Drv6502ROM + 0xa000, 0xa000, 0xffff, MAP_ROM);
-	M6502SetWriteMemIndexHandler(dommy_write);
-	M6502SetReadMemIndexHandler(dommy_read);
 	M6502SetReadOpArgHandler(dommy_read);
 	M6502SetWriteHandler(dommy_write);
 	M6502SetReadOpHandler(dommy_read);
@@ -414,6 +388,7 @@ static INT32 MemIndex()
 
 static INT32 DrvInit(void (*m6502Init)(), INT32 (*pLoadCB)())
 {
+	BurnSetRefreshRate(57);
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
@@ -432,10 +407,8 @@ static INT32 DrvInit(void (*m6502Init)(), INT32 (*pLoadCB)())
 		m6502Init();
 	}
 
-	BurnSetRefreshRate(57);
-
-	AY8910Init(0, 1500000, nBurnSoundRate, NULL, NULL, NULL, NULL);
-	AY8910Init(1, 1500000, nBurnSoundRate, NULL, NULL, NULL, NULL);
+	AY8910Init(0, 1500000, 0);
+	AY8910Init(1, 1500000, 1);
 	AY8910SetAllRoutes(0, 0.23, BURN_SND_ROUTE_BOTH);
 	AY8910SetAllRoutes(1, 0.23, BURN_SND_ROUTE_BOTH);
 
@@ -455,7 +428,6 @@ static INT32 DrvExit()
 	AY8910Exit(1);
 
 	BurnFree (AllMem);
-	BurnFree (pFMBuffer);
 
 	return 0;
 }
@@ -533,8 +505,6 @@ static INT32 DrvDraw()
 
 static INT32 DrvFrame()
 {
-	DrvDelayAY8910BufferAllocation();
-
 	if (DrvReset) {
 		DrvDoReset();
 	}
@@ -566,7 +536,7 @@ static INT32 DrvFrame()
 	M6502Close();
 
 	if (pBurnSoundOut) {
-		AY8910Render(&pAY8910Buffer[0], pBurnSoundOut, nBurnSoundLen, 0);
+		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	if (pBurnDraw) {
@@ -628,7 +598,7 @@ struct BurnDriver BurnDrvdommy = {
 	"Dommy\0", NULL, "Technos", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TECHNOS, GBF_MAZE, 0,
-	NULL, dommyRomInfo, dommyRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	NULL, dommyRomInfo, dommyRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	dommyInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x08,
 	240, 248, 3, 4
 };
@@ -668,7 +638,7 @@ struct BurnDriver BurnDrvscregg = {
 	"Scrambled Egg\0", NULL, "Technos", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TECHNOS, GBF_MAZE, 0,
-	NULL, screggRomInfo, screggRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	NULL, screggRomInfo, screggRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	screggInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x08,
 	240, 240, 3, 4
 };
@@ -703,7 +673,7 @@ struct BurnDriver BurnDrveggs = {
 	"Eggs\0", NULL, "[Technos] Universal USA", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TECHNOS, GBF_MAZE, 0,
-	NULL, eggsRomInfo, eggsRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	NULL, eggsRomInfo, eggsRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	screggInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x08,
 	240, 240, 3, 4
 };
@@ -736,7 +706,7 @@ struct BurnDriver BurnDrvrockduck = {
 	"Rock Duck (prototype?)\0", "incorrect colors", "Datel SAS", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TECHNOS, GBF_MAZE, 0,
-	NULL, rockduckRomInfo, rockduckRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	NULL, rockduckRomInfo, rockduckRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	rockduckInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x08,
 	240, 240, 3, 4
 };

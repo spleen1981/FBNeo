@@ -281,11 +281,7 @@ static void __fastcall himesiki_main_write_port(UINT16 port, UINT8 data)
 
 		case 0x0b:
 			soundlatch = data;
-			ZetClose();
-			ZetOpen(1);
-			ZetNmi();
-			ZetClose();
-			ZetOpen(0);
+			ZetNmi(1);
 		return;
 	}
 }
@@ -353,16 +349,6 @@ static void ppi8255_1_portC_w(UINT8 data)
 static void DrvFMIRQHandler(INT32, INT32 nStatus)
 {
 	ZetSetIRQLine(0, (nStatus) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
-}
-
-static INT32 DrvSynchroniseStream(INT32 nSoundRate)
-{
-	return (INT64)ZetTotalCycles() * nSoundRate / 4000000;
-}
-
-static double DrvGetTime()
-{
-	return (double)ZetTotalCycles() / 4000000;
 }
 
 static INT32 DrvDoReset()
@@ -545,14 +531,11 @@ static INT32 DrvInit(INT32 nGame)
 	ZetClose();
 
 	ppi8255_init(2);
-	PPI0PortReadA = ppi8255_0_portA_r;
-	PPI0PortReadB = ppi8255_0_portB_r;
-	PPI0PortReadC = ppi8255_0_portC_r;
-	PPI1PortReadA = ppi8255_1_portA_r;
-	PPI1PortReadB = ppi8255_1_portB_r;
-	PPI1PortWriteC = ppi8255_1_portC_w;
+	ppi8255_set_read_ports(0, ppi8255_0_portA_r, ppi8255_0_portB_r, ppi8255_0_portC_r);
+	ppi8255_set_read_ports(1, ppi8255_1_portA_r, ppi8255_1_portB_r, NULL);
+	ppi8255_set_write_ports(1, NULL, NULL, ppi8255_1_portC_w);
 
-	BurnYM2203Init(1, 3000000, &DrvFMIRQHandler, DrvSynchroniseStream, DrvGetTime, 0);
+	BurnYM2203Init(1, 3000000, &DrvFMIRQHandler, 0);
 	BurnTimerAttachZet(4000000);
 	BurnYM2203SetAllRoutes(0, 0.15, BURN_SND_ROUTE_BOTH);
 	BurnYM2203SetPSGVolume(0, 0.05);
@@ -844,7 +827,7 @@ struct BurnDriver BurnDrvHimesiki = {
 	"Himeshikibu (Japan)\0", NULL, "Hi-Soft", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_MAHJONG, 0,
-	NULL, himesikiRomInfo, himesikiRomName, NULL, NULL, HimesikiInputInfo, HimesikiDIPInfo,
+	NULL, himesikiRomInfo, himesikiRomName, NULL, NULL, NULL, NULL, HimesikiInputInfo, HimesikiDIPInfo,
 	himesikiInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	192, 256, 3, 4
 };
@@ -853,16 +836,19 @@ struct BurnDriver BurnDrvHimesiki = {
 // Android (early build?)
 
 static struct BurnRomInfo androidpoRomDesc[] = {
-	{ "MITSUBISHI_A01.toppcb.m5l27256k.k1.BIN",	0x08000, 0x25ab85eb, 1 | BRF_PRG | BRF_ESS }, //  0 - Z80 #0 Code
-	{ "MITSUBISHI_A03.toppcb.m5l27256k.G1.BIN",	0x08000, 0x6cf5f48a, 1 | BRF_PRG | BRF_ESS }, //  1 
-	{ "MITSUBISHI_A02.toppcb.m5l27256k.J1.BIN",	0x08000, 0xe41426be, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "mitsubishi__ad1__m5l27256k.toppcb.k1",		0x08000, 0x25ab85eb, 1 | BRF_PRG | BRF_ESS }, //  0 - Z80 #0 Code
+	{ "mitsubishi__ad-3__m5l27256k.toppcb.g1",		0x08000, 0x6cf5f48a, 1 | BRF_PRG | BRF_ESS }, //  1 
+	{ "mitsubishi__ad2__m5l27256k.toppcb.j1",		0x08000, 0xe41426be, 1 | BRF_PRG | BRF_ESS }, //  2
 
-	{ "MITSUBISHI_A04.toppcb.m5l27256k.N6.BIN",	0x08000, 0x13c38fe4, 2 | BRF_PRG | BRF_ESS }, //  3 - Z80 #1 Code
+	{ "mitsubishi__ad-4__m5l27256k.toppcb.n6",		0x08000, 0x13c38fe4, 2 | BRF_PRG | BRF_ESS }, //  3 - Z80 #1 Code
 
-	{ "MITSUBISHI_A05.toppcb.m5l27512k.F5.BIN",	0x10000, 0x4c72a930, 3 | BRF_GRA },           //  4 - Background Tiles	
+	{ "mitsubishi__ad-5__m5l27512k.toppcb.f5",		0x10000, 0x4c72a930, 3 | BRF_GRA },           //  4 - Background Tiles	
 
-	{ "MITSUBISHI_A06.botpcb.m5l27512k.9E.BIN",	0x10000, 0x5e42984e, 4 | BRF_GRA },           //  5 - 16x16 Sprites
-	{ "MITSUBISHI_A07.botpcb.m5l27512k.9B.BIN",	0x10000, 0x611ff400, 4 | BRF_GRA },           //  6
+	{ "mitsubishi__ad-6__m5l27512k.botpcb.def9",	0x10000, 0x5e42984e, 4 | BRF_GRA },           //  5 - 16x16 Sprites
+	{ "mitsubishi__ad-7__m5l27512k.botpcb.bc9",		0x10000, 0x611ff400, 4 | BRF_GRA },           //  6
+	
+	{ "ricoh_7a2_19__epl10p8bp_japan_m.j3.jed",		0x00473, 0x807d1553, 0 | BRF_OPT },           //  7
+	{ "ricoh_7a2_19__epl10p8bp_japan_i.f1.jed",		0x00473, 0xc5e51ea2, 0 | BRF_OPT },           //  8
 };
 
 STD_ROM_PICK(androidpo)
@@ -878,7 +864,7 @@ struct BurnDriver BurnDrvAndroidpo = {
 	"Android (prototype, early build)\0", NULL, "Nasco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, androidpoRomInfo, androidpoRomName, NULL, NULL, AndroidpInputInfo, AndroidpoDIPInfo,
+	NULL, androidpoRomInfo, androidpoRomName, NULL, NULL, NULL, NULL, AndroidpInputInfo, AndroidpoDIPInfo,
 	androidpoInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	192, 256, 3, 4
 };
@@ -886,15 +872,15 @@ struct BurnDriver BurnDrvAndroidpo = {
 // Android (later build?)
 
 static struct BurnRomInfo androidpRomDesc[] = {
-	{ "ANDR1.BIN", 0x08000, 0xfff04130, 1 | BRF_PRG | BRF_ESS }, //  0 - Z80 #0 Code
-	{ "ANDR3.BIN", 0x08000, 0x112d5123, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "andr1.bin", 0x08000, 0xfff04130, 1 | BRF_PRG | BRF_ESS }, //  0 - Z80 #0 Code
+	{ "andr3.bin", 0x08000, 0x112d5123, 1 | BRF_PRG | BRF_ESS }, //  1
 
-	{ "ANDR4.BIN", 0x08000, 0x65f5e98b, 2 | BRF_PRG | BRF_ESS }, //  2 - Z80 #1 Code
+	{ "andr4.bin", 0x08000, 0x65f5e98b, 2 | BRF_PRG | BRF_ESS }, //  2 - Z80 #1 Code
    
-	{ "ANDR5.BIN", 0x10000, 0x0a0b44c0, 3 | BRF_GRA },           //  3 - Background Tiles
+	{ "andr5.bin", 0x10000, 0x0a0b44c0, 3 | BRF_GRA },           //  3 - Background Tiles
    
-	{ "ANDR6.BIN", 0x10000, 0x122b7dd1, 4 | BRF_GRA },           //  4 - 16x16 Sprites
-	{ "ANDR7.BIN", 0x10000, 0xfc0f9234, 4 | BRF_GRA },           //  5
+	{ "andr6.bin", 0x10000, 0x122b7dd1, 4 | BRF_GRA },           //  4 - 16x16 Sprites
+	{ "andr7.bin", 0x10000, 0xfc0f9234, 4 | BRF_GRA },           //  5
 };
 
 STD_ROM_PICK(androidp)
@@ -910,7 +896,7 @@ struct BurnDriver BurnDrvAndroidp = {
 	"Android (prototype, later build)\0", NULL, "Nasco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, androidpRomInfo, androidpRomName, NULL, NULL, AndroidpInputInfo, AndroidpDIPInfo,
+	NULL, androidpRomInfo, androidpRomName, NULL, NULL, NULL, NULL, AndroidpInputInfo, AndroidpDIPInfo,
 	androidpInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	192, 256, 3, 4
 };

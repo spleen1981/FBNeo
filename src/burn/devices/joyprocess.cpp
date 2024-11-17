@@ -1,36 +1,37 @@
 #include "burnint.h"
 #include "joyprocess.h"
 
-#define INPUT_4WAY              2
-#define INPUT_CLEAROPPOSITES    4
-#define INPUT_MAKEACTIVELOW     8
-
+// Digital Processing
 void ProcessJoystick(UINT8 *input, INT8 playernum, INT8 up_bit, INT8 down_bit, INT8 left_bit, INT8 right_bit, UINT8 flags)
-{
-	// Limitation: this only works on the first 4 bits - active high to start with
-	// grep ProcessJoystick in drv/pre90s for examples
-
+{ // limitations: 4 players max., processes 8-bit inputs only!
 	static INT32 fourway[4]      = { 0, 0, 0, 0 }; // 4-way buffer
 	static UINT8 DrvInputPrev[4] = { 0, 0, 0, 0 }; // 4-way buffer
+
+	if (flags & INPUT_ISACTIVELOW) {
+		*input ^= 0xff;
+	}
 
 	UINT8 ud = (1 << up_bit) | (1 << down_bit);
 	UINT8 rl = (1 << right_bit) | (1 << left_bit);
 
+	UINT8 udrlmask = ud | rl; // bitmask to process
+	UINT8 othermask = udrlmask ^ 0xff; // bitmask to preserve (invert of udrlmask)
+
 	if (flags & INPUT_4WAY) {
 		playernum &= 3; // just incase.
 		if(*input != DrvInputPrev[playernum]) {
-			fourway[playernum] = *input & 0xf;
+			fourway[playernum] = *input & udrlmask;
 
 			if((fourway[playernum] & rl) && (fourway[playernum] & ud))
-				fourway[playernum] ^= (fourway[playernum] & (DrvInputPrev[playernum] & 0xf));
+				fourway[playernum] ^= (fourway[playernum] & (DrvInputPrev[playernum] & udrlmask));
 
-			if((fourway[playernum] & rl) && (fourway[playernum] & ud)) // if it starts out diagonally, pick a direction
-				fourway[playernum] &= (rand()&1) ? rl : ud;
+			if((fourway[playernum] & rl) && (fourway[playernum] & ud))
+				fourway[playernum] &= ud | ud; // diagonals aren't allowed w/INPUT_4WAY
 		}
 
 		DrvInputPrev[playernum] = *input;
 
-		*input = fourway[playernum] | (DrvInputPrev[playernum] & 0xf0); // preserve the unprocessed/other bits
+		*input = fourway[playernum] | (DrvInputPrev[playernum] & othermask); // add back the unprocessed/other bits
 	}
 
 	if (flags & INPUT_CLEAROPPOSITES) {
@@ -42,8 +43,8 @@ void ProcessJoystick(UINT8 *input, INT8 playernum, INT8 up_bit, INT8 down_bit, I
 		}
 	}
 
-	if (flags & INPUT_MAKEACTIVELOW) {
-		*input = 0xff - *input;
+	if (flags & INPUT_MAKEACTIVELOW || flags & INPUT_ISACTIVELOW) {
+		*input ^= 0xff;
 	}
 }
 
@@ -60,4 +61,79 @@ void CompileInput(UINT8 **input, void *output, INT32 num, INT32 bits, UINT32 *in
 			if (bits < 9) ((UINT8*)output)[j] ^= (input[j][i] & 1) << i;
 		}
 	}
+}
+
+// Analog Processing
+INT16 AnalogDeadZone(INT16 anaval)
+{
+	INT32 negative = (anaval < 0);
+
+	anaval = abs(anaval);
+
+	// < 160 is usually "noise" with modern gamepad thumbsticks
+	// (mouse movements are usually above 200)
+	if (anaval < 160) {
+		anaval = 0;
+	} else {
+		anaval -= 160;
+	}
+
+	return (negative) ? -anaval : anaval;
+}
+
+UINT32 scalerange(UINT32 x, UINT32 in_min, UINT32 in_max, UINT32 out_min, UINT32 out_max) {
+	return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+UINT8 ProcessAnalog(INT16 anaval, INT32 reversed, INT32 flags, UINT8 scalemin, UINT8 scalemax)
+{
+	return ProcessAnalog(anaval, reversed, flags, scalemin, scalemax, 0x7f);
+}
+
+UINT8 ProcessAnalog(INT16 anaval, INT32 reversed, INT32 flags, UINT8 scalemin, UINT8 scalemax, UINT8 centerval)
+{
+    UINT8 linear_min = 0, linear_max = 0;
+
+    if (flags & INPUT_MIGHTBEDIGITAL && (UINT16)anaval == 0xffff) {
+		anaval = 0x3fc; // digital button mapped here & pressed.
+	}
+
+    if (flags & INPUT_LINEAR) {
+        anaval = abs(anaval);
+        linear_min = scalemin;
+        linear_max = scalemax;
+        scalemin = 0x00;
+        scalemax = 0xff;
+    }
+
+	INT32 DeadZone = (flags & INPUT_DEADZONE) ? 10 : 0;
+	INT16 Temp = (reversed) ? (centerval - (anaval / 16)) : (centerval + (anaval / 16));  // - for reversed, + for normal
+
+	if (flags & INPUT_DEADZONE) { // deadzones
+		if (flags & INPUT_LINEAR) {
+			if (Temp < DeadZone) Temp = 0;
+			DeadZone = 0; // this is all the DZ handling INPUT_LINEAR needs
+		} else {
+			// 0x7f is center, 0x3f right, 0xbf left.  0x7f +-10 is noise.
+			if (!(Temp < centerval-DeadZone || Temp > centerval+DeadZone)) {
+				Temp = centerval; // we hit a dead-zone, return mid-range
+			} else {
+				// so we don't jump between 0x7f (center) and next value after deadzone
+				if (Temp < centerval-DeadZone) Temp += DeadZone;
+				else if (Temp > centerval+DeadZone) Temp -= DeadZone;
+			}
+		}
+    }
+
+	if (Temp < 0x3f + DeadZone) Temp = 0x3f + DeadZone; // clamping for happy scalerange()
+	if (Temp > 0xbf - DeadZone) Temp = 0xbf - DeadZone;
+
+	Temp = scalerange(Temp, 0x3f + DeadZone, 0xbf - DeadZone, scalemin, scalemax);
+
+	if (flags & INPUT_LINEAR) {
+		if (!reversed) Temp -= centerval;
+		Temp = scalerange(Temp, 0, centerval, linear_min, linear_max);
+	}
+
+	return Temp;
 }

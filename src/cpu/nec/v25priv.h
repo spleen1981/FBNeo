@@ -2,6 +2,7 @@
 #define V33_TYPE 0
 #define V30_TYPE 8
 #define V20_TYPE 16
+#define i86_TYPE 32
 
 #ifndef FALSE
 #define FALSE 0
@@ -70,7 +71,7 @@ typedef struct _v25_state_t v25_state_t;
 struct _v25_state_t
 {
 	internalram ram;
-	offs_t	fetch_xor;
+	UINT32	fetch_xor;
 
 	UINT16	ip;
 
@@ -99,27 +100,25 @@ struct _v25_state_t
 	UINT16	TM0, MD0, TM1, MD1;
 	UINT8	TMC0, TMC1;
 //	emu_timer *timers[4];
-	int timer_param[4];
-	int timer_cycles_period[4];
-	int timer_cycles_until_trigger[4];
-	unsigned char timer_enabled[4];
-	unsigned char timer_flags[4];
-	unsigned int clock; // unscaled!
+	INT32 timer_param[4];
+	INT32 timer_cycles_period[4];
+	INT32 timer_cycles_until_trigger[4];
+	UINT8 timer_enabled[4];
+	UINT8 timer_flags[4];
+	UINT32 clock; // unscaled!
 
 	/* system control */
 	UINT8	RAMEN, TB, PCK;	/* PRC register */
 	UINT32	IDB;
 
-	int		icount;
-
-	//const nec_config *config;
-	unsigned char *decode;
+	INT32		icount;
 
 	UINT8	prefetch_size;
 	UINT8	prefetch_cycles;
 	INT8	prefetch_count;
 	UINT8	prefetch_reset;
 	UINT32	chip_type;
+	UINT32  i86_neg;		// use x86-style NEG opcode (f6 18 & f7 18)
 
 	UINT32	prefix_base;	/* base address of the latest prefix segment */
 	UINT8	seg_prefix;		/* prefix segment indicator */
@@ -127,6 +126,8 @@ struct _v25_state_t
 	UINT32 cycles_total;
 	UINT32 cycles_remaining;
 	INT8	stop_run;
+
+	unsigned char *decode;
 };
 
 enum {
@@ -138,7 +139,7 @@ enum {
 typedef enum {
 	DS1 = 0x0E/2,
 	PS  = 0x0C/2,
-	SS  = 0x0A/2,
+	SS_  = 0x0A/2,
 	DS0 = 0x08/2
 } SREGS;
 
@@ -216,7 +217,7 @@ void v25_write_word(v25_state_t *nec_state, unsigned a, UINT16 d);
 
 #define SegBase(Seg) (Sreg(Seg) << 4)
 
-#define DefaultBase(Seg) ((nec_state->seg_prefix && (Seg==DS0 || Seg==SS)) ? nec_state->prefix_base : Sreg(Seg) << 4)
+#define DefaultBase(Seg) ((nec_state->seg_prefix && (Seg==DS0 || Seg==SS_)) ? nec_state->prefix_base : Sreg(Seg) << 4)
 
 #define GetMemB(Seg,Off) (read_mem_byte(DefaultBase(Seg) + (Off)))
 #define GetMemW(Seg,Off) (read_mem_word(DefaultBase(Seg) + (Off)))
@@ -231,8 +232,8 @@ void v25_write_word(v25_state_t *nec_state, unsigned a, UINT16 d);
 #define EMPTY_PREFETCH()	nec_state->prefetch_reset = 1
 
 
-#define PUSH(val) { Wreg(SP) -= 2; write_mem_word(((Sreg(SS)<<4)+Wreg(SP)), val); }
-#define POP(var) { Wreg(SP) += 2; var = read_mem_word(((Sreg(SS)<<4) + ((Wreg(SP)-2) & 0xffff))); }
+#define PUSH(val) { Wreg(SP) -= 2; write_mem_word(((Sreg(SS_)<<4)+Wreg(SP)), val); }
+#define POP(var) { Wreg(SP) += 2; var = read_mem_word(((Sreg(SS_)<<4) + ((Wreg(SP)-2) & 0xffff))); }
 
 #define GetModRM UINT32 ModRM=FETCH()
 

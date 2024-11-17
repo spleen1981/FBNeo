@@ -14,11 +14,21 @@
  #define __cdecl
 #endif
 
+#if !defined (_MSC_VER) && defined(FASTCALL)
+ #undef __fastcall
+ #define __fastcall __attribute__((fastcall))
+#endif
+
 #ifndef INLINE
  #define INLINE __inline static
 #endif
 
 #define FBA
+#define FBANEO
+
+#ifndef M_PI // SDL2 is making this not found
+#define M_PI 3.14159265358979323846264338327950288
+#endif
 
 typedef unsigned char						UINT8;
 typedef signed char 						INT8;
@@ -33,6 +43,10 @@ typedef unsigned __int64					UINT64;
 __extension__ typedef unsigned long long	UINT64;
 __extension__ typedef long long				INT64;
 #endif
+
+// Macro to determine the size of a struct up to and including "member"
+#define STRUCT_SIZE_HELPER(type, member) offsetof(type, member) + sizeof(((type*)0)->member)
+
 #define OSD_CPU_H
 
 /* U64 and S64 are used to wrap long integer constants. */

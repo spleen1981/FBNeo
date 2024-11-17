@@ -3,7 +3,6 @@
 
 #include "tiles_generic.h"
 #include "z80_intf.h"
-#include "namco_snd.h"
 #include "samples.h"
 
 static UINT8 *AllMem;
@@ -471,8 +470,8 @@ struct BurnDriver BurnDrvSafarir = {
 	"safarir", NULL, NULL, "safarir", "1979",
 	"Safari Rally (World)\0", NULL, "SNK (Taito license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, safarirRomInfo, safarirRomName, SafarirSampleInfo, SafarirSampleName, SafarirInputInfo, SafarirDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, safarirRomInfo, safarirRomName, NULL, NULL, SafarirSampleInfo, SafarirSampleName, SafarirInputInfo, SafarirDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	208, 256, 3, 4
 };
@@ -500,8 +499,8 @@ struct BurnDriver BurnDrvSafarirj = {
 	"safarirj", "safarir", NULL, "safarir", "1979",
 	"Safari Rally (Japan)\0", NULL, "SNK", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, safarirjRomInfo, safarirjRomName, SafarirSampleInfo, SafarirSampleName, SafarirInputInfo, SafarirDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, safarirjRomInfo, safarirjRomName, NULL, NULL, SafarirSampleInfo, SafarirSampleName, SafarirInputInfo, SafarirDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	208, 256, 3, 4
 };

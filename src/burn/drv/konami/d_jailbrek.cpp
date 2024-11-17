@@ -375,7 +375,7 @@ static INT32 DrvInit()
 		DrvPaletteInit();
 	}
 
-	M6809Init(1);
+	M6809Init(0);
 	M6809Open(0);
 	M6809MapMemory(DrvColRAM,		0x0000, 0x07ff, MAP_RAM);
 	M6809MapMemory(DrvVidRAM,		0x0800, 0x0fff, MAP_RAM);
@@ -390,6 +390,7 @@ static INT32 DrvInit()
 
 	SN76489AInit(0, 1536000, 0);
 	SN76496SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
+    SN76496SetBuffered(M6809TotalCycles, 1536000);
 
 	vlm5030Init(0, 3579545, DrvVLM5030Sync, DrvVLMROM, 0x2000, 1);
 	vlm5030SetAllRoutes(0, 1.00, BURN_SND_ROUTE_BOTH);
@@ -517,6 +518,16 @@ static INT32 DrvDraw()
 	return 0;
 }
 
+static inline void DrvClearOpposites(UINT8* nJoystickInputs) // active low version
+{
+	if ((*nJoystickInputs & 0x03) == 0x00) {
+		*nJoystickInputs |= 0x03;
+	}
+	if ((*nJoystickInputs & 0x0c) == 0x00) {
+		*nJoystickInputs |= 0x0c;
+	}
+}
+
 static INT32 DrvFrame()
 {
 	watchdog++;
@@ -537,37 +548,27 @@ static INT32 DrvFrame()
 			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
 			DrvInputs[2] ^= (DrvJoy3[i] & 1) << i;
 		}
+		DrvClearOpposites(&DrvInputs[1]);
+		DrvClearOpposites(&DrvInputs[2]);
 	}
 
 	INT32 nInterleave = 9;
 	INT32 nCyclesTotal[1] = { 1536000 / 60 };
 	INT32 nCyclesDone[1] = { 0 };
-	INT32 nSoundBufferPos = 0;
 
 	M6809Open(0);
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += M6809Run(nCyclesTotal[0] / nInterleave);
+		nCyclesDone[0] += M6809Run(((i + 1) * nCyclesTotal[0] / nInterleave) - nCyclesDone[0]);
 
 		if (i < 8 && nmi_enable) M6809SetIRQLine(0x20, CPU_IRQSTATUS_AUTO);
 
-		if (i == 8 && irq_enable) M6809SetIRQLine(0, CPU_IRQSTATUS_AUTO);
-
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			SN76496Update(0, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
+		if (i == 8 && irq_enable) M6809SetIRQLine(0, CPU_IRQSTATUS_HOLD);
 	}
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		if (nSegmentLength) {
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			SN76496Update(0, pSoundBuf, nSegmentLength);
-		}
+        SN76496Update(pBurnSoundOut, nBurnSoundLen);
 		vlm5030Update(0, pBurnSoundOut, nBurnSoundLen);
 	}
 
@@ -580,7 +581,7 @@ static INT32 DrvFrame()
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -599,8 +600,8 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 	if (nAction & ACB_DRIVER_DATA) {
 		M6809Scan(nAction);
 
-		vlm5030Scan(nAction);
-		SN76496Scan(nAction,pnMin);
+		vlm5030Scan(nAction, pnMin);
+		SN76496Scan(nAction, pnMin);
 
 		SCAN_VAR(scrolldirection);
 		SCAN_VAR(nmi_enable);
@@ -641,8 +642,8 @@ struct BurnDriver BurnDrvJailbrek = {
 	"jailbrek", NULL, NULL, NULL, "1986",
 	"Jail Break\0", NULL, "Konami", "GX507",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, jailbrekRomInfo, jailbrekRomName, NULL, NULL, JailbrekInputInfo, JailbrekDIPInfo,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, jailbrekRomInfo, jailbrekRomName, NULL, NULL, NULL, NULL, JailbrekInputInfo, JailbrekDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	240, 224, 4, 3
 };
@@ -677,8 +678,8 @@ struct BurnDriver BurnDrvManhatan = {
 	"manhatan", "jailbrek", NULL, NULL, "1986",
 	"Manhattan 24 Bunsyo (Japan)\0", NULL, "Konami", "GX507",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, manhatanRomInfo, manhatanRomName, NULL, NULL, JailbrekInputInfo, JailbrekDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, manhatanRomInfo, manhatanRomName, NULL, NULL, NULL, NULL, JailbrekInputInfo, JailbrekDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	240, 224, 4, 3
 };
@@ -714,8 +715,8 @@ struct BurnDriver BurnDrvJailbrekb = {
 	"jailbrekb", "jailbrek", NULL, NULL, "1986",
 	"Jail Break (bootleg)\0", NULL, "bootleg", "GX507",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
-	NULL, jailbrekbRomInfo, jailbrekbRomName, NULL, NULL, JailbrekInputInfo, JailbrekDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, jailbrekbRomInfo, jailbrekbRomName, NULL, NULL, NULL, NULL, JailbrekInputInfo, JailbrekDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	240, 224, 4, 3
 };

@@ -1,4 +1,9 @@
+// FB Alpha Battle Garegga driver module
+// Driver and emulation by Jan Klaassen
+
 #include "toaplan.h"
+#include "nmk112.h"
+
 // Battle Garegga
 
 static UINT8 DrvButton[8] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -7,8 +12,6 @@ static UINT8 DrvJoy2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static UINT8 DrvInput[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static UINT8 DrvReset = 0;
-static UINT8 bDrawScreen;
-static bool bVBlank;
 
 static UINT8 nIRQPending;
 
@@ -17,8 +20,9 @@ static INT32 nSoundCommand;
 // Z80 ROM bank
 static INT32 nCurrentBank;
 
-INT32 Bgareggabl = 0;
+INT32 Bgareggabl = 0; // used by toa_extratext.cpp
 static INT32 Bgareggabla = 0;
+static INT32 location_test = 0;
 
 // Rom information
 static struct BurnRomInfo bgareggaRomDesc[] = {
@@ -40,6 +44,26 @@ static struct BurnRomInfo bgareggaRomDesc[] = {
 
 STD_ROM_PICK(bgaregga)
 STD_ROM_FN(bgaregga)
+
+// Battle Garegga (location test) (Wed Jan 17 1996)
+static struct BurnRomInfo bgareggatRomDesc[] = {
+	{ "battlegaregga-prg0-8-1-17.bin",	0x080000, 0xc032176f, BRF_PRG | BRF_ESS }, //  0 CPU #0 code (even)
+	{ "battlegaregga-prg1-8-1-17.bin",	0x080000, 0x3822f375, BRF_PRG | BRF_ESS }, //  1			 (odd)
+
+	{ "rom4.bin",		0x200000, 0xb333d81f, BRF_GRA },		   //  2 GP9001 Tile data
+	{ "rom3.bin",		0x200000, 0x51b9ebfb, BRF_GRA },           //  3
+	{ "rom2.bin",		0x200000, 0xb330e5e2, BRF_GRA },           //  4
+	{ "rom1.bin",		0x200000, 0x7eafdd70, BRF_GRA },           //  5
+
+	{ "text.u81",		0x008000, 0xe67fd534, BRF_GRA },           //  6 Extra text layer tile data
+
+	{ "battlegaregga-snd-8-1-18-loke-ver.bin",	0x020000, 0xf5ea56f7, BRF_ESS | BRF_PRG }, //  7 Z80 program
+
+	{ "rom5.bin",		0x100000, 0xf6d49863, BRF_SND },           //  8 MSM6295 ADPCM data
+};
+
+STD_ROM_PICK(bgareggat)
+STD_ROM_FN(bgareggat)
 
 static struct BurnRomInfo bgareggazRomDesc[] = {
 	{ "garegga-prg0.bin",     0x080000, 0x6F4AF466, BRF_ESS | BRF_PRG }, //  0 CPU #0 code (even)
@@ -165,16 +189,16 @@ STD_ROM_FN(bgaregtw)
 static struct BurnRomInfo bgareggablRomDesc[] = {
 	{ "xt-8m.bin",    0x100000, 0x4a6657cb, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
 
-	{ "6#-322",       0x400000, 0x37fe48ed, BRF_GRA },			 //  1 GP9001 Tile data // rom4.bin + rom3.bin
-	{ "5#-322",       0x400000, 0x5a06c031, BRF_GRA },			 //  2					// rom2.bin + rom1.bin
+	{ "6@-322",       0x400000, 0x37fe48ed, BRF_GRA },			 //  1 GP9001 Tile data // rom4.bin + rom3.bin
+	{ "5@-322",       0x400000, 0x5a06c031, BRF_GRA },			 //  2					// rom2.bin + rom1.bin
 
-	{ "1#-256",       0x008000, 0x760dcd14, BRF_GRA },			 //  3 Extra text layer tile data
+	{ "1@-256",       0x008000, 0x760dcd14, BRF_GRA },			 //  3 Extra text layer tile data
 
 	{ "snd.bin",      0x020000, 0x68632952, BRF_ESS | BRF_PRG }, //  4 Z80 program
 
 	{ "rom5.bin",     0x100000, 0xF6D49863, BRF_SND },			 //  5 MSM6295 ADPCM data
 	
-	{ "2#-256",       0x008000, 0x456dd16e, BRF_GRA },			 //  6 (looks like garbage)
+	{ "2@-256",       0x008000, 0x456dd16e, BRF_GRA },			 //  6 (looks like garbage)
 };
 
 
@@ -204,33 +228,33 @@ STD_ROM_PICK(bgareggabla)
 STD_ROM_FN(bgareggabla)
 
 static struct BurnInputInfo battlegInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvButton + 3,	"p1 coin"},
-	{"P1 Start",	BIT_DIGITAL,	DrvButton + 5,	"p1 start"},
+	{"P1 Coin",		BIT_DIGITAL,	DrvButton + 3,	"p1 coin"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvButton + 5,	"p1 start"	},
 
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"},
-	{"P1 Right",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"},
-	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
-	{"P1 Button 2",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"},
-	{"P1 Button 3",	BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"},
+	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
+	{"P1 Button 3",	BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvButton + 4,	"p2 coin"},
-	{"P2 Start",	BIT_DIGITAL,	DrvButton + 6,	"p2 start"},
+	{"P2 Coin",		BIT_DIGITAL,	DrvButton + 4,	"p2 coin"	},
+	{"P2 Start",	BIT_DIGITAL,	DrvButton + 6,	"p2 start"	},
 
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"},
-	{"P2 Right",	BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"},
-	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"},
-	{"P2 Button 2",	BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"},
-	{"P2 Button 3",	BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"},
+	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",	BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
+	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",	BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
+	{"P2 Button 3",	BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"},
-	{"Diagnostics",	BIT_DIGITAL,	DrvButton + 0,	"diag"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvInput + 3,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvInput + 4,	"dip"},
-	{"Dip C",		BIT_DIPSWITCH,	DrvInput + 5,	"dip"},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Diagnostics",	BIT_DIGITAL,	DrvButton + 0,	"diag"		},
+	{"Dip A",		BIT_DIPSWITCH,	DrvInput + 3,	"dip"		},
+	{"Dip B",		BIT_DIPSWITCH,	DrvInput + 4,	"dip"		},
+	{"Dip C",		BIT_DIPSWITCH,	DrvInput + 5,	"dip"		},
 };
 
 STDINPUTINFO(battleg)
@@ -446,38 +470,38 @@ static void drvZ80Bankswitch(INT32 nBank)
 }
 
 // Scan ram
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
 	if (pnMin) {						// Return minimum compatible version
 		*pnMin = 0x029497;
 	}
-	if (nAction & ACB_VOLATILE) {		// Scan volatile data
 
+	if (nAction & ACB_VOLATILE) {		// Scan volatile data
 		memset(&ba, 0, sizeof(ba));
-    	ba.Data		= RamStart;
+		ba.Data		= RamStart;
 		ba.nLen		= RamEnd-RamStart;
 		ba.szName	= "All Ram";
 		BurnAcb(&ba);
 
 		SekScan(nAction);				// scan 68000 states
 		ZetScan(nAction);				// Scan Z80
-		SCAN_VAR(nCurrentBank);
 
-		MSM6295Scan(0, nAction);
-		BurnYM2151Scan(nAction);
+		MSM6295Scan(nAction, pnMin);
+		BurnYM2151Scan(nAction, pnMin);
+		NMK112_Scan(nAction);
 
 		ToaScanGP9001(nAction, pnMin);
 
-		SCAN_VAR(DrvInput);
+		SCAN_VAR(nCurrentBank);
 		SCAN_VAR(nSoundCommand);
 		SCAN_VAR(nIRQPending);
 
 		if (nAction & ACB_WRITE) {
 			INT32 nBank = nCurrentBank;
 			nCurrentBank = -1;
-                        ZetOpen(0);               // March 28, 2014: Fix for crash on savestate load - dink
+			ZetOpen(0);
 			drvZ80Bankswitch(nBank);
 			ZetClose();
 		}
@@ -552,15 +576,15 @@ static INT32 LoadRomsBla()
 	return 0;
 }
 
-UINT8 __fastcall battlegZ80Read(UINT16 nAddress)
+static UINT8 __fastcall battlegZ80Read(UINT16 nAddress)
 {
-//	printf("z80 read %4X\n", nAddress);
+//	bprintf(0, _T("z80 read %4X\n"), nAddress);
 	switch (nAddress) {
 		case 0xE001:
-			return BurnYM2151ReadStatus();
+			return BurnYM2151Read();
 
 		case 0xE004:
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 
 		case 0xE01C:
 			return nSoundCommand;
@@ -572,9 +596,9 @@ UINT8 __fastcall battlegZ80Read(UINT16 nAddress)
 	return 0;
 }
 
-void __fastcall battlegZ80Write(UINT16 nAddress, UINT8 nValue)
+static void __fastcall battlegZ80Write(UINT16 nAddress, UINT8 nValue)
 {
-//	printf("z80 wrote %4X with %2X\n", nAddress, nValue);
+//	bprintf(0, _T("z80 wrote %4X with %2X\n"), nAddress, nValue);
 	switch (nAddress) {
 		case 0xE000:
 			BurnYM2151SelectRegister(nValue);
@@ -584,20 +608,13 @@ void __fastcall battlegZ80Write(UINT16 nAddress, UINT8 nValue)
 			break;
 
 		case 0xE004:
-			MSM6295Command(0, nValue);
+			MSM6295Write(0, nValue);
 			break;
 
 		case 0xE006:
-			MSM6295SampleInfo[0][0] = MSM6295ROM + ((nValue & 0x0F) << 16);
-			MSM6295SampleData[0][0] = MSM6295ROM + ((nValue & 0x0F) << 16);
-			MSM6295SampleInfo[0][1] = MSM6295ROM + ((nValue & 0xF0) << 12) + 0x0100;
-			MSM6295SampleData[0][1] = MSM6295ROM + ((nValue & 0xF0) << 12);
-			break;
 		case 0xE008:
-			MSM6295SampleInfo[0][2] = MSM6295ROM + ((nValue & 0x0F) << 16) + 0x0200;
-			MSM6295SampleData[0][2] = MSM6295ROM + ((nValue & 0x0F) << 16);
-			MSM6295SampleInfo[0][3] = MSM6295ROM + ((nValue & 0xF0) << 12) + 0x0300;
-			MSM6295SampleData[0][3] = MSM6295ROM + ((nValue & 0xF0) << 12);
+			NMK112_okibank_write((nAddress - 0xe006) + 0, nValue & 0xf);
+			NMK112_okibank_write((nAddress - 0xe006) + 1, nValue >> 4);
 			break;
 
 		case 0xE00A: {
@@ -607,7 +624,7 @@ void __fastcall battlegZ80Write(UINT16 nAddress, UINT8 nValue)
 
 		case 0xE00C:
 			// Once a sound command is processed, it is written to this address
-			// printf("z80 wrote %4X -> %2X\n", nAddress, nValue);
+			// bprintf(0, _T("z80 wrote %4X -> %2X\n"), nAddress, nValue);
 			break;
 
 	}
@@ -642,7 +659,7 @@ static INT32 DrvZ80Init()
 	return 0;
 }
 
-UINT8 __fastcall battlegReadByte(UINT32 sekAddress)
+static UINT8 __fastcall battlegReadByte(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 
@@ -665,17 +682,17 @@ UINT8 __fastcall battlegReadByte(UINT32 sekAddress)
 			return DrvInput[5];
 
 //		default:
-//			printf("Attempt to read byte value of location %x\n", sekAddress);
+//			bprintf(0, _T("Attempt to read byte value of location %x\n"), sekAddress);
 	}
 	return 0;
 }
 
-UINT16 __fastcall battlegReadWord(UINT32 sekAddress)
+static UINT16 __fastcall battlegReadWord(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 
 		case 0x21C03C:
-			return ToaScanlineRegister();
+			return (location_test) ? ToaScanlineRegisterLoctest() : ToaScanlineRegister();
 
 		case 0x300004:
 			return ToaGP9001ReadRAM_Hi(0);
@@ -683,12 +700,12 @@ UINT16 __fastcall battlegReadWord(UINT32 sekAddress)
 			return ToaGP9001ReadRAM_Lo(0);
 
 //		default:
-//			printf("Attempt to read word value of location %x\n", sekAddress);
+//			bprintf(0, _T("Attempt to read word value of location %x\n"), sekAddress);
 	}
 	return 0;
 }
 
-void __fastcall battlegWriteByte(UINT32 sekAddress, UINT8 byteValue)
+static void __fastcall battlegWriteByte(UINT32 sekAddress, UINT8 byteValue)
 {
 	switch (sekAddress) {
 
@@ -708,31 +725,20 @@ void __fastcall battlegWriteByte(UINT32 sekAddress, UINT8 byteValue)
 			break;
 
 //		default:
-//			printf("Attempt to write byte value %x to location %x\n", byteValue, sekAddress);
+//			bprintf(0, _T("Attempt to write byte value %x to location %x\n"), byteValue, sekAddress);
 	}
 }
 
-void __fastcall battlegWriteWord(UINT32 sekAddress, UINT16 wordValue)
+static void __fastcall battlegWriteWord(UINT32 sekAddress, UINT16 wordValue)
 {
 	switch (sekAddress) {
 
-//		static int p;
-
 		case 0x300000:								// Set GP9001 VRAM address-pointer
 			ToaGP9001SetRAMPointer(wordValue);
-//			p = wordValue & 0x1FFF;
 			break;
 
 		case 0x300004:
-//			if (p++ >= 0x1800) {
-//				static int s;
-//				if (s != SekCurrentScanline()) {
-//					s = SekCurrentScanline();
-//					bprintf(PRINT_NORMAL, _T("  - sprite (%3i).\n"), s);
-//				}
-//			}
 		case 0x300006:
-//			p++;
 			ToaGP9001WriteRAM(wordValue, 0);
 			break;
 
@@ -746,7 +752,7 @@ void __fastcall battlegWriteWord(UINT32 sekAddress, UINT16 wordValue)
 		}
 
 //		default:
-//			printf("Attempt to write word value %x to location %x\n", wordValue, sekAddress);
+//			bprintf(0, _T("Attempt to write word value %x to location %x\n"), wordValue, sekAddress);
 	}
 }
 
@@ -754,7 +760,7 @@ static INT32 DrvDoReset()
 {
 	SekOpen(0);
 	nIRQPending = 0;
-    SekSetIRQLine(0, CPU_IRQSTATUS_NONE);
+	SekSetIRQLine(0, CPU_IRQSTATUS_NONE);
 	SekReset();
 	SekClose();
 
@@ -764,6 +770,7 @@ static INT32 DrvDoReset()
 
 	MSM6295Reset(0);
 	BurnYM2151Reset();
+	NMK112Reset();
 
 	HiscoreReset();
 
@@ -809,7 +816,7 @@ static INT32 battlegInit()
 
 	{
 		SekInit(0, 0x68000);										// Allocate 68000
-	    SekOpen(0);
+		SekOpen(0);
 
 		// Map 68000 memory:
 		SekMapMemory(Rom01,			0x000000, 0x0FFFFF, MAP_ROM);	// CPU 0 ROM
@@ -849,17 +856,25 @@ static INT32 battlegInit()
 	MSM6295Init(0, 32000000 / 16 / 132, 1);
 	MSM6295SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
 
+	NMK112_init(0, MSM6295ROM, NULL, 0x100000, 0); // only 1
+
 	nToaPalLen = nColCount;
 	ToaPalSrc = RamPal;
 	ToaPalInit();
-
-	bDrawScreen = true;
 
 	// mar 2 1996 & apr 2 1996 ver:	0x0009AC - 0x0009B8 & 0x001F5E - 0x001F64 & 0x003A1C - 0x003A22
 	// feb 2 1996 ver:				0x0009AC - 0x0009B8 & 0x001F2E - 0x001F34 & 0x0039EC - 0x0039F2
 
 	DrvDoReset();												// Reset machine
+
 	return 0;
+}
+
+static INT32 BgareggatInit()
+{
+	location_test = 1;
+
+	return battlegInit();
 }
 
 static INT32 BgareggablInit()
@@ -892,6 +907,7 @@ static INT32 DrvExit()
 	
 	Bgareggabl = 0;
 	Bgareggabla = 0;
+	location_test = 0;
 
 	return 0;
 }
@@ -900,19 +916,12 @@ static INT32 DrvDraw()
 {
 	ToaClearScreen(0);
 
-	if (bDrawScreen) {
-		ToaGetBitmap();
-		ToaRenderGP9001();					// Render GP9001 graphics
-		ToaExtraTextLayer();				// Render extra text layer
-	}
+	ToaGetBitmap();
+	ToaRenderGP9001();						// Render GP9001 graphics
+	ToaExtraTextLayer();					// Render extra text layer
 
 	ToaPalUpdate();							// Update the palette
 
-	return 0;
-}
-
-inline static INT32 CheckSleep(INT32)
-{
 	return 0;
 }
 
@@ -943,33 +952,26 @@ static INT32 DrvFrame()
 	nCyclesDone[0] = nCyclesDone[1] = 0;
 
 	SekOpen(0);
-	
+
 	SekSetCyclesScanline(nCyclesTotal[0] / 262);
-	nToaCyclesDisplayStart = nCyclesTotal[0] - ((nCyclesTotal[0] * (TOA_VBLANK_LINES + 240)) / 262);
+
+	nToaCyclesDisplayStart = nCyclesTotal[0] - ((nCyclesTotal[0] * (TOA_VBLANK_LINES + 240)) / 262); // 0
 	nToaCyclesVBlankStart = nCyclesTotal[0] - ((nCyclesTotal[0] * TOA_VBLANK_LINES) / 262);
-	bVBlank = false;
+	bool bVBlank = false;
 
 	INT32 nSoundBufferPos = 0;
 
 	ZetOpen(0);
 	for (INT32 i = 1; i <= nInterleave; i++) {
-    	INT32 nCurrentCPU;
-		INT32 nNext;
-
 		// Run 68000
-
-		nCurrentCPU = 0;
-		nNext = i * nCyclesTotal[nCurrentCPU] / nInterleave;
+		INT32 nCurrentCPU = 0;
+		INT32 nNext = i * nCyclesTotal[nCurrentCPU] / nInterleave;
 
 		// Trigger VBlank interrupt
 		if (!bVBlank && nNext > nToaCyclesVBlankStart) {
 			if (nCyclesDone[nCurrentCPU] < nToaCyclesVBlankStart) {
 				nCyclesSegment = nToaCyclesVBlankStart - nCyclesDone[nCurrentCPU];
-				if (!CheckSleep(nCurrentCPU)) {
-					nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-				} else {
-					nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-				}
+				nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 			}
 
 			nIRQPending = 1;
@@ -985,28 +987,22 @@ static INT32 DrvFrame()
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		if (!CheckSleep(nCurrentCPU)) {									// See if this CPU is busywaiting
-			nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-			nIRQPending = 0;
-		} else {
-			nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-		}
+		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
+		nIRQPending = 0;
 
-		if ((i & 1) == 0) {
-			// Run Z80
-			nCurrentCPU = 1;
-			nNext = i * nCyclesTotal[nCurrentCPU] / nInterleave;
-			nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-			nCyclesDone[nCurrentCPU] += ZetRun(nCyclesSegment);
+		// Run Z80
+		nCurrentCPU = 1;
+		nNext = i * nCyclesTotal[nCurrentCPU] / nInterleave;
+		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
+		nCyclesDone[nCurrentCPU] += ZetRun(nCyclesSegment);
 
-			// Render sound segment
-			if (pBurnSoundOut) {
-				INT32 nSegmentLength = (nBurnSoundLen * i / nInterleave) - nSoundBufferPos;
-				INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-				BurnYM2151Render(pSoundBuf, nSegmentLength);
-				MSM6295Render(0, pSoundBuf, nSegmentLength);
-				nSoundBufferPos += nSegmentLength;
-			}
+		// Render sound segment
+		if (pBurnSoundOut) {
+			INT32 nSegmentLength = (nBurnSoundLen * i / nInterleave) - nSoundBufferPos;
+			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
+			BurnYM2151Render(pSoundBuf, nSegmentLength);
+			MSM6295Render(0, pSoundBuf, nSegmentLength);
+			nSoundBufferPos += nSegmentLength;
 		}
 	}
 
@@ -1034,8 +1030,18 @@ struct BurnDriver BurnDrvBgaregga = {
 	"Battle Garegga (Europe / USA / Japan / Asia) (Sat Feb 3 1996)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, bgareggaRomInfo, bgareggaRomName, NULL, NULL, battlegInputInfo, bgareggaDIPInfo,
+	NULL, bgareggaRomInfo, bgareggaRomName, NULL, NULL, NULL, NULL, battlegInputInfo, bgareggaDIPInfo,
 	battlegInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
+	240, 320, 3, 4
+};
+
+struct BurnDriver BurnDrvBgareggat = {
+	"bgareggat", "bgaregga", NULL, NULL, "1996",
+	"Battle Garegga (location test) (Wed Jan 17 1996)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
+	NULL, bgareggatRomInfo, bgareggatRomName, NULL, NULL, NULL, NULL, battlegInputInfo, bgareggaDIPInfo,
+	BgareggatInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
 
@@ -1044,7 +1050,7 @@ struct BurnDriver BurnDrvBgareggaz = {
 	"Battle Garegga Zakk version (Europe / USA / Japan / Asia) (Sat Feb 3 1996)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, bgareggazRomInfo, bgareggazRomName, NULL, NULL, battlegInputInfo, bgareggaDIPInfo,
+	NULL, bgareggazRomInfo, bgareggazRomName, NULL, NULL, NULL, NULL, battlegInputInfo, bgareggaDIPInfo,
 	battlegInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1054,7 +1060,7 @@ struct BurnDriver BurnDrvBgaregcn = {
 	"Battle Garegga - Type 2 (Denmark / China) (Tue Apr 2 1996)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, bgaregcnRomInfo, bgaregcnRomName, NULL, NULL, battlegInputInfo, bgaregcnDIPInfo,
+	NULL, bgaregcnRomInfo, bgaregcnRomName, NULL, NULL, NULL, NULL, battlegInputInfo, bgaregcnDIPInfo,
 	battlegInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1064,7 +1070,7 @@ struct BurnDriver BurnDrvBgaregt2 = {
 	"Battle Garegga - Type 2 (Europe / USA / Japan / Asia) (Sat Mar 2 1996)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, bgaregt2RomInfo, bgaregt2RomName, NULL, NULL, battlegInputInfo, bgareggaDIPInfo,
+	NULL, bgaregt2RomInfo, bgaregt2RomName, NULL, NULL, NULL, NULL, battlegInputInfo, bgareggaDIPInfo,
 	battlegInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1074,7 +1080,7 @@ struct BurnDriver BurnDrvBgaregnv = {
 	"Battle Garegga - New Version (Austria / Hong Kong) (Sat Mar 2 1996)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, bgaregnvRomInfo, bgaregnvRomName, NULL, NULL, battlegInputInfo, bgareghkDIPInfo,
+	NULL, bgaregnvRomInfo, bgaregnvRomName, NULL, NULL, NULL, NULL, battlegInputInfo, bgareghkDIPInfo,
 	battlegInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1084,7 +1090,7 @@ struct BurnDriver BurnDrvBgareghk = {
 	"Battle Garegga (Austria / Hong Kong) (Sat Feb 3 1996)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, bgareghkRomInfo, bgareghkRomName, NULL, NULL, battlegInputInfo, bgareghkDIPInfo,
+	NULL, bgareghkRomInfo, bgareghkRomName, NULL, NULL, NULL, NULL, battlegInputInfo, bgareghkDIPInfo,
 	battlegInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1094,17 +1100,17 @@ struct BurnDriver BurnDrvBgaregtw = {
 	"Battle Garegga (Taiwan / Germany) (Thu Feb 1 1996)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, bgaregtwRomInfo, bgaregtwRomName, NULL, NULL, battlegInputInfo, bgaregtwDIPInfo,
+	NULL, bgaregtwRomInfo, bgaregtwRomName, NULL, NULL, NULL, NULL, battlegInputInfo, bgaregtwDIPInfo,
 	battlegInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
 
 struct BurnDriver BurnDrvBgareggabl = {
 	"bgareggabl", "bgaregga", NULL, NULL, "1996",
-	"1945 Part 2 (Chinese hack of Battle Garaga)\0", NULL, "hack", "Toaplan GP9001 based",
+	"1945 Part 2 (Chinese hack of Battle Garegga)\0", NULL, "hack", "Toaplan GP9001 based",
 	L"1945 Part 2\0\uFF11\uFF19\uFF14\uFF15\u4E8C\u4EE3 (Chinese hack of Battle Garegga)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HACK | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, bgareggablRomInfo, bgareggablRomName, NULL, NULL, battlegInputInfo, bgareggaDIPInfo,
+	NULL, bgareggablRomInfo, bgareggablRomName, NULL, NULL, NULL, NULL, battlegInputInfo, bgareggaDIPInfo,
 	BgareggablInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1114,7 +1120,7 @@ struct BurnDriver BurnDrvBgareggabla = {
 	"Lei Shen Zhuan Thunder Deity Biography (Chinese hack of Battle Garegga)\0", NULL, "hack", "Toaplan GP9001 based",
 	L"\u96F7\u795E\u50B3\0Lei Shen Zhuan Thunder Deity Biography (Chinese hack of Battle Garegga)\0" , NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HACK | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, bgareggablaRomInfo, bgareggablaRomName, NULL, NULL, battlegInputInfo, bgareggaDIPInfo,
+	NULL, bgareggablaRomInfo, bgareggablaRomName, NULL, NULL, NULL, NULL, battlegInputInfo, bgareggaDIPInfo,
 	BgareggablaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };

@@ -6,6 +6,7 @@
 #include "i8039.h"
 #include "sn76496.h"
 #include "dac.h"
+#include "resnet.h"
 
 static UINT8 *AllMem;
 static UINT8 *RamEnd;
@@ -54,7 +55,6 @@ static struct BurnInputInfo FinalizrInputList[] = {
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
-	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p1 fire 3"	},
 
 	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 start"	},
@@ -64,7 +64,6 @@ static struct BurnInputInfo FinalizrInputList[] = {
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"	},
-	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 fire 3"	},
 
 	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
 	{"Service",		BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
@@ -77,83 +76,83 @@ STDINPUTINFO(Finalizr)
 
 static struct BurnDIPInfo FinalizrDIPList[]=
 {
-	{0x14, 0xff, 0xff, 0xff, NULL			},
-	{0x15, 0xff, 0xff, 0x5a, NULL			},
-	{0x16, 0xff, 0xff, 0xfe, NULL			},
+	{0x12, 0xff, 0xff, 0xff, NULL			},
+	{0x13, 0xff, 0xff, 0x5a, NULL			},
+	{0x14, 0xff, 0xff, 0xfe, NULL			},
 
 	{0   , 0xfe, 0   ,    16, "Coin A"		},
-	{0x14, 0x01, 0x0f, 0x02, "4 Coins 1 Credits"	},
-	{0x14, 0x01, 0x0f, 0x05, "3 Coins 1 Credits"	},
-	{0x14, 0x01, 0x0f, 0x08, "2 Coins 1 Credits"	},
-	{0x14, 0x01, 0x0f, 0x04, "3 Coins 2 Credits"	},
-	{0x14, 0x01, 0x0f, 0x01, "4 Coins 3 Credits"	},
-	{0x14, 0x01, 0x0f, 0x0f, "1 Coin  1 Credits"	},
-	{0x14, 0x01, 0x0f, 0x03, "3 Coins 4 Credits"	},
-	{0x14, 0x01, 0x0f, 0x07, "2 Coins 3 Credits"	},
-	{0x14, 0x01, 0x0f, 0x0e, "1 Coin  2 Credits"	},
-	{0x14, 0x01, 0x0f, 0x06, "2 Coins 5 Credits"	},
-	{0x14, 0x01, 0x0f, 0x0d, "1 Coin  3 Credits"	},
-	{0x14, 0x01, 0x0f, 0x0c, "1 Coin  4 Credits"	},
-	{0x14, 0x01, 0x0f, 0x0b, "1 Coin  5 Credits"	},
-	{0x14, 0x01, 0x0f, 0x0a, "1 Coin  6 Credits"	},
-	{0x14, 0x01, 0x0f, 0x09, "1 Coin  7 Credits"	},
-	{0x14, 0x01, 0x0f, 0x00, "Free Play"		},
+	{0x12, 0x01, 0x0f, 0x02, "4 Coins 1 Credits"	},
+	{0x12, 0x01, 0x0f, 0x05, "3 Coins 1 Credits"	},
+	{0x12, 0x01, 0x0f, 0x08, "2 Coins 1 Credits"	},
+	{0x12, 0x01, 0x0f, 0x04, "3 Coins 2 Credits"	},
+	{0x12, 0x01, 0x0f, 0x01, "4 Coins 3 Credits"	},
+	{0x12, 0x01, 0x0f, 0x0f, "1 Coin  1 Credits"	},
+	{0x12, 0x01, 0x0f, 0x03, "3 Coins 4 Credits"	},
+	{0x12, 0x01, 0x0f, 0x07, "2 Coins 3 Credits"	},
+	{0x12, 0x01, 0x0f, 0x0e, "1 Coin  2 Credits"	},
+	{0x12, 0x01, 0x0f, 0x06, "2 Coins 5 Credits"	},
+	{0x12, 0x01, 0x0f, 0x0d, "1 Coin  3 Credits"	},
+	{0x12, 0x01, 0x0f, 0x0c, "1 Coin  4 Credits"	},
+	{0x12, 0x01, 0x0f, 0x0b, "1 Coin  5 Credits"	},
+	{0x12, 0x01, 0x0f, 0x0a, "1 Coin  6 Credits"	},
+	{0x12, 0x01, 0x0f, 0x09, "1 Coin  7 Credits"	},
+	{0x12, 0x01, 0x0f, 0x00, "Free Play"		},
 
 	{0   , 0xfe, 0   ,    16, "Coin B"		},
-	{0x14, 0x01, 0xf0, 0x20, "4 Coins 1 Credits"	},
-	{0x14, 0x01, 0xf0, 0x50, "3 Coins 1 Credits"	},
-	{0x14, 0x01, 0xf0, 0x80, "2 Coins 1 Credits"	},
-	{0x14, 0x01, 0xf0, 0x40, "3 Coins 2 Credits"	},
-	{0x14, 0x01, 0xf0, 0x10, "4 Coins 3 Credits"	},
-	{0x14, 0x01, 0xf0, 0xf0, "1 Coin  1 Credits"	},
-	{0x14, 0x01, 0xf0, 0x30, "3 Coins 4 Credits"	},
-	{0x14, 0x01, 0xf0, 0x70, "2 Coins 3 Credits"	},
-	{0x14, 0x01, 0xf0, 0xe0, "1 Coin  2 Credits"	},
-	{0x14, 0x01, 0xf0, 0x60, "2 Coins 5 Credits"	},
-	{0x14, 0x01, 0xf0, 0xd0, "1 Coin  3 Credits"	},
-	{0x14, 0x01, 0xf0, 0xc0, "1 Coin  4 Credits"	},
-	{0x14, 0x01, 0xf0, 0xb0, "1 Coin  5 Credits"	},
-	{0x14, 0x01, 0xf0, 0xa0, "1 Coin  6 Credits"	},
-	{0x14, 0x01, 0xf0, 0x90, "1 Coin  7 Credits"	},
-	{0x14, 0x01, 0xf0, 0x00, "No Coin B"		},
+	{0x12, 0x01, 0xf0, 0x20, "4 Coins 1 Credits"	},
+	{0x12, 0x01, 0xf0, 0x50, "3 Coins 1 Credits"	},
+	{0x12, 0x01, 0xf0, 0x80, "2 Coins 1 Credits"	},
+	{0x12, 0x01, 0xf0, 0x40, "3 Coins 2 Credits"	},
+	{0x12, 0x01, 0xf0, 0x10, "4 Coins 3 Credits"	},
+	{0x12, 0x01, 0xf0, 0xf0, "1 Coin  1 Credits"	},
+	{0x12, 0x01, 0xf0, 0x30, "3 Coins 4 Credits"	},
+	{0x12, 0x01, 0xf0, 0x70, "2 Coins 3 Credits"	},
+	{0x12, 0x01, 0xf0, 0xe0, "1 Coin  2 Credits"	},
+	{0x12, 0x01, 0xf0, 0x60, "2 Coins 5 Credits"	},
+	{0x12, 0x01, 0xf0, 0xd0, "1 Coin  3 Credits"	},
+	{0x12, 0x01, 0xf0, 0xc0, "1 Coin  4 Credits"	},
+	{0x12, 0x01, 0xf0, 0xb0, "1 Coin  5 Credits"	},
+	{0x12, 0x01, 0xf0, 0xa0, "1 Coin  6 Credits"	},
+	{0x12, 0x01, 0xf0, 0x90, "1 Coin  7 Credits"	},
+	{0x12, 0x01, 0xf0, 0x00, "No Coin B"		},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
-	{0x15, 0x01, 0x03, 0x03, "2"			},
-	{0x15, 0x01, 0x03, 0x02, "3"			},
-	{0x15, 0x01, 0x03, 0x01, "4"			},
-	{0x15, 0x01, 0x03, 0x00, "7"			},
+	{0x13, 0x01, 0x03, 0x03, "2"			},
+	{0x13, 0x01, 0x03, 0x02, "3"			},
+	{0x13, 0x01, 0x03, 0x01, "4"			},
+	{0x13, 0x01, 0x03, 0x00, "7"			},
 
 	{0   , 0xfe, 0   ,    2, "Cabinet"		},
-	{0x15, 0x01, 0x04, 0x00, "Upright"		},
-	{0x15, 0x01, 0x04, 0x04, "Cocktail"		},
+	{0x13, 0x01, 0x04, 0x00, "Upright"		},
+	{0x13, 0x01, 0x04, 0x04, "Cocktail"		},
 
 	{0   , 0xfe, 0   ,    4, "Bonus Life"		},
-	{0x15, 0x01, 0x18, 0x18, "30000 150000"		},
-	{0x15, 0x01, 0x18, 0x10, "50000 300000"		},
-	{0x15, 0x01, 0x18, 0x08, "30000"		},
-	{0x15, 0x01, 0x18, 0x00, "50000"		},
+	{0x13, 0x01, 0x18, 0x18, "30000 150000"		},
+	{0x13, 0x01, 0x18, 0x10, "50000 300000"		},
+	{0x13, 0x01, 0x18, 0x08, "30000"		},
+	{0x13, 0x01, 0x18, 0x00, "50000"		},
 
 	{0   , 0xfe, 0   ,    4, "Difficulty"		},
-	{0x15, 0x01, 0x60, 0x60, "Easy"			},
-	{0x15, 0x01, 0x60, 0x40, "Normal"		},
-	{0x15, 0x01, 0x60, 0x20, "Hard"			},
-	{0x15, 0x01, 0x60, 0x00, "Very Hard"		},
+	{0x13, 0x01, 0x60, 0x60, "Easy"			},
+	{0x13, 0x01, 0x60, 0x40, "Normal"		},
+	{0x13, 0x01, 0x60, 0x20, "Hard"			},
+	{0x13, 0x01, 0x60, 0x00, "Very Hard"		},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x15, 0x01, 0x80, 0x80, "Off"			},
-	{0x15, 0x01, 0x80, 0x00, "On"			},
+	{0x13, 0x01, 0x80, 0x80, "Off"			},
+	{0x13, 0x01, 0x80, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
-	{0x16, 0x01, 0x01, 0x00, "Off"			},
-	{0x16, 0x01, 0x01, 0x01, "On"			},
+	{0x14, 0x01, 0x01, 0x00, "Off"			},
+	{0x14, 0x01, 0x01, 0x01, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Controls"		},
-	{0x16, 0x01, 0x02, 0x02, "Single"		},
-	{0x16, 0x01, 0x02, 0x00, "Dual"			},
+	{0x14, 0x01, 0x02, 0x02, "Single"		},
+	{0x14, 0x01, 0x02, 0x00, "Dual"			},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"		},
-	{0x16, 0x01, 0x04, 0x04, "Off"			},
-	{0x16, 0x01, 0x04, 0x00, "On"			},
+	{0x14, 0x01, 0x04, 0x04, "Off"			},
+	{0x14, 0x01, 0x04, 0x00, "On"			},
 };
 
 STDDIPINFO(Finalizr)
@@ -172,7 +171,7 @@ static UINT8 finalizr_main_read(UINT16 address)
 			return (DrvInputs[0] & 0x7f) | (vblank ? 0x80 : 0);
 		case 0x0811:
 		case 0x0812:
-			return DrvInputs[address & 3];
+			return (DrvInputs[address & 3] & 0x7f);
 
 		case 0x0813:
 			return DrvDips[0];
@@ -270,7 +269,7 @@ static UINT8 __fastcall finalizr_sound_read_port(UINT32 port)
 
 static INT32 DrvSyncDAC()
 {
-	return (INT32)(float)(nBurnSoundLen * (M6809TotalCycles() / (1536000.0000 / (nBurnFPS / 100.0000))));
+	return (INT32)(float)(nBurnSoundLen * (I8039TotalCycles() / (614400.0000 / (nBurnFPS / 100.0000))));
 }
 
 static INT32 DrvDoReset(INT32 clear_ram)
@@ -283,8 +282,10 @@ static INT32 DrvDoReset(INT32 clear_ram)
 	M6809Reset();
 	M6809Close();
 
+	I8039Open(0);
 	I8039Reset();
 	DACReset();
+	I8039Close();
 
 	scroll = 0;
 	nmi_enable = 0;
@@ -304,7 +305,7 @@ static INT32 MemIndex()
 	UINT8 *Next; Next = AllMem;
 
 	DrvM6809ROM		= Next; Next += 0x00c000;
-	DrvM6809DecROM		= Next; Next += 0x00c000;
+	DrvM6809DecROM  = Next; Next += 0x00c000;
 
 	DrvI8039ROM		= Next; Next += 0x001000;
 
@@ -350,28 +351,36 @@ static void DrvPaletteInit()
 {
 	UINT32 palette[0x20];
 
+	static const int resistances[4] = { 2200, 1000, 470, 220 };
+	double rweights[4], gweights[4], bweights[4];
+
+	compute_resistor_weights(0, 0xff, -1.0,
+			4, &resistances[0], rweights, 470, 0,
+			4, &resistances[0], gweights, 470, 0,
+			4, &resistances[0], bweights, 470, 0);
+
 	for (INT32 i = 0; i < 0x20; i++)
 	{
-		INT32 bit0 = ((DrvColPROM[i] >> 0) & 0x01) * 14;
-		INT32 bit1 = ((DrvColPROM[i] >> 1) & 0x01) * 31;
-		INT32 bit2 = ((DrvColPROM[i] >> 2) & 0x01) * 67;
-		INT32 bit3 = ((DrvColPROM[i] >> 3) & 0x01) * 143;
+		INT32 bit0 = (DrvColPROM[i] >> 0) & 0x01;
+		INT32 bit1 = (DrvColPROM[i] >> 1) & 0x01;
+		INT32 bit2 = (DrvColPROM[i] >> 2) & 0x01;
+		INT32 bit3 = (DrvColPROM[i] >> 3) & 0x01;
 
-		INT32 r = bit0 + bit1 + bit2 + bit3;
+		INT32 r = combine_4_weights(rweights, bit0, bit1, bit2, bit3);
 
-		bit0 = ((DrvColPROM[i] >> 4) & 0x01) * 14;
-		bit1 = ((DrvColPROM[i] >> 5) & 0x01) * 31;
-		bit2 = ((DrvColPROM[i] >> 6) & 0x01) * 67;
-		bit3 = ((DrvColPROM[i] >> 7) & 0x01) * 143;
+		bit0 = (DrvColPROM[i] >> 4) & 0x01;
+		bit1 = (DrvColPROM[i] >> 5) & 0x01;
+		bit2 = (DrvColPROM[i] >> 6) & 0x01;
+		bit3 = (DrvColPROM[i] >> 7) & 0x01;
 
-		INT32 g = bit0 + bit1 + bit2 + bit3;
+		INT32 g = combine_4_weights(rweights, bit0, bit1, bit2, bit3);
 
-		bit0 = ((DrvColPROM[i + 0x20] >> 0) & 0x01) * 14;
-		bit1 = ((DrvColPROM[i + 0x20] >> 1) & 0x01) * 31;
-		bit2 = ((DrvColPROM[i + 0x20] >> 2) & 0x01) * 67;
-		bit3 = ((DrvColPROM[i + 0x20] >> 3) & 0x01) * 14;
+		bit0 = (DrvColPROM[i + 0x20] >> 0) & 0x01;
+		bit1 = (DrvColPROM[i + 0x20] >> 1) & 0x01;
+		bit2 = (DrvColPROM[i + 0x20] >> 2) & 0x01;
+		bit3 = (DrvColPROM[i + 0x20] >> 3) & 0x01;
 
-		INT32 b = bit0 + bit1 + bit2 + bit3;
+		INT32 b = combine_4_weights(rweights, bit0, bit1, bit2, bit3);
 
 		palette[i] = BurnHighCol(r,g,b,0);
 	}
@@ -436,7 +445,7 @@ static INT32 DrvInit()
 	DrvGfxExpand();
 	DrvPaletteInit();
 
-	M6809Init(1);
+	M6809Init(0);
 	M6809Open(0);
 	M6809MapMemory(DrvColRAM0,	0x2000, 0x23ff, MAP_RAM);
 	M6809MapMemory(DrvVidRAM0,	0x2400, 0x27ff, MAP_RAM);
@@ -450,15 +459,18 @@ static INT32 DrvInit()
 	M6809SetReadHandler(finalizr_main_read);
 	M6809Close();
 
-	I8039Init(NULL);
+	I8039Init(0);
+	I8039Open(0);
 	I8039SetProgramReadHandler(finalizr_sound_read);
 	I8039SetCPUOpReadHandler(finalizr_sound_read);
 	I8039SetCPUOpReadArgHandler(finalizr_sound_read);
 	I8039SetIOReadHandler(finalizr_sound_read_port);
 	I8039SetIOWriteHandler(finalizr_sound_write_port);
+	I8039Close();
 
 	SN76489AInit(0, 1536000, 0);
 	SN76496SetRoute(0, 0.45, BURN_SND_ROUTE_BOTH);
+    SN76496SetBuffered(M6809TotalCycles, 1536000);
 
 	DACInit(0, 0, 1, DrvSyncDAC);
 	DACSetRoute(0, 0.15, BURN_SND_ROUTE_BOTH);
@@ -487,16 +499,17 @@ static INT32 DrvExit()
 
 static void draw_bg_layer()
 {
-	INT32 scrollx = (scroll - 32) & 0xff;
+	INT32 scrollx = scroll - 32;
 
 	for (INT32 offs = 0; offs < 32 * 32; offs++)
 	{
-		INT32 sx = (offs & 0x1f) * 8;
+		INT32 sx = ((offs & 0x1f) * 8) - 8;
 		INT32 sy = ((offs / 0x20) * 8) - 16;
 		if (sy < 0 || sy >= nScreenHeight) continue;
 
 		sx -= scrollx;
-		if (sx < 25) sx += 256;
+
+		if (sx < 25 + -8) sx += 256;
 		if (sx >= nScreenWidth || sy >= nScreenHeight) continue;
 
 		INT32 attr  = DrvColRAM0[offs];
@@ -525,7 +538,7 @@ static void draw_fg_layer()
 {
 	for (INT32 offs = 0; offs < 32 * 32; offs++)
 	{
-		INT32 sx = (offs & 0x1f) * 8;
+		INT32 sx = ((offs & 0x1f) * 8) - 8;
 		if (sx >= 32) continue;
 		INT32 sy = ((offs / 0x20) * 8) - 16;
 		if (sy < 0 || sy >= nScreenHeight) continue;
@@ -607,6 +620,7 @@ static void draw_sprites()
 	for (INT32 offs = 0; offs <= 0x200 - 5; offs += 5)
 	{
 		INT32 sx    = 32 + 1 + sr[offs + 3] - ((sr[offs + 4] & 0x01) << 8);
+		sx -= 8;
 		INT32 sy    = sr[offs + 2];
 		INT32 flipx = sr[offs + 4] & 0x20;
 		INT32 flipy = sr[offs + 4] & 0x40;
@@ -700,7 +714,7 @@ static INT32 DrvFrame()
 
 	{
 		memset (DrvInputs, 0xff, 3);
-		for (INT32 i = 0; i < 5; i++) {
+		for (INT32 i = 0; i < 8; i++) {
 			DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;
  			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
 			DrvInputs[2] ^= (DrvJoy3[i] & 1) << i;
@@ -708,44 +722,32 @@ static INT32 DrvFrame()
 	}
 
 	INT32 nInterleave = 256;
-	INT32 nSoundBufferPos = 0;
-	INT32 nCyclesTotal[2] = { 1536000 / 60, 6144000 / 15 / 60 };
+	INT32 nCyclesTotal[2] = { 1536000 / 60, 9216000 / 15 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
 	M6809Open(0);
+	I8039Open(0);
 
 	vblank = 0;
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += M6809Run(nCyclesTotal[0] / nInterleave);
-		if (i == 240 && irq_enable) {
-			M6809SetIRQLine(0, CPU_IRQSTATUS_ACK);
-			M6809Run(100);
-			M6809SetIRQLine(0, CPU_IRQSTATUS_NONE);
-		}
+		nCyclesDone[0] += M6809Run(((i + 1) * nCyclesTotal[0] / nInterleave) - nCyclesDone[0]);
 
+        if (i == 240 && irq_enable) M6809SetIRQLine(0, CPU_IRQSTATUS_HOLD);
+		if (i == 240) vblank = 1;
 		if ((i % 32) == 31 && nmi_enable) M6809SetIRQLine(0x20, CPU_IRQSTATUS_AUTO);
 
-		if (i == 240) vblank = 1; // ?
-
-		nCyclesDone[1] += I8039Run(nCyclesTotal[1] / nInterleave);
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			SN76496Update(0, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
+		nCyclesDone[1] += I8039Run(((i + 1) * nCyclesTotal[1] / nInterleave) - nCyclesDone[1]);
 	}
-
-	M6809Close();
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		SN76496Update(0, pSoundBuf, nSegmentLength);
-		DACUpdate(pBurnSoundOut,nBurnSoundLen);
+		SN76496Update(pBurnSoundOut, nBurnSoundLen);
+		DACUpdate(pBurnSoundOut, nBurnSoundLen);
 	}
+
+	I8039Close();
+	M6809Close();
 
 	if (pBurnDraw) {
 		DrvDraw();
@@ -791,7 +793,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 }
 
 
-// Finalizer - Super Transformation
+// Finalizer - Super Transformation (set 1)
 
 static struct BurnRomInfo finalizrRomDesc[] = {
 	{ "523k01.9c",		0x4000, 0x716633cb, 1 | BRF_PRG | BRF_ESS }, //  0 M6809 Code
@@ -818,12 +820,48 @@ STD_ROM_FN(finalizr)
 
 struct BurnDriver BurnDrvFinalizr = {
 	"finalizr", NULL, NULL, NULL, "1985",
-	"Finalizer - Super Transformation\0", NULL, "Konami", "GX523",
+	"Finalizer - Super Transformation (set 1)\0", NULL, "Konami", "GX523",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_PREFIX_KONAMI, GBF_VERSHOOT, 0,
-	NULL, finalizrRomInfo, finalizrRomName, NULL, NULL, FinalizrInputInfo, FinalizrDIPInfo,
+	NULL, finalizrRomInfo, finalizrRomName, NULL, NULL, NULL, NULL, FinalizrInputInfo, FinalizrDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
-	224, 280, 3, 4
+	224, 272, 3, 4
+};
+
+
+// Finalizer - Super Transformation (set 2)
+
+static struct BurnRomInfo finalizraRomDesc[] = {
+	{ "1.9c",			0x4000, 0x7d464e5c, 1 | BRF_PRG | BRF_ESS }, //  0 M6809 Code
+	{ "2.12c",			0x4000, 0x383dc94e, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "3.13c",			0x4000, 0xce177f6e, 1 | BRF_PRG | BRF_ESS }, //  2
+
+	{ "d8749hd.bin",	0x0800, 0x978dfc33, 2 | BRF_PRG | BRF_ESS }, //  3 I8039 Code
+
+	{ "523h04.5e",		0x4000, 0xc056d710, 3 | BRF_GRA },           //  4 Sprites & tiles
+	{ "523h07.5f",		0x4000, 0x50e512ba, 3 | BRF_GRA },           //  5
+	{ "523h05.6e",		0x4000, 0xae0d0f76, 3 | BRF_GRA },           //  6
+	{ "523h08.6f",		0x4000, 0x79f44e17, 3 | BRF_GRA },           //  7
+	{ "523h06.7e",		0x4000, 0xd2db9689, 3 | BRF_GRA },           //  8
+	{ "523h09.7f",		0x4000, 0x8896dc85, 3 | BRF_GRA },           //  9
+
+	{ "523h10.2f",		0x0020, 0xec15dd15, 4 | BRF_GRA },           // 10 Color Proms
+	{ "523h11.3f",		0x0020, 0x54be2e83, 4 | BRF_GRA },           // 11
+	{ "523h13.11f",		0x0100, 0x4e0647a0, 4 | BRF_GRA },           // 12
+	{ "523h12.10f",		0x0100, 0x53166a2a, 4 | BRF_GRA },           // 13
+};
+
+STD_ROM_PICK(finalizra)
+STD_ROM_FN(finalizra)
+
+struct BurnDriver BurnDrvFinalizra = {
+	"finalizra", "finalizr", NULL, NULL, "1985",
+	"Finalizer - Super Transformation (set 2)\0", NULL, "Konami", "GX523",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_PREFIX_KONAMI, GBF_VERSHOOT, 0,
+	NULL, finalizraRomInfo, finalizraRomName, NULL, NULL, NULL, NULL, FinalizrInputInfo, FinalizrDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
+	224, 272, 3, 4
 };
 
 
@@ -856,7 +894,7 @@ struct BurnDriver BurnDrvFinalizrb = {
 	"Finalizer - Super Transformation (bootleg)\0", NULL, "bootleg", "GX523",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_PREFIX_KONAMI, GBF_VERSHOOT, 0,
-	NULL, finalizrbRomInfo, finalizrbRomName, NULL, NULL, FinalizrInputInfo, FinalizrDIPInfo,
+	NULL, finalizrbRomInfo, finalizrbRomName, NULL, NULL, NULL, NULL, FinalizrInputInfo, FinalizrDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
-	224, 280, 3, 4
+	224, 272, 3, 4
 };

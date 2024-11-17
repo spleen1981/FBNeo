@@ -1,3 +1,5 @@
+// Based on MAME sources by Jarek Burczynski, Hiromitsu Shioya
+
 #include "burnint.h"
 #include "msm5232.h"
 
@@ -84,7 +86,7 @@ static void gate_update()
 
 void MSM5232SetGateCallback(void (*callback)(INT32))
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_MSM5232Initted) bprintf(PRINT_ERROR, _T("MSM5232SetGateCallback called without init\n"));
 #endif
 
@@ -98,7 +100,7 @@ void MSM5232SetGateCallback(void (*callback)(INT32))
 
 void MSM5232Reset()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_MSM5232Initted) bprintf(PRINT_ERROR, _T("MSM5232Reset called without init\n"));
 #endif
 
@@ -132,7 +134,7 @@ void MSM5232Reset()
 
 void MSM5232SetCapacitors(double cap1, double cap2, double cap3, double cap4, double cap5, double cap6, double cap7, double cap8)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_MSM5232Initted) bprintf(PRINT_ERROR, _T("MSM5232SetCapacitors called without init\n"));
 #endif
 
@@ -293,9 +295,11 @@ void MSM5232Init(INT32 clock, INT32 bAdd)
 
 void MSM5232Exit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_MSM5232Initted) bprintf(PRINT_ERROR, _T("MSM5232Exit called without init\n"));
 #endif
+
+	if (!DebugSnd_MSM5232Initted) return;
 
 	for (INT32 j = 0; j < 11; j++) {
 		BurnFree(sound_buffer[j]);
@@ -309,7 +313,7 @@ void MSM5232Exit()
 
 void MSM5232SetRoute(double vol, INT32 route)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_MSM5232Initted) bprintf(PRINT_ERROR, _T("MSM5232SetRoute called without init\n"));
 #endif
 
@@ -318,7 +322,7 @@ void MSM5232SetRoute(double vol, INT32 route)
 
 void MSM5232Write(INT32 offset, UINT8 data)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_MSM5232Initted) bprintf(PRINT_ERROR, _T("MSM5232Write called without init\n"));
 #endif
 
@@ -410,9 +414,11 @@ void MSM5232Write(INT32 offset, UINT8 data)
 		case 0x0c:  /* group1 control */
 			m_control1 = data;
 
-			for (i=0; i<4; i++)
+			for (i=0; i<4; i++) {
+				if (data & 0x10 && m_voi[i].eg_sect == 1)
+					m_voi[i].eg_sect = 0;
 				m_voi[i].eg_arm = data&0x10;
-
+			}
 			m_EN_out16[0] = (data&1) ? ~0:0;
 			m_EN_out8[0]  = (data&2) ? ~0:0;
 			m_EN_out4[0]  = (data&4) ? ~0:0;
@@ -424,9 +430,11 @@ void MSM5232Write(INT32 offset, UINT8 data)
 			m_control2 = data;
 			gate_update();
 
-			for (i=0; i<4; i++)
+			for (i=0; i<4; i++) {
+				if (data & 0x10 && m_voi[i+4].eg_sect == 1)
+					m_voi[i+4].eg_sect = 0;
 				m_voi[i+4].eg_arm = data&0x10;
-
+			}
 			m_EN_out16[1] = (data&1) ? ~0:0;
 			m_EN_out8[1]  = (data&2) ? ~0:0;
 			m_EN_out4[1]  = (data&4) ? ~0:0;
@@ -633,7 +641,7 @@ static void TG_group_advance(INT32 groupidx)
 
 void MSM5232SetClock(INT32 clock)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_MSM5232Initted) bprintf(PRINT_ERROR, _T("MSM5232SetClock called without init\n"));
 #endif
 
@@ -658,7 +666,7 @@ void MSM5232SetClock(INT32 clock)
 
 void MSM5232Update(INT16 *buffer, INT32 samples)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_MSM5232Initted) bprintf(PRINT_ERROR, _T("MSM5232Update called without init\n"));
 #endif
 
@@ -760,22 +768,22 @@ void MSM5232Update(INT16 *buffer, INT32 samples)
 	
 			sample = BURN_SND_CLIP(sample);
 	
-			buffer[0] += BURN_SND_CLIP(buffer[0]+sample);
-			buffer[1] += BURN_SND_CLIP(buffer[1]+sample);
+			buffer[0] = BURN_SND_CLIP(buffer[0]+sample);
+			buffer[1] = BURN_SND_CLIP(buffer[1]+sample);
 			buffer += 2;
 		}
 	}
 }
 
-INT32 MSM5232Scan(INT32 nAction, INT32 *)
+void MSM5232Scan(INT32 nAction, INT32 *)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_MSM5232Initted) bprintf(PRINT_ERROR, _T("MSM5232Scan called without init\n"));
 #endif
 
 	struct BurnArea ba;
 
-	if (nAction & ACB_DRIVER_DATA) {		
+	if (nAction & ACB_DRIVER_DATA) {
 		memset(&ba, 0, sizeof(ba));
 
 		ba.Data	  = m_voi;
@@ -783,14 +791,11 @@ INT32 MSM5232Scan(INT32 nAction, INT32 *)
 		ba.szName = "Voice data";
 		BurnAcb(&ba);
 
-		SCAN_VAR(m_EN_out16[0]);
-		SCAN_VAR(m_EN_out16[1]);
-		SCAN_VAR(m_EN_out8[0]);
-		SCAN_VAR(m_EN_out8[1]);
-		SCAN_VAR(m_EN_out4[0]);
-		SCAN_VAR(m_EN_out4[1]);
-		SCAN_VAR(m_EN_out2[0]);
-		SCAN_VAR(m_EN_out2[1]);
+		SCAN_VAR(m_EN_out16);
+		SCAN_VAR(m_EN_out8);
+		SCAN_VAR(m_EN_out4);
+		SCAN_VAR(m_EN_out2);
+		SCAN_VAR(m_voi);
 		SCAN_VAR(m_noise_cnt);
 		SCAN_VAR(m_noise_step);
 		SCAN_VAR(m_noise_rng);
@@ -805,6 +810,4 @@ INT32 MSM5232Scan(INT32 nAction, INT32 *)
 	if (nAction & ACB_WRITE) {
 		init_tables();
 	}
-
-	return 0;
 }

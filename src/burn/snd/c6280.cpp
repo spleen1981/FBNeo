@@ -58,6 +58,7 @@
 #include "burnint.h"
 #include "h6280_intf.h"
 #include "c6280.h"
+#include <stddef.h>
 #include "math.h"
 
 typedef struct {
@@ -78,6 +79,7 @@ typedef struct {
 	UINT8 lfo_frequency;
 	UINT8 lfo_control;
 	t_channel channel[8];
+
 	INT16 volume_table[32];
 	UINT32 noise_freq_tab[32];
 	UINT32 wave_freq_tab[4096];
@@ -91,27 +93,9 @@ static INT32 c6280_previous_offset = 0;
 
 static c6280_t chip[1];
 
-INT32 c6280_sync_get_offset_end()
-{
-#if defined FBA_DEBUG
-	if (!DebugSnd_C6280Initted) bprintf(PRINT_ERROR, _T("c6280_sync_get_offset_end called without init\n"));
-#endif
-
-	// should we get these externally? The c6280 *should* only ever be used with
-	// the h6280 and should use the same clocks.
-	INT32 cycles = (INT32)((INT64)7159090 * nBurnCPUSpeedAdjust / (0x0100 * 60));
-	INT64 ret = (nBurnSoundLen * h6280TotalCycles()) / cycles;
-
-	if (ret >= nBurnSoundLen) {
-		ret = nBurnSoundLen;
-	}
-
-	return (INT32)ret;
-}
-
 void c6280_reset()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_C6280Initted) bprintf(PRINT_ERROR, _T("c6280_reset called without init\n"));
 #endif
 
@@ -173,7 +157,7 @@ void c6280_init(double clk, INT32 bAdd)
 	stream_buffer = (INT16*)BurnMalloc(nBurnSoundLen * 2 * sizeof(INT16));
 
 	if (stream_buffer == NULL) {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 		bprintf (0, _T("Stream buffer allocation failed!\n"));
 #endif
 		return;
@@ -182,7 +166,7 @@ void c6280_init(double clk, INT32 bAdd)
 
 void c6280_set_route(INT32 nIndex, double nVolume, INT32 nRouteDir)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_C6280Initted) bprintf(PRINT_ERROR, _T("c6280_set_route called without init\n"));
 #endif
 
@@ -194,7 +178,7 @@ void c6280_set_route(INT32 nIndex, double nVolume, INT32 nRouteDir)
 
 void c6280_exit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_C6280Initted) bprintf(PRINT_ERROR, _T("c6280_exit called without init\n"));
 #endif
 
@@ -205,26 +189,37 @@ void c6280_exit()
 	DebugSnd_C6280Initted = 0;
 }
 
+static INT32 c6280_sync_get_offset_end()
+{
+#if defined FBNEO_DEBUG
+	if (!DebugSnd_C6280Initted) bprintf(PRINT_ERROR, _T("c6280_sync_get_offset_end called without init\n"));
+#endif
+
+	// should we get these externally? The c6280 *should* only ever be used with
+	// the h6280 and should use the same clocks.
+	INT32 cycles = (INT32)((INT64)7159090 * nBurnCPUSpeedAdjust / (0x0100 * 60));
+	INT64 ret = (nBurnSoundLen * h6280TotalCycles()) / cycles;
+
+	if (ret >= nBurnSoundLen) {
+		ret = nBurnSoundLen;
+	}
+
+	return (INT32)ret;
+}
+
 static void c6280_stream_update()
 {
 	c6280_t *p = &chip[0];
 
-#if 1
 	INT32 end = c6280_sync_get_offset_end();
 	INT32 start = c6280_previous_offset;
 
 	INT32 samples = end - start;
-	if (samples<=0) return; // don't update if length is 0
+	if (samples <= 0) return; // don't update if length is 0
 
 	INT16 *pBuffer = stream_buffer + start * 2;
 
 	c6280_previous_offset = end;
-	/* if (end >= nBurnSoundLen) { // this is always true, so //'d -dink
-		c6280_previous_offset = 0; // c6280_previous_offset reset to 0 at the bottom of c6280_update();
-	} else {
-		c6280_previous_offset = end;
-	}*/
-#endif
 
 	static const INT32 scale_tab[] = {
 		0x00, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F,
@@ -241,7 +236,7 @@ static void c6280_stream_update()
 	rmal = scale_tab[rmal];
 
 	/* Clear buffer */
-	memset (pBuffer, 0, samples * sizeof(short) * 2); // 16-bit * 2 channels
+	memset (pBuffer, 0, samples * sizeof(INT16) * 2); // 16-bit * 2 channels
 
 	for(ch = 0; ch < 6; ch++)
 	{
@@ -274,7 +269,7 @@ static void c6280_stream_update()
 				UINT32 step = p->noise_freq_tab[(p->channel[ch].noise_control & 0x1F) ^ 0x1F];
 				for(i = 0; i < samples; i++, pBuf+=2)
 				{
-					static int data = 0;
+					static INT32 data = 0;
 					p->channel[ch].noise_counter += step;
 					if(p->channel[ch].noise_counter >= 0x800)
 					{
@@ -397,7 +392,7 @@ static void c6280_write_internal(INT32 offset, INT32 data)
 
 void c6280_update(INT16 *pBuffer, INT32 samples)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_C6280Initted) bprintf(PRINT_ERROR, _T("c6280_update called without init\n"));
 #endif
 
@@ -425,16 +420,17 @@ void c6280_update(INT16 *pBuffer, INT32 samples)
 		if ((p->output_dir[BURN_SND_C6280_ROUTE_2] & BURN_SND_ROUTE_RIGHT) == BURN_SND_ROUTE_RIGHT) {
 			nRightSample += (INT32)(stream_buffer[(i << 1) + 1] * p->gain[BURN_SND_C6280_ROUTE_2]);
 		}
-			
+
 		pBuffer[(i << 1) + 0] = BURN_SND_CLIP(nLeftSample);
 		pBuffer[(i << 1) + 1] = BURN_SND_CLIP(nRightSample);
 	}
+
 	c6280_previous_offset = 0;
 }
 
 UINT8 c6280_read()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_C6280Initted) bprintf(PRINT_ERROR, _T("c6280_read called without init\n"));
 #endif
 
@@ -443,7 +439,7 @@ UINT8 c6280_read()
 
 void c6280_write(UINT8 offset, UINT8 data)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_C6280Initted) bprintf(PRINT_ERROR, _T("c6280_write called without init\n"));
 #endif
 
@@ -451,27 +447,25 @@ void c6280_write(UINT8 offset, UINT8 data)
 	c6280_write_internal(offset, data);
 }
 
-INT32 c6280_scan(INT32 nAction, INT32 *pnMin)
+void c6280_scan(INT32 nAction, INT32 *pnMin)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_C6280Initted) bprintf(PRINT_ERROR, _T("c6280_scan called without init\n"));
 #endif
 
 	struct BurnArea ba;
 
 	if (pnMin) {
-		*pnMin =  0x029702;
+		*pnMin = 0x029702;
 	}
 
-	if (nAction & ACB_DRIVER_DATA) {	
+	if (nAction & ACB_DRIVER_DATA) {
 		c6280_t *p = &chip[0];
 
+		memset(&ba, 0, sizeof(ba));
 		ba.Data		= p;
-		ba.nLen		= sizeof(c6280_t);
-		ba.nAddress	= 0;
+		ba.nLen		= STRUCT_SIZE_HELPER(c6280_t, channel);
 		ba.szName	= "c6280 Chip #0";
 		BurnAcb(&ba);
 	}
-
-	return 0;
 }

@@ -3,10 +3,7 @@
 
 #include "tiles_generic.h"
 #include "z80_intf.h"
-#include "driver.h"
-extern "C" {
-	#include "ay8910.h"
-}
+#include "ay8910.h"
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;
@@ -28,8 +25,6 @@ static UINT8 *DrvSubRAM;
 static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
-static INT16 *pAY8910Buffer[6];
-
 static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
 static UINT8 DrvJoy3[8];
@@ -44,129 +39,133 @@ static INT32 vblank;
 static INT32 watchdog;
 static UINT8 ninjakun_ioctrl;
 
-static struct BurnInputInfo DrvInputList[] = {
-	{"P1 Coin"      , 	BIT_DIGITAL  , DrvJoy2 + 7,	"p1 coin"	},
-	{"P1 start"  ,    	BIT_DIGITAL  , DrvJoy1 + 5,	"p1 start"	},
-	{"P1 Left"      , 	BIT_DIGITAL  , DrvJoy1 + 0, 	"p1 left" 	},
-	{"P1 Right"     , 	BIT_DIGITAL  , DrvJoy1 + 1, 	"p1 right"	},
-	{"P1 Button 1"  , 	BIT_DIGITAL  , DrvJoy1 + 2,	"p1 fire 1"	},
+static struct BurnInputInfo PkunwarInputList[] = {
+	{"P1 Coin", 		BIT_DIGITAL,	DrvJoy2 + 7,	"p1 coin"	},
+	{"P1 Start",    	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 start"	},
+	{"P1 Left", 		BIT_DIGITAL,	DrvJoy1 + 0, 	"p1 left" 	},
+	{"P1 Right", 		BIT_DIGITAL,	DrvJoy1 + 1, 	"p1 right"	},
+	{"P1 Button 1", 	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 1"	},
 
-	{"P2 start"  ,    	BIT_DIGITAL  , DrvJoy2 + 5,	"p2 start"	},
-	{"P2 Left"      , 	BIT_DIGITAL  , DrvJoy2 + 0, 	"p2 left" 	},
-	{"P2 Right"     , 	BIT_DIGITAL  , DrvJoy2 + 1, 	"p2 right"	},
-	{"P2 Button 1"  , 	BIT_DIGITAL  , DrvJoy2 + 2,	"p2 fire 1"	},
+	{"P2 Start",    	BIT_DIGITAL,	DrvJoy2 + 5,	"p2 start"	},
+	{"P2 Left", 		BIT_DIGITAL,	DrvJoy2 + 0, 	"p2 left" 	},
+	{"P2 Right", 		BIT_DIGITAL,	DrvJoy2 + 1, 	"p2 right"	},
+	{"P2 Button 1", 	BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 1"	},
 
-	{"Service Mode",  	BIT_DIGITAL,   DrvJoy2 + 6,     "diag"		},
-
-	{"Reset",	  	BIT_DIGITAL  , &DrvReset,	"reset"		},
-	{"Dip 1",	  	BIT_DIPSWITCH, DrvDips + 0,	"dip"		},
+	{"Reset",	  		BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip 1",	  		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip 2",	  		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
-STDINPUTINFO(Drv)
+STDINPUTINFO(Pkunwar)
 
 static struct BurnInputInfo Nova2001InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 1,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 2"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Nova2001)
 
 static struct BurnInputInfo NinjakunInputList[] = {
-	{"P1 coin",		BIT_DIGITAL,	DrvJoy2 + 7,	"p1 coin"	},
+	{"P1 coin",			BIT_DIGITAL,	DrvJoy2 + 7,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Ninjakun)
 
 static struct BurnInputInfo Raiders5InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy2 + 7,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 start"},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy2 + 7,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 start"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 start"},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Raiders5)
 
-static struct BurnDIPInfo DrvDIPList[]=
+static struct BurnDIPInfo PkunwarDIPList[]=
 {
-	{0x0b, 0xff, 0xff, 0xfb, NULL 			},
+	{0x0a, 0xff, 0xff, 0xfb, NULL 			},
+	{0x0b, 0xff, 0xff, 0x40, NULL 			},
 
 	{0   , 0xfe, 0   , 4   , "Coinage"   	},
-	{0x0b, 0x01, 0x03, 0x00, "3 Coins 1 Credit"		},
-	{0x0b, 0x01, 0x03, 0x02, "2 Coins 1 Credit"		},
-	{0x0b, 0x01, 0x03, 0x03, "1 Coin 1 Credit"		},
-	{0x0b, 0x01, 0x03, 0x01, "1 Coin 2 Credits"		},
+	{0x0a, 0x01, 0x03, 0x00, "3 Coins 1 Credit"		},
+	{0x0a, 0x01, 0x03, 0x02, "2 Coins 1 Credit"		},
+	{0x0a, 0x01, 0x03, 0x03, "1 Coin 1 Credit"		},
+	{0x0a, 0x01, 0x03, 0x01, "1 Coin 2 Credits"		},
 
 	{0   , 0xfe, 0   , 2   , "Cabinet"		},
-	{0x0b, 0x01, 0x04, 0x00, "Upright"		},
-	{0x0b, 0x01, 0x04, 0x04, "Cocktail"		},
+	{0x0a, 0x01, 0x04, 0x00, "Upright"		},
+	{0x0a, 0x01, 0x04, 0x04, "Cocktail"		},
 
 	{0   , 0xfe, 0   , 2   , "Demo Sounds"		},
-	{0x0b, 0x01, 0x08, 0x00, "Off"			},
-	{0x0b, 0x01, 0x08, 0x08, "On"			},
+	{0x0a, 0x01, 0x08, 0x00, "Off"			},
+	{0x0a, 0x01, 0x08, 0x08, "On"			},
 
 	{0   , 0xfe, 0   , 4   , "Difficulty"		},
-	{0x0b, 0x01, 0x30, 0x10, "Easy"			},
-	{0x0b, 0x01, 0x30, 0x30, "Medium"		},
-	{0x0b, 0x01, 0x30, 0x20, "Hard"			},
-	{0x0b, 0x01, 0x30, 0x00, "Hardest"		},
+	{0x0a, 0x01, 0x30, 0x10, "Easy"			},
+	{0x0a, 0x01, 0x30, 0x30, "Medium"		},
+	{0x0a, 0x01, 0x30, 0x20, "Hard"			},
+	{0x0a, 0x01, 0x30, 0x00, "Hardest"		},
 
 	{0   , 0xfe, 0   , 2   , "Flip screen"		},
-	{0x0b, 0x01, 0x40, 0x40, "Off"			},
-	{0x0b, 0x01, 0x40, 0x00, "On"			},
+	{0x0a, 0x01, 0x40, 0x40, "Off"			},
+	{0x0a, 0x01, 0x40, 0x00, "On"			},
 
 	{0   , 0xfe, 0   , 2   , "Free Play"		},
-	{0x0b, 0x01, 0x80, 0x80, "Off"			},
-	{0x0b, 0x01, 0x80, 0x00, "On"			},
+	{0x0a, 0x01, 0x80, 0x80, "Off"			},
+	{0x0a, 0x01, 0x80, 0x00, "On"			},
+
+    {0   , 0xfe, 0   ,    2, "Service Mode"		},
+	{0x0b, 0x01, 0x40, 0x40, "Off"			},
+	{0x0b, 0x01, 0x40, 0x00, "On"			},
 };
 
-STDDIPINFO(Drv)
+STDDIPINFO(Pkunwar)
 
 static struct BurnDIPInfo Nova2001DIPList[]=
 {
@@ -448,7 +447,7 @@ static UINT8 __fastcall raiders5_sub_read(UINT16 address)
 	return 0;
 }
 
-UINT8 __fastcall raiders5_in(UINT16 /*address*/)
+static UINT8 __fastcall raiders5_in(UINT16 /*address*/)
 {
 	return 0; // NOP
 }
@@ -714,12 +713,12 @@ static void __fastcall ninjakun_sub_write(UINT16 address, UINT8 data)
 
 static UINT8 pkunwar_port_0(UINT32)
 {
-	return (DrvInputs[0] & 0x7) | (vblank ^= 0x80);
+	return (DrvInputs[0] & 0x7f) | (vblank ? 0 : 0x80);
 }
 
 static UINT8 pkunwar_port_1(UINT32)
 {
-	return DrvInputs[1];
+	return (DrvInputs[1] & ~0x40) | (DrvDips[1] & 0x40);
 }
 
 static UINT8 pkunwar_port_2(UINT32)
@@ -810,13 +809,6 @@ static INT32 MemIndex()
 	DrvPalRAM		= Next; Next += 0x000300;
 
 	RamEnd			= Next;
-
-	pAY8910Buffer[0]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[1]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[2]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[3]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[4]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[5]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
 
 	MemEnd			= Next;
 
@@ -917,11 +909,13 @@ static INT32 PkunwarInit()
 	ZetMapMemory(DrvMainROM + 0xe000,	0xe000, 0xffff, MAP_ROM);
 	ZetClose();
 
-	AY8910Init(0, 1500000, nBurnSoundRate, &pkunwar_port_0, &pkunwar_port_1, NULL, NULL);
-	AY8910Init(1, 1500000, nBurnSoundRate, &pkunwar_port_2, &pkunwar_port_3, NULL, NULL);
-
+	AY8910Init(0, 1500000, 0);
+	AY8910Init(1, 1500000, 1);
+	AY8910SetPorts(0, &pkunwar_port_0, &pkunwar_port_1, NULL, NULL);
+	AY8910SetPorts(1, &pkunwar_port_2, &pkunwar_port_3, NULL, NULL);
 	AY8910SetAllRoutes(0, 0.25, BURN_SND_ROUTE_BOTH);
 	AY8910SetAllRoutes(1, 0.25, BURN_SND_ROUTE_BOTH);
+	AY8910SetBuffered(ZetTotalCycles, 3000000);
 
 	GenericTilesInit();
 
@@ -971,11 +965,13 @@ static INT32 NovaInit()
 	ZetMapMemory(DrvMainRAM,		0xe000, 0xe7ff, MAP_RAM);
 	ZetClose();
 
-    AY8910Init(0, 2000000, nBurnSoundRate, NULL, NULL, &nova2001_scroll_x_w, &nova2001_scroll_y_w);
-    AY8910Init(1, 2000000, nBurnSoundRate, &nova2001_port_3, &nova2001_port_4, NULL, NULL);
-
+	AY8910Init(0, 2000000, 0);
+	AY8910Init(1, 2000000, 1);
+	AY8910SetPorts(0, NULL, NULL, &nova2001_scroll_x_w, &nova2001_scroll_y_w);
+	AY8910SetPorts(1, &nova2001_port_3, &nova2001_port_4, NULL, NULL);
 	AY8910SetAllRoutes(0, 0.20, BURN_SND_ROUTE_BOTH);
 	AY8910SetAllRoutes(1, 0.20, BURN_SND_ROUTE_BOTH);
+	AY8910SetBuffered(ZetTotalCycles, 3000000);
 
 	GenericTilesInit();
 
@@ -1056,11 +1052,13 @@ static INT32 NinjakunInit()
 	ZetMapMemory(DrvMainRAM + 0x0000,	0xe400, 0xe7ff, MAP_RAM);
 	ZetClose();
 
-	AY8910Init(0, 3000000, nBurnSoundRate, &nova2001_port_3, &nova2001_port_4, NULL, NULL);
-	AY8910Init(1, 3000000, nBurnSoundRate, NULL, NULL, &nova2001_scroll_x_w, &nova2001_scroll_y_w);
-
+	AY8910Init(0, 3000000, 0);
+	AY8910Init(1, 3000000, 1);
+	AY8910SetPorts(1, NULL, NULL, &nova2001_scroll_x_w, &nova2001_scroll_y_w);
+	AY8910SetPorts(0, &nova2001_port_3, &nova2001_port_4, NULL, NULL);
 	AY8910SetAllRoutes(0, 0.20, BURN_SND_ROUTE_BOTH);
 	AY8910SetAllRoutes(1, 0.20, BURN_SND_ROUTE_BOTH);
+	AY8910SetBuffered(ZetTotalCycles, 3000000);
 
 	GenericTilesInit();
 
@@ -1118,11 +1116,13 @@ static INT32 Raiders5Init()
 	ZetMapMemory(DrvMainRAM + 0x0000,	0xa000, 0xa7ff, MAP_RAM);
 	ZetClose();
 
-	AY8910Init(0, 1500000, nBurnSoundRate, &raiders5_port_0, &pkunwar_port_1, NULL, NULL);
-	AY8910Init(1, 1500000, nBurnSoundRate, &nova2001_port_3, &nova2001_port_4, NULL, NULL);
-
+	AY8910Init(0, 1500000, 0);
+	AY8910Init(1, 1500000, 1);
+	AY8910SetPorts(0, &raiders5_port_0, &pkunwar_port_1, NULL, NULL);
+	AY8910SetPorts(1, &nova2001_port_3, &nova2001_port_4, NULL, NULL);
 	AY8910SetAllRoutes(0, 0.25, BURN_SND_ROUTE_BOTH);
 	AY8910SetAllRoutes(1, 0.25, BURN_SND_ROUTE_BOTH);
+	AY8910SetBuffered(ZetTotalCycles, 3000000);
 
 	GenericTilesInit();
 
@@ -1489,21 +1489,25 @@ static INT32 NovaFrame()
 	}
 
 	vblank = 0;
+	ZetNewFrame();
+
 	INT32 nInterleave = 256;
-	INT32 nCyclesTotal = 3000000 / 60;
+	INT32 nCyclesTotal[1] = { 3000000 / 60 };
+	INT32 nCyclesDone[1]  = { 0 };
 
 	ZetOpen(0);
 	for (INT32 i = 0; i < nInterleave; i++) {
-		ZetRun(nCyclesTotal / nInterleave);
+		CPU_RUN(0, Zet);
+
 		if (i == 240) {
-			ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 			vblank = 0x80;
 		}
 	}
 	ZetClose();
 
 	if (pBurnSoundOut) {
-		AY8910Render(&pAY8910Buffer[0], pBurnSoundOut, nBurnSoundLen, 0);
+		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	if (pBurnDraw) {
@@ -1527,14 +1531,25 @@ static INT32 PkunwarFrame()
 	}
 
 	vblank = 0;
+	ZetNewFrame();
+
+	INT32 nInterleave = 256;
+	INT32 nCyclesTotal[1] = { 3000000 / 60 };
+	INT32 nCyclesDone[1]  = { 0 };
 
 	ZetOpen(0);
-	ZetRun(3000000 / 60);
-	ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
+	for (INT32 i = 0; i < nInterleave; i++) {
+		CPU_RUN(0, Zet);
+
+		if (i == 240) {
+			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
+			vblank = 1;
+		}
+	}
 	ZetClose();
 
 	if (pBurnSoundOut) {
-		AY8910Render(&pAY8910Buffer[0], pBurnSoundOut, nBurnSoundLen, 0);
+		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	if (pBurnDraw) {
@@ -1559,13 +1574,15 @@ static INT32 Raiders5Frame()
 	}
 
 	vblank = 0;
+	ZetNewFrame();
 
 	INT32 nInterleave = 2000; // needs high interleave
-	INT32 nCyclesTotal = 3000000 / 60;
+	INT32 nCyclesTotal[2] = { 3000000 / 60, 3000000 / 60 };
+	INT32 nCyclesDone[2]  = { 0, 0 };
 
 	for (INT32 i = 0; i < nInterleave; i++) {
 		ZetOpen(0);
-		ZetRun(nCyclesTotal / nInterleave);
+		CPU_RUN(0, Zet);
 
 		if (i == 1880) {
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
@@ -1574,7 +1591,8 @@ static INT32 Raiders5Frame()
 		ZetClose();
 
 		ZetOpen(1);
-		ZetRun(nCyclesTotal / nInterleave);
+		CPU_RUN(1, Zet);
+
 		if (i%(nInterleave/4) == (nInterleave/4)-10) {
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		}
@@ -1582,7 +1600,7 @@ static INT32 Raiders5Frame()
 	}
 
 	if (pBurnSoundOut) {
-		AY8910Render(&pAY8910Buffer[0], pBurnSoundOut, nBurnSoundLen, 0);
+		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	if (pBurnDraw) {
@@ -1607,33 +1625,37 @@ static INT32 NinjakunFrame()
 	}
 
 	vblank = 0;
+	ZetNewFrame();
+
 	INT32 nInterleave = 256;
-	INT32 nCyclesTotal = 3000000 / 60;
+	INT32 nCyclesTotal[2] = { 3000000 / 60, 3000000 / 60 };
+	INT32 nCyclesDone[2]  = { 0, 0 };
 
 	for (INT32 i = 0; i < nInterleave; i++) {
 		ZetOpen(0);
-		ZetRun(nCyclesTotal / nInterleave);
-		INT32 sync_cycles = ZetTotalCycles();
-		if (i == 250) {
+		CPU_RUN(0, Zet);
+
+		if (i == 224) {
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 			vblank = 1;
 		}
 		ZetClose();
 
 		ZetOpen(1);
-		ZetRun(sync_cycles - ZetTotalCycles());
-		if (i == 58 || i == 122 || i == 190 || i == 250) {
+		CPU_RUN(1, Zet);
+
+		if (i == 32 || i == 96 || i == 160 || i == 224) {
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		}
 		ZetClose();
+
+		if (i == 224 && pBurnDraw) {
+			NinjakunDraw();
+		}
 	}
 
 	if (pBurnSoundOut) {
-		AY8910Render(&pAY8910Buffer[0], pBurnSoundOut, nBurnSoundLen, 0);
-	}
-
-	if (pBurnDraw) {
-		NinjakunDraw();
+		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	return 0;
@@ -1692,7 +1714,7 @@ struct BurnDriver BurnDrvpkunwar = {
 	"Penguin-Kun Wars (US)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
-	NULL, pkunwarRomInfo, pkunwarRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	NULL, pkunwarRomInfo, pkunwarRomName, NULL, NULL, NULL, NULL, PkunwarInputInfo, PkunwarDIPInfo,
 	PkunwarInit, DrvExit, PkunwarFrame, PkunwarDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 192, 4, 3
 };
@@ -1721,7 +1743,7 @@ struct BurnDriver BurnDrvpkunwarj = {
 	"Penguin-Kun Wars (Japan)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
-	NULL, pkunwarjRomInfo, pkunwarjRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	NULL, pkunwarjRomInfo, pkunwarjRomName, NULL, NULL, NULL, NULL, PkunwarInputInfo, PkunwarDIPInfo,
 	PkunwarInit, DrvExit, PkunwarFrame, PkunwarDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 192, 4, 3
 };
@@ -1749,8 +1771,8 @@ struct BurnDriver BurnDrvNova2001 = {
 	"nova2001", NULL, NULL, NULL, "1983",
 	"Nova 2001 (Japan)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, nova2001RomInfo, nova2001RomName, NULL, NULL, Nova2001InputInfo, Nova2001DIPInfo,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	NULL, nova2001RomInfo, nova2001RomName, NULL, NULL, NULL, NULL, Nova2001InputInfo, Nova2001DIPInfo,
 	NovaInit, DrvExit, NovaFrame, NovaDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 192, 4, 3
 };
@@ -1761,8 +1783,8 @@ struct BurnDriver BurnDrvNova2001 = {
 static struct BurnRomInfo nova2001hRomDesc[] = {
 	// roms 1 and 2 had green stickers, but looks like an unofficial mod, bytes have been added in empty space to fix game checksum after mods were made to code.
 	// one of the mods fixes the game resetting if the coin input is held down for too short / long of a period, the purpose of the other is unknown.
-	{ "1(green).6c",	0x2000, 0x1a8731b3, 1 | BRF_PRG | BRF_ESS}, //  0 Z80 Code
-	{ "2(green).6d",	0x2000, 0xbc4e442b, 1 | BRF_PRG | BRF_ESS}, //  1
+	{ "1,green.6c",		0x2000, 0x1a8731b3, 1 | BRF_PRG | BRF_ESS}, //  0 Z80 Code
+	{ "2,green.6d",		0x2000, 0xbc4e442b, 1 | BRF_PRG | BRF_ESS}, //  1
 	{ "3.6f",			0x2000, 0xb2849038, 1 | BRF_PRG | BRF_ESS}, //  2
 	{ "4.6g",	        0x1000, 0x6b5bb12d, 1 | BRF_PRG | BRF_ESS}, //  3
 
@@ -1781,8 +1803,8 @@ struct BurnDriver BurnDrvNova2001h = {
 	"nova2001h", "nova2001", NULL, NULL, "1983",
 	"Nova 2001 (Japan, hack?)\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, nova2001hRomInfo, nova2001hRomName, NULL, NULL, Nova2001InputInfo, Nova2001DIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	NULL, nova2001hRomInfo, nova2001hRomName, NULL, NULL, NULL, NULL, Nova2001InputInfo, Nova2001DIPInfo,
 	NovaInit, DrvExit, NovaFrame, NovaDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 192, 4, 3
 };
@@ -1811,8 +1833,8 @@ struct BurnDriver BurnDrvNova2001u = {
 	"nova2001u", "nova2001", NULL, NULL, "1983",
 	"Nova 2001 (US)\0", NULL, "UPL (Universal license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, nova2001uRomInfo, nova2001uRomName, NULL, NULL, Nova2001InputInfo, Nova2001DIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	NULL, nova2001uRomInfo, nova2001uRomName, NULL, NULL, NULL, NULL, Nova2001InputInfo, Nova2001DIPInfo,
 	NovaInit, DrvExit, NovaFrame, NovaDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 192, 4, 3
 };
@@ -1847,7 +1869,7 @@ struct BurnDriver BurnDrvNinjakun = {
 	"Ninjakun Majou no Bouken\0", NULL, "UPL (Taito license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
-	NULL, ninjakunRomInfo, ninjakunRomName, NULL, NULL, NinjakunInputInfo, NinjakunDIPInfo,
+	NULL, ninjakunRomInfo, ninjakunRomName, NULL, NULL, NULL, NULL, NinjakunInputInfo, NinjakunDIPInfo,
 	NinjakunInit, DrvExit, NinjakunFrame, NinjakunDraw, DrvScan, &DrvRecalc, 0x300,
 	256, 192, 4, 3
 };
@@ -1873,8 +1895,8 @@ struct BurnDriver BurnDrvRaiders5 = {
 	"raiders5", NULL, NULL, NULL, "1985",
 	"Raiders5\0", NULL, "UPL", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, raiders5RomInfo, raiders5RomName, NULL, NULL, Raiders5InputInfo, Raiders5DIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, raiders5RomInfo, raiders5RomName, NULL, NULL, NULL, NULL, Raiders5InputInfo, Raiders5DIPInfo,
 	Raiders5Init, DrvExit, Raiders5Frame, Raiders5Draw, NULL, &DrvRecalc, 0x300,
 	256, 192, 4, 3
 };
@@ -1900,8 +1922,8 @@ struct BurnDriver BurnDrvRaidrs5t = {
 	"raiders5t", "raiders5", NULL, NULL, "1985",
 	"Raiders5 (Japan)\0", NULL, "UPL (Taito license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_FLIPPED | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, raiders5tRomInfo, raiders5tRomName, NULL, NULL, Raiders5InputInfo, Raiders5DIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_FLIPPED | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, raiders5tRomInfo, raiders5tRomName, NULL, NULL, NULL, NULL, Raiders5InputInfo, Raiders5DIPInfo,
 	Raiders5Init, DrvExit, Raiders5Frame, Raiders5Draw, NULL, &DrvRecalc, 0x300,
 	256, 192, 4, 3
 };

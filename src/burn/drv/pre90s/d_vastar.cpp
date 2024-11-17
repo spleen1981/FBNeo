@@ -3,10 +3,7 @@
 
 #include "tiles_generic.h"
 #include "z80_intf.h"
-#include "driver.h"
-extern "C" {
 #include "ay8910.h"
-}
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;
@@ -26,8 +23,6 @@ static UINT8 *DrvVidRAM2;
 
 static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
-
-static INT16 *pAY8910Buffer[3];
 
 static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
@@ -320,11 +315,7 @@ static void __fastcall vastar_main_write_port(UINT16 port, UINT8 data)
 		case 0x02:
 			sound_reset = ~data & 0x01;
 			if (sound_reset) {
-				ZetClose();
-				ZetOpen(1);
-				ZetReset();
-				ZetClose();
-				ZetOpen(0);
+				ZetReset(1);
 			}
 		return;
 	}
@@ -431,10 +422,6 @@ static INT32 MemIndex()
 	DrvVidRAM2		= Next; Next += 0x000c00;
 
 	RamEnd			= Next;
-
-	pAY8910Buffer[0]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[1]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[2]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
 
 	MemEnd			= Next;
 
@@ -615,7 +602,8 @@ static INT32 DrvInit(INT32 load_type)
 	ZetSetInHandler(vastar_sound_read_port);
 	ZetClose();
 
-	AY8910Init(0, 1536000, nBurnSoundRate, &vastar_ay8910_read_A, &vastar_ay8910_read_B, NULL, NULL);
+	AY8910Init(0, 1536000, 0);
+	AY8910SetPorts(0, &vastar_ay8910_read_A, &vastar_ay8910_read_B, NULL, NULL);
 	AY8910SetAllRoutes(0, 0.15, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
@@ -846,7 +834,7 @@ static INT32 DrvFrame()
 	}
 
 	if (pBurnSoundOut) {
-		AY8910Render(&pAY8910Buffer[0], pBurnSoundOut, nBurnSoundLen, 0);
+		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	if (pBurnDraw) {
@@ -856,7 +844,7 @@ static INT32 DrvFrame()
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -864,7 +852,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		*pnMin = 0x029702;
 	}
 
-	if (nAction & ACB_VOLATILE) {		
+	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
 
 		ba.Data	  = AllRam;
@@ -929,7 +917,7 @@ struct BurnDriver BurnDrvVastar = {
 	"Vastar (set 1)\0", NULL, "Sesame Japan", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
-	NULL, vastarRomInfo, vastarRomName, NULL, NULL, VastarInputInfo, VastarDIPInfo,
+	NULL, vastarRomInfo, vastarRomName, NULL, NULL, NULL, NULL, VastarInputInfo, VastarDIPInfo,
 	vastarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 256, 3, 4
 };
@@ -974,7 +962,7 @@ struct BurnDriver BurnDrvVastar2 = {
 	"Vastar (set 2)\0", NULL, "Sesame Japan", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
-	NULL, vastar2RomInfo, vastar2RomName, NULL, NULL, VastarInputInfo, VastarDIPInfo,
+	NULL, vastar2RomInfo, vastar2RomName, NULL, NULL, NULL, NULL, VastarInputInfo, VastarDIPInfo,
 	vastarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 256, 3, 4
 };
@@ -1020,7 +1008,7 @@ struct BurnDriver BurnDrvVastar3 = {
 	"Vastar (set 3)\0", NULL, "Sesame Japan", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
-	NULL, vastar3RomInfo, vastar3RomName, NULL, NULL, VastarInputInfo, VastarDIPInfo,
+	NULL, vastar3RomInfo, vastar3RomName, NULL, NULL, NULL, NULL, VastarInputInfo, VastarDIPInfo,
 	vastar3Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 256, 3, 4
 };
@@ -1065,7 +1053,7 @@ struct BurnDriver BurnDrvVastar4 = {
 	"Vastar (set 4)\0", NULL, "Sesame Japan", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
-	NULL, vastar4RomInfo, vastar4RomName, NULL, NULL, VastarInputInfo, Vastar4DIPInfo,
+	NULL, vastar4RomInfo, vastar4RomName, NULL, NULL, NULL, NULL, VastarInputInfo, Vastar4DIPInfo,
 	vastarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 256, 3, 4
 };
@@ -1110,7 +1098,7 @@ struct BurnDriver BurnDrvPprobe = {
 	"Planet Probe (prototype?)\0", NULL, "Crux / Kyugo?", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, pprobeRomInfo, pprobeRomName, NULL, NULL, PprobeInputInfo, PprobeDIPInfo,
+	NULL, pprobeRomInfo, pprobeRomName, NULL, NULL, NULL, NULL, PprobeInputInfo, PprobeDIPInfo,
 	pprobeInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 256, 3, 4
 };

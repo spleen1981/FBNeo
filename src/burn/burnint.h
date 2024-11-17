@@ -1,3 +1,6 @@
+#ifndef _BURNINT_H
+#define _BURNINT_H
+
 // Burn - Arcade emulator library - internal code
 
 // Standard headers
@@ -7,17 +10,11 @@
 #include <string.h>
 #include <assert.h>
 
-#if defined(__LIBRETRO__) && defined(_MSC_VER)
-#include <tchar.h>
-#else
 #include "tchar.h"
-#endif
-
-#ifdef __LIBRETRO_OPTIMIZATIONS__
-#include "burn_libretro_opts.h"
-#endif
 
 #include "burn.h"
+#include "burn_sound.h"
+#include "joyprocess.h"
 
 #ifdef LSB_FIRST
 typedef union
@@ -59,6 +56,8 @@ struct BurnDriver {
 	INT32 (*GetZipName)(char** pszName, UINT32 i);				// Function to get possible zip names
 	INT32 (*GetRomInfo)(struct BurnRomInfo* pri, UINT32 i);		// Function to get the length and crc of each rom
 	INT32 (*GetRomName)(char** pszName, UINT32 i, INT32 nAka);	// Function to get the possible names for each rom
+	INT32 (*GetHDDInfo)(struct BurnHDDInfo* pri, UINT32 i);			// Function to get hdd info
+	INT32 (*GetHDDName)(char** pszName, UINT32 i, INT32 nAka);		// Function to get the possible names for each hdd
 	INT32 (*GetSampleInfo)(struct BurnSampleInfo* pri, UINT32 i);		// Function to get the sample flags
 	INT32 (*GetSampleName)(char** pszName, UINT32 i, INT32 nAka);	// Function to get the possible names for each sample
 	INT32 (*GetInputInfo)(struct BurnInputInfo* pii, UINT32 i);	// Function to get the input info for the game
@@ -78,8 +77,21 @@ struct BurnDriver {
 
 // burn.cpp
 INT32 BurnSetRefreshRate(double dRefreshRate);
-INT32 BurnByteswap(UINT8* pm,INT32 nLen);
+INT32 BurnByteswap(UINT8* pMem, INT32 nLen);
+void BurnNibbleExpand(UINT8 *source, UINT8 *dst, INT32 length, INT32 swap, UINT8 nxor);
 INT32 BurnClearScreen();
+
+
+// recording / netgame helper
+#ifndef __LIBRETRO__
+INT32 is_netgame_or_recording();
+#else
+inline static INT32 is_netgame_or_recording()
+{
+	return kNetGame;
+}
+#endif
+
 
 // load.cpp
 
@@ -128,6 +140,7 @@ inline static void PutPix(UINT8* pPix, UINT32 c)
 // Setting up cpus for cheats
 
 struct cpu_core_config {
+	char cpu_name[32];
 	void (*open)(INT32);		// cpu open
 	void (*close)();		// cpu close
 
@@ -135,7 +148,10 @@ struct cpu_core_config {
 	void (*write)(UINT32, UINT8);	// write
 	INT32 (*active)();		// active cpu
 	INT32 (*totalcycles)();		// total cycles
-	void (*newframe)();		// new frame
+	void (*newframe)();		// new frame'
+	INT32 (*idle)(INT32);	// idle cycles
+
+	void (*irq)(INT32, INT32, INT32);	// set irq, cpu, line, status
 
 	INT32 (*run)(INT32);		// execute cycles
 	void (*runend)();		// end run
@@ -149,9 +165,11 @@ void CpuCheatRegister(INT32 type, cpu_core_config *config);
 
 // burn_memory.cpp
 void BurnInitMemoryManager();
-UINT8 *BurnMalloc(INT32 size);
-void _BurnFree(void *ptr);
-#define BurnFree(x)		_BurnFree(x); x = NULL;
+UINT8 *_BurnMalloc(INT32 size, char *file, INT32 line); // internal use only :)
+UINT8 *BurnRealloc(void *ptr, INT32 size);
+void _BurnFree(void *ptr); // internal use only :)
+#define BurnFree(x) do {_BurnFree(x); x = NULL; } while (0)
+#define BurnMalloc(x) _BurnMalloc(x, __FILE__, __LINE__)
 void BurnExitMemoryManager();
 
 // ---------------------------------------------------------------------------
@@ -162,6 +180,9 @@ void BurnExitMemoryManager();
 #define BURN_SND_ROUTE_LEFT			1
 #define BURN_SND_ROUTE_RIGHT		2
 #define BURN_SND_ROUTE_BOTH			(BURN_SND_ROUTE_LEFT | BURN_SND_ROUTE_RIGHT)
+// the following 2 are only supported in ay8910 and flt_rc
+#define BURN_SND_ROUTE_PANLEFT      4
+#define BURN_SND_ROUTE_PANRIGHT     8
 
 // ---------------------------------------------------------------------------
 // Debug Tracker
@@ -169,6 +190,7 @@ void BurnExitMemoryManager();
 extern UINT8 Debug_BurnTransferInitted;
 extern UINT8 Debug_BurnGunInitted;
 extern UINT8 Debug_BurnLedInitted;
+extern UINT8 Debug_BurnShiftInitted;
 extern UINT8 Debug_HiscoreInitted;
 extern UINT8 Debug_GenericTilesInitted;
 
@@ -196,6 +218,7 @@ extern UINT8 DebugSnd_YM2612Initted;
 extern UINT8 DebugSnd_YM3526Initted;
 extern UINT8 DebugSnd_YM3812Initted;
 extern UINT8 DebugSnd_YMF278BInitted;
+extern UINT8 DebugSnd_YMF262Initted;
 extern UINT8 DebugSnd_C6280Initted;
 extern UINT8 DebugSnd_DACInitted;
 extern UINT8 DebugSnd_ES5506Initted;
@@ -241,3 +264,5 @@ extern UINT8 DebugCPU_I8039Initted;
 extern UINT8 DebugCPU_SH2Initted;
 
 void DebugTrackerExit();
+
+#endif

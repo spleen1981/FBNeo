@@ -14,7 +14,7 @@
 static UINT8* pSShot = NULL;
 static UINT8* pConvertedImage = NULL;
 static png_bytep* pSShotImageRows = NULL;
-static FILE* ff;
+static FILE* ff = NULL;
 
 INT32 MakeScreenShot()
 {
@@ -26,7 +26,7 @@ INT32 MakeScreenShot()
     tm* tmTime;
     png_time_struct png_time_now;
 
-    char szSShotName[MAX_PATH];
+	char szSShotName[MAX_PATH] = { 0, };
     INT32 w, h;
 
     // do our PNG construct things
@@ -54,8 +54,10 @@ INT32 MakeScreenShot()
 			pSShotImageRows = NULL;
 		}
 
-		fclose(ff);
-        remove(szSShotName);
+		if (ff) {
+			fclose(ff);
+			remove(szSShotName);
+		}
 
 		return SSHOT_LIBPNG_ERROR;
     }

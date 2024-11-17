@@ -3,7 +3,6 @@
  * Licensed under BSD 3-clause.
  */
 #include <iostream>
-#include <cstdint>
 #include "mips3.h"
 #include "mipsdef.h"
 #include "mips3_memory.h"
@@ -24,6 +23,11 @@ const char *mips3::cop0_reg_names[32] = {
 void mips3::tlb_init()
 {
     m_tlb = new tlb_entry[m_tlb_entries];
+}
+
+void mips3::tlb_exit()
+{
+    delete[] m_tlb;
 }
 
 void mips3::tlb_flush()

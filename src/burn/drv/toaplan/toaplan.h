@@ -105,17 +105,21 @@ INT32 ToaScanBCU2(INT32 nAction, INT32* pnMin);
 inline static void ToaGP9001SetRAMPointer(UINT32 wordValue, const INT32 nController = 0)
 {
 	extern UINT8* GP9001Pointer[2];
+	extern UINT32 GP9001PointerCfg[2];
 
 	wordValue &= 0x1FFF;
+	GP9001PointerCfg[nController] = wordValue; // for reconfig @ state load
 	GP9001Pointer[nController] = GP9001RAM[nController] + (wordValue << 1);
 }
 
 inline static void ToaGP9001WriteRAM(const UINT16 wordValue, const INT32 nController)
 {
 	extern UINT8* GP9001Pointer[2];
+	extern UINT32 GP9001PointerCfg[2];
 
 	*((UINT16*)(GP9001Pointer[nController])) = BURN_ENDIAN_SWAP_INT16(wordValue);
 	GP9001Pointer[nController] += 2;
+	GP9001PointerCfg[nController] += 1; // +1 because (wordValue << 1) in ToaGP9001SetRAMPointer()
 }
 
 inline static UINT16 ToaGP9001ReadRAM_Hi(const INT32 nController)
@@ -185,6 +189,32 @@ inline static UINT16 ToaScanlineRegister()
 	return nFlags | nCurrentScanline;
 }
 
+inline static UINT16 ToaScanlineRegisterLoctest() // bgaregga location test
+{
+	static INT32 nPreviousScanline;
+	UINT16 nFlags = 0xFE00;
+	INT32 nCurrentScanline = (SekCurrentScanline() + 15) % 262;
+	if (nCurrentScanline > 0xff) nCurrentScanline = 0xff;
+
+#if 0
+	// None of the games actually use this
+	INT32 nCurrentBeamPosition = SekTotalCycles() % nToaCyclesScanline;
+	if (nCurrentBeamPosition < 64) {
+		nFlags &= ~0x4000;
+	}
+#endif
+
+	if (nCurrentScanline != nPreviousScanline) {
+		nPreviousScanline = nCurrentScanline;
+		nFlags &= ~0x8000;
+
+//		bprintf(PRINT_NORMAL, _T("  - line %3i, PC 0x%08X\n"), nCurrentScanline, SekGetPC(-1));
+
+	}
+
+	return nFlags | nCurrentScanline;
+}
+
 // toa_extratext.cpp
 extern UINT8* ExtraTROM;
 extern UINT8* ExtraTRAM;
@@ -218,6 +248,8 @@ extern UINT16 BCU2Reg[8];
 
 extern INT32 nBCU2TileXOffset;
 extern INT32 nBCU2TileYOffset;
+extern INT32 nFCU2SpriteXOffset;
+extern INT32 nFCU2SpriteYOffset;
 
 INT32 ToaPal2Update();
 INT32 ToaInitBCU2();

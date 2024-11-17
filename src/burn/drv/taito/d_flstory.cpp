@@ -1,14 +1,14 @@
+// FB Alpha Fairyland story driver module
+// Based on MAME driver by Nicola Salmoria
+
 // Todo: victnine
 
 #include "tiles_generic.h"
 #include "taito_m68705.h"
 #include "z80_intf.h"
-#include "driver.h"
 #include "dac.h"
 #include "msm5232.h"
-extern "C" {
 #include "ay8910.h"
-}
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;
@@ -28,8 +28,6 @@ static UINT8 *DrvMcuRAM;
 
 static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
-
-static INT16 *pAY8910Buffer[3];
 
 static UINT8 snd_data;
 static UINT8 snd_flag;
@@ -57,15 +55,6 @@ static INT32 m_vol_ctrl[16];
 static UINT8 m_snd_ctrl0;
 static UINT8 m_snd_ctrl1;
 static UINT8 m_snd_ctrl2;
-static UINT8 m_mcu_cmd;
-static UINT8 m_mcu_counter;
-static UINT8 m_mcu_b4_cmd;
-static UINT8 m_mcu_param;
-static UINT8 m_mcu_b2_res;
-static UINT8 m_mcu_b1_res;
-static UINT8 m_mcu_bb_res;
-static UINT8 m_mcu_b5_res;
-static UINT8 m_mcu_b6_res;
 
 static struct BurnInputInfo FlstoryInputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 coin"	},
@@ -156,40 +145,40 @@ static struct BurnDIPInfo RumbaDIPList[]=
 	{0x13, 0x01, 0x80, 0x80, "Cocktail"		},
 
 	{0   , 0xfe, 0   ,    16, "Coin A"		},
-	{0x14, 0x01, 0x0f, 0x0f, "9 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x0e, "8 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x0d, "7 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x0c, "6 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x0b, "5 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x0a, "4 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x09, "3 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x08, "2 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x00, "1 Coin  1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x01, "1 Coin  2 Credits"		},
-	{0x14, 0x01, 0x0f, 0x02, "1 Coin  3 Credits"		},
-	{0x14, 0x01, 0x0f, 0x03, "1 Coin  4 Credits"		},
-	{0x14, 0x01, 0x0f, 0x04, "1 Coin  5 Credits"		},
-	{0x14, 0x01, 0x0f, 0x05, "1 Coin  6 Credits"		},
-	{0x14, 0x01, 0x0f, 0x06, "1 Coin  7 Credits"		},
-	{0x14, 0x01, 0x0f, 0x07, "1 Coin  8 Credits"		},
+	{0x14, 0x01, 0x0f, 0x0f, "9 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x0e, "8 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x0d, "7 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x0c, "6 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x0b, "5 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x0a, "4 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x09, "3 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x08, "2 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x00, "1 Coin  1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x01, "1 Coin  2 Credits"	},
+	{0x14, 0x01, 0x0f, 0x02, "1 Coin  3 Credits"	},
+	{0x14, 0x01, 0x0f, 0x03, "1 Coin  4 Credits"	},
+	{0x14, 0x01, 0x0f, 0x04, "1 Coin  5 Credits"	},
+	{0x14, 0x01, 0x0f, 0x05, "1 Coin  6 Credits"	},
+	{0x14, 0x01, 0x0f, 0x06, "1 Coin  7 Credits"	},
+	{0x14, 0x01, 0x0f, 0x07, "1 Coin  8 Credits"	},
 
 	{0   , 0xfe, 0   ,    16, "Coin B"		},
-	{0x14, 0x01, 0xf0, 0xf0, "9 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0xe0, "8 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0xd0, "7 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0xc0, "6 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0xa0, "4 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0x90, "3 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0x80, "2 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0x00, "1 Coin  1 Credits"		},
-	{0x14, 0x01, 0xf0, 0x10, "1 Coin  2 Credits"		},
-	{0x14, 0x01, 0xf0, 0x20, "1 Coin  3 Credits"		},
-	{0x14, 0x01, 0xf0, 0x30, "1 Coin  4 Credits"		},
-	{0x14, 0x01, 0xf0, 0x40, "1 Coin  5 Credits"		},
-	{0x14, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"		},
-	{0x14, 0x01, 0xf0, 0x60, "1 Coin  7 Credits"		},
-	{0x14, 0x01, 0xf0, 0x70, "1 Coin  8 Credits"		},
+	{0x14, 0x01, 0xf0, 0xf0, "9 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0xe0, "8 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0xd0, "7 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0xc0, "6 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0xb0, "5 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0xa0, "4 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0x90, "3 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0x80, "2 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0x00, "1 Coin  1 Credit"		},
+	{0x14, 0x01, 0xf0, 0x10, "1 Coin  2 Credits"	},
+	{0x14, 0x01, 0xf0, 0x20, "1 Coin  3 Credits"	},
+	{0x14, 0x01, 0xf0, 0x30, "1 Coin  4 Credits"	},
+	{0x14, 0x01, 0xf0, 0x40, "1 Coin  5 Credits"	},
+	{0x14, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"	},
+	{0x14, 0x01, 0xf0, 0x60, "1 Coin  7 Credits"	},
+	{0x14, 0x01, 0xf0, 0x70, "1 Coin  8 Credits"	},
 
 	{0   , 0xfe, 0   ,    2, "Training Stage"		},
 	{0x15, 0x01, 0x01, 0x00, "Off"		},
@@ -203,7 +192,7 @@ static struct BurnDIPInfo RumbaDIPList[]=
 	{0x15, 0x01, 0x04, 0x04, "Japanese"		},
 	{0x15, 0x01, 0x04, 0x00, "English"		},
 
-	{0   , 0xfe, 0   ,    2, "Attract Sound"		},
+	{0   , 0xfe, 0   ,    2, "Attract Sound on Title Screen"		}, /* At title sequence only - NOT Demo Sounds */
 	{0x15, 0x01, 0x08, 0x08, "Off"		},
 	{0x15, 0x01, 0x08, 0x00, "On"		},
 
@@ -212,7 +201,7 @@ static struct BurnDIPInfo RumbaDIPList[]=
 	{0x15, 0x01, 0x10, 0x00, "On"		},
 
 	{0   , 0xfe, 0   ,    2, "Copyright String"		},
-	{0x15, 0x01, 0x20, 0x20, "Taito Corp. MCMLXXXIV"		},
+	{0x15, 0x01, 0x20, 0x20, "Taito Corp. MCMLXXXIV"	},
 	{0x15, 0x01, 0x20, 0x00, "Taito Corporation"		},
 
 	{0   , 0xfe, 0   ,    2, "Infinite Lives"		},
@@ -248,7 +237,7 @@ static struct BurnDIPInfo FlstoryDIPList[]=
 	{0x0f, 0x01, 0x18, 0x18, "5"				},
 	{0x0f, 0x01, 0x18, 0x00, "Infinite (Cheat)"		},
 
-	{0   , 0xfe, 0   ,    2, "Debug Mode"			},
+	{0   , 0xfe, 0   ,    2, "Debug Mode"			}, // Check code at 0x0679
 	{0x0f, 0x01, 0x20, 0x20, "Off"				},
 	{0x0f, 0x01, 0x20, 0x00, "On"				},
 
@@ -261,40 +250,40 @@ static struct BurnDIPInfo FlstoryDIPList[]=
 	{0x0f, 0x01, 0x80, 0x00, "Cocktail"			},
 
 	{0   , 0xfe, 0   ,   16, "Coin A"			},
-	{0x10, 0x01, 0x0f, 0x0f, "9 Coins 1 Credits"		},
-	{0x10, 0x01, 0x0f, 0x0e, "8 Coins 1 Credits"		},
-	{0x10, 0x01, 0x0f, 0x0d, "7 Coins 1 Credits"		},
-	{0x10, 0x01, 0x0f, 0x0c, "6 Coins 1 Credits"		},
-	{0x10, 0x01, 0x0f, 0x0b, "5 Coins 1 Credits"		},
-	{0x10, 0x01, 0x0f, 0x0a, "4 Coins 1 Credits"		},
-	{0x10, 0x01, 0x0f, 0x09, "3 Coins 1 Credits"		},
-	{0x10, 0x01, 0x0f, 0x08, "2 Coins 1 Credits"		},
-	{0x10, 0x01, 0x0f, 0x00, "1 Coin  1 Credits"		},
-	{0x10, 0x01, 0x0f, 0x01, "1 Coin  2 Credits"		},
-	{0x10, 0x01, 0x0f, 0x02, "1 Coin  3 Credits"		},
-	{0x10, 0x01, 0x0f, 0x03, "1 Coin  4 Credits"		},
-	{0x10, 0x01, 0x0f, 0x04, "1 Coin  5 Credits"		},
-	{0x10, 0x01, 0x0f, 0x05, "1 Coin  6 Credits"		},
-	{0x10, 0x01, 0x0f, 0x06, "1 Coin  7 Credits"		},
-	{0x10, 0x01, 0x0f, 0x07, "1 Coin  8 Credits"		},
+	{0x10, 0x01, 0x0f, 0x0f, "9 Coins 1 Credit"		},
+	{0x10, 0x01, 0x0f, 0x0e, "8 Coins 1 Credit"		},
+	{0x10, 0x01, 0x0f, 0x0d, "7 Coins 1 Credit"		},
+	{0x10, 0x01, 0x0f, 0x0c, "6 Coins 1 Credit"		},
+	{0x10, 0x01, 0x0f, 0x0b, "5 Coins 1 Credit"		},
+	{0x10, 0x01, 0x0f, 0x0a, "4 Coins 1 Credit"		},
+	{0x10, 0x01, 0x0f, 0x09, "3 Coins 1 Credit"		},
+	{0x10, 0x01, 0x0f, 0x08, "2 Coins 1 Credit"		},
+	{0x10, 0x01, 0x0f, 0x00, "1 Coin  1 Credit"		},
+	{0x10, 0x01, 0x0f, 0x01, "1 Coin  2 Credits"	},
+	{0x10, 0x01, 0x0f, 0x02, "1 Coin  3 Credits"	},
+	{0x10, 0x01, 0x0f, 0x03, "1 Coin  4 Credits"	},
+	{0x10, 0x01, 0x0f, 0x04, "1 Coin  5 Credits"	},
+	{0x10, 0x01, 0x0f, 0x05, "1 Coin  6 Credits"	},
+	{0x10, 0x01, 0x0f, 0x06, "1 Coin  7 Credits"	},
+	{0x10, 0x01, 0x0f, 0x07, "1 Coin  8 Credits"	},
 
 	{0   , 0xfe, 0   ,   16, "Coin B"			},
-	{0x10, 0x01, 0xf0, 0xf0, "9 Coins 1 Credits"		},
-	{0x10, 0x01, 0xf0, 0xe0, "8 Coins 1 Credits"		},
-	{0x10, 0x01, 0xf0, 0xd0, "7 Coins 1 Credits"		},
-	{0x10, 0x01, 0xf0, 0xc0, "6 Coins 1 Credits"		},
-	{0x10, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"		},
-	{0x10, 0x01, 0xf0, 0xa0, "4 Coins 1 Credits"		},
-	{0x10, 0x01, 0xf0, 0x90, "3 Coins 1 Credits"		},
-	{0x10, 0x01, 0xf0, 0x80, "2 Coins 1 Credits"		},
-	{0x10, 0x01, 0xf0, 0x00, "1 Coin  1 Credits"		},
-	{0x10, 0x01, 0xf0, 0x10, "1 Coin  2 Credits"		},
-	{0x10, 0x01, 0xf0, 0x20, "1 Coin  3 Credits"		},
-	{0x10, 0x01, 0xf0, 0x30, "1 Coin  4 Credits"		},
-	{0x10, 0x01, 0xf0, 0x40, "1 Coin  5 Credits"		},
-	{0x10, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"		},
-	{0x10, 0x01, 0xf0, 0x60, "1 Coin  7 Credits"		},
-	{0x10, 0x01, 0xf0, 0x70, "1 Coin  8 Credits"		},
+	{0x10, 0x01, 0xf0, 0xf0, "9 Coins 1 Credit"		},
+	{0x10, 0x01, 0xf0, 0xe0, "8 Coins 1 Credit"		},
+	{0x10, 0x01, 0xf0, 0xd0, "7 Coins 1 Credit"		},
+	{0x10, 0x01, 0xf0, 0xc0, "6 Coins 1 Credit"		},
+	{0x10, 0x01, 0xf0, 0xb0, "5 Coins 1 Credit"		},
+	{0x10, 0x01, 0xf0, 0xa0, "4 Coins 1 Credit"		},
+	{0x10, 0x01, 0xf0, 0x90, "3 Coins 1 Credit"		},
+	{0x10, 0x01, 0xf0, 0x80, "2 Coins 1 Credit"		},
+	{0x10, 0x01, 0xf0, 0x00, "1 Coin  1 Credit"		},
+	{0x10, 0x01, 0xf0, 0x10, "1 Coin  2 Credits"	},
+	{0x10, 0x01, 0xf0, 0x20, "1 Coin  3 Credits"	},
+	{0x10, 0x01, 0xf0, 0x30, "1 Coin  4 Credits"	},
+	{0x10, 0x01, 0xf0, 0x40, "1 Coin  5 Credits"	},
+	{0x10, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"	},
+	{0x10, 0x01, 0xf0, 0x60, "1 Coin  7 Credits"	},
+	{0x10, 0x01, 0xf0, 0x70, "1 Coin  8 Credits"	},
 
 	{0   , 0xfe, 0   ,    2, "Allow Continue"		},
 	{0x11, 0x01, 0x08, 0x00, "No"				},
@@ -304,9 +293,9 @@ static struct BurnDIPInfo FlstoryDIPList[]=
 	{0x11, 0x01, 0x10, 0x00, "Off"				},
 	{0x11, 0x01, 0x10, 0x10, "On"				},
 
-	{0   , 0xfe, 0   ,    2, "Leave Off"			},
-	{0x11, 0x01, 0x20, 0x20, "Off"				},
-	{0x11, 0x01, 0x20, 0x00, "On"				},
+	{0   , 0xfe, 0   ,    2, "Leave Off"			}, // Check code at 0x7859
+	{0x11, 0x01, 0x20, 0x20, "Off"				},	   // must be OFF or the game will
+	{0x11, 0x01, 0x20, 0x00, "On"				},	   // hang after the game is over !
 
 	{0   , 0xfe, 0   ,    2, "Invulnerability (Cheat)"	},
 	{0x11, 0x01, 0x40, 0x40, "Off"				},
@@ -383,40 +372,40 @@ static struct BurnDIPInfo Onna34roDIPList[]=
 	{0x13, 0x01, 0x80, 0x00, "Cocktail"		},
 
 	{0   , 0xfe, 0   ,    16, "Coin A"		},
-	{0x14, 0x01, 0x0f, 0x0f, "9 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x0e, "8 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x0d, "7 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x0c, "6 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x0b, "5 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x0a, "4 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x09, "3 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x08, "2 Coins 1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x00, "1 Coin  1 Credits"		},
-	{0x14, 0x01, 0x0f, 0x01, "1 Coin  2 Credits"		},
-	{0x14, 0x01, 0x0f, 0x02, "1 Coin  3 Credits"		},
-	{0x14, 0x01, 0x0f, 0x03, "1 Coin  4 Credits"		},
-	{0x14, 0x01, 0x0f, 0x04, "1 Coin  5 Credits"		},
-	{0x14, 0x01, 0x0f, 0x05, "1 Coin  6 Credits"		},
-	{0x14, 0x01, 0x0f, 0x06, "1 Coin  7 Credits"		},
-	{0x14, 0x01, 0x0f, 0x07, "1 Coin  8 Credits"		},
+	{0x14, 0x01, 0x0f, 0x0f, "9 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x0e, "8 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x0d, "7 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x0c, "6 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x0b, "5 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x0a, "4 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x09, "3 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x08, "2 Coins 1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x00, "1 Coin  1 Credit"		},
+	{0x14, 0x01, 0x0f, 0x01, "1 Coin  2 Credits"	},
+	{0x14, 0x01, 0x0f, 0x02, "1 Coin  3 Credits"	},
+	{0x14, 0x01, 0x0f, 0x03, "1 Coin  4 Credits"	},
+	{0x14, 0x01, 0x0f, 0x04, "1 Coin  5 Credits"	},
+	{0x14, 0x01, 0x0f, 0x05, "1 Coin  6 Credits"	},
+	{0x14, 0x01, 0x0f, 0x06, "1 Coin  7 Credits"	},
+	{0x14, 0x01, 0x0f, 0x07, "1 Coin  8 Credits"	},
 
 	{0   , 0xfe, 0   ,    16, "Coin B"		},
-	{0x14, 0x01, 0xf0, 0xf0, "9 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0xe0, "8 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0xd0, "7 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0xc0, "6 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0xa0, "4 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0x90, "3 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0x80, "2 Coins 1 Credits"		},
-	{0x14, 0x01, 0xf0, 0x00, "1 Coin  1 Credits"		},
-	{0x14, 0x01, 0xf0, 0x10, "1 Coin  2 Credits"		},
-	{0x14, 0x01, 0xf0, 0x20, "1 Coin  3 Credits"		},
-	{0x14, 0x01, 0xf0, 0x30, "1 Coin  4 Credits"		},
-	{0x14, 0x01, 0xf0, 0x40, "1 Coin  5 Credits"		},
-	{0x14, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"		},
-	{0x14, 0x01, 0xf0, 0x60, "1 Coin  7 Credits"		},
-	{0x14, 0x01, 0xf0, 0x70, "1 Coin  8 Credits"		},
+	{0x14, 0x01, 0xf0, 0xf0, "9 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0xe0, "8 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0xd0, "7 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0xc0, "6 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0xb0, "5 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0xa0, "4 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0x90, "3 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0x80, "2 Coins 1 Credit"		},
+	{0x14, 0x01, 0xf0, 0x00, "1 Coin  1 Credit"		},
+	{0x14, 0x01, 0xf0, 0x10, "1 Coin  2 Credits"	},
+	{0x14, 0x01, 0xf0, 0x20, "1 Coin  3 Credits"	},
+	{0x14, 0x01, 0xf0, 0x30, "1 Coin  4 Credits"	},
+	{0x14, 0x01, 0xf0, 0x40, "1 Coin  5 Credits"	},
+	{0x14, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"	},
+	{0x14, 0x01, 0xf0, 0x60, "1 Coin  7 Credits"	},
+	{0x14, 0x01, 0xf0, 0x70, "1 Coin  8 Credits"	},
 
 	{0   , 0xfe, 0   ,    2, "Invulnerability (Cheat)"		},
 	{0x15, 0x01, 0x01, 0x00, "Off"		},
@@ -505,18 +494,18 @@ static struct BurnDIPInfo VictnineDIPList[]=
 	{0   , 0xfe, 0   ,    3, "Cabinet"		},
 	{0x1b, 0x01, 0xa0, 0x20, "Upright"		},
 	{0x1b, 0x01, 0xa0, 0xa0, "Cocktail"		},
-	{0x1b, 0x01, 0xa0, 0x00, "MA / MB"		},
-
+	{0x1b, 0x01, 0xa0, 0x00, "MA / MB"		}, // This is a small single player sit-down cab called 'Taito MA' or 'Taito MB', with only 1 joystick and 3 buttons.
+											   // Only Player 1 can play and only buttons A, C and c are active.
 	{0   , 0xfe, 0   ,   16, "Coin A"		},
-	{0x1c, 0x01, 0x0f, 0x0f, "9 Coins 1 Credits"	},
-	{0x1c, 0x01, 0x0f, 0x0e, "8 Coins 1 Credits"	},
-	{0x1c, 0x01, 0x0f, 0x0d, "7 Coins 1 Credits"	},
-	{0x1c, 0x01, 0x0f, 0x0c, "6 Coins 1 Credits"	},
-	{0x1c, 0x01, 0x0f, 0x0b, "5 Coins 1 Credits"	},
-	{0x1c, 0x01, 0x0f, 0x0a, "4 Coins 1 Credits"	},
-	{0x1c, 0x01, 0x0f, 0x09, "3 Coins 1 Credits"	},
-	{0x1c, 0x01, 0x0f, 0x08, "2 Coins 1 Credits"	},
-	{0x1c, 0x01, 0x0f, 0x00, "1 Coin  1 Credits"	},
+	{0x1c, 0x01, 0x0f, 0x0f, "9 Coins 1 Credit"		},
+	{0x1c, 0x01, 0x0f, 0x0e, "8 Coins 1 Credit"		},
+	{0x1c, 0x01, 0x0f, 0x0d, "7 Coins 1 Credit"		},
+	{0x1c, 0x01, 0x0f, 0x0c, "6 Coins 1 Credit"		},
+	{0x1c, 0x01, 0x0f, 0x0b, "5 Coins 1 Credit"		},
+	{0x1c, 0x01, 0x0f, 0x0a, "4 Coins 1 Credit"		},
+	{0x1c, 0x01, 0x0f, 0x09, "3 Coins 1 Credit"		},
+	{0x1c, 0x01, 0x0f, 0x08, "2 Coins 1 Credit"		},
+	{0x1c, 0x01, 0x0f, 0x00, "1 Coin  1 Credit"		},
 	{0x1c, 0x01, 0x0f, 0x01, "1 Coin  2 Credits"	},
 	{0x1c, 0x01, 0x0f, 0x02, "1 Coin  3 Credits"	},
 	{0x1c, 0x01, 0x0f, 0x03, "1 Coin  4 Credits"	},
@@ -526,15 +515,15 @@ static struct BurnDIPInfo VictnineDIPList[]=
 	{0x1c, 0x01, 0x0f, 0x07, "1 Coin  8 Credits"	},
 
 	{0   , 0xfe, 0   ,   16, "Coin B"		},
-	{0x1c, 0x01, 0xf0, 0xf0, "9 Coins 1 Credits"	},
-	{0x1c, 0x01, 0xf0, 0xe0, "8 Coins 1 Credits"	},
-	{0x1c, 0x01, 0xf0, 0xd0, "7 Coins 1 Credits"	},
-	{0x1c, 0x01, 0xf0, 0xc0, "6 Coins 1 Credits"	},
-	{0x1c, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"	},
-	{0x1c, 0x01, 0xf0, 0xa0, "4 Coins 1 Credits"	},
-	{0x1c, 0x01, 0xf0, 0x90, "3 Coins 1 Credits"	},
-	{0x1c, 0x01, 0xf0, 0x80, "2 Coins 1 Credits"	},
-	{0x1c, 0x01, 0xf0, 0x00, "1 Coin  1 Credits"	},
+	{0x1c, 0x01, 0xf0, 0xf0, "9 Coins 1 Credit"		},
+	{0x1c, 0x01, 0xf0, 0xe0, "8 Coins 1 Credit"		},
+	{0x1c, 0x01, 0xf0, 0xd0, "7 Coins 1 Credit"		},
+	{0x1c, 0x01, 0xf0, 0xc0, "6 Coins 1 Credit"		},
+	{0x1c, 0x01, 0xf0, 0xb0, "5 Coins 1 Credit"		},
+	{0x1c, 0x01, 0xf0, 0xa0, "4 Coins 1 Credit"		},
+	{0x1c, 0x01, 0xf0, 0x90, "3 Coins 1 Credit"		},
+	{0x1c, 0x01, 0xf0, 0x80, "2 Coins 1 Credit"		},
+	{0x1c, 0x01, 0xf0, 0x00, "1 Coin  1 Credit"		},
 	{0x1c, 0x01, 0xf0, 0x10, "1 Coin  2 Credits"	},
 	{0x1c, 0x01, 0xf0, 0x20, "1 Coin  3 Credits"	},
 	{0x1c, 0x01, 0xf0, 0x30, "1 Coin  4 Credits"	},
@@ -551,13 +540,13 @@ static struct BurnDIPInfo VictnineDIPList[]=
 	{0x1d, 0x01, 0x20, 0x00, "Off"			},
 	{0x1d, 0x01, 0x20, 0x20, "On"			},
 
-	{0   , 0xfe, 0   ,    2, "No hit"		},
+	{0   , 0xfe, 0   ,    2, "No Hit"		}, // Allows playing the game regardless of the score until the 9th innings.
 	{0x1d, 0x01, 0x40, 0x40, "Off"			},
 	{0x1d, 0x01, 0x40, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Coinage"		},
-	{0x1d, 0x01, 0x80, 0x80, "A and B"		},
-	{0x1d, 0x01, 0x80, 0x00, "A only"		},
+	{0x1d, 0x01, 0x80, 0x80, "2-Way"		},
+	{0x1d, 0x01, 0x80, 0x00, "1-Way"		},
 };
 
 STDDIPINFO(Victnine)
@@ -583,117 +572,6 @@ static void gfxctrl_write(INT32 data)
 	if (data & 4) *flipscreen = (~data & 0x01);
 }
 
-static UINT8 rumba_mcu_read()
-{
-	if((m_mcu_cmd & 0xf0) == 0x00) // end packet cmd, value returned is meaningless (probably used for main <-> mcu comms syncronization)
-		return 0;
-
-	switch(m_mcu_cmd)
-	{
-		case 0x73: return 0xa4; //initial MCU check
-		case 0x33: return m_mcu_b2_res; //0xb2 result
-		case 0x31: return m_mcu_b1_res; //0xb1 result
-
-		case 0x35: m_mcu_b5_res = 1; m_mcu_b6_res = 1; return 0;
-		case 0x36: return m_mcu_b4_cmd; //0xb4 command, extra protection for lives (first play only), otherwise game gives one extra life at start-up (!)
-		case 0x37: return m_mcu_b5_res; //0xb4 / 0xb5 / 0xb6 result y value
-		case 0x38: return m_mcu_b6_res; //x value
-
-		case 0x3b: return m_mcu_bb_res; //0xbb result
-		case 0x40: return 0;
-		case 0x41: return 0;
-		case 0x42:
-		{
-			return 0;
-		}
-	}
-
-	return 0;
-}
-
-static void rumba_mcu_write(UINT8 data)
-{
-	if(m_mcu_param)
-	{
-		m_mcu_param = 0; // clear param
-
-		switch(m_mcu_cmd)
-		{
-			case 0xb0: // counter, used by command 0xb1 (and something else?
-			{
-				m_mcu_counter = data;
-				break;
-			}
-			case 0xb1: // player death sequence, controls X position
-			{
-				m_mcu_b1_res = data;
-
-				/* TODO: this is pretty hard to simulate ... */
-				if(m_mcu_counter >= 0x10)
-					m_mcu_b1_res++; // left
-				else if(m_mcu_counter >= 0x08)
-					m_mcu_b1_res--; // right
-				else
-					m_mcu_b1_res++; // left again
-
-				break;
-			}
-			case 0xb2: // player sprite hook-up param when he throws the wheel
-			{
-				switch(data)
-				{
-					case 1: m_mcu_b2_res = 0xaa; break; //left
-					case 2: m_mcu_b2_res = 0xaa; break; //right
-					case 4: m_mcu_b2_res = 0xab; break; //down
-					case 8: m_mcu_b2_res = 0xa9; break; //up
-				}
-				break;
-			}
-			case 0xbb: // when you start a level, lives
-			{
-				m_mcu_bb_res = data;
-				break;
-			}
-			case 0xb4: // when the bird touches the top / bottom / left / right of the screen, for correct repositioning
-			{
-				m_mcu_b4_cmd = data;
-				break;
-			}
-			case 0xb5: // bird X coord
-			{
-				m_mcu_b5_res = data;
-
-				if(m_mcu_b4_cmd == 3) // from right to left
-					m_mcu_b5_res = 0x0d;
-
-				if(m_mcu_b4_cmd == 2) // from left to right
-					m_mcu_b5_res = 0xe4;
-
-				break;
-			}
-			case 0xb6: // bird Y coord
-			{
-				m_mcu_b6_res = data;
-
-				if(m_mcu_b4_cmd == 1) // from up to down
-					m_mcu_b6_res = 0x04;
-
-				if(m_mcu_b4_cmd == 4) // from down to up
-					m_mcu_b6_res = 0xdc;
-
-				break;
-			}
-		}
-
-		return;
-	}
-
-	m_mcu_cmd = data;
-
-	if(((data & 0xf0) == 0xb0 || (data & 0xf0) == 0xc0) && m_mcu_param == 0)
-		m_mcu_param = 1;
-}
-
 static void onna34ro_mcu_write(INT32 data)
 {
 	INT32 score_adr = (ZetReadByte(0xe29e) << 8) + ZetReadByte(0xe29d);
@@ -710,16 +588,13 @@ static void onna34ro_mcu_write(INT32 data)
 			from_mcu = 0x6a;
 			break;
 
-		case 0x40: if(score_adr >= 0xe000 && score_adr < 0xe800)
-			from_mcu = ZetReadByte(score_adr);
+		case 0x40: if(score_adr >= 0xe000 && score_adr < 0xe800) from_mcu = ZetReadByte(score_adr);
 			break;
 
-		case 0x41: if(score_adr >= 0xe000 && score_adr < 0xe800)
-			from_mcu = ZetReadByte(score_adr+1);
+		case 0x41: if(score_adr >= 0xe000 && score_adr < 0xe800) from_mcu = ZetReadByte(score_adr+1);
 			break;
 
-		case 0x42: if(score_adr >= 0xe000 && score_adr < 0xe800)
-			from_mcu = ZetReadByte(score_adr+2) & 0x0f;
+		case 0x42: if(score_adr >= 0xe000 && score_adr < 0xe800) from_mcu = ZetReadByte(score_adr+2) & 0x0f;
 			break;
 
 		default:
@@ -791,7 +666,7 @@ static void victnine_mcu_write(INT32 data)
 	}
 }
 
-void __fastcall flstory_main_write(UINT16 address, UINT8 data)
+static void __fastcall flstory_main_write(UINT16 address, UINT8 data)
 {
 	if ((address & 0xff00) == 0xdc00) {
 		DrvSprRAM[address & 0xff] = data;
@@ -806,11 +681,9 @@ void __fastcall flstory_main_write(UINT16 address, UINT8 data)
 	switch (address)
 	{
 		case 0xd000:
-			if (select_game == 3) {
-				rumba_mcu_write(data);
-			} else if (select_game == 2) {
+			if (select_game == 2) {
 				victnine_mcu_write(data);
-			} else if (select_game == 1) {
+			} else if (select_game == 10) {
 				onna34ro_mcu_write(data);
 			} else {
 				standard_taito_mcu_write(data);
@@ -822,11 +695,7 @@ void __fastcall flstory_main_write(UINT16 address, UINT8 data)
 			*soundlatch = data;
 
 			if (nmi_enable) {
-				ZetClose();
-				ZetOpen(1);
-				ZetNmi();
-				ZetClose();
-				ZetOpen(0);
+				ZetNmi(1);
 			} else {
 				pending_nmi = 1;
 			}
@@ -839,16 +708,15 @@ void __fastcall flstory_main_write(UINT16 address, UINT8 data)
 	}
 }
 
-UINT8 __fastcall flstory_main_read(UINT16 address)
+static UINT8 __fastcall flstory_main_read(UINT16 address)
 {
 	switch (address)
 	{
 		case 0xd000:
-			if (select_game == 1) {
-				return from_mcu; }
-			else if (select_game == 3) {
-				return rumba_mcu_read();
-			} else if (select_game == 2) {
+			if (select_game == 10) {
+				return from_mcu;
+			}
+			if (select_game == 2) {
 				return from_mcu - ZetReadByte(0xe685);
 			} else {
 				return standard_taito_mcu_read();
@@ -882,7 +750,7 @@ UINT8 __fastcall flstory_main_read(UINT16 address)
 			if (mcu_sent) res |= 0x02;
 
 			if (select_game == 2) res |= DrvInputs[3];
-			if (select_game == 3 || select_game == 1) res = 0x03; // rumba and onna always returns 3
+			if (select_game == 10) res = 0x03; // onna always returns 3
 			return res;
 		}
 
@@ -951,7 +819,7 @@ static void AY_ayportA_write(UINT32 /*addr*/, UINT32 data)
 	AY8910SetAllRoutes(0, m_vol_ctrl[(m_snd_ctrl2 >> 4) & 15] / ((select_game == 3) ? 1600.0 : 2000.0), BURN_SND_ROUTE_BOTH);
 }
 
-void __fastcall flstory_sound_write(UINT16 address, UINT8 data)
+static void __fastcall flstory_sound_write(UINT16 address, UINT8 data)
 {
 	switch (address)
 	{
@@ -1009,7 +877,7 @@ void __fastcall flstory_sound_write(UINT16 address, UINT8 data)
 	}
 }
 
-UINT8 __fastcall flstory_sound_read(UINT16 address)
+static UINT8 __fastcall flstory_sound_read(UINT16 address)
 {
 	if (address == 0xd800) {
 		return *soundlatch;
@@ -1018,23 +886,13 @@ UINT8 __fastcall flstory_sound_read(UINT16 address)
 	return 0;
 }
 
-static INT32 flstoryDACSync()
-{
-	return (INT32)(float)(nBurnSoundLen * (ZetTotalCycles() / (4000000.000 / (nBurnFPS / 100.000))));
-}
-
 static INT32 DrvDoReset()
 {
 	DrvReset = 0;
 	memset (AllRam, 0, RamEnd - AllRam);
 
-	ZetOpen(0);
-	ZetReset();
-	ZetClose();
-
-	ZetOpen(1);
-	ZetReset();
-	ZetClose();
+	ZetReset(0);
+	ZetReset(1);
 
 	m67805_taito_reset();
 
@@ -1050,17 +908,6 @@ static INT32 DrvDoReset()
 	pending_nmi = 0;
 	char_bank = 0;
 	mcu_select = 0;
-
-	// below for Rumba mcu sim
-	m_mcu_cmd = 0;
-	m_mcu_counter = 0;
-	m_mcu_b4_cmd = 0;
-	m_mcu_param = 0;
-	m_mcu_b2_res = 0;
-	m_mcu_b1_res = 0;
-	m_mcu_bb_res = 0;
-	m_mcu_b5_res = 0;
-	m_mcu_b6_res = 0;
 
 	return 0;
 }
@@ -1093,10 +940,6 @@ static INT32 MemIndex()
 	flipscreen		= Next; Next += 0x000001;
 
 	RamEnd			= Next;
-
-	pAY8910Buffer[0]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[1]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[2]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
 
 	MemEnd			= Next;
 
@@ -1171,6 +1014,8 @@ static INT32 DrvInit()
 			if (BurnLoadRom(DrvGfxROM0 + 0x14000, 13, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM0 + 0x18000, 14, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM0 + 0x1c000, 15, 1)) return 1;
+			
+			if (BurnLoadRom(DrvMcuROM  + 0x00000, 16, 1)) return 1;
 		} else if (select_game == 2) {
 			if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
 			if (BurnLoadRom(DrvZ80ROM0 + 0x02000,  1, 1)) return 1;
@@ -1202,11 +1047,32 @@ static INT32 DrvInit()
 			if (BurnLoadRom(DrvZ80ROM1 + 0x00000,  3, 1)) return 1;
 			if (BurnLoadRom(DrvZ80ROM1 + 0x02000,  4, 1)) return 1;
 			if (BurnLoadRom(DrvZ80ROM1 + 0x04000,  5, 1)) return 1;
-			// 6 == undumped mcu
+			
+			if (BurnLoadRom(DrvMcuROM  + 0x00000,  6, 1)) return 1;
+
 			if (BurnLoadRom(DrvGfxROM0 + 0x02000,  7, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM0 + 0x00000,  8, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM0 + 0x06000,  9, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM0 + 0x04000, 10, 1)) return 1;
+		} else if (select_game == 10) {
+			if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
+			if (BurnLoadRom(DrvZ80ROM0 + 0x04000,  1, 1)) return 1;
+			if (BurnLoadRom(DrvZ80ROM0 + 0x08000,  2, 1)) return 1;
+
+			if (BurnLoadRom(DrvZ80ROM1 + 0x00000,  3, 1)) return 1;
+			if (BurnLoadRom(DrvZ80ROM1 + 0x02000,  4, 1)) return 1;
+			if (BurnLoadRom(DrvZ80ROM1 + 0x04000,  5, 1)) return 1;
+			if (BurnLoadRom(DrvZ80ROM1 + 0x06000,  6, 1)) return 1;
+			if (BurnLoadRom(DrvZ80ROM1 + 0x08000,  7, 1)) return 1;
+
+			if (BurnLoadRom(DrvGfxROM0 + 0x00000,  8, 1)) return 1;
+			if (BurnLoadRom(DrvGfxROM0 + 0x04000,  9, 1)) return 1;
+			if (BurnLoadRom(DrvGfxROM0 + 0x08000, 10, 1)) return 1;
+			if (BurnLoadRom(DrvGfxROM0 + 0x0c000, 11, 1)) return 1;
+			if (BurnLoadRom(DrvGfxROM0 + 0x10000, 12, 1)) return 1;
+			if (BurnLoadRom(DrvGfxROM0 + 0x14000, 13, 1)) return 1;
+			if (BurnLoadRom(DrvGfxROM0 + 0x18000, 14, 1)) return 1;
+			if (BurnLoadRom(DrvGfxROM0 + 0x1c000, 15, 1)) return 1;
 		}
 
 		DrvGfxDecode();
@@ -1250,7 +1116,8 @@ static INT32 DrvInit()
 
 	m67805_taito_init(DrvMcuROM, DrvMcuRAM, &standard_m68705_interface);
 
-	AY8910Init(0, 2000000, nBurnSoundRate, NULL, NULL, AY_ayportA_write, NULL);
+	AY8910Init(0, 2000000, 0);
+	AY8910SetPorts(0, NULL, NULL, AY_ayportA_write, NULL);
 	AY8910SetAllRoutes(0, 0.05, BURN_SND_ROUTE_BOTH);
 	if (select_game == 3) {
 		AY8910SetAllRoutes(0, 0.10, BURN_SND_ROUTE_BOTH);
@@ -1267,7 +1134,7 @@ static INT32 DrvInit()
 	MSM5232SetRoute(1.00, BURN_SND_MSM5232_ROUTE_6);
 	MSM5232SetRoute(1.00, BURN_SND_MSM5232_ROUTE_7);
 
-	DACInit(0, 0, 1, flstoryDACSync);
+	DACInit(0, 0, 1, ZetTotalCycles, 4000000);
 	DACSetRoute(0, 0.20, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
@@ -1308,16 +1175,6 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(m_snd_ctrl0);
 		SCAN_VAR(m_snd_ctrl1);
 		SCAN_VAR(m_snd_ctrl2);
-		// below for Rumba mcu sim
-		SCAN_VAR(m_mcu_cmd);
-		SCAN_VAR(m_mcu_counter);
-		SCAN_VAR(m_mcu_b4_cmd);
-		SCAN_VAR(m_mcu_param);
-		SCAN_VAR(m_mcu_b2_res);
-		SCAN_VAR(m_mcu_b1_res);
-		SCAN_VAR(m_mcu_bb_res);
-		SCAN_VAR(m_mcu_b5_res);
-		SCAN_VAR(m_mcu_b6_res);
 
 		DrvRecalc = 1;
 	}
@@ -1344,7 +1201,7 @@ static INT32 DrvExit()
 static void draw_background_layer(INT32 type, INT32 priority)
 {                    //fg      bg      fg      bg
 	INT32 masks[4] = { 0x3fff, 0xc000, 0x8000, 0x7fff };
-	INT32 mask = masks[type];
+	INT32 mask = masks[type & 0x03];
 
 	for (INT32 offs = 0; offs < 32 * 32; offs++)
 	{
@@ -1614,7 +1471,7 @@ static INT32 DrvFrame()
 		if (i == (nInterleave / 1) - 1) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		ZetClose();
 
-		if (select_game == 0) {
+		if (select_game == 0 || select_game == 1 || select_game == 3) {
 			m6805Open(0);
 			nSegment = nCyclesTotal[2] / nInterleave;
 			nCyclesDone[2] += m6805Run(nSegment);
@@ -1624,11 +1481,11 @@ static INT32 DrvFrame()
 
 	ZetOpen(1);
 
-	if (pBurnSoundOut) {
-		AY8910Render(&pAY8910Buffer[0], pBurnSoundOut, nBurnSoundLen, 0);
-		MSM5232Update(pBurnSoundOut, nBurnSoundLen);
-		DACUpdate(pBurnSoundOut, nBurnSoundLen);
-	}
+    if (pBurnSoundOut) {
+        AY8910Render(pBurnSoundOut, nBurnSoundLen);
+        MSM5232Update(pBurnSoundOut, nBurnSoundLen);
+        DACUpdate(pBurnSoundOut, nBurnSoundLen);
+    }
 
 	ZetClose();
 
@@ -1659,7 +1516,7 @@ static struct BurnRomInfo flstoryRomDesc[] = {
 	{ "vid-a45.09",		0x4000, 0x8336be58, 3 | BRF_GRA }, // 11
 	{ "vid-a45.21",		0x4000, 0xfc382bd1, 3 | BRF_GRA }, // 12
 
-	{ "a45.mcu",		0x0800, 0x5378253c, 4 | BRF_PRG | BRF_ESS }, // 13 mcu
+	{ "a45-20.mcu",		0x0800, 0x7d2cdd9b, 4 | BRF_PRG | BRF_ESS }, // 13 mcu
 };
 
 STD_ROM_PICK(flstory)
@@ -1677,7 +1534,7 @@ struct BurnDriver BurnDrvFlstory = {
 	"The FairyLand Story\0", NULL, "Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
-	NULL, flstoryRomInfo, flstoryRomName, NULL, NULL, FlstoryInputInfo, FlstoryDIPInfo,
+	NULL, flstoryRomInfo, flstoryRomName, NULL, NULL, NULL, NULL, FlstoryInputInfo, FlstoryDIPInfo,
 	flstoryInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 224, 4, 3
 };
@@ -1702,7 +1559,7 @@ static struct BurnRomInfo flstoryjRomDesc[] = {
 	{ "vid-a45.09",		0x4000, 0x8336be58, 3 | BRF_GRA }, // 11
 	{ "vid-a45.21",		0x4000, 0xfc382bd1, 3 | BRF_GRA }, // 12
 
-	{ "a45.mcu",		0x0800, 0x5378253c, 4 | BRF_PRG | BRF_ESS }, // 13 mcu
+	{ "a45-20.mcu",		0x0800, 0x7d2cdd9b, 4 | BRF_PRG | BRF_ESS }, // 13 mcu
 };
 
 STD_ROM_PICK(flstoryj)
@@ -1713,7 +1570,7 @@ struct BurnDriver BurnDrvFlstoryj = {
 	"The FairyLand Story (Japan)\0", NULL, "Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
-	NULL, flstoryjRomInfo, flstoryjRomName, NULL, NULL, FlstoryInputInfo, FlstoryDIPInfo,
+	NULL, flstoryjRomInfo, flstoryjRomName, NULL, NULL, NULL, NULL, FlstoryInputInfo, FlstoryDIPInfo,
 	flstoryInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 224, 4, 3
 };
@@ -1741,7 +1598,7 @@ static struct BurnRomInfo onna34roRomDesc[] = {
 	{ "a52-09.33v",		0x4000, 0x39c543b5, 3 | BRF_GRA }, // 14
 	{ "a52-11.32v",		0x4000, 0xd1dda6b3, 3 | BRF_GRA }, // 15
 
-	{ "a52-17.54c",		0x0800, 0x00000000, 4 | BRF_NODUMP }, // 16 cpu2
+	{ "a52_17.54c",		0x0800, 0x0ab2612e, 4 | BRF_PRG | BRF_ESS }, // 16 cpu2
 };
 
 STD_ROM_PICK(onna34ro)
@@ -1756,10 +1613,10 @@ static INT32 onna34roInit()
 
 struct BurnDriver BurnDrvOnna34ro = {
 	"onna34ro", NULL, NULL, NULL, "1985",
-	"Onna Sansirou - Typhoon Gal (set 1)\0", NULL, "Taito", "Miscellaneous",
+	"Onna Sansirou - Typhoon Gal\0", NULL, "Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
-	NULL, onna34roRomInfo, onna34roRomName, NULL, NULL, Onna34roInputInfo, Onna34roDIPInfo,
+	NULL, onna34roRomInfo, onna34roRomName, NULL, NULL, NULL, NULL, Onna34roInputInfo, Onna34roDIPInfo,
 	onna34roInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 224, 4, 3
 };
@@ -1786,20 +1643,25 @@ static struct BurnRomInfo onna34raRomDesc[] = {
 	{ "a52-07.34v",		0x4000, 0x0bf420f2, 3 | BRF_GRA }, // 13
 	{ "a52-09.33v",		0x4000, 0x39c543b5, 3 | BRF_GRA }, // 14
 	{ "a52-11.32v",		0x4000, 0xd1dda6b3, 3 | BRF_GRA }, // 15
-
-	{ "a52-17.54c",		0x0800, 0x00000000, 4 | BRF_NODUMP }, // 16 cpu2
 };
 
 STD_ROM_PICK(onna34ra)
 STD_ROM_FN(onna34ra)
 
+static INT32 onna34roaInit()
+{
+	select_game = 10;
+
+	return DrvInit();
+}
+
 struct BurnDriver BurnDrvOnna34ra = {
 	"onna34roa", "onna34ro", NULL, NULL, "1985",
-	"Onna Sansirou - Typhoon Gal (set 2)\0", NULL, "Taito", "Miscellaneous",
+	"Onna Sansirou - Typhoon Gal (bootleg)\0", NULL, "Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
-	NULL, onna34raRomInfo, onna34raRomName, NULL, NULL, Onna34roInputInfo, Onna34roDIPInfo,
-	onna34roInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
+	NULL, onna34raRomInfo, onna34raRomName, NULL, NULL, NULL, NULL, Onna34roInputInfo, Onna34roDIPInfo,
+	onna34roaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 224, 4, 3
 };
 
@@ -1821,16 +1683,17 @@ static struct BurnRomInfo victnineRomDesc[] = {
 	{ "a16-16.38",		0x2000, 0x9395351b, 2 | BRF_PRG | BRF_ESS }, // 10
 	{ "a16-17.39",		0x2000, 0x872270b3, 2 | BRF_PRG | BRF_ESS }, // 11
 
-	{ "a16-06-1.7",		0x2000, 0xb708134d, 3 | BRF_GRA }, // 12 gfx1
-	{ "a16-07-2.8",		0x2000, 0xcdaf7f83, 3 | BRF_GRA }, // 13
-	{ "a16-10.90",		0x2000, 0xe8e42454, 3 | BRF_GRA }, // 14
-	{ "a16-11-1.91",	0x2000, 0x1f766661, 3 | BRF_GRA }, // 15
-	{ "a16-04.5",		0x2000, 0xb2fae99f, 3 | BRF_GRA }, // 16
-	{ "a16-05-1.6",		0x2000, 0x85dfbb6e, 3 | BRF_GRA }, // 17
-	{ "a16-08.88",		0x2000, 0x1ddb6466, 3 | BRF_GRA }, // 18
-	{ "a16-09-1.89",	0x2000, 0x23d4c43c, 3 | BRF_GRA }, // 19
+	{ "a16-06-1.7",		0x2000, 0xb708134d, 3 | BRF_GRA }, 			 // 12 gfx1
+	{ "a16-07-2.8",		0x2000, 0xcdaf7f83, 3 | BRF_GRA }, 			 // 13
+	{ "a16-10.90",		0x2000, 0xe8e42454, 3 | BRF_GRA }, 			 // 14
+	{ "a16-11-1.91",	0x2000, 0x1f766661, 3 | BRF_GRA }, 			 // 15
+	{ "a16-04.5",		0x2000, 0xb2fae99f, 3 | BRF_GRA }, 			 // 16
+	{ "a16-05-1.6",		0x2000, 0x85dfbb6e, 3 | BRF_GRA }, 			 // 17
+	{ "a16-08.88",		0x2000, 0x1ddb6466, 3 | BRF_GRA }, 			 // 18
+	{ "a16-09-1.89",	0x2000, 0x23d4c43c, 3 | BRF_GRA }, 			 // 19
 
-	{ "a16-18.mcu",		0x0800, 0x00000000, 4 | BRF_NODUMP }, // 20 cpu2
+	// dumped via m68705 dumper and hand-verified. Might still be imperfect but confirmed working on real PCB.
+	{ "a16-18.54",		0x0800, 0x5198ef59, 4 | BRF_PRG | BRF_ESS }, // 20 cpu2
 };
 
 STD_ROM_PICK(victnine)
@@ -1852,7 +1715,7 @@ struct BurnDriverD BurnDrvVictnine = {
 	"Victorious Nine\0", NULL, "Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	0, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
-	NULL, victnineRomInfo, victnineRomName, NULL, NULL, VictnineInputInfo, VictnineDIPInfo,
+	NULL, victnineRomInfo, victnineRomName, NULL, NULL, NULL, NULL, VictnineInputInfo, VictnineDIPInfo,
 	victnineInit, DrvExit, DrvFrame, victnineDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 224, 4, 3
 };
@@ -1877,7 +1740,7 @@ static struct BurnRomInfo rumbaRomDesc[] = {
 	{ "a23_09.bin",		0x2000, 0xd0a101d3, 2 | BRF_PRG | BRF_ESS }, //  4
 	{ "a23_10.bin",		0x2000, 0xf9447bd4, 2 | BRF_PRG | BRF_ESS }, //  5
 
-	{ "a23-11.mc68705p5s",	0x0800, 0x00000000, 3 | BRF_NODUMP }, //  6 mcu
+	{ "a23_11.bin",		0x0800, 0xfddc99ce, 3 | BRF_PRG | BRF_ESS }, //  6 mcu
 
 	{ "a23_07.bin",		0x2000, 0xc98fbea6, 4 | BRF_GRA }, //  7 gfx1
 	{ "a23_06.bin",		0x2000, 0xbf1e3a7f, 4 | BRF_GRA }, //  8
@@ -1892,8 +1755,8 @@ struct BurnDriver BurnDrvRumba = {
 	"rumba", NULL, NULL, NULL, "1984",
 	"Rumba Lumber\0", NULL, "Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
-	NULL, rumbaRomInfo, rumbaRomName, NULL, NULL, RumbaInputInfo, RumbaDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_MAZE, 0,
+	NULL, rumbaRomInfo, rumbaRomName, NULL, NULL, NULL, NULL, RumbaInputInfo, RumbaDIPInfo,
 	rumbaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };

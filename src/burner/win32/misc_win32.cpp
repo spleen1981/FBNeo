@@ -1,6 +1,10 @@
 #include "burner.h"
 
-bool bIsWindowsXPorGreater = FALSE;
+bool bEnableHighResTimer = true; // default value
+
+bool bIsWindowsXPorGreater = false;
+bool bIsWindowsXP = false;
+bool bIsWindows8OrGreater = false;
 
 // Detect if we are using Windows XP/Vista/7
 BOOL DetectWindowsVersion()
@@ -12,12 +16,14 @@ BOOL DetectWindowsVersion()
     osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 
     GetVersionEx(&osvi);
-    
+
 	// osvi.dwMajorVersion returns the windows version: 5 = XP 6 = Vista/7
     // osvi.dwMinorVersion returns the minor version, XP and 7 = 1, Vista = 0
     bIsWindowsXPorLater = ((osvi.dwMajorVersion > 5) || ( (osvi.dwMajorVersion == 5) && (osvi.dwMinorVersion >= 1)));
-    
-    return bIsWindowsXPorLater; 
+	bIsWindowsXP = (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 1);
+	bIsWindows8OrGreater = ((osvi.dwMajorVersion > 6) || ((osvi.dwMajorVersion == 6) && (osvi.dwMinorVersion >= 2)));
+
+	return bIsWindowsXPorLater;
 }
 
 // Set the current directory to be the application's directory
@@ -231,19 +237,20 @@ int WndInMid(HWND hMid, HWND hBase)
 	by = (by - mh) >> 1;
 
 	if (hBase) {
-		SystemParametersInfo(SPI_GETWORKAREA, 0, &SystemWorkArea, 0);
+		RECT tmpWorkArea;
+		SystemParametersInfo(SPI_GETWORKAREA, 0, &tmpWorkArea, 0);
 
-		if (bx + mw > SystemWorkArea.right) {
-			bx = SystemWorkArea.right - mw;
+		if (bx + mw > tmpWorkArea.right) {
+			bx = tmpWorkArea.right - mw;
 		}
-		if (by + mh > SystemWorkArea.bottom) {
-			by = SystemWorkArea.bottom - mh;
+		if (by + mh > tmpWorkArea.bottom) {
+			by = tmpWorkArea.bottom - mh;
 		}
-		if (bx < SystemWorkArea.left) {
-			bx = SystemWorkArea.left;
+		if (bx < tmpWorkArea.left) {
+			bx = tmpWorkArea.left;
 		}
-		if (by < SystemWorkArea.top) {
-			by = SystemWorkArea.top;
+		if (by < tmpWorkArea.top) {
+			by = tmpWorkArea.top;
 		}
 	}
 
@@ -251,4 +258,36 @@ int WndInMid(HWND hMid, HWND hBase)
 	SetWindowPos(hMid, NULL, bx, by, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 
 	return 0;
+}
+
+// ---------------------------------------------------------------------------
+
+// Set-up high resolution timing
+
+static int bHighResolutionTimerActive = 0;
+
+void EnableHighResolutionTiming()
+{
+	TIMECAPS hTCaps;
+
+	bHighResolutionTimerActive = 0;
+
+	if (bEnableHighResTimer) {
+#ifdef PRINT_DEBUG_INFO
+		dprintf(_T(" ** Enabling High-Resolution system timer.\n"));
+#endif
+
+		if (timeGetDevCaps(&hTCaps, sizeof(hTCaps)) == TIMERR_NOERROR) {
+			bHighResolutionTimerActive = hTCaps.wPeriodMin;
+			timeBeginPeriod(hTCaps.wPeriodMin);
+		}
+	}
+}
+
+void DisableHighResolutionTiming()
+{
+	if (bHighResolutionTimerActive) {
+		timeEndPeriod(bHighResolutionTimerActive);
+		bHighResolutionTimerActive = 0;
+	}
 }

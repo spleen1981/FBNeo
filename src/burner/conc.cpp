@@ -65,8 +65,9 @@ static INT32 ConfigParseFile(TCHAR* pszFilename)
 		nLine++;
 
 		nLen = _tcslen(szLine);
+
 		// Get rid of the linefeed at the end
-		while (szLine[nLen - 1] == 0x0A || szLine[nLen - 1] == 0x0D) {
+		while ((nLen > 0) && (szLine[nLen - 1] == 0x0A || szLine[nLen - 1] == 0x0D)) {
 			szLine[nLen - 1] = 0;
 			nLen--;
 		}
@@ -433,13 +434,14 @@ static INT32 ConfigParseMAMEFile()
 
 	TCHAR szFileName[MAX_PATH] = _T("");
 	_stprintf(szFileName, _T("%scheat.dat"), szAppCheatsPath);
-	
+
 	FILE *fz = _tfopen(szFileName, _T("rt"));
 	if (fz == NULL) {
 		return 1;
 	}
 
 	TCHAR tmp[256];
+	TCHAR tmp2[256];
 	TCHAR gName[64];
 	TCHAR szLine[1024];
 
@@ -451,6 +453,7 @@ static INT32 ConfigParseMAMEFile()
 	UINT32 flags = 0;
 	UINT32 nAddress = 0;
 	UINT32 nValue = 0;
+	UINT32 nAttrib = 0;
 
 	CheatInfo* pCurrentCheat = NULL;
 	_stprintf(gName, _T(":%s:"), BurnDrvGetText(DRV_NAME));
@@ -485,15 +488,14 @@ static INT32 ConfigParseMAMEFile()
 		tmpcpy(3);						// cheat value
 		_stscanf (tmp, _T("%x"), &nValue);
 
+		tmpcpy(4);						// cheat attribute
+		_stscanf (tmp, _T("%x"), &nAttrib);
+
 		tmpcpy(5);						// cheat name
+				   //was x7f00
+		if (flags & 0x80007c00) continue;			// skip various cheats (unhandled methods at this time)
 
-		if (flags & 0x80007f00) continue;			// skip various cheats
-
-		// controls how many bytes we're going to patch (only allow single bytes for now)
-	//	if (flags & 0x00300000) continue;
-	//	nValue &= 0x000000ff;			// only use a single byte
-
-		if ( flags & 0x00008000 || (flags & 0x0001000 && !menu)) {
+		if ( flags & 0x00008000 || (flags & 0x00010000 && !menu)) { // Linked cheat "(2/2) etc.."
 			if (nCurrentAddress < CHEAT_MAX_ADDRESS) {
 				AddressInfo();
 			}
@@ -520,9 +522,11 @@ static INT32 ConfigParseMAMEFile()
 			}
 
 			// Fill in defaults
-			pCurrentCheat->nType = 0;							// Default to cheat type 0 (apply each frame)
+			pCurrentCheat->nType = 0;							    // Default to cheat type 0 (apply each frame)
 			pCurrentCheat->nStatus = -1;							// Disable cheat
 			pCurrentCheat->nDefault = 0;							// Set default option
+			pCurrentCheat->bOneShot = 0;							// Set default option (off)
+			pCurrentCheat->bWatchMode = 0;							// Set default option (off)
 
 			_tcsncpy (pCurrentCheat->szCheatName, tmp, QUOTE_MAX);
 
@@ -534,10 +538,36 @@ static INT32 ConfigParseMAMEFile()
 			OptionName(_T("Disabled"));
 
 			if (nAddress) {
-				n++;
+				if (flags & 0x1) {
+					pCurrentCheat->bOneShot = 1; // apply once and stop
+				}
+				if (flags & 0x2) {
+					pCurrentCheat->bWaitForModification = 1; // wait for modification before changing
+				}
+				if (flags & 0x800000) {
+					pCurrentCheat->bRestoreOnDisable = 1; // restore previous value on disable
+				}
+				if ((flags & 0x6) == 0x6) {
+					pCurrentCheat->bWatchMode = 1; // display value @ address
+				}
+				if (flags & 0x100) { // add options
+					INT32 nTotal = nValue + 1;
+					INT32 nPlus1 = (flags & 0x200) ? 1 : 0; // displayed value +1?
 
-				OptionName(tmp);	
-				AddressInfo();
+					//bprintf(0, _T("adding .. %X. options\n"), nTotal);
+					if (nTotal > 0xff) continue; // bad entry (roughrac has this)
+					for (nValue = 0; nValue < nTotal; nValue++) {
+						swprintf(tmp2, L"# %d.", nValue + nPlus1);
+						n++;
+						nCurrentAddress = 0;
+						OptionName(tmp2);
+						AddressInfo();
+					}
+				} else {
+					n++;
+					OptionName(tmp);
+					AddressInfo();
+				}
 			} else {
 				menu = 1;
 			}
@@ -549,9 +579,22 @@ static INT32 ConfigParseMAMEFile()
 			n++;
 			nCurrentAddress = 0;
 
+			if (flags & 0x1) {
+				pCurrentCheat->bOneShot = 1; // apply once and stop
+			}
+			if (flags & 0x2) {
+				pCurrentCheat->bWaitForModification = 1; // wait for modification before changing
+			}
+			if ((flags & 0x6) == 0x6) {
+				pCurrentCheat->bWatchMode = 1; // display value @ address
+			}
+			if (flags & 0x800000) {
+				pCurrentCheat->bRestoreOnDisable = 1; // restore previous value on disable
+			}
+
 			OptionName(tmp);
 			AddressInfo();
-			
+
 			continue;
 		}
 	}

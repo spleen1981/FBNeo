@@ -1,7 +1,7 @@
 #include "mips3_intf.h"
 #include "mips3/mips3.h"
 #include "burnint.h"
-#include <cstdint>
+#include <stdint.h>
 
 #ifdef MIPS3_X64_DRC
 #include "mips3/x64/mips3_x64.h"
@@ -31,22 +31,22 @@ struct Mips3MemoryMap
 };
 
 
-static mips::mips3 *g_mips = nullptr;
-static Mips3MemoryMap *g_mmap = nullptr;
+static mips::mips3 *g_mips = NULL;
+static Mips3MemoryMap *g_mmap = NULL;
 static bool g_useRecompiler = false;
 
 #ifdef MIPS3_X64_DRC
 static mips::mips3_x64 *g_mips_x64 = nullptr;
 #endif
 
-static unsigned char DefReadByte(unsigned int a) { return 0; }
-static unsigned short DefReadHalf(unsigned int a) { return 0; }
-static unsigned int DefReadWord(unsigned int a) { return 0; }
-static unsigned long long DefReadDouble(unsigned int a) { return 0; }
-static void DefWriteByte(unsigned int a, unsigned char value) { }
-static void DefWriteHalf(unsigned int a, unsigned short value) { }
-static void DefWriteWord(unsigned int a, unsigned int value) { }
-static void DefWriteDouble(unsigned int a, unsigned long long value) { }
+static UINT8 DefReadByte(UINT32 a) { return 0; }
+static UINT16 DefReadHalf(UINT32 a) { return 0; }
+static UINT32 DefReadWord(UINT32 a) { return 0; }
+static UINT64 DefReadDouble(UINT32 a) { return 0; }
+static void DefWriteByte(UINT32 a, UINT8 value) { }
+static void DefWriteHalf(UINT32 a, UINT16 value) { }
+static void DefWriteWord(UINT32 a, UINT32 value) { }
+static void DefWriteDouble(UINT32 a, UINT64 value) { }
 
 static void ResetMemoryMap()
 {
@@ -96,8 +96,8 @@ int Mips3Exit()
 #endif
     delete g_mips;
     delete g_mmap;
-    g_mips = nullptr;
-    g_mmap = nullptr;
+    g_mips = NULL;
+    g_mmap = NULL;
 	
 	return 0;
 }
@@ -240,12 +240,12 @@ namespace mem
 
 
 template<typename T>
-inline T fast_read(uint8_t *ptr, unsigned adr) {
+inline T mips_fast_read(uint8_t *ptr, unsigned adr) {
     return *((T*)  ((uint8_t*) ptr + (adr & PAGE_MASK)));
 }
 
 template<typename T>
-inline void fast_write(uint8_t *xptr, unsigned adr, T value) {
+inline void mips_fast_write(uint8_t *xptr, unsigned adr, T value) {
     T *ptr = ((T*)  ((uint8_t*) xptr + (adr & PAGE_MASK)));
     *ptr = value;
 }
@@ -268,7 +268,7 @@ uint16_t read_half(addr_t address)
 
     UINT8 *pr = g_mmap->MemMap[PFN(address)];
     if ((uintptr_t)pr >= MIPS_MAXHANDLER) {
-        return BURN_ENDIAN_SWAP_INT16(fast_read<uint16_t>(pr, address));
+        return BURN_ENDIAN_SWAP_INT16(mips_fast_read<uint16_t>(pr, address));
     }
     return g_mmap->ReadHalf[(uintptr_t)pr](address);
 }
@@ -279,7 +279,7 @@ uint32_t read_word(addr_t address)
 
     UINT8 *pr = g_mmap->MemMap[PFN(address)];
     if ((uintptr_t)pr >= MIPS_MAXHANDLER) {
-        return BURN_ENDIAN_SWAP_INT32(fast_read<uint32_t>(pr, address));
+        return BURN_ENDIAN_SWAP_INT32(mips_fast_read<uint32_t>(pr, address));
     }
     return g_mmap->ReadWord[(uintptr_t)pr](address);
 }
@@ -290,7 +290,7 @@ uint64_t read_dword(addr_t address)
 
     UINT8 *pr = g_mmap->MemMap[PFN(address)];
     if ((uintptr_t)pr >= MIPS_MAXHANDLER) {
-        return BURN_ENDIAN_SWAP_INT64(fast_read<uint64_t>(pr, address));
+        return BURN_ENDIAN_SWAP_INT64(mips_fast_read<uint64_t>(pr, address));
     }
     return g_mmap->ReadDouble[(uintptr_t)pr](address);
 }
@@ -314,7 +314,7 @@ void write_half(addr_t address, uint16_t value)
 
     UINT8 *pr = g_mmap->MemMap[PAGE_WADD + PFN(address)];
     if ((uintptr_t)pr >= MIPS_MAXHANDLER) {
-        fast_write<uint16_t>(pr, address, BURN_ENDIAN_SWAP_INT16(value));
+        mips_fast_write<uint16_t>(pr, address, BURN_ENDIAN_SWAP_INT16(value));
         return;
     }
     g_mmap->WriteHalf[(uintptr_t)pr](address, value);
@@ -326,7 +326,7 @@ void write_word(addr_t address, uint32_t value)
 
     UINT8 *pr = g_mmap->MemMap[PAGE_WADD + PFN(address)];
     if ((uintptr_t)pr >= MIPS_MAXHANDLER) {
-        fast_write<uint32_t>(pr, address, BURN_ENDIAN_SWAP_INT32(value));
+		mips_fast_write<uint32_t>(pr, address, BURN_ENDIAN_SWAP_INT32(value));
         return;
     }
     g_mmap->WriteWord[(uintptr_t)pr](address, value);
@@ -338,7 +338,7 @@ void write_dword(addr_t address, uint64_t value)
 
     UINT8 *pr = g_mmap->MemMap[PAGE_WADD + PFN(address)];
     if ((uintptr_t)pr >= MIPS_MAXHANDLER) {
-        fast_write<uint64_t>(pr, address, BURN_ENDIAN_SWAP_INT64(value));
+		mips_fast_write<uint64_t>(pr, address, BURN_ENDIAN_SWAP_INT64(value));
         return;
     }
     g_mmap->WriteDouble[(uintptr_t)pr](address, value);

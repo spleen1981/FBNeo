@@ -1,3 +1,6 @@
+// FB Alpha Tumble Pop driver module
+// Based on MAME driver by David Haywood, Bryan McPhail
+
 #include "tiles_generic.h"
 #include "m68000_intf.h"
 #include "z80_intf.h"
@@ -18,6 +21,7 @@ static UINT8 *RamStart            = NULL;
 static UINT8 *RamEnd              = NULL;
 static UINT8 *Drv68KRom           = NULL;
 static UINT8 *Drv68KRam           = NULL;
+static UINT8 *Drv68KRam2          = NULL;
 static UINT8 *DrvZ80Rom           = NULL;
 static UINT8 *DrvZ80Ram           = NULL;
 static UINT8 *DrvProtData         = NULL;
@@ -51,17 +55,17 @@ static INT32 DrvYM2151Freq;
 static INT32 DrvNumSprites;
 static INT32 DrvNumChars;
 static INT32 DrvNumTiles;
-static INT32 DrvHasZ80;
-static INT32 DrvHasYM2151;
-static INT32 DrvHasYM3812;
-static INT32 DrvHasProt;
-static INT32 Tumbleb2;
-static INT32 Jumpkids;
-static INT32 Chokchok;
-static INT32 Wlstar;
-static INT32 Wondl96;
-static INT32 Bcstry;
-static INT32 Semibase;
+static INT32 DrvHasZ80 = 0;
+static INT32 DrvHasYM2151 = 0;
+static INT32 DrvHasYM3812 = 0;
+static INT32 DrvHasProt = 0;
+static INT32 Tumbleb2 = 0;
+static INT32 Jumpkids = 0;
+static INT32 Chokchok = 0;
+static INT32 Wlstar = 0;
+static INT32 Wondl96 = 0;
+static INT32 Bcstry = 0;
+static INT32 Semibase = 0;
 static INT32 SemicomSoundCommand;
 static INT32 Pf1XOffset;
 static INT32 Pf1YOffset;
@@ -74,16 +78,16 @@ typedef void (*Map68k)();
 static Map68k DrvMap68k;
 typedef void (*MapZ80)();
 static MapZ80 DrvMapZ80;
-typedef void (*Render)();
+typedef INT32 (*Render)();
 static Render DrvRender;
 
-static void DrvDraw();
-static void PangpangDraw();
-static void SuprtrioDraw();
-static void HtchctchDraw();
-static void FncywldDraw();
-static void SdfightDraw();
-static void JumppopDraw();
+static INT32 DrvDraw();
+static INT32 PangpangDraw();
+static INT32 SuprtrioDraw();
+static INT32 HtchctchDraw();
+static INT32 FncywldDraw();
+static INT32 SdfightDraw();
+static INT32 JumppopDraw();
 
 static INT32 nCyclesDone[2], nCyclesTotal[2];
 static INT32 nCyclesSegment;
@@ -1048,18 +1052,32 @@ STD_ROM_PICK(Tumbleb)
 STD_ROM_FN(Tumbleb)
 
 static struct BurnRomInfo Tumbleb2RomDesc[] = {
-	{ "thumbpop.2",    0x40000, 0x34b016e1, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
-	{ "thumbpop.3",    0x40000, 0x89501c71, BRF_ESS | BRF_PRG }, //	 1
+	{ "wj-2",          0x40000, 0x34b016e1, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
+	{ "wj-3",          0x40000, 0x89501c71, BRF_ESS | BRF_PRG }, //	 1
 	
-	{ "thumbpop.19",   0x40000, 0x0795aab4, BRF_GRA },	     //  2	Tiles
-	{ "thumbpop.18",   0x40000, 0xad58df43, BRF_GRA },	     //  3
+	{ "wj-9",          0x40000, 0x0795aab4, BRF_GRA },	     //  2	Tiles
+	{ "wj-8",          0x40000, 0xad58df43, BRF_GRA },	     //  3
 	
-	{ "map-01.rom",    0x80000, 0xe81ffa09, BRF_GRA },	     //  4	Sprites
-	{ "map-00.rom",    0x80000, 0x8c879cfe, BRF_GRA },	     //  5
+	{ "wj-6",          0x40000, 0xee91db18, BRF_GRA },	     //  4	Sprites
+	{ "wj-7",          0x40000, 0x87cffb06, BRF_GRA },	     //  5
+	{ "wj-4",          0x40000, 0x79a29725, BRF_GRA },	     //  6	Sprites
+	{ "wj-5",          0x40000, 0xdda8932e, BRF_GRA },	     //  7
 	
-	{ "thumbpop.snd",  0x80000, 0xfabbf15d, BRF_SND },	     //  6	Samples
+	{ "wj-1",          0x80000, 0xfabbf15d, BRF_SND },	     //  8	Samples
 	
 	{ "pic_16c57",     0x02d4c, 0x00000000, BRF_NODUMP },
+	
+	{ "palce16v8.1",   0x104, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "palce20v8.2",   0x157, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "palce16v8.3",   0x104, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "palce16v8.4",   0x104, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "palce16v8.5",   0x104, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "palce16v8.6",   0x104, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "palce16v8.7",   0x104, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "palce22v10.8",  0x2dd, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "palce22v10.9",  0x2dd, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "palce16v8h.10", 0x117, 0xeef433f9, BRF_OPT    },
+	{ "palce16v8.11",  0x104, 0x00000000, BRF_OPT | BRF_NODUMP },
 };
 
 STD_ROM_PICK(Tumbleb2)
@@ -1171,7 +1189,7 @@ static struct BurnRomInfo HtchctchRomDesc[] = {
 	
 	{ "p01.c1",        0x20000, 0x18c06829, BRF_SND },	     //  10	Samples
 	
-	{ "87c52.mcu",     0x10000, 0x00000000, BRF_NODUMP },	     //  11
+	{ "87c51fa.bin",   0x02000, 0xa30312f3, BRF_ESS | BRF_PRG },	 //  11 Intel 87C52 MCU Code
 };
 
 STD_ROM_PICK(Htchctch)
@@ -1195,7 +1213,7 @@ static struct BurnRomInfo CookbibRomDesc[] = {
 	
 	{ "sound.uc1",     0x20000, 0x545e19b6, BRF_SND },	     //  10	Samples
 	
-	{ "87c52.mcu",     0x10000, 0x00000000, BRF_NODUMP },	     //  11
+	{ "87c52.mcu",     0x10000, 0x00000000, BRF_NODUMP },	 //  11 Intel 87C52 MCU Code
 };
 
 STD_ROM_PICK(Cookbib)
@@ -1219,7 +1237,7 @@ static struct BurnRomInfo CookbibaRomDesc[] = {
 	
 	{ "sound.uc1",     0x20000, 0x545e19b6, BRF_SND },	     //  10	Samples
 	
-	{ "87c52.mcu",     0x10000, 0x00000000, BRF_NODUMP },	     //  11
+	{ "87c52.mcu",     0x10000, 0x00000000, BRF_NODUMP },	 //  11 Intel 87C52 MCU Code
 };
 
 STD_ROM_PICK(Cookbiba)
@@ -1243,7 +1261,7 @@ static struct BurnRomInfo ChokchokRomDesc[] = {
 	
 	{ "uc1.bin",       0x40000, 0xf3f57abd, BRF_SND },	     //  10	Samples
 	
-	{ "87c52.mcu",     0x10000, 0x00000000, BRF_NODUMP },	     //  11
+	{ "p87c52ebpn.bin",     0x02000, 0x0d6b4918, BRF_ESS | BRF_PRG }, //  11 Intel 87C52 MCU Code
 };
 
 STD_ROM_PICK(Chokchok)
@@ -1320,6 +1338,22 @@ static struct BurnRomInfo FncywldRomDesc[] = {
 
 STD_ROM_PICK(Fncywld)
 STD_ROM_FN(Fncywld)
+
+static struct BurnRomInfo magipurRomDesc[] = {
+	{ "2-27c040.bin",	0x80000, 0x135c5de7, 1 | BRF_PRG | BRF_ESS }, //  0	68000 Program Code
+	{ "3-27c040.bin",	0x80000, 0xee4b16da, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "4-27c040.bin",	0x80000, 0xe460a77d, 2 | BRF_GRA },           //  2	Tiles
+	{ "5-27c040.bin",	0x80000, 0x79c53627, 2 | BRF_GRA },           //  3
+
+	{ "6-27c040.bin",	0x80000, 0xb25b5872, 3 | BRF_GRA },           //  4	Sprites
+	{ "7-27c040.bin",	0x80000, 0xd3c3a672, 3 | BRF_GRA },           //  5
+
+	{ "1-27c020.bin",	0x40000, 0x84dcf771, 4 | BRF_SND },           //  6 Samples
+};
+
+STD_ROM_PICK(magipur)
+STD_ROM_FN(magipur)
 
 static struct BurnRomInfo SdfightRomDesc[] = {
 	{ "u817",          0x80000, 0x9f284f4d, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
@@ -1459,7 +1493,7 @@ static struct BurnRomInfo DquizgoRomDesc[] = {
 	
 	{ "uc1",           0x40000, 0xd0f4c4ba, BRF_SND },	     //  10	Samples
 	
-	{ "87c52.mcu",     0x10000, 0x00000000, BRF_NODUMP },	     //  11
+	{ "87c51rap.bin",  0x02000, 0x03bc1f83, BRF_ESS | BRF_PRG }, //  11 P87C52EBPN MCU, after decapping the die was 87C51RA+
 };
 
 STD_ROM_PICK(Dquizgo)
@@ -1509,15 +1543,16 @@ static INT32 MemIndex()
 	UINT8 *Next; Next = Mem;
 
 	Drv68KRom                   = Next; Next += 0x100000;
-	if (DrvHasZ80)DrvZ80Rom     = Next; Next += 0x010000;
-	if (DrvHasProt) DrvProtData = Next; Next += 0x000200;
+	if (DrvHasZ80) { DrvZ80Rom     = Next; Next += 0x010000; }
+	if (DrvHasProt) { DrvProtData = Next; Next += 0x000200; }
 	MSM6295ROM                  = Next; Next += 0x040000;
 	DrvMSM6295ROMSrc            = Next; Next += 0x100000;
 
 	RamStart                    = Next;
 
 	Drv68KRam                   = Next; Next += 0x010800;
-	if (DrvHasZ80)DrvZ80Ram     = Next; Next += 0x000800;
+	Drv68KRam2                  = Next; Next += 0x000800;
+	if (DrvHasZ80) { DrvZ80Ram     = Next; Next += 0x000800; }
 	DrvSpriteRam                = Next; Next += DrvSpriteRamSize;
 	DrvPf1Ram                   = Next; Next += 0x002000;
 	DrvPf2Ram                   = Next; Next += 0x002000;
@@ -1620,13 +1655,13 @@ static const INT32 Tumbleb2SoundLookup[256] = {
 
 static void Tumbleb2PlayMusic()
 {
-	INT32 Status = MSM6295ReadStatus(0);
+	INT32 Status = MSM6295Read(0);
 
 	if (Tumbleb2MusicIsPlaying)
 	{
 		if ((Status & 0x08) == 0) {
-			MSM6295Command(0, 0x80 | Tumbleb2MusicCommand);
-			MSM6295Command(0, 0x00 | 0x82);
+			MSM6295Write(0, 0x80 | Tumbleb2MusicCommand);
+			MSM6295Write(0, 0x00 | 0x82);
 		}
 	}
 }
@@ -1638,38 +1673,38 @@ static void Tumbleb2SetMusicBank(INT32 Bank)
 
 static void Tumbleb2PlaySound(UINT16 data)
 {
-	INT32 Status = MSM6295ReadStatus(0);
+	INT32 Status = MSM6295Read(0);
 	
 	if ((Status & 0x01) == 0) {
-		MSM6295Command(0, 0x80 | data);
-		MSM6295Command(0, 0x00 | 0x12);
+		MSM6295Write(0, 0x80 | data);
+		MSM6295Write(0, 0x00 | 0x12);
 	} else {
 		if ((Status & 0x02) == 0) {
-			MSM6295Command(0, 0x80 | data);
-			MSM6295Command(0, 0x00 | 0x22);
+			MSM6295Write(0, 0x80 | data);
+			MSM6295Write(0, 0x00 | 0x22);
 		} else {
 			if ((Status & 0x04) == 0) {
-				MSM6295Command(0, 0x80 | data);
-				MSM6295Command(0, 0x00 | 0x42);
-			}	
+				MSM6295Write(0, 0x80 | data);
+				MSM6295Write(0, 0x00 | 0x42);
+			}
 		}
 	}
 }
 
 static void Tumbleb2ProcessMusicCommand(UINT16 data)
 {
-	INT32 Status = MSM6295ReadStatus(0);
+	INT32 Status = MSM6295Read(0);
 	
 	if (data == 1) {
 		if ((Status & 0x08) == 0x08) {
-			MSM6295Command(0, 0x40);
+			MSM6295Write(0, 0x40);
 			Tumbleb2MusicIsPlaying = 0;
 		}
 	} else {
 		if (Tumbleb2MusicIsPlaying != data) {
 			Tumbleb2MusicIsPlaying = data;
 			
-			MSM6295Command(0, 0x40);
+			MSM6295Write(0, 0x40);
 			
 			switch (data) {
 				case 0x04: // map screen
@@ -1764,7 +1799,7 @@ static void Tumbleb2SoundMCUCommand(UINT16 data)
 	}
 }
 
-UINT8 __fastcall Tumbleb68KReadByte(UINT32 a)
+static UINT8 __fastcall Tumbleb68KReadByte(UINT32 a)
 {
 	switch (a) {
 		case 0x100001: {
@@ -1804,7 +1839,7 @@ UINT8 __fastcall Tumbleb68KReadByte(UINT32 a)
 	return 0;
 }
 
-void __fastcall Tumbleb68KWriteByte(UINT32 a, UINT8 d)
+static void __fastcall Tumbleb68KWriteByte(UINT32 a, UINT8 d)
 {
 	switch (a) {
 		case 0x100000: {
@@ -1812,7 +1847,7 @@ void __fastcall Tumbleb68KWriteByte(UINT32 a, UINT8 d)
 				Tumbleb2SoundMCUCommand(d);
 				return;
 			} else {
-				MSM6295Command(0, d);
+				MSM6295Write(0, d);
 				return;
 			}
 		}
@@ -1838,11 +1873,11 @@ void __fastcall Tumbleb68KWriteByte(UINT32 a, UINT8 d)
 	}
 }
 
-UINT16 __fastcall Tumbleb68KReadWord(UINT32 a)
+static UINT16 __fastcall Tumbleb68KReadWord(UINT32 a)
 {
 	switch (a) {
 		case 0x100004: {
-			return rand() % 0x10000;
+			return BurnRandom() % 0x10000;
 		}
 		
 		case 0x180000: {
@@ -1898,9 +1933,9 @@ UINT16 __fastcall Tumbleb68KReadWord(UINT32 a)
 	return 0;
 }
 
-void __fastcall Tumbleb68KWriteWord(UINT32 a, UINT16 d)
+static void __fastcall Tumbleb68KWriteWord(UINT32 a, UINT16 d)
 {
-#if 1 && defined FBA_DEBUG
+#if 1 && defined FBNEO_DEBUG
 	if (a >= 0x160800 && a <= 0x160807) return;
 	if (a >= 0x198000 && a <= 0x1a8015) return;
 	if (a >= 0x321000 && a <= 0x321fff) return;
@@ -1933,7 +1968,7 @@ void __fastcall Tumbleb68KWriteWord(UINT32 a, UINT16 d)
 						if (d & 0xff) DrvSoundLatch = d & 0xff;
 						return;
 					} else {
-						MSM6295Command(0, d & 0xff);
+						MSM6295Write(0, d & 0xff);
 						return;
 					}
 				}
@@ -1955,7 +1990,7 @@ void __fastcall Tumbleb68KWriteWord(UINT32 a, UINT16 d)
 	}
 }
 
-UINT16 __fastcall Suprtrio68KReadWord(UINT32 a)
+static UINT16 __fastcall Suprtrio68KReadWord(UINT32 a)
 {
 	switch (a) {
 		case 0xe00000: {
@@ -1978,7 +2013,7 @@ UINT16 __fastcall Suprtrio68KReadWord(UINT32 a)
 	return 0;
 }
 
-void __fastcall Suprtrio68KWriteWord(UINT32 a, UINT16 d)
+static void __fastcall Suprtrio68KWriteWord(UINT32 a, UINT16 d)
 {
 	if (a >= 0xa00000 && a <= 0xa0000f) {
 		DrvControl[(a - 0xa00000) >> 1] = d;
@@ -2004,7 +2039,7 @@ void __fastcall Suprtrio68KWriteWord(UINT32 a, UINT16 d)
 	}
 }
 
-UINT8 __fastcall Fncywld68KReadByte(UINT32 a)
+static UINT8 __fastcall Fncywld68KReadByte(UINT32 a)
 {
 	switch (a) {
 		case 0x100003: {
@@ -2012,7 +2047,7 @@ UINT8 __fastcall Fncywld68KReadByte(UINT32 a)
 		}
 		
 		case 0x100005: {
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 		}
 		
 		case 0x180002: {
@@ -2036,7 +2071,7 @@ UINT8 __fastcall Fncywld68KReadByte(UINT32 a)
 	return 0;
 }
 
-void __fastcall Fncywld68KWriteByte(UINT32 a, UINT8 d)
+static void __fastcall Fncywld68KWriteByte(UINT32 a, UINT8 d)
 {
 	switch (a) {
 		case 0x100001: {
@@ -2050,9 +2085,11 @@ void __fastcall Fncywld68KWriteByte(UINT32 a, UINT8 d)
 		}
 		
 		case 0x100005: {
-			MSM6295Command(0, d);
+			MSM6295Write(0, d);
 			return;
 		}
+
+		case 0x100010: return; // nop
 		
 		default: {
 			bprintf(PRINT_NORMAL, _T("68K Write byte => %06X, %02X\n"), a, d);
@@ -2060,7 +2097,7 @@ void __fastcall Fncywld68KWriteByte(UINT32 a, UINT8 d)
 	}
 }
 
-UINT16 __fastcall Fncywld68KReadWord(UINT32 a)
+static UINT16 __fastcall Fncywld68KReadWord(UINT32 a)
 {
 	switch (a) {
 		case 0x180000: {
@@ -2104,7 +2141,7 @@ UINT16 __fastcall Fncywld68KReadWord(UINT32 a)
 	return 0;
 }
 
-void __fastcall Fncywld68KWriteWord(UINT32 a, UINT16 d)
+static void __fastcall Fncywld68KWriteWord(UINT32 a, UINT16 d)
 {
 	if (a >= 0x160800 && a <= 0x160807) return;
 	
@@ -2125,7 +2162,7 @@ void __fastcall Fncywld68KWriteWord(UINT32 a, UINT16 d)
 	}
 }
 
-UINT16 __fastcall Jumppop68KReadWord(UINT32 a)
+static UINT16 __fastcall Jumppop68KReadWord(UINT32 a)
 {
 	switch (a) {
 		case 0x180002: {
@@ -2148,7 +2185,7 @@ UINT16 __fastcall Jumppop68KReadWord(UINT32 a)
 	return 0;
 }
 
-void __fastcall Jumppop68KWriteWord(UINT32 a, UINT16 d)
+static void __fastcall Jumppop68KWriteWord(UINT32 a, UINT16 d)
 {
 	if (a >= 0x380000 && a <= 0x38000f) {
 		DrvControl[(a - 0x380000) >> 1] = d;
@@ -2180,11 +2217,11 @@ void __fastcall Jumppop68KWriteWord(UINT32 a, UINT16 d)
 	}
 }
 
-UINT8 __fastcall JumpkidsZ80Read(UINT16 a)
+static UINT8 __fastcall JumpkidsZ80Read(UINT16 a)
 {
 	switch (a) {
 		case 0x9800: {
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 		}
 		
 		case 0xa000: {
@@ -2199,7 +2236,7 @@ UINT8 __fastcall JumpkidsZ80Read(UINT16 a)
 	return 0;
 }
 
-void __fastcall JumpkidsZ80Write(UINT16 a, UINT8 d)
+static void __fastcall JumpkidsZ80Write(UINT16 a, UINT8 d)
 {
 	switch (a) {
 		case 0x9000: {
@@ -2209,7 +2246,7 @@ void __fastcall JumpkidsZ80Write(UINT16 a, UINT8 d)
 		}
 		
 		case 0x9800: {
-			MSM6295Command(0, d);
+			MSM6295Write(0, d);
 			return;
 		}
 		
@@ -2219,15 +2256,15 @@ void __fastcall JumpkidsZ80Write(UINT16 a, UINT8 d)
 	}
 }
 
-UINT8 __fastcall SemicomZ80Read(UINT16 a)
+static UINT8 __fastcall SemicomZ80Read(UINT16 a)
 {
 	switch (a) {
 		case 0xf001: {
-			return BurnYM2151ReadStatus();
+			return BurnYM2151Read();
 		}
 		
 		case 0xf002: {
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 		}
 		
 		case 0xf008: {
@@ -2242,7 +2279,7 @@ UINT8 __fastcall SemicomZ80Read(UINT16 a)
 	return 0;
 }
 
-void __fastcall SemicomZ80Write(UINT16 a, UINT8 d)
+static void __fastcall SemicomZ80Write(UINT16 a, UINT8 d)
 {
 	switch (a) {
 		case 0xf000: {
@@ -2256,7 +2293,7 @@ void __fastcall SemicomZ80Write(UINT16 a, UINT8 d)
 		}
 		
 		case 0xf002: {
-			MSM6295Command(0, d);
+			MSM6295Write(0, d);
 			return;
 		}
 		
@@ -2276,13 +2313,13 @@ void __fastcall SemicomZ80Write(UINT16 a, UINT8 d)
 	}
 }
 
-UINT8 __fastcall JumppopZ80PortRead(UINT16 a)
+static UINT8 __fastcall JumppopZ80PortRead(UINT16 a)
 {
 	a &= 0xff;
 	
 	switch (a) {
 		case 0x02: {
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 		}
 		
 		case 0x03: {
@@ -2303,7 +2340,7 @@ UINT8 __fastcall JumppopZ80PortRead(UINT16 a)
 	return 0;
 }
 
-void __fastcall JumppopZ80PortWrite(UINT16 a, UINT8 d)
+static void __fastcall JumppopZ80PortWrite(UINT16 a, UINT8 d)
 {
 	a &= 0xff;
 	
@@ -2319,7 +2356,7 @@ void __fastcall JumppopZ80PortWrite(UINT16 a, UINT8 d)
 		}
 		
 		case 0x02: {
-			MSM6295Command(0, d);
+			MSM6295Write(0, d);
 			return;
 		}
 		
@@ -2330,8 +2367,7 @@ void __fastcall JumppopZ80PortWrite(UINT16 a, UINT8 d)
 		
 		case 0x05: {
 			DrvZ80Bank = d;
-			ZetMapArea(0x8000, 0xbfff, 0, DrvZ80Rom + (DrvZ80Bank * 0x4000));
-			ZetMapArea(0x8000, 0xbfff, 2, DrvZ80Rom + (DrvZ80Bank * 0x4000));
+			ZetMapMemory(DrvZ80Rom + (DrvZ80Bank * 0x4000), 0x8000, 0xbfff, MAP_ROM);
 			return;
 		}
 		
@@ -2407,7 +2443,7 @@ static INT32 TumblebLoadRoms()
 	TumblebTilesRearrange();
 	GfxDecode(DrvNumChars, 4, 8, 8, CharPlaneOffsets, CharXOffsets, CharYOffsets, 0x80, DrvTempRom, DrvChars);
 	GfxDecode(DrvNumTiles, 4, 16, 16, CharPlaneOffsets, SpriteXOffsets, SpriteYOffsets, 0x200, DrvTempRom, DrvTiles);
-		
+
 	// Load and decode the sprites
 	memset(DrvTempRom, 0, 0x100000);
 	nRet = BurnLoadRom(DrvTempRom + 0x000000,  4, 1); if (nRet != 0) return 1;
@@ -2416,7 +2452,42 @@ static INT32 TumblebLoadRoms()
 	
 	// Load Sample Roms
 	nRet = BurnLoadRom(DrvMSM6295ROMSrc + 0x00000, 6, 1); if (nRet != 0) return 1;
-	if (Tumbleb2) nRet = BurnLoadRom(DrvMSM6295ROMSrc + 0x80000, 6, 1); if (nRet != 0) return 1;
+	if (Tumbleb2) { nRet = BurnLoadRom(DrvMSM6295ROMSrc + 0x80000, 6, 1); if (nRet != 0) return 1; }
+	memcpy(MSM6295ROM, DrvMSM6295ROMSrc, 0x40000);
+	
+	BurnFree(DrvTempRom);
+	
+	return 0;
+}
+
+static INT32 Tumbleb2LoadRoms()
+{
+	INT32 nRet = 0;
+	
+	DrvTempRom = (UINT8 *)BurnMalloc(0x100000);
+
+	// Load 68000 Program Roms
+	nRet = BurnLoadRom(Drv68KRom + 0x00001, 0, 2); if (nRet != 0) return 1;
+	nRet = BurnLoadRom(Drv68KRom + 0x00000, 1, 2); if (nRet != 0) return 1;
+	
+	// Load and decode the tiles
+	nRet = BurnLoadRom(DrvTempRom + 0x000000, 2, 2); if (nRet != 0) return 1;
+	nRet = BurnLoadRom(DrvTempRom + 0x000001, 3, 2); if (nRet != 0) return 1;
+	TumblebTilesRearrange();
+	GfxDecode(DrvNumChars, 4, 8, 8, CharPlaneOffsets, CharXOffsets, CharYOffsets, 0x80, DrvTempRom, DrvChars);
+	GfxDecode(DrvNumTiles, 4, 16, 16, CharPlaneOffsets, SpriteXOffsets, SpriteYOffsets, 0x200, DrvTempRom, DrvTiles);
+		
+	// Load and decode the sprites
+	memset(DrvTempRom, 0, 0x100000);
+	nRet = BurnLoadRom(DrvTempRom + 0x000000,  4, 2); if (nRet != 0) return 1;
+	nRet = BurnLoadRom(DrvTempRom + 0x000001,  5, 2); if (nRet != 0) return 1;
+	nRet = BurnLoadRom(DrvTempRom + 0x080000,  6, 2); if (nRet != 0) return 1;
+	nRet = BurnLoadRom(DrvTempRom + 0x080001,  7, 2); if (nRet != 0) return 1;
+	GfxDecode(DrvNumSprites, 4, 16, 16, SpritePlaneOffsets, SpriteXOffsets, SpriteYOffsets, 0x200, DrvTempRom, DrvSprites);
+	
+	// Load Sample Roms
+	nRet = BurnLoadRom(DrvMSM6295ROMSrc + 0x00000, 8, 1); if (nRet != 0) return 1;
+	if (Tumbleb2) { nRet = BurnLoadRom(DrvMSM6295ROMSrc + 0x80000, 8, 1); if (nRet != 0) return 1; }
 	memcpy(MSM6295ROM, DrvMSM6295ROMSrc, 0x40000);
 	
 	BurnFree(DrvTempRom);
@@ -2749,6 +2820,56 @@ static INT32 FncywldLoadRoms()
 	return 0;
 }
 
+static void magipur_tile_reorder(UINT8 *src, UINT8 *dst, INT32 swap)
+{
+	for (INT32 i = 0; i < 0x40000; i++)
+	{
+		dst[(i * 2 + 0x00001) ^ swap] = src[i + 0x00000];
+		dst[(i * 2 + 0x00000) ^ swap] = src[i + 0x40000];
+		dst[(i * 2 + 0x80001) ^ swap] = src[i + 0x80000];
+		dst[(i * 2 + 0x80000) ^ swap] = src[i + 0xc0000];
+	}
+}
+
+static INT32 MagipurLoadRoms()
+{
+	INT32 nRet = 0;
+	
+	DrvTempRom = (UINT8 *)BurnMalloc(0x100000);
+	UINT8 *DrvTempRom2 = (UINT8 *)BurnMalloc(0x100000);
+
+	// Load 68000 Program Roms
+	nRet = BurnLoadRom(Drv68KRom + 0x00001, 0, 2); if (nRet != 0) return 1;
+	nRet = BurnLoadRom(Drv68KRom + 0x00000, 1, 2); if (nRet != 0) return 1;
+
+	// Load and decode the tiles
+	nRet = BurnLoadRom(DrvTempRom2 + 0x000000, 4, 1); if (nRet != 0) return 1;
+	nRet = BurnLoadRom(DrvTempRom2 + 0x080000, 5, 1); if (nRet != 0) return 1;
+
+	magipur_tile_reorder(DrvTempRom2, DrvTempRom, 0);
+
+	TumblebTilesRearrange();
+	GfxDecode(DrvNumChars, 4, 8, 8, SpritePlaneOffsets, CharXOffsets, CharYOffsets, 0x80, DrvTempRom, DrvChars);
+	GfxDecode(DrvNumTiles, 4, 16, 16, SpritePlaneOffsets, SpriteXOffsets, SpriteYOffsets, 0x200, DrvTempRom, DrvTiles);
+
+	// Load and decode the sprites
+	memset(DrvTempRom, 0, 0x100000);
+	nRet = BurnLoadRom(DrvTempRom2 + 0x080000,  2, 1); if (nRet != 0) return 1;
+	nRet = BurnLoadRom(DrvTempRom2 + 0x000000,  3, 1); if (nRet != 0) return 1;
+
+	magipur_tile_reorder(DrvTempRom2, DrvTempRom, 1);
+
+	GfxDecode(DrvNumSprites, 4, 16, 16, SpritePlaneOffsets, SpriteXOffsets, SpriteYOffsets, 0x200, DrvTempRom, DrvSprites);
+
+	// Load Sample Roms
+	nRet = BurnLoadRom(MSM6295ROM + 0x00000,  6, 1); if (nRet != 0) return 1;
+
+	BurnFree(DrvTempRom);
+	BurnFree(DrvTempRom2);
+
+	return 0;
+}
+
 static INT32 SdfightLoadRoms()
 {
 	INT32 nRet = 0;
@@ -2963,6 +3084,25 @@ static void FncywldMap68k()
 	SekClose();
 }
 
+static void MagipurMap68k()
+{
+	// Setup the 68000 emulation
+	SekInit(0, 0x68000);
+	SekOpen(0);
+	SekMapMemory(Drv68KRam           , 0x000000, 0x00ffff, MAP_RAM);
+	SekMapMemory(Drv68KRam2          , 0x1a0000, 0x1a07ff, MAP_RAM);
+	SekMapMemory(DrvPaletteRam       , 0x140000, 0x140fff, MAP_RAM);
+	SekMapMemory(DrvSpriteRam        , 0x160000, 0x1607ff, MAP_RAM);
+	SekMapMemory(DrvPf1Ram           , 0x320000, 0x321fff, MAP_RAM);
+	SekMapMemory(DrvPf2Ram           , 0x322000, 0x323fff, MAP_RAM);
+	SekMapMemory(Drv68KRom           , 0xf00000, 0xffffff, MAP_ROM);
+	SekSetReadWordHandler(0, Fncywld68KReadWord);
+	SekSetWriteWordHandler(0, Fncywld68KWriteWord);
+	SekSetReadByteHandler(0, Fncywld68KReadByte);
+	SekSetWriteByteHandler(0, Fncywld68KWriteByte);
+	SekClose();
+}
+
 static void JumpkidsMapZ80()
 {
 	// Setup the Z80 emulation
@@ -2970,11 +3110,8 @@ static void JumpkidsMapZ80()
 	ZetOpen(0);
 	ZetSetReadHandler(JumpkidsZ80Read);
 	ZetSetWriteHandler(JumpkidsZ80Write);
-	ZetMapArea(0x0000, 0x7fff, 0, DrvZ80Rom                );
-	ZetMapArea(0x0000, 0x7fff, 2, DrvZ80Rom                );
-	ZetMapArea(0x8000, 0x87ff, 0, DrvZ80Ram                );
-	ZetMapArea(0x8000, 0x87ff, 1, DrvZ80Ram                );
-	ZetMapArea(0x8000, 0x87ff, 2, DrvZ80Ram                );
+	ZetMapMemory(DrvZ80Rom, 0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80Ram, 0x8000, 0x87ff, MAP_RAM);
 	ZetClose();
 }
 
@@ -2985,11 +3122,8 @@ static void SemicomMapZ80()
 	ZetOpen(0);
 	ZetSetReadHandler(SemicomZ80Read);
 	ZetSetWriteHandler(SemicomZ80Write);
-	ZetMapArea(0x0000, 0xcfff, 0, DrvZ80Rom                );
-	ZetMapArea(0x0000, 0xcfff, 2, DrvZ80Rom                );
-	ZetMapArea(0xd000, 0xd7ff, 0, DrvZ80Ram                );
-	ZetMapArea(0xd000, 0xd7ff, 1, DrvZ80Ram                );
-	ZetMapArea(0xd000, 0xd7ff, 2, DrvZ80Ram                );
+	ZetMapMemory(DrvZ80Rom, 0x0000, 0xcfff, MAP_ROM);
+	ZetMapMemory(DrvZ80Ram, 0xd000, 0xd7ff, MAP_RAM);
 	ZetClose();
 }
 
@@ -3005,7 +3139,8 @@ static void SemicomYM2151IrqHandler(INT32 Irq)
 static INT32 DrvInit(bool bReset, INT32 SpriteRamSize, INT32 SpriteMask, INT32 SpriteXOffset, INT32 SpriteYOffset, INT32 NumSprites, INT32 NumChars, INT32 NumTiles, double Refresh, INT32 OkiFreq)
 {
 	INT32 nRet = 0, nLen;
-	
+	BurnSetRefreshRate(Refresh);
+
 	DrvSpriteRamSize = SpriteRamSize;
 	DrvNumSprites = NumSprites,
 	DrvNumChars = NumChars,
@@ -3020,7 +3155,9 @@ static INT32 DrvInit(bool bReset, INT32 SpriteRamSize, INT32 SpriteMask, INT32 S
 	MemIndex();
 
 	nRet = DrvLoadRoms();
-	
+
+	if (nRet) return 1;
+
 	DrvMap68k();
 	
 	if (DrvHasZ80) DrvMapZ80();
@@ -3044,7 +3181,7 @@ static INT32 DrvInit(bool bReset, INT32 SpriteRamSize, INT32 SpriteMask, INT32 S
 		MSM6295SetRoute(0, 0.70, BURN_SND_ROUTE_BOTH);
 	}
 	
-	BurnSetRefreshRate(Refresh);
+
 	
 	nCyclesTotal[0] = 14000000 / 60;
 	
@@ -3077,7 +3214,12 @@ static INT32 TumblebInit()
 static INT32 Tumbleb2Init()
 {
 	Tumbleb2 = 1;
-	return TumblebInit();	
+	
+	DrvLoadRoms = Tumbleb2LoadRoms;
+	DrvMap68k = TumblebMap68k;
+	DrvRender = DrvDraw;
+
+	return DrvInit(1, 0x800, 0x3fff, -1, 0, 0x2000, 0x4000, 0x1000, 58.0, 8000000 / 10);
 }
 
 static INT32 JumpkidsInit()
@@ -3211,7 +3353,7 @@ static INT32 ChokchokInit()
 	Pf1XOffset = -5;
 	Pf1YOffset = 0;
 	Pf2XOffset = -1;
-	Pf2YOffset = 2;
+	Pf2YOffset = 1;
 	
 	return nRet;
 }
@@ -3289,6 +3431,33 @@ static INT32 FncywldInit()
 	
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.20, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.20, BURN_SND_ROUTE_RIGHT);
+	
+	return nRet;
+}
+
+static INT32 MagipurInit()
+{
+	INT32 nRet;
+	
+	DrvHasYM2151 = 1;
+	DrvHasZ80 = 0;
+	DrvYM2151Freq = 32220000 / 9;
+	DrvLoadRoms = MagipurLoadRoms;
+	DrvMap68k = MagipurMap68k;
+	DrvRender = FncywldDraw;
+	
+	nRet = DrvInit(1, 0x800, 0x3fff, -1, 0, 0x2000, 0x8000, 0x2000, 60.0, 1023924);
+	if (!nRet) {
+		memcpy(Drv68KRam, Drv68KRom, 0x80);
+		SekOpen(0);
+		SekReset();
+		SekClose();
+		nCyclesTotal[0] = 12000000 / 60;
+		DrvSpriteColourMask = 0x3f;
+	
+		BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.20, BURN_SND_ROUTE_LEFT);
+		BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.20, BURN_SND_ROUTE_RIGHT);
+	}
 	
 	return nRet;
 }
@@ -3414,7 +3583,9 @@ inline static INT32 JumppopSynchroniseStream(INT32 nSoundRate)
 static INT32 JumppopInit()
 {
 	INT32 nRet = 0, nLen;
-	
+
+	BurnSetRefreshRate(60.0);
+
 	DrvSpriteRamSize = 0x1000;
 	DrvNumSprites = 0x4000,
 	DrvNumChars = 0x8000,
@@ -3505,24 +3676,18 @@ static INT32 JumppopInit()
 	ZetOpen(0);
 	ZetSetInHandler(JumppopZ80PortRead);
 	ZetSetOutHandler(JumppopZ80PortWrite);
-	ZetMapArea(0x0000, 0x2fff, 0, DrvZ80Rom                );
-	ZetMapArea(0x0000, 0x2fff, 2, DrvZ80Rom                );
-	ZetMapArea(0x8000, 0xbfff, 0, DrvZ80Rom + 0x8000       );
-	ZetMapArea(0x8000, 0xbfff, 2, DrvZ80Rom + 0x8000       );
-	ZetMapArea(0xf800, 0xffff, 0, DrvZ80Ram                );
-	ZetMapArea(0xf800, 0xffff, 1, DrvZ80Ram                );
-	ZetMapArea(0xf800, 0xffff, 2, DrvZ80Ram                );
+	ZetMapMemory(DrvZ80Rom, 0x0000, 0x2fff, MAP_ROM);
+	ZetMapMemory(DrvZ80Rom + 0x8000, 0x8000, 0xbfff, MAP_ROM);
+	ZetMapMemory(DrvZ80Ram, 0xf800, 0xffff, MAP_RAM);
 	ZetClose();
 	
 	BurnYM3812Init(1, 3500000, NULL, JumppopSynchroniseStream, 0);
-	BurnTimerAttachZetYM3812(3500000);
+	BurnTimerAttachYM3812(&ZetConfig, 3500000);
 	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 0.70, BURN_SND_ROUTE_BOTH);
 	
 	// Setup the OKIM6295 emulation
 	MSM6295Init(0, 875000 / 132, 1);
 	MSM6295SetRoute(0, 0.50, BURN_SND_ROUTE_BOTH);
-	
-	BurnSetRefreshRate(60.0);
 	
 	nCyclesTotal[0] = 16000000 / 60;
 	nCyclesTotal[1] = 3500000 / 60;
@@ -4264,23 +4429,25 @@ static void DrvRenderSprites(INT32 MaskColour, INT32 xFlipped)
 	}
 }
 
-static void DrvDraw()
+static INT32 DrvDraw()
 {
 	BurnTransferClear();
 	DrvCalcPalette();
-	DrvRenderPf2Layer(DrvControl[3], DrvControl[4]);
+	if (nBurnLayer & 1) DrvRenderPf2Layer(DrvControl[3], DrvControl[4]);
 	
 	if (DrvControl[6] & 0x80) {
-		DrvRenderCharLayer();
+		if (nBurnLayer & 2) DrvRenderCharLayer();
 	} else {
-		DrvRenderPf1Layer(DrvControl[1], DrvControl[2]);
+		if (nBurnLayer & 4) DrvRenderPf1Layer(DrvControl[1], DrvControl[2]);
 	}
 	
-	DrvRenderSprites(0, 0);
+	if (nSpriteEnable & 1) DrvRenderSprites(0, 0);
 	BurnTransferCopy(DrvPalette);
+
+	return 0;
 }
 
-static void PangpangDraw()
+static INT32 PangpangDraw()
 {
 	BurnTransferClear();
 	DrvCalcPalette();
@@ -4294,9 +4461,11 @@ static void PangpangDraw()
 	
 	DrvRenderSprites(0, 0);
 	BurnTransferCopy(DrvPalette);
+
+	return 0;
 }
 
-static void SuprtrioDraw()
+static INT32 SuprtrioDraw()
 {
 	BurnTransferClear();
 	HtchctchCalcPalette();
@@ -4304,9 +4473,11 @@ static void SuprtrioDraw()
 	DrvRenderPf1Layer(-DrvControl[1], -DrvControl[2]);
 	DrvRenderSprites(0, 0);
 	BurnTransferCopy(DrvPalette);
+
+	return 0;
 }
 
-static void HtchctchDraw()
+static INT32 HtchctchDraw()
 {
 	BurnTransferClear();
 	HtchctchCalcPalette();
@@ -4320,25 +4491,29 @@ static void HtchctchDraw()
 	
 	DrvRenderSprites(0, 0);
 	BurnTransferCopy(DrvPalette);
+
+	return 0;
 }
 
-static void FncywldDraw()
+static INT32 FncywldDraw()
 {
 	BurnTransferClear();
 	FncywldCalcPalette();
-	FncywldRenderPf2Layer();
+	if (nBurnLayer & 1) FncywldRenderPf2Layer();
 	
 	if (DrvControl[6] & 0x80) {
-		FncywldRenderCharLayer();
+		if (nBurnLayer & 2) FncywldRenderCharLayer();
 	} else {
-		FncywldRenderPf1Layer();
+		if (nBurnLayer & 4) FncywldRenderPf1Layer();
 	}
 	
-	DrvRenderSprites(0x0f, 0);
+	if (nSpriteEnable & 1) DrvRenderSprites(0x0f, 0);
 	BurnTransferCopy(DrvPalette);
+
+	return 0;
 }
 
-static void SdfightDraw()
+static INT32 SdfightDraw()
 {
 	BurnTransferClear();
 	HtchctchCalcPalette();
@@ -4352,9 +4527,11 @@ static void SdfightDraw()
 	
 	DrvRenderSprites(0, 0);
 	BurnTransferCopy(DrvPalette);
+
+	return 0;
 }
 
-static void JumppopDraw()
+static INT32 JumppopDraw()
 {
 	BurnTransferClear();
 	JumppopCalcPalette();
@@ -4373,6 +4550,8 @@ static void JumppopDraw()
 	
 	DrvRenderSprites(0, 1);
 	BurnTransferCopy(DrvPalette);
+
+	return 0;
 }
 
 #define NUM_SCANLINES		315
@@ -4525,15 +4704,10 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 	if (nAction & ACB_DRIVER_DATA) {
 		SekScan(nAction);
 		if (DrvHasZ80) ZetScan(nAction);
-		if (DrvHasYM2151) BurnYM2151Scan(nAction);
-		MSM6295Scan(0, nAction);
+		if (DrvHasYM2151) BurnYM2151Scan(nAction, pnMin);
+		MSM6295Scan(nAction, pnMin);
 
 		// Scan critical driver variables
-		SCAN_VAR(nCyclesDone);
-		SCAN_VAR(nCyclesSegment);
-		SCAN_VAR(DrvDip);
-		SCAN_VAR(DrvInput);
-		SCAN_VAR(DrvVBlank);
 		SCAN_VAR(DrvOkiBank);
 		SCAN_VAR(DrvZ80Bank);
 		SCAN_VAR(DrvTileBank);
@@ -4541,6 +4715,8 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(Tumbleb2MusicCommand);
 		SCAN_VAR(Tumbleb2MusicBank);
 		SCAN_VAR(Tumbleb2MusicIsPlaying);
+
+		BurnRandomScan(nAction);
 	}
 	
 	if (nAction & ACB_WRITE) {
@@ -4554,8 +4730,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		
 		if (DrvZ80Bank) {
 			ZetOpen(0);
-			ZetMapArea(0x8000, 0xbfff, 0, DrvZ80Rom + (DrvZ80Bank * 0x4000));
-			ZetMapArea(0x8000, 0xbfff, 2, DrvZ80Rom + (DrvZ80Bank * 0x4000));
+			ZetMapMemory(DrvZ80Rom + (DrvZ80Bank * 0x4000), 0x8000, 0xbfff, MAP_ROM);
 			ZetClose();
 		}
 	}
@@ -4568,8 +4743,8 @@ struct BurnDriver BurnDrvTumbleb = {
 	"Tumble Pop (bootleg set 1)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
-	NULL, TumblebRomInfo, TumblebRomName, NULL, NULL, TumblebInputInfo, TumblebDIPInfo,
-	TumblebInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, TumblebRomInfo, TumblebRomName, NULL, NULL, NULL, NULL, TumblebInputInfo, TumblebDIPInfo,
+	TumblebInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4578,8 +4753,8 @@ struct BurnDriver BurnDrvTumbleb2 = {
 	"Tumble Pop (bootleg set 2)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
-	NULL, Tumbleb2RomInfo, Tumbleb2RomName, NULL, NULL, TumblebInputInfo, TumblebDIPInfo,
-	Tumbleb2Init, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, Tumbleb2RomInfo, Tumbleb2RomName, NULL, NULL, NULL, NULL, TumblebInputInfo, TumblebDIPInfo,
+	Tumbleb2Init, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4588,8 +4763,8 @@ struct BurnDriver BurnDrvJumpkids = {
 	"Jump Kids\0", NULL, "Comad", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
-	NULL, JumpkidsRomInfo, JumpkidsRomName, NULL, NULL, TumblebInputInfo, TumblebDIPInfo,
-	JumpkidsInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, JumpkidsRomInfo, JumpkidsRomName, NULL, NULL, NULL, NULL, TumblebInputInfo, TumblebDIPInfo,
+	JumpkidsInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4598,8 +4773,8 @@ struct BurnDriver BurnDrvMetlsavr = {
 	"Metal Saver\0", NULL, "First Amusement", "Miscellaneous",
 	L"Metal Saver\0\uBA54\uD0C8\uC138\uC774\uBC84\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
-	NULL, MetlsavrRomInfo, MetlsavrRomName, NULL, NULL, MetlsavrInputInfo, MetlsavrDIPInfo,
-	MetlsavrInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, MetlsavrRomInfo, MetlsavrRomName, NULL, NULL, NULL, NULL, MetlsavrInputInfo, MetlsavrDIPInfo,
+	MetlsavrInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4608,8 +4783,8 @@ struct BurnDriver BurnDrvPangpang = {
 	"Pang Pang\0", NULL, "Dong Gue La Mi Ltd.", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
-	NULL, PangpangRomInfo, PangpangRomName, NULL, NULL, TumblebInputInfo, TumblebDIPInfo,
-	PangpangInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, PangpangRomInfo, PangpangRomName, NULL, NULL, NULL, NULL, TumblebInputInfo, TumblebDIPInfo,
+	PangpangInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4618,8 +4793,8 @@ struct BurnDriver BurnDrvSuprtrio = {
 	"Super Trio\0", NULL, "Gameace", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
-	NULL, SuprtrioRomInfo, SuprtrioRomName, NULL, NULL, SuprtrioInputInfo, SuprtrioDIPInfo,
-	SuprtrioInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, SuprtrioRomInfo, SuprtrioRomName, NULL, NULL, NULL, NULL, SuprtrioInputInfo, SuprtrioDIPInfo,
+	SuprtrioInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4628,8 +4803,8 @@ struct BurnDriver BurnDrvHtchctch = {
 	"Hatch Catch\0", NULL, "SemiCom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
-	NULL, HtchctchRomInfo, HtchctchRomName, NULL, NULL, HtchctchInputInfo, HtchctchDIPInfo,
-	HtchctchInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, HtchctchRomInfo, HtchctchRomName, NULL, NULL, NULL, NULL, HtchctchInputInfo, HtchctchDIPInfo,
+	HtchctchInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4638,8 +4813,8 @@ struct BurnDriver BurnDrvCookbib = {
 	"Cookie & Bibi (set 1)\0", NULL, "SemiCom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
-	NULL, CookbibRomInfo, CookbibRomName, NULL, NULL, HtchctchInputInfo, CookbibDIPInfo,
-	CookbibInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, CookbibRomInfo, CookbibRomName, NULL, NULL, NULL, NULL, HtchctchInputInfo, CookbibDIPInfo,
+	CookbibInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4648,8 +4823,8 @@ struct BurnDriver BurnDrvCookbiba = {
 	"Cookie & Bibi (set 2)\0", NULL, "SemiCom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
-	NULL, CookbibaRomInfo, CookbibaRomName, NULL, NULL, HtchctchInputInfo, CookbibDIPInfo,
-	CookbibInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, CookbibaRomInfo, CookbibaRomName, NULL, NULL, NULL, NULL, HtchctchInputInfo, CookbibDIPInfo,
+	CookbibInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4658,8 +4833,8 @@ struct BurnDriver BurnDrvChokChok = {
 	"Choky! Choky!\0", NULL, "SemiCom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
-	NULL, ChokchokRomInfo, ChokchokRomName, NULL, NULL, HtchctchInputInfo, ChokchokDIPInfo,
-	ChokchokInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, ChokchokRomInfo, ChokchokRomName, NULL, NULL, NULL, NULL, HtchctchInputInfo, ChokchokDIPInfo,
+	ChokchokInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4668,8 +4843,8 @@ struct BurnDriver BurnDrvWlstar = {
 	"Wonder League Star - Sok-Magicball Fighting (Korea)\0", NULL, "Mijin", "Miscellaneous",
 	L"\uC6D0\uB354\uB9AC\uADF8\uC2A4\uD0C0 - \uC18D \uB9E4\uC9C1\uBCFC \uD30C\uC774\uD305 (Korea)\0Wonder League Star - Sok-Magicball Fighting\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SPORTSMISC, 0,
-	NULL, WlstarRomInfo, WlstarRomName, NULL, NULL, MetlsavrInputInfo, WlstarDIPInfo,
-	WlstarInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, WlstarRomInfo, WlstarRomName, NULL, NULL, NULL, NULL, MetlsavrInputInfo, WlstarDIPInfo,
+	WlstarInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4678,8 +4853,8 @@ struct BurnDriver BurnDrvWondl96 = {
 	"Wonder League '96 (Korea)\0", NULL, "SemiCom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SPORTSMISC, 0,
-	NULL, Wondl96RomInfo, Wondl96RomName, NULL, NULL, MetlsavrInputInfo, Wondl96DIPInfo,
-	Wondl96Init, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, Wondl96RomInfo, Wondl96RomName, NULL, NULL, NULL, NULL, MetlsavrInputInfo, Wondl96DIPInfo,
+	Wondl96Init, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4688,8 +4863,18 @@ struct BurnDriver BurnDrvFancywld = {
 	"Fancy World - Earth of Crisis\0", NULL, "Unico", "Miscellaneous",
 	L"Fancy World - Earth of Crisis\0\uD39C\uC2DC\uC6D4\uB4DC \uD658\uC0C1\uC758 \uC138\uACC4 - Earth of Crisis\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
-	NULL, FncywldRomInfo, FncywldRomName, NULL, NULL, FncywldInputInfo, FncywldDIPInfo,
-	FncywldInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, FncywldRomInfo, FncywldRomName, NULL, NULL, NULL, NULL, FncywldInputInfo, FncywldDIPInfo,
+	FncywldInit, DrvExit, DrvFrame, DrvRender, DrvScan,
+	NULL, 0x800, 320, 240, 4, 3
+};
+
+struct BurnDriver BurnDrvMagipur = {
+	"magipur", NULL, NULL, NULL, "1996",
+	"Magic Purple\0", NULL, "Unico", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	NULL, magipurRomInfo, magipurRomName, NULL, NULL, NULL, NULL, FncywldInputInfo, FncywldDIPInfo,
+	MagipurInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4698,8 +4883,8 @@ struct BurnDriver BurnDrvSdfight = {
 	"SD Fighters (Korea)\0", NULL, "SemiCom", "Miscellaneous",
 	L"\uFF33\uFF24 \uD30C\uC774\uD130\uC988 (Korea)\0SD Fighters\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_VSFIGHT, 0,
-	NULL, SdfightRomInfo, SdfightRomName, NULL, NULL, MetlsavrInputInfo, SdfightDIPInfo,
-	SdfightInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, SdfightRomInfo, SdfightRomName, NULL, NULL, NULL, NULL, MetlsavrInputInfo, SdfightDIPInfo,
+	SdfightInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4708,8 +4893,8 @@ struct BurnDriver BurnDrvBcstry = {
 	"B.C. Story (set 1)\0", NULL, "SemiCom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SPORTSMISC, 0,
-	NULL, BcstryRomInfo, BcstryRomName, NULL, NULL, MetlsavrInputInfo, BcstryDIPInfo,
-	BcstryInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, BcstryRomInfo, BcstryRomName, NULL, NULL, NULL, NULL, MetlsavrInputInfo, BcstryDIPInfo,
+	BcstryInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4718,8 +4903,8 @@ struct BurnDriver BurnDrvBcstrya = {
 	"B.C. Story (set 2)\0", NULL, "SemiCom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_SPORTSMISC, 0,
-	NULL, BcstryaRomInfo, BcstryaRomName, NULL, NULL, MetlsavrInputInfo, BcstryDIPInfo,
-	BcstryInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, BcstryaRomInfo, BcstryaRomName, NULL, NULL, NULL, NULL, MetlsavrInputInfo, BcstryDIPInfo,
+	BcstryInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4728,8 +4913,8 @@ struct BurnDriver BurnDrvSemibase = {
 	"MuHanSeungBu (SemiCom Baseball) (Korea)\0", NULL, "SemiCom", "Miscellaneous",
 	L"\u7121\u9650\u52DD\u8CA0\0\uC804\uC6D0 \uAD6D\uC81C\uB9AC\uADF8 \uC804 (SemiCom Baseball) (Korea)\0MuHanSeungBu\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SPORTSMISC, 0,
-	NULL, SemibaseRomInfo, SemibaseRomName, NULL, NULL, SemibaseInputInfo, SemibaseDIPInfo,
-	SemibaseInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, SemibaseRomInfo, SemibaseRomName, NULL, NULL, NULL, NULL, SemibaseInputInfo, SemibaseDIPInfo,
+	SemibaseInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4738,8 +4923,8 @@ struct BurnDriver BurnDrvDquizgo = {
 	"Date Quiz Go Go (Korea)\0", NULL, "SemiCom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_QUIZ, 0,
-	NULL, DquizgoRomInfo, DquizgoRomName, NULL, NULL, MetlsavrInputInfo, DquizgoDIPInfo,
-	DquizgoInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, DquizgoRomInfo, DquizgoRomName, NULL, NULL, NULL, NULL, MetlsavrInputInfo, DquizgoDIPInfo,
+	DquizgoInit, DrvExit, DrvFrame, DrvRender, DrvScan,
 	NULL, 0x800, 320, 240, 4, 3
 };
 
@@ -4749,8 +4934,8 @@ struct BurnDriver BurnDrvJumppop = {
 	"Jumping Pop (set 1)\0", NULL, "ESD", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
-	NULL, JumppopRomInfo, JumppopRomName, NULL, NULL, JumppopInputInfo, JumppopDIPInfo,
-	JumppopInit, JumppopExit, JumppopFrame, NULL, DrvScan,
+	NULL, JumppopRomInfo, JumppopRomName, NULL, NULL, NULL, NULL, JumppopInputInfo, JumppopDIPInfo,
+	JumppopInit, JumppopExit, JumppopFrame, DrvRender, DrvScan,
 	NULL, 0x400, 320, 240, 4, 3
 };
 
@@ -4759,7 +4944,7 @@ struct BurnDriver BurnDrvJumppope = {
 	"Jumping Pop (set 2)\0", NULL, "Emag Soft", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
-	NULL, JumppopeRomInfo, JumppopeRomName, NULL, NULL, JumppopInputInfo, JumppopDIPInfo,
-	JumppopInit, JumppopExit, JumppopFrame, NULL, DrvScan,
+	NULL, JumppopeRomInfo, JumppopeRomName, NULL, NULL, NULL, NULL, JumppopInputInfo, JumppopDIPInfo,
+	JumppopInit, JumppopExit, JumppopFrame, DrvRender, DrvScan,
 	NULL, 0x400, 320, 240, 4, 3
 };

@@ -351,7 +351,7 @@ UINT8 __fastcall ajax_sound_read(UINT16 address)
 	{
 		case 0xc000:
 		case 0xc001:
-			return BurnYM2151ReadStatus();
+			return BurnYM2151Read();
 
 		case 0xe000:
 			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
@@ -416,6 +416,8 @@ static INT32 DrvDoReset()
 	ZetReset();
 	ZetClose();
 
+	K007232Reset(0);
+	K007232Reset(1);
 	BurnYM2151Reset();
 
 	KonamiICReset();
@@ -558,7 +560,7 @@ static INT32 DrvInit(INT32 type)
 	konamiSetReadHandler(ajax_main_read);
 	konamiClose();
 
-	M6809Init(1);
+	M6809Init(0);
 	M6809Open(0);
 	M6809MapMemory(DrvShareRAM,		0x2000, 0x3fff, MAP_RAM);
 	M6809MapMemory(DrvM6809ROM  + 0x10000,	0x8000, 0x9fff, MAP_ROM);
@@ -593,14 +595,14 @@ static INT32 DrvInit(INT32 type)
 
 	K052109Init(DrvGfxROM0, DrvGfxROMExp0, 0x7ffff);
 	K052109SetCallback(K052109Callback);
-	K052109AdjustScroll(8, 0);
+	K052109AdjustScroll(4, 0);
 
 	K051960Init(DrvGfxROM1, DrvGfxROMExp1, 0xfffff);
 	K051960SetCallback(K051960Callback);
-	K051960SetSpriteOffset(8, 0);
+	K051960SetSpriteOffset(4, 0);
 
 	K051316Init(0, DrvGfxROM2, DrvGfxROM2, 0x7ffff, K051316Callback, 7, 0);
-	K051316SetOffset(0, -112, -16);
+	K051316SetOffset(0, -112 + 4, -16);
 
 	DrvDoReset();
 
@@ -748,7 +750,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		M6809Scan(nAction);
 		ZetScan(nAction);
 
-		BurnYM2151Scan(nAction);
+		BurnYM2151Scan(nAction, pnMin);
 		K007232Scan(nAction, pnMin);
 
 		KonamiICScan(nAction);
@@ -838,9 +840,9 @@ struct BurnDriver BurnDrvAjax = {
 	"Ajax\0", NULL, "Konami", "GX770",
 	L"Ajax\0\u30A8\u30FC\u30B8\u30E3\u30C3\u30AF\u30B9\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_VERSHOOT, 0,
-	NULL, ajaxRomInfo, ajaxRomName, NULL, NULL, AjaxInputInfo, AjaxDIPInfo,
+	NULL, ajaxRomInfo, ajaxRomName, NULL, NULL, NULL, NULL, AjaxInputInfo, AjaxDIPInfo,
 	ajaxInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
-	224, 288, 3, 4
+	224, 304, 3, 4
 };
 
 
@@ -884,9 +886,9 @@ struct BurnDriver BurnDrvTyphoon = {
 	"Typhoon\0", NULL, "Konami", "GX770",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_VERSHOOT, 0,
-	NULL, typhoonRomInfo, typhoonRomName, NULL, NULL, AjaxInputInfo, AjaxDIPInfo,
+	NULL, typhoonRomInfo, typhoonRomName, NULL, NULL, NULL, NULL, AjaxInputInfo, AjaxDIPInfo,
 	typhoonInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
-	224, 288, 3, 4
+	224, 304, 3, 4
 };
 
 
@@ -925,7 +927,7 @@ struct BurnDriver BurnDrvAjaxj = {
 	"Ajax (Japan)\0", NULL, "Konami", "GX770",
 	L"Ajax\0\u30A8\u30FC\u30B8\u30E3\u30C3\u30AF\u30B9 (Japan)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_VERSHOOT, 0,
-	NULL, ajaxjRomInfo, ajaxjRomName, NULL, NULL, AjaxInputInfo, AjaxDIPInfo,
+	NULL, ajaxjRomInfo, ajaxjRomName, NULL, NULL, NULL, NULL, AjaxInputInfo, AjaxDIPInfo,
 	typhoonInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
-	224, 288, 3, 4
+	224, 304, 3, 4
 };

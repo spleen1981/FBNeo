@@ -81,7 +81,7 @@ static void make_mixer_table(INT32 voices)
 
 void K005289Reset()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_K005289Initted) bprintf(PRINT_ERROR, _T("K005289Reset called without init\n"));
 #endif
 
@@ -114,7 +114,7 @@ void K005289Init(INT32 clock, UINT8 *prom)
 
 void K005289SetRoute(INT32 nIndex, double nVolume, INT32 nRouteDir)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_K005289Initted) bprintf(PRINT_ERROR, _T("K005289SetRoute called without init\n"));
 #endif
 
@@ -124,19 +124,23 @@ void K005289SetRoute(INT32 nIndex, double nVolume, INT32 nRouteDir)
 
 void K005289Exit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_K005289Initted) bprintf(PRINT_ERROR, _T("K005289Exit called without init\n"));
 #endif
 
+	if (!DebugSnd_K005289Initted) return;
+
 	BurnFree (mixer_buffer);
 	BurnFree (mixer_table);
-	
+	mixer_buffer = NULL;
+	mixer_table = NULL;
+
 	DebugSnd_K005289Initted = 0;
 }
 
 void K005289Update(INT16 *buffer, INT32 samples)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_K005289Initted) bprintf(PRINT_ERROR, _T("K005289Update called without init\n"));
 #endif
 
@@ -217,7 +221,7 @@ void K005289Update(INT16 *buffer, INT32 samples)
 
 void K005289ControlAWrite(UINT8 data)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_K005289Initted) bprintf(PRINT_ERROR, _T("K005289ControlAWrite called without init\n"));
 #endif
 
@@ -227,7 +231,7 @@ void K005289ControlAWrite(UINT8 data)
 
 void K005289ControlBWrite(UINT8 data)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_K005289Initted) bprintf(PRINT_ERROR, _T("K005289ControlBWrite called without init\n"));
 #endif
 
@@ -237,7 +241,7 @@ void K005289ControlBWrite(UINT8 data)
 
 void K005289Ld1Write(INT32 offset)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_K005289Initted) bprintf(PRINT_ERROR, _T("K005289Ld1 called without init\n"));
 #endif
 
@@ -247,7 +251,7 @@ void K005289Ld1Write(INT32 offset)
 
 void K005289Ld2Write(INT32 offset)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_K005289Initted) bprintf(PRINT_ERROR, _T("K005289Ld2 called without init\n"));
 #endif
 
@@ -257,7 +261,7 @@ void K005289Ld2Write(INT32 offset)
 
 void K005289Tg1Write()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_K005289Initted) bprintf(PRINT_ERROR, _T("K005289Tg1 called without init\n"));
 #endif
 
@@ -266,16 +270,16 @@ void K005289Tg1Write()
 
 void K005289Tg2Write()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_K005289Initted) bprintf(PRINT_ERROR, _T("K005289Tg2 called without init\n"));
 #endif
 
 	frequency[1] = freq_latch[1];
 }
 
-INT32 K005289Scan(INT32 nAction, INT32 *)
+void K005289Scan(INT32 nAction, INT32 *)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_K005289Initted) bprintf(PRINT_ERROR, _T("K005289Scan called without init\n"));
 #endif
 
@@ -288,9 +292,5 @@ INT32 K005289Scan(INT32 nAction, INT32 *)
 			SCAN_VAR(waveform[i]);
 			SCAN_VAR(volume[i]);
 		}
-
-		return 0;
 	}
-
-	return 0;
 }

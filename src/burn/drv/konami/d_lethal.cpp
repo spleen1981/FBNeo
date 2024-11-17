@@ -1,8 +1,6 @@
 // FB Alpha Lethal Enforcers driver module
 // Based on MAME driver by R. Belmont and Nicola Salmoria
 // Notes:
-//   Weird vertical black lines in certain places
-//   The glass windows should be transparent, but they're opaque
 //   japan version needs sprites fixed (x flipped not y flipped)
 //
 
@@ -48,10 +46,10 @@ static UINT8 DrvReset;
 static UINT8 DrvInputs[1];
 static UINT8 DrvDips[1];
 
-static INT32 LethalGun0 = 0;
-static INT32 LethalGun1 = 0;
-static INT32 LethalGun2 = 0;
-static INT32 LethalGun3 = 0;
+static INT16 LethalGun0 = 0;
+static INT16 LethalGun1 = 0;
+static INT16 LethalGun2 = 0;
+static INT16 LethalGun3 = 0;
 static UINT8 ReloadGun0 = 0;
 static UINT8 ReloadGun1 = 0;
 
@@ -72,6 +70,7 @@ static struct BurnInputInfo LethalenInputList[] = {
 	A("P2 Gun Y",    BIT_ANALOG_REL, &LethalGun3   ,    "p2 y-axis" ),
 
 	{"Reset",		    BIT_DIGITAL,	&DrvReset  ,	"reset"		},
+	{"Service Mode",	BIT_DIGITAL,	DrvJoy1 + 3,	"diag"		},
 	{"Service",		    BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
 	{"Dips",		  BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 };
@@ -80,27 +79,23 @@ STDINPUTINFO(Lethalen)
 
 static struct BurnDIPInfo LethalenDIPList[]=
 {
-	{0x0c, 0xff, 0xff, 0xd8, NULL			},
-
-	{0   , 0xfe, 0   ,    2, "Service Mode"		},
-	{0x0c, 0x01, 0x08, 0x08, "Off"			},
-	{0x0c, 0x01, 0x08, 0x00, "On"			},
+	{0x0f, 0xff, 0xff, 0xd8, NULL			},
 
 	{0   , 0xfe, 0   ,    2, "Language"		},
-	{0x0c, 0x01, 0x10, 0x10, "English"		},
-	{0x0c, 0x01, 0x10, 0x00, "Spanish"		},
+	{0x0f, 0x01, 0x10, 0x10, "English"		},
+	{0x0f, 0x01, 0x10, 0x00, "Spanish"		},
 
 	{0   , 0xfe, 0   ,    2, "Game Type"		},
-	{0x0c, 0x01, 0x20, 0x20, "Street"		},
-	{0x0c, 0x01, 0x20, 0x00, "Arcade"		},
+	{0x0f, 0x01, 0x20, 0x20, "Street"		},
+	{0x0f, 0x01, 0x20, 0x00, "Arcade"		},
 
 	{0   , 0xfe, 0   ,    2, "Coin Mechanism"	},
-	{0x0c, 0x01, 0x40, 0x40, "Common"		},
-	{0x0c, 0x01, 0x40, 0x00, "Independent"		},
+	{0x0f, 0x01, 0x40, 0x40, "Common"		},
+	{0x0f, 0x01, 0x40, 0x00, "Independent"		},
 
 	{0   , 0xfe, 0   ,    2, "Sound Output"		},
-	{0x0c, 0x01, 0x80, 0x00, "Mono"			},
-	{0x0c, 0x01, 0x80, 0x80, "Stereo"		},
+	{0x0f, 0x01, 0x80, 0x00, "Mono"			},
+	{0x0f, 0x01, 0x80, 0x80, "Stereo"		},
 };
 
 STDDIPINFO(Lethalen)
@@ -501,9 +496,6 @@ static INT32 DrvInit(INT32 flipy)
 		if (BurnLoadRomExt(DrvGfxROM0 + 0x000000,  3, 4, 2)) return 1;
 		if (BurnLoadRomExt(DrvGfxROM0 + 0x200002,  4, 4, 2)) return 1;
 		if (BurnLoadRomExt(DrvGfxROM0 + 0x200000,  5, 4, 2)) return 1;
-#if 0
-		BurnByteswap(DrvGfxROM0, 0x400000);
-#endif
 
 		if (BurnLoadRomExt(DrvGfxROM1 + 0x000000,  6, 4, 2)) return 1;
 		if (BurnLoadRomExt(DrvGfxROM1 + 0x000002,  7, 4, 2)) return 1;
@@ -540,7 +532,7 @@ static INT32 DrvInit(INT32 flipy)
 	K056832SetExtLinescroll();
 
 	K053245Init(0, DrvGfxROM1, DrvGfxROMExp1, 0x3fffff, lethal_sprite_callback);
-	K053245SetSpriteOffset(0, (flipy) ? (-216+95) : (-224-105), -16);
+	K053245SetSpriteOffset(0, (flipy) ? (-216+96) : (-224-105), -15);
 	K053245SetBpp(0, 6);
 
 	K054539Init(0, 48000, DrvSndROM, 0x200000);
@@ -549,7 +541,7 @@ static INT32 DrvInit(INT32 flipy)
 
 	DrvDoReset();
 
-	BurnGunInit(2, true);	
+	BurnGunInit(2, true);
 
 	return 0;
 }
@@ -590,7 +582,7 @@ static void DrvPaletteRecalc()
 
 	for (INT32 i = 0; i < 0x3802/2; i++)
 	{
-		UINT16 p = (pal[i] >> 8) | (pal[i] << 8);
+		UINT16 p = (BURN_ENDIAN_SWAP_INT16(pal[i]) >> 8) | (BURN_ENDIAN_SWAP_INT16(pal[i]) << 8);
 
 		INT32 r = (p & 0x1f);
 		INT32 g = (p >> 5) & 0x1f;
@@ -617,7 +609,7 @@ static INT32 DrvDraw()
 		K056832SetLayerOffsets(0, 188, 0);
 		K056832SetLayerOffsets(1, 190, 0);
 		K056832SetLayerOffsets(2, 192, 0);
-		K056832SetLayerOffsets(3, 192, 0);
+		K056832SetLayerOffsets(3, 194, 0);
 	}
 
 	KonamiClearBitmaps(DrvPalette[0x1c00]);
@@ -690,7 +682,6 @@ static INT32 DrvFrame()
 	}
 
 	INT32 nInterleave = nBurnSoundLen;
-	INT32 nSoundBufferPos = 0;
 	INT32 nCyclesTotal[2] = { 3000000 / 60, 6000000 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
@@ -712,14 +703,6 @@ static INT32 DrvFrame()
 		if ((i % (nInterleave / 8)) == ((nInterleave / 8) - 1) && sound_nmi_enable) {
 			ZetNmi();
 		}
-
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			memset (pSoundBuf, 0, nSegmentLength * 2 * 2);
-			K054539Update(0, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
 	}
 
 	if (K056832IsIrqEnabled()) {
@@ -727,12 +710,8 @@ static INT32 DrvFrame()
 	}
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		if (nSegmentLength) {
-			memset (pSoundBuf, 0, nSegmentLength * 2 * 2);
-			K054539Update(0, pSoundBuf, nSegmentLength);
-		}
+		BurnSoundClear();
+		K054539Update(0, pBurnSoundOut, nBurnSoundLen);
 	}
 
 	ZetClose();
@@ -745,7 +724,7 @@ static INT32 DrvFrame()
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -764,13 +743,15 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		HD6309Scan(nAction);
 		ZetScan(nAction);
 
-		K054539Scan(nAction);
+		K054539Scan(nAction, pnMin);
 
 		KonamiICScan(nAction);
 		BurnGunScan();
 
 		SCAN_VAR(current_4800_bank);
 		SCAN_VAR(sound_nmi_enable);
+		SCAN_VAR(layer_colorbase);
+		SCAN_VAR(sprite_colorbase);
 	}
 
 	return 0;
@@ -806,7 +787,7 @@ struct BurnDriver BurnDrvLethalen = {
 	"Lethal Enforcers (ver UAE, 11/19/92 15:04)\0", NULL, "Konami", "GX191",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
-	NULL, lethalenRomInfo, lethalenRomName, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
+	NULL, lethalenRomInfo, lethalenRomName, NULL, NULL, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
 	LethalenInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	288, 224, 4, 3
 };
@@ -841,7 +822,7 @@ struct BurnDriver BurnDrvLethalenub = {
 	"Lethal Enforcers (ver UAB, 09/01/92 11:12)\0", NULL, "Konami", "GX191",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
-	NULL, lethalenubRomInfo, lethalenubRomName, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
+	NULL, lethalenubRomInfo, lethalenubRomName, NULL, NULL, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
 	LethalenInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	288, 224, 4, 3
 };
@@ -876,7 +857,7 @@ struct BurnDriver BurnDrvLethalenua = {
 	"Lethal Enforcers (ver UAA, 08/17/92 21:38)\0", NULL, "Konami", "GX191",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
-	NULL, lethalenuaRomInfo, lethalenuaRomName, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
+	NULL, lethalenuaRomInfo, lethalenuaRomName, NULL, NULL, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
 	LethalenInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	288, 224, 4, 3
 };
@@ -911,7 +892,7 @@ struct BurnDriver BurnDrvLethalenux = {
 	"Lethal Enforcers (ver unknown, US, 08/06/92 15:11, hacked/proto?)\0", NULL, "Konami", "GX191",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
-	NULL, lethalenuxRomInfo, lethalenuxRomName, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
+	NULL, lethalenuxRomInfo, lethalenuxRomName, NULL, NULL, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
 	LethalenInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	288, 224, 4, 3
 };
@@ -946,7 +927,7 @@ struct BurnDriver BurnDrvLethaleneaa = {
 	"Lethal Enforcers (ver EAA, 09/09/92 09:44)\0", NULL, "Konami", "GX191",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
-	NULL, lethaleneaaRomInfo, lethaleneaaRomName, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
+	NULL, lethaleneaaRomInfo, lethaleneaaRomName, NULL, NULL, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
 	LethalenInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	288, 224, 4, 3
 };
@@ -981,7 +962,42 @@ struct BurnDriver BurnDrvLethaleneab = {
 	"Lethal Enforcers (ver EAB, 10/14/92 19:53)\0", NULL, "Konami", "GX191",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
-	NULL, lethaleneabRomInfo, lethaleneabRomName, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
+	NULL, lethaleneabRomInfo, lethaleneabRomName, NULL, NULL, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
+	LethalenInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
+	288, 224, 4, 3
+};
+
+
+// Lethal Enforcers (ver EAD, 11/11/92 10:52)
+
+static struct BurnRomInfo lethaleneadRomDesc[] = {
+	{ "191ead01.u4",	0x040000, 0xce2e13ce, 1 | BRF_PRG | BRF_ESS }, //  0 HD6309 Code
+
+	{ "191a02.f4",		0x010000, 0x72b843cc, 2 | BRF_PRG | BRF_ESS }, //  1 Z80 Code
+
+	{ "191a08",			0x100000, 0x555bd4db, 3 | BRF_GRA },           //  2 K056832 Characters
+	{ "191a10",			0x100000, 0x2fa9bf51, 3 | BRF_GRA },           //  3
+	{ "191a07",			0x100000, 0x1dad184c, 3 | BRF_GRA },           //  4
+	{ "191a09",			0x100000, 0xe2028531, 3 | BRF_GRA },           //  5
+
+	{ "191a05",			0x100000, 0xf2e3b58b, 4 | BRF_GRA },           //  6 K053244 Sprites
+	{ "191a04",			0x100000, 0x5c3eeb2b, 4 | BRF_GRA },           //  7
+	{ "191a06",			0x100000, 0xee11fc08, 4 | BRF_GRA },           //  8
+
+	{ "191a03",			0x200000, 0x9b13fbe8, 5 | BRF_SND },           //  9 K054539 Samples
+
+	{ "lethalenead.nv",	0x000080, 0xe1dc2bc0, 6 | BRF_OPT },           // 10 eeprom data
+};
+
+STD_ROM_PICK(lethalenead)
+STD_ROM_FN(lethalenead)
+
+struct BurnDriver BurnDrvLethalenead = {
+	"lethalenead", "lethalen", NULL, NULL, "1992",
+	"Lethal Enforcers (ver EAD, 11/11/92 10:52)\0", NULL, "Konami", "GX191",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
+	NULL, lethaleneadRomInfo, lethaleneadRomName, NULL, NULL, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
 	LethalenInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	288, 224, 4, 3
 };
@@ -1016,7 +1032,7 @@ struct BurnDriver BurnDrvLethaleneae = {
 	"Lethal Enforcers (ver EAE, 11/19/92 16:24)\0", NULL, "Konami", "GX191",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
-	NULL, lethaleneaeRomInfo, lethaleneaeRomName, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
+	NULL, lethaleneaeRomInfo, lethaleneaeRomName, NULL, NULL, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
 	LethalenInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	288, 224, 4, 3
 };
@@ -1051,7 +1067,7 @@ struct BurnDriverD BurnDrvLethalenj = {
 	"Lethal Enforcers (ver JAD, 12/04/92 17:16)\0", "no sprites!", "Konami", "GX191",
 	NULL, NULL, NULL, NULL,
 	BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
-	NULL, lethalenjRomInfo, lethalenjRomName, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
+	NULL, lethalenjRomInfo, lethalenjRomName, NULL, NULL, NULL, NULL, LethalenInputInfo, LethalenDIPInfo,
 	LethalenjInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	288, 224, 4, 3
 };

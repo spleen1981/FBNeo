@@ -142,6 +142,44 @@ static struct BurnDIPInfo OutrunDIPList[]=
 
 STDDIPINFO(Outrun)
 
+static struct BurnDIPInfo OutrunehDIPList[]=
+{
+	// Default Values
+	{0x0a, 0xff, 0xff, 0xff, NULL                                 },
+	{0x0b, 0xff, 0xff, 0xf9, NULL                                 },
+
+	// Dip 1
+	OUTRUN_COINAGE(0x0a)
+
+	// Dip 2
+	{0   , 0xfe, 0   , 3   , "Cabinet"                            },
+	{0x0b, 0x01, 0x03, 0x03, "Moving"                             },
+	{0x0b, 0x01, 0x03, 0x02, "Up Cockpit"                         },
+	{0x0b, 0x01, 0x03, 0x01, "Mini Up"                            },
+	
+	{0   , 0xfe, 0   , 2   , "Speed Indicator"                    },
+	{0x0b, 0x01, 0x08, 0x08, "km/h"                               },
+	{0x0b, 0x01, 0x08, 0x00, "MPH"                         		  },
+	
+	{0   , 0xfe, 0   , 2   , "Demo Sounds"                        },
+	{0x0b, 0x01, 0x04, 0x04, "Off"                                },
+	{0x0b, 0x01, 0x04, 0x00, "On"                                 },
+	
+	{0   , 0xfe, 0   , 4   , "Time Adjust"                        },
+	{0x0b, 0x01, 0x30, 0x20, "Easy"                               },
+	{0x0b, 0x01, 0x30, 0x30, "Normal"                             },
+	{0x0b, 0x01, 0x30, 0x10, "Hard"                               },
+	{0x0b, 0x01, 0x30, 0x00, "Hardest"                            },
+	
+	{0   , 0xfe, 0   , 4   , "Difficulty"                         },
+	{0x0b, 0x01, 0xc0, 0x80, "Easy"                               },
+	{0x0b, 0x01, 0xc0, 0xc0, "Normal"                             },
+	{0x0b, 0x01, 0xc0, 0x40, "Hard"                               },
+	{0x0b, 0x01, 0xc0, 0x00, "Hardest"                            },
+};
+
+STDDIPINFO(Outruneh)
+
 static struct BurnDIPInfo OutrundxDIPList[]=
 {
 	// Default Values
@@ -174,6 +212,43 @@ static struct BurnDIPInfo OutrundxDIPList[]=
 };
 
 STDDIPINFO(Outrundx)
+
+static struct BurnDIPInfo OutrundxehDIPList[]=
+{
+	// Default Values
+	{0x0a, 0xff, 0xff, 0xff, NULL                                 },
+	{0x0b, 0xff, 0xff, 0xfc, NULL                                 },
+
+	// Dip 1
+	OUTRUN_COINAGE(0x0a)
+
+	// Dip 2
+	{0   , 0xfe, 0   , 2   , "Cabinet"                            },
+	{0x0b, 0x01, 0x01, 0x00, "Not Moving"                         },
+	{0x0b, 0x01, 0x01, 0x01, "Moving"                             },
+	
+	{0   , 0xfe, 0   , 2   , "Demo Sounds"                        },
+	{0x0b, 0x01, 0x02, 0x02, "Off"                                },
+	{0x0b, 0x01, 0x02, 0x00, "On"                                 },
+	
+	{0   , 0xfe, 0   , 2   , "Speed Indicator"                    },
+	{0x0b, 0x01, 0x08, 0x08, "km/h"                               },
+	{0x0b, 0x01, 0x08, 0x00, "MPH"                         		  },
+	
+	{0   , 0xfe, 0   , 4   , "Time Adjust"                        },
+	{0x0b, 0x01, 0x30, 0x20, "Easy"                               },
+	{0x0b, 0x01, 0x30, 0x30, "Normal"                             },
+	{0x0b, 0x01, 0x30, 0x10, "Hard"                               },
+	{0x0b, 0x01, 0x30, 0x00, "Hardest"                            },
+	
+	{0   , 0xfe, 0   , 4   , "Difficulty"                         },
+	{0x0b, 0x01, 0xc0, 0x80, "Easy"                               },
+	{0x0b, 0x01, 0xc0, 0xc0, "Normal"                             },
+	{0x0b, 0x01, 0xc0, 0x40, "Hard"                               },
+	{0x0b, 0x01, 0xc0, 0x00, "Hardest"                            },
+};
+
+STDDIPINFO(Outrundxeh)
 
 static struct BurnDIPInfo ShangonDIPList[]=
 {
@@ -444,10 +519,10 @@ STD_ROM_PICK(Outrunra)
 STD_ROM_FN(Outrunra)
 
 static struct BurnRomInfo OutrunehRomDesc[] = {
-	{ "enhanced_110_epr-10380b.133",   0x10000, 0x30d6ab84, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
-	{ "enhanced_110_epr-10382b.118",   0x10000, 0x62041a21, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
-	{ "enhanced_110_epr-10381b.132",   0x10000, 0xa3cc8db5, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
-	{ "enhanced_110_epr-10383b.117",   0x10000, 0x21ab78a0, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "enhanced_202_epr-10380b.133",   0x10000, 0xdb563a0f, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "enhanced_202_epr-10382b.118",   0x10000, 0xca324a4e, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "enhanced_202_epr-10381b.132",   0x10000, 0xd60be71f, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "enhanced_202_epr-10383b.117",   0x10000, 0xcc1f2f75, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
 	
 	{ "epr-10327a.76",    0x10000, 0xe28a5baf, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
 	{ "epr-10329a.58",    0x10000, 0xda131c81, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
@@ -480,7 +555,7 @@ static struct BurnRomInfo OutrunehRomDesc[] = {
 	{ "opr-10191.68",     0x08000, 0x20a284ab, SYS16_ROM_PCMDATA | BRF_SND },
 	{ "opr-10190.69",     0x08000, 0x7cab70e2, SYS16_ROM_PCMDATA | BRF_SND },
 	{ "opr-10189.70",     0x08000, 0x01366b54, SYS16_ROM_PCMDATA | BRF_SND },
-	{ "enhanced_103_opr-10188.71",     0x08000, 0x37598616, SYS16_ROM_PCMDATA | BRF_SND }, // unofficial replacement for factory defective opr-10188
+	{ "enhanced_202_opr-10188.71",     0x08000, 0x57d5c867, SYS16_ROM_PCMDATA | BRF_SND }, // unofficial replacement for factory defective opr-10188
 };
 
 
@@ -561,11 +636,10 @@ static struct BurnRomInfo OutrundxjRomDesc[] = {
 	{ "epr-10332.ic132",  0x10000, 0x53d298d7, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
 	{ "epr-10334.ic117",  0x10000, 0xff22ad0b, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
 	
-	// note, this fails the ROM test because the checksums present in the ROMs have not been changed from the unencrypted version!
-	{ "epr-10327a.76",    0x10000, 0xe28a5baf, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
-	{ "epr-10329a.58",    0x10000, 0xda131c81, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
-	{ "epr-10328a.75",    0x10000, 0xd5ec5e5d, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
-	{ "epr-10330a.57",    0x10000, 0xba9ec82a, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
+	{ "epr-10327.76",     0x10000, 0xda99d855, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
+	{ "epr-10329.58",     0x10000, 0xfe0fa5e2, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
+	{ "epr-10328.75",     0x10000, 0x3c0e9a7f, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
+	{ "epr-10330.57",     0x10000, 0x59786e99, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
 
 	{ "opr-10268.99",     0x08000, 0x95344b04, SYS16_ROM_TILES | BRF_GRA },
 	{ "opr-10232.102",    0x08000, 0x776ba1eb, SYS16_ROM_TILES | BRF_GRA },
@@ -595,7 +669,7 @@ static struct BurnRomInfo OutrundxjRomDesc[] = {
 	{ "opr-10189.70",     0x08000, 0x01366b54, SYS16_ROM_PCMDATA | BRF_SND },
 	{ "opr-10188.71",     0x08000, 0xbad30ad9, SYS16_ROM_PCMDATA | BRF_SND },
 	
-	{ "317-0019.key",  0x02000, 0x6ff847c6, SYS16_ROM_KEY | BRF_ESS | BRF_PRG },
+	{ "317-0019.key",     0x02000, 0x8ffbed98, SYS16_ROM_KEY | BRF_ESS | BRF_PRG },
 };
 
 
@@ -830,6 +904,44 @@ static struct BurnRomInfo ShangonRomDesc[] = {
 STD_ROM_PICK(Shangon)
 STD_ROM_FN(Shangon)
 
+static struct BurnRomInfo ShangonehRomDesc[] = {
+	{ "epr-10886.133.enh",0x10000, 0xca94b341, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "epr-10884.118.enh",0x10000, 0xb301d2cc, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "epr-10887.132.enh",0x10000, 0xf12958d5, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "epr-10885.117.enh",0x10000, 0xf9f69814, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	
+	{ "epr-10792.76",     0x10000, 0x16299d25, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
+	{ "epr-10790.58",     0x10000, 0x2246cbc1, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
+	{ "epr-10793.75",     0x10000, 0xd9525427, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
+	{ "epr-10791.57",     0x10000, 0x5faf4cbe, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
+
+	{ "epr-10652.54",     0x08000, 0x260286f9, SYS16_ROM_TILES | BRF_GRA },
+	{ "epr-10651.55",     0x08000, 0xc609ee7b, SYS16_ROM_TILES | BRF_GRA },
+	{ "epr-10650.56",     0x08000, 0xb236a403, SYS16_ROM_TILES | BRF_GRA },
+	
+	{ "mpr-10794.8",      0x20000, 0x7c958e63, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "mpr-10798.16",     0x20000, 0x7d58f807, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "mpr-10795.6",      0x20000, 0xd9d31f8c, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "mpr-10799.14",     0x20000, 0x96d90d3d, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "mpr-10796.4",      0x20000, 0xfb48957c, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "mpr-10800.12",     0x20000, 0xfeaff98e, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "mpr-10797.2",      0x20000, 0x27f2870d, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "mpr-10801.10",     0x20000, 0x12781795, SYS16_ROM_SPRITES | BRF_GRA },
+	
+	{ "epr-10642.47",     0x08000, 0x7836bcc3, SYS16_ROM_ROAD | BRF_GRA },
+
+	{ "epr-10649c.88",    0x08000, 0xf6c1ce71, SYS16_ROM_Z80PROG | BRF_ESS | BRF_PRG },
+	
+	{ "epr-10643.66",     0x08000, 0x06f55364, SYS16_ROM_PCMDATA | BRF_SND },
+	{ "epr-10644.67",     0x08000, 0xb41d541d, SYS16_ROM_PCMDATA | BRF_SND },
+	{ "epr-10645.68",     0x08000, 0xa60dabff, SYS16_ROM_PCMDATA | BRF_SND },
+	{ "epr-10646.69",     0x08000, 0x473cc411, SYS16_ROM_PCMDATA | BRF_SND },
+};
+
+
+STD_ROM_PICK(Shangoneh)
+STD_ROM_FN(Shangoneh)
+
 static struct BurnRomInfo Shangon1RomDesc[] = {
 	{ "epr-10636.133",    0x10000, 0xe52721fe, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
 	{ "epr-10634.118",    0x10000, 0x08feca97, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
@@ -869,7 +981,7 @@ static struct BurnRomInfo Shangon1RomDesc[] = {
 	{ "epr-10645.68",     0x08000, 0xa60dabff, SYS16_ROM_PCMDATA | BRF_SND },
 	{ "epr-10646.69",     0x08000, 0x473cc411, SYS16_ROM_PCMDATA | BRF_SND },
 	
-	{ "317-0034.key",     0x02000, 0x263ca773, SYS16_ROM_KEY | BRF_ESS | BRF_PRG },
+	{ "317-0034.key",     0x02000, 0xad61539a, SYS16_ROM_KEY | BRF_ESS | BRF_PRG },
 };
 
 
@@ -915,7 +1027,7 @@ static struct BurnRomInfo Shangon2RomDesc[] = {
 	{ "epr-10645.68",     0x08000, 0xa60dabff, SYS16_ROM_PCMDATA | BRF_SND },
 	{ "epr-10646.69",     0x08000, 0x473cc411, SYS16_ROM_PCMDATA | BRF_SND },
 	
-	{ "317-0034.key",     0x02000, 0x263ca773, SYS16_ROM_KEY | BRF_ESS | BRF_PRG },
+	{ "317-0034.key",     0x02000, 0xad61539a, SYS16_ROM_KEY | BRF_ESS | BRF_PRG },
 };
 
 
@@ -961,7 +1073,7 @@ static struct BurnRomInfo Shangon3RomDesc[] = {
 	{ "epr-10645.68",     0x08000, 0xa60dabff, SYS16_ROM_PCMDATA | BRF_SND },
 	{ "epr-10646.69",     0x08000, 0x473cc411, SYS16_ROM_PCMDATA | BRF_SND },
 	
-	{ "317-0034.key",     0x02000, 0x263ca773, SYS16_ROM_KEY | BRF_ESS | BRF_PRG },
+	{ "317-0034.key",     0x02000, 0xad61539a, SYS16_ROM_KEY | BRF_ESS | BRF_PRG },
 };
 	
 
@@ -1055,6 +1167,50 @@ static struct BurnRomInfo ShangonleRomDesc[] = {
 
 STD_ROM_PICK(Shangonle)
 STD_ROM_FN(Shangonle)
+
+static struct BurnRomInfo ShangonleehRomDesc[] = {
+	{ "epr-13944.133.enh",0x10000, 0x7a9235a0, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "epr-13943.118.enh",0x10000, 0x0d72ec1e, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "epr-10899.132.enh",0x10000, 0x4079107b, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "epr-10897.117.enh",0x10000, 0xae134fb1, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	
+	{ "epr-10640.76",     0x10000, 0x02be68db, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
+	{ "epr-10638.58",     0x10000, 0xf13e8bee, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
+	{ "epr-10641.75",     0x10000, 0x38c3f808, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
+	{ "epr-10639.57",     0x10000, 0x8cdbcde8, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
+
+	{ "epr-10652.54",     0x08000, 0x260286f9, SYS16_ROM_TILES | BRF_GRA },
+	{ "epr-10651.55",     0x08000, 0xc609ee7b, SYS16_ROM_TILES | BRF_GRA },
+	{ "epr-10650.56",     0x08000, 0xb236a403, SYS16_ROM_TILES | BRF_GRA },
+	
+	{ "epr-10675.8",      0x10000, 0xd6ac012b, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-10682.16",     0x10000, 0xd9d83250, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-13945.7",      0x10000, 0xfbb1eef9, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-13946.15",     0x10000, 0x03144930, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-10677.6",      0x10000, 0x8a57b8d6, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-10684.14",     0x10000, 0x3aff8910, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-10678.5",      0x10000, 0xaf473098, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-10685.13",     0x10000, 0x80bafeef, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-10679.4",      0x10000, 0x03bc4878, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-10686.12",     0x10000, 0x274b734e, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-10680.3",      0x10000, 0x9f0677ed, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-10687.11",     0x10000, 0x508a4701, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-10681.2",      0x10000, 0xb176ea72, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-10688.10",     0x10000, 0x42fcd51d, SYS16_ROM_SPRITES | BRF_GRA },
+	
+	{ "epr-10642.47",     0x08000, 0x7836bcc3, SYS16_ROM_ROAD | BRF_GRA },
+
+	{ "epr-10649c.88",    0x08000, 0xf6c1ce71, SYS16_ROM_Z80PROG | BRF_ESS | BRF_PRG },
+	
+	{ "epr-10643.66",     0x08000, 0x06f55364, SYS16_ROM_PCMDATA | BRF_SND },
+	{ "epr-10644.67",     0x08000, 0xb41d541d, SYS16_ROM_PCMDATA | BRF_SND },
+	{ "epr-10645.68",     0x08000, 0xa60dabff, SYS16_ROM_PCMDATA | BRF_SND },
+	{ "epr-10646.69",     0x08000, 0x473cc411, SYS16_ROM_PCMDATA | BRF_SND },
+};
+
+
+STD_ROM_PICK(Shangonleeh)
+STD_ROM_FN(Shangonleeh)
 
 static struct BurnRomInfo ToutrunRomDesc[] = {
 	{ "epr-12513.133",    0x10000, 0xae8835a5, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
@@ -1612,103 +1768,73 @@ void OutrunPPI0WritePortC(UINT8 data)
 	}
 }
 
-UINT16 __fastcall OutrunReadWord(UINT32 a)
+static UINT8 OutrunReadIO(UINT32 offset)
 {
-	switch (a) {
-		case 0x140060: {
-			// watchdog read
-			return 0;
-		}
-	}
-
-#if 0 && defined FBA_DEBUG
-	bprintf(PRINT_NORMAL, _T("68000 Read Word -> 0x%06X\n"), a);
-#endif
-
-	return 0xffff;
-}
-
-UINT8 __fastcall OutrunReadByte(UINT32 a)
-{
-	switch (a) {
-		case 0x140001: {
-			ppi8255_r(0, (a - 0x140000) >> 1);
+	switch (offset) {
+		case 0x00:
+		case 0x01:
+		case 0x02:
+		case 0x03: {
+			return ppi8255_r(0, offset);
 		}
 		
-		case 0x140011: {
+		case 0x08: {
 			return 0xff - System16Input[0];
 		}
 		
-		case 0x140015: {
+		case 0x09: {
+			return 0xff - System16Input[1];
+		}
+		
+		case 0x0a: {
 			return System16Dip[0];
 		}
 		
-		case 0x140017: {
+		case 0x0b: {
 			return System16Dip[1];
 		}
 		
-		case 0x140031: {
+		case 0x18: {
 			if (System16ProcessAnalogControlsDo) return System16ProcessAnalogControlsDo(System16AnalogSelect);
+			return 0xff;
+		}
+	
+		case 0x30: {
+			// watchdog read
+			return 0;
+		}
+		
+		case 0x38: {
+			// ???
+			return 0;
 		}
 	}
-
-#if 0 && defined FBA_DEBUG
-	bprintf(PRINT_NORMAL, _T("68000 Read Byte -> 0x%06X\n"), a);
-#endif
-
-	return 0xff;
+	
+	return sega_315_5195_io_read(offset);
 }
 
-void __fastcall OutrunWriteWord(UINT32 a, UINT16 d)
+static void OutrunWriteIO(UINT32 offset, UINT8 d)
 {
-	if (a >= 0x100000 && a <= 0x10ffff) {
-		System16BTileWordWrite(a - 0x100000, d);
-		return;
-	}
-	
-	switch (a) {
-		case 0x140070: {
-			UINT32 *src = (UINT32 *)System16SpriteRam;
-			UINT32 *dst = (UINT32 *)System16SpriteRamBuff;
-
-			/* swap the halves of the sprite RAM */
-			for (UINT32 i = 0; i < System16SpriteRamSize/4; i++) {
-				UINT32 temp = *src;
-				*src++ = *dst;
-				*dst++ = temp;
-			}
-		
-			/* hack for thunderblade */
-			memset(System16SpriteRam, 0xff, System16SpriteRamSize);
+	switch (offset) {
+		case 0x00:
+		case 0x01:
+		case 0x02:
+		case 0x03: {
+			ppi8255_w(0, offset, d);
 			return;
 		}
-	}
-
-#if 0 && defined FBA_DEBUG
-	bprintf(PRINT_NORMAL, _T("68000 Write Word -> 0x%06X, 0x%04X\n"), a, d);
-#endif
-}
-
-void __fastcall OutrunWriteByte(UINT32 a, UINT8 d)
-{
-	if (a >= 0x100000 && a <= 0x10ffff) {
-		System16BTileByteWrite((a - 0x100000) ^ 1, d);
-		return;
-	}
-	
-	switch (a) {
-		case 0x140003:
-		case 0x140005:
-		case 0x140007: {
-			ppi8255_w(0, (a - 0x140000) >> 1, d & 0xff);
+		
+		case 0x10: {
+			// motors
+			return;
 		}
 		
-		case 0x140031: {
+		case 0x18: {
 			System16AnalogSelect = d;
 			return;
 		}
 		
-		case 0x140071: {
+		case 0x38: {
 			UINT32 *src = (UINT32 *)System16SpriteRam;
 			UINT32 *dst = (UINT32 *)System16SpriteRamBuff;
 
@@ -1723,26 +1849,72 @@ void __fastcall OutrunWriteByte(UINT32 a, UINT8 d)
 			memset(System16SpriteRam, 0xff, System16SpriteRamSize);
 			return;
 		}
+	}
+	
+	sega_315_5195_io_write(offset, d);
+}
+
+static UINT8 ShangonReadIO(UINT32 offset)
+{
+	switch (offset) {
+		case 0x0801: {
+			return 0xff - System16Input[0];
+		}
 		
-		case 0xffff07: {
-			System16SoundLatch = d & 0xff;
-			ZetOpen(0);
-			ZetNmi();
-			ZetClose();
+		case 0x0802: {
+			return System16Dip[0];
+		}
+		
+		case 0x0803: {
+			return System16Dip[1];
+		}
+		
+		case 0x1810: {
+			if (System16ProcessAnalogControlsDo) return System16ProcessAnalogControlsDo(System16AnalogSelect);
+			return 0xff;
+		}
+	}
+	
+	return sega_315_5195_io_read(offset);
+}
+
+static void ShangonWriteIO(UINT32 offset, UINT8 d)
+{
+	switch (offset) {
+		case 0x0000: {
+			System16AnalogSelect = (d >> 6) & 3;
+			System16VideoEnable = (d >> 5) & 1;
+			return;
+		}
+		
+		case 0x0010: {
+			if (!(d & 1)) {
+				ZetOpen(0);
+				ZetReset();
+				ZetClose();
+			}
+			return;
+			
+		}
+		
+		case 0x1800: {
+			// watchdog write
+			return;
+		}
+		
+		case 0x1810: {
+			// adc trigger
 			return;
 		}
 	}
-
-#if 0 && defined FBA_DEBUG
-	bprintf(PRINT_NORMAL, _T("68000 Write Byte -> 0x%06X, 0x%02X\n"), a, d);
-#endif
+	
+	sega_315_5195_io_write(offset, d);
 }
 
-UINT8 __fastcall Outrun2ReadByte(UINT32 a)
+UINT16 System16RoadControlRead(UINT32 offset)
 {
-	switch (a) {
-		case 0x090000:
-		case 0x090001: {
+	switch (offset) {
+		case 0x00: {
 			// swap the halves of the road RAM
 			memcpy(System16RoadRamBuff, System16RoadRam, 0x1000);
 			UINT32 *src = (UINT32 *)System16RoadRamBuff;
@@ -1756,8 +1928,29 @@ UINT8 __fastcall Outrun2ReadByte(UINT32 a)
 			return System16RoadControl;
 		}
 	}
+	
+	return 0;
+}
 
-#if 0 && defined FBA_DEBUG
+void System16RoadControlWrite(UINT32 offset, UINT16 d)
+{
+	switch (offset) {
+		case 0x00: {
+			System16RoadControl = d & 3;
+		}
+	}
+}
+
+UINT8 __fastcall Outrun2ReadByte(UINT32 a)
+{
+	switch (a) {
+		case 0x090000:
+		case 0x090001: {
+			return System16RoadControlRead((a - 0x090000) >> 1);
+		}
+	}
+
+#if 0 && defined FBNEO_DEBUG
 	bprintf(PRINT_NORMAL, _T("68000 # 2 Read Byte -> 0x%06X\n"), a);
 #endif
 
@@ -1768,12 +1961,12 @@ void __fastcall Outrun2WriteWord(UINT32 a, UINT16 d)
 {
 	switch (a) {
 		case 0x090000: {
-			System16RoadControl = d & 3;
+			System16RoadControlWrite((a - 0x090000) >> 1, d);
 			return;
 		}
 	}
 
-#if 0 && defined FBA_DEBUG
+#if 0 && defined FBNEO_DEBUG
 	bprintf(PRINT_NORMAL, _T("68000 # 2 Write Word -> 0x%06X, 0x%04X\n"), a, d);
 #endif
 }
@@ -1782,157 +1975,13 @@ void __fastcall Outrun2WriteByte(UINT32 a, UINT8 d)
 {
 	switch (a) {
 		case 0x090001: {
-			System16RoadControl = d & 3;
+			System16RoadControlWrite((a - 0x090000) >> 1, d);
 			return;
 		}
 	}
 
-#if 0 && defined FBA_DEBUG
+#if 0 && defined FBNEO_DEBUG
 	bprintf(PRINT_NORMAL, _T("68000 # 2 Write Byte -> 0x%06X, 0x%02X\n"), a, d);
-#endif
-}
-
-UINT16 __fastcall ShangonReadWord(UINT32 a)
-{
-	switch (a) {
-		case 0x141002: {
-			return 0xff - System16Input[0];
-		}
-		
-		case 0x141004: {
-			return System16Dip[0];
-		}
-		
-		case 0x141006: {
-			return System16Dip[1];
-		}
-	}
-
-#if 0 && defined FBA_DEBUG
-	bprintf(PRINT_NORMAL, _T("68000 Read Word -> 0x%06X\n"), a);
-#endif
-
-	return 0xffff;
-}
-
-UINT8 __fastcall ShangonReadByte(UINT32 a)
-{
-	switch (a) {
-		case 0x141003: {
-			return 0xff - System16Input[0];
-		}
-		
-		case 0x141005: {
-			return System16Dip[0];
-		}
-		
-		case 0x141007: {
-			return System16Dip[1];
-		}
-		
-		case 0x143021: {
-			if (System16ProcessAnalogControlsDo) return System16ProcessAnalogControlsDo(System16AnalogSelect);
-		}
-		
-		case 0x290000: {
-			// swap the halves of the road RAM
-			memcpy(System16RoadRamBuff, System16RoadRam, 0x1000);
-			UINT32 *src = (UINT32 *)System16RoadRamBuff;
-			UINT32 *dst = (UINT32 *)System16RoadRam;
-			for (INT32 i = 0; i < 0x1000/4; i++) {
-				UINT32 temp = *src;
-				*src++ = *dst;
-				*dst++ = temp;
-			}
-			
-			return System16RoadControl;
-		}
-		
-		case 0xffff05: {
-			return System16SoundLatch;
-		}
-	}
-		
-#if 0 && defined FBA_DEBUG
-	bprintf(PRINT_NORMAL, _T("68000 Read Byte -> 0x%06X\n"), a);
-#endif
-
-	return 0xff;
-}
-
-void __fastcall ShangonWriteWord(UINT32 a, UINT16 d)
-{
-	if (a >= 0x100000 && a <= 0x10ffff) {
-		System16BTileWordWrite(a - 0x100000, d);
-		return;
-	}
-	
-	switch (a) {
-		case 0x290000: {
-			System16RoadControl = d & 3;
-			return;
-		}
-		
-		case 0xffff06: {
-			System16SoundLatch = d & 0xff;
-			ZetOpen(0);
-			ZetNmi();
-			nSystem16CyclesDone[2] += ZetRun(200);
-			ZetClose();
-			return;
-		}
-	}
-	
-#if 0 && defined FBA_DEBUG
-	bprintf(PRINT_NORMAL, _T("68000 Write Word -> 0x%06X, 0x%04X\n"), a, d);
-#endif
-}
-
-void __fastcall ShangonWriteByte(UINT32 a, UINT8 d)
-{
-	if (a >= 0x100000 && a <= 0x10ffff) {
-		System16BTileByteWrite((a - 0x100000) ^ 1, d);
-		return;
-	}
-	
-	switch (a) {
-		case 0x140001: {
-			System16AnalogSelect = (d >> 6) & 3;
-			System16VideoEnable = (d >> 5) & 1;
-			return;
-		}
-		
-		case 0x140021: {
-			if (!(d & 1)) {
-				ZetOpen(0);
-				ZetReset();
-				ZetClose();
-			}
-			return;
-			
-		}
-		
-		case 0x143001: {
-			// watchdog write
-			return;
-		}
-		
-		case 0x143021: {
-			return;
-		}
-		
-		case 0xffff07: {
-			System16SoundLatch = d & 0xff;
-			ZetOpen(0);
-			ZetNmi();
-			nSystem16CyclesDone[2] += ZetRun(200);
-			ZetClose();
-			return;
-		}
-	}
-
-#if 0 && defined FBA_DEBUG
-	bprintf(PRINT_NORMAL, _T("68000 Write Byte -> 0x%06X, 0x%02X\n"), a, d);
 #endif
 }
 
@@ -1942,35 +1991,21 @@ Driver Inits
 
 UINT8 OutrunProcessAnalogControls(UINT16 value)
 {
-	UINT8 temp = 0;
-	
 	switch (value) {
 
 		// Steering
 		case 0: {
-
-			// Prevent CHAR data overflow
-			if((System16AnalogPort0 >> 4) > 0x7f && (System16AnalogPort0 >> 4) <= 0x80) {
-				temp = 0x80 + 0x7f;
-			} else {
-				temp = 0x80 + (System16AnalogPort0 >> 4);
-			}
-
-			if (temp < 0x20) temp = 0x20;
-			if (temp > 0xe0) temp = 0xe0;
-			return temp;
+			return ProcessAnalog(System16AnalogPort0, 0, INPUT_DEADZONE, 0x20, 0xe0);
 		}
 
 		// Accelerate
 		case 4: {
-			if (System16AnalogPort1 > 1) return 0xff;
-			return 0;
+			return ProcessAnalog(System16AnalogPort1, 0, INPUT_DEADZONE | INPUT_LINEAR | INPUT_MIGHTBEDIGITAL, 0x00, 0xff);
 		}
 		
 		// Brake
 		case 8: {
-			if (System16AnalogPort2 > 1) return 0xff;
-			return 0;
+			return ProcessAnalog(System16AnalogPort2, 0, INPUT_DEADZONE | INPUT_LINEAR | INPUT_MIGHTBEDIGITAL, 0x00, 0xff);
 		}
 	}
 	
@@ -1979,35 +2014,21 @@ UINT8 OutrunProcessAnalogControls(UINT16 value)
 
 UINT8 ShangonProcessAnalogControls(UINT16 value)
 {
-	UINT8 temp = 0;
-	
 	switch (value) {
 
 		// Steering
 		case 0: {
-
-			// Prevent CHAR data overflow
-			if((System16AnalogPort0 >> 4) < 0xf82 && (System16AnalogPort0 >> 4) > 0x80) {
-				temp = (UINT8)(0x80 - 0xf82);
-			} else {
-				temp = 0x80 - (System16AnalogPort0 >> 4);
-			}
-
-			if (temp < 0x20) temp = 0x20;
-			if (temp > 0xe0) temp = 0xe0;
-			return temp;
+			return ProcessAnalog(System16AnalogPort0, 1, INPUT_DEADZONE, 0x20, 0xe0);
 		}
 
 		// Accelerate
 		case 1: {
-			if (System16AnalogPort1 > 1) return 0xff;
-			return 0;
+			return ProcessAnalog(System16AnalogPort1, 0, INPUT_DEADZONE | INPUT_LINEAR | INPUT_MIGHTBEDIGITAL, 0x00, 0xff);
 		}
 
 		// Brake
 		case 2: {
-			if (System16AnalogPort2 > 1) return 0xff;
-			return 0;
+			return ProcessAnalog(System16AnalogPort2, 0, INPUT_DEADZONE | INPUT_LINEAR | INPUT_MIGHTBEDIGITAL, 0x00, 0xff);
 		}
 	}
 	
@@ -2017,6 +2038,8 @@ UINT8 ShangonProcessAnalogControls(UINT16 value)
 static INT32 OutrunInit()
 {
 	System16ProcessAnalogControlsDo = OutrunProcessAnalogControls;
+	sega_315_5195_custom_io_do = OutrunReadIO;
+	sega_315_5195_custom_io_write_do = OutrunWriteIO;
 	
 	System16HasGears = true;
 	
@@ -2049,6 +2072,11 @@ static INT32 OutrunInit()
 static INT32 OutrunbInit()
 {
 	System16ProcessAnalogControlsDo = OutrunProcessAnalogControls;
+	sega_315_5195_custom_io_do = OutrunReadIO;
+	sega_315_5195_custom_io_write_do = OutrunWriteIO;
+	
+	UINT8 memory_control[0x10] = { 0x02, 0x00, 0x0d, 0x10, 0x00, 0x12, 0x0c, 0x13, 0x08, 0x14, 0x0f ,0x20, 0x00, 0x00, 0x00, 0x00 };
+	System16I8751InitialConfig = memory_control;
 	
 	System16HasGears = true;
 	
@@ -2111,6 +2139,8 @@ static INT32 OutrunbInit()
 static INT32 ShangonInit()
 {
 	System16ProcessAnalogControlsDo = ShangonProcessAnalogControls;
+	sega_315_5195_custom_io_do = ShangonReadIO;
+	sega_315_5195_custom_io_write_do = ShangonWriteIO;
 	
 	Shangon = true;
 	
@@ -2119,13 +2149,6 @@ static INT32 ShangonInit()
 	INT32 nRet = System16Init();
 	
 	if (!nRet) {
-		SekOpen(0);
-		SekSetReadWordHandler(0, ShangonReadWord);
-		SekSetWriteWordHandler(0, ShangonWriteWord);
-		SekSetReadByteHandler(0, ShangonReadByte);
-		SekSetWriteByteHandler(0, ShangonWriteByte);
-		SekClose();
-		
 		System16RoadColorOffset1 = 0x7f6;
 		System16RoadColorOffset2 = 0x7c0;
 		System16RoadColorOffset3 = 0x7c0;
@@ -2147,18 +2170,11 @@ static INT32 ShangonInit()
 	return nRet;
 }
 
-static INT32 Shangon1Init()
-{
-	System16ProcessAnalogControlsDo = ShangonProcessAnalogControls;
-	
-	System16PCMDataSizePreAllocate = 0x40000;
-	
-	return ShangonInit();
-}
-
 static INT32 ToutrunInit()
 {
 	System16ProcessAnalogControlsDo = OutrunProcessAnalogControls;
+	sega_315_5195_custom_io_do = OutrunReadIO;
+	sega_315_5195_custom_io_write_do = OutrunWriteIO;
 	
 	System16HasGears = true;
 	
@@ -2176,8 +2192,8 @@ struct BurnDriver BurnDrvOutrun = {
 	"Out Run (sitdown/upright, Rev B)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, OutrunRomInfo, OutrunRomName, NULL, NULL, OutrunInputInfo, OutrunDIPInfo,
-	OutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	NULL, OutrunRomInfo, OutrunRomName, NULL, NULL, NULL, NULL, OutrunInputInfo, OutrunDIPInfo,
+	OutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2185,19 +2201,19 @@ struct BurnDriver BurnDrvOutrunra = {
 	"outrunra", "outrun", NULL, NULL, "1986",
 	"Out Run (sitdown/upright, Rev A)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, OutrunraRomInfo, OutrunraRomName, NULL, NULL, OutrunInputInfo, OutrunDIPInfo,
-	OutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, OutrunraRomInfo, OutrunraRomName, NULL, NULL, NULL, NULL, OutrunInputInfo, OutrunDIPInfo,
+	OutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
 struct BurnDriver BurnDrvOutruneh = {
-	"outruneh", "outrun", NULL, NULL, "2014",
-	"Out Run (sitdown/upright, Rev B) (Enhanced Edition v1.1.0)\0", NULL, "hack (Chris White)", "Out Run",
+	"outruneh", "outrun", NULL, NULL, "2017",
+	"Out Run (sitdown/upright, Rev B) (Enhanced Edition v2.0.2)\0", NULL, "hack (Chris White)", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, OutrunehRomInfo, OutrunehRomName, NULL, NULL, OutrunInputInfo, OutrunDIPInfo,
-	OutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, OutrunehRomInfo, OutrunehRomName, NULL, NULL, NULL, NULL, OutrunInputInfo, OutrunehDIPInfo,
+	OutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2205,9 +2221,9 @@ struct BurnDriver BurnDrvOutrundx = {
 	"outrundx", "outrun", NULL, NULL, "1986",
 	"Out Run (deluxe sitdown)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, OutrundxRomInfo, OutrundxRomName, NULL, NULL, OutrunInputInfo, OutrundxDIPInfo,
-	OutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, OutrundxRomInfo, OutrundxRomName, NULL, NULL, NULL, NULL, OutrunInputInfo, OutrundxDIPInfo,
+	OutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2215,18 +2231,19 @@ struct BurnDriver BurnDrvOutrundxj = {
 	"outrundxj", "outrun", NULL, NULL, "1986",
 	"Out Run (Japan, deluxe sitdown, FD1089A 317-0019)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1089A_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, OutrundxjRomInfo, OutrundxjRomName, NULL, NULL, OutrunInputInfo, OutrunDIPInfo,
-	OutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1089A_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, OutrundxjRomInfo, OutrundxjRomName, NULL, NULL, NULL, NULL, OutrunInputInfo, OutrunDIPInfo,
+	OutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
+
 struct BurnDriver BurnDrvOutrundxa = {
 	"outrundxa", "outrun", NULL, NULL, "1986",
 	"Out Run (deluxe sitdown earlier version)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, OutrundxaRomInfo, OutrundxaRomName, NULL, NULL, OutrunInputInfo, OutrundxDIPInfo,
-	OutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, OutrundxaRomInfo, OutrundxaRomName, NULL, NULL, NULL, NULL, OutrunInputInfo, OutrundxDIPInfo,
+	OutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2234,9 +2251,9 @@ struct BurnDriver BurnDrvOutrundxeh = {
 	"outrundxeh", "outrun", NULL, NULL, "2013",
 	"Out Run (deluxe sitdown) (Enhanced Edition v1.0.3)\0", NULL, "hack (Chris White)", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, OutrundxehRomInfo, OutrundxehRomName, NULL, NULL, OutrunInputInfo, OutrundxDIPInfo,
-	OutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, OutrundxehRomInfo, OutrundxehRomName, NULL, NULL, NULL, NULL, OutrunInputInfo, OutrundxehDIPInfo,
+	OutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2244,9 +2261,9 @@ struct BurnDriver BurnDrvOutrunb = {
 	"outrunb", "outrun", NULL, NULL, "1986",
 	"Out Run (bootleg)\0", NULL, "bootleg", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, OutrunbRomInfo, OutrunbRomName, NULL, NULL, OutrunInputInfo, OutrunDIPInfo,
-	OutrunbInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, OutrunbRomInfo, OutrunbRomName, NULL, NULL, NULL, NULL, OutrunInputInfo, OutrunDIPInfo,
+	OutrunbInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2254,9 +2271,19 @@ struct BurnDriver BurnDrvShangon = {
 	"shangon", NULL, NULL, NULL, "1987",
 	"Super Hang-On (sitdown/upright, unprotected)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_OUTRUN, GBF_RACING, 0,
-	NULL, ShangonRomInfo, ShangonRomName, NULL, NULL, ShangonInputInfo, ShangonDIPInfo,
-	ShangonInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN, GBF_RACING, 0,
+	NULL, ShangonRomInfo, ShangonRomName, NULL, NULL, NULL, NULL, ShangonInputInfo, ShangonDIPInfo,
+	ShangonInit, System16Exit, OutrunFrame, ShangonRender, System16Scan,
+	NULL, 0x3000, 320, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvShangoneh = {
+	"shangoneh", "shangon", NULL, NULL, "2014",
+	"Super Hang-On (sitdown/upright, unprotected) (Enhanced Edition v2.0.2)\0", NULL, "hack (Chris White)", "Out Run",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN, GBF_RACING, 0,
+	NULL, ShangonehRomInfo, ShangonehRomName, NULL, NULL, NULL, NULL, ShangonInputInfo, ShangonDIPInfo,
+	ShangonInit, System16Exit, OutrunFrame, ShangonRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2264,9 +2291,9 @@ struct BurnDriver BurnDrvShangon1 = {
 	"shangon1", "shangon", NULL, NULL, "1987",
 	"Super Hang-On (mini ride-on, FD1089B 317-0034)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1089B_ENC, GBF_RACING, 0,
-	NULL, Shangon1RomInfo, Shangon1RomName, NULL, NULL, ShangonInputInfo, ShangonDIPInfo,
-	Shangon1Init, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1089B_ENC, GBF_RACING, 0,
+	NULL, Shangon1RomInfo, Shangon1RomName, NULL, NULL, NULL, NULL, ShangonInputInfo, ShangonDIPInfo,
+	ShangonInit, System16Exit, OutrunFrame, ShangonRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2274,9 +2301,9 @@ struct BurnDriver BurnDrvShangon2 = {
 	"shangon2", "shangon", NULL, NULL, "1987",
 	"Super Hang-On (mini ride-on, Rev A, FD1089B 317-0034)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1089B_ENC, GBF_RACING, 0,
-	NULL, Shangon2RomInfo, Shangon2RomName, NULL, NULL, ShangonInputInfo, ShangonDIPInfo,
-	Shangon1Init, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1089B_ENC, GBF_RACING, 0,
+	NULL, Shangon2RomInfo, Shangon2RomName, NULL, NULL, NULL, NULL, ShangonInputInfo, ShangonDIPInfo,
+	ShangonInit, System16Exit, OutrunFrame, ShangonRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2284,9 +2311,9 @@ struct BurnDriver BurnDrvShangon3 = {
 	"shangon3", "shangon", NULL, NULL, "1987",
 	"Super Hang-On (sitdown/upright, FD1089B 317-0034)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1089B_ENC, GBF_RACING, 0,
-	NULL, Shangon3RomInfo, Shangon3RomName, NULL, NULL, ShangonInputInfo, ShangonDIPInfo,
-	Shangon1Init, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1089B_ENC, GBF_RACING, 0,
+	NULL, Shangon3RomInfo, Shangon3RomName, NULL, NULL, NULL, NULL, ShangonInputInfo, ShangonDIPInfo,
+	ShangonInit, System16Exit, OutrunFrame, ShangonRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2294,9 +2321,9 @@ struct BurnDriver BurnDrvShangon3d = {
 	"shangon3d", "shangon", NULL, NULL, "1987",
 	"Super Hang-On (sitdown/upright, FD1089B 317-0034 decrypted)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_OUTRUN, GBF_RACING, 0,
-	NULL, Shangon3dRomInfo, Shangon3dRomName, NULL, NULL, ShangonInputInfo, ShangonDIPInfo,
-	Shangon1Init, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN, GBF_RACING, 0,
+	NULL, Shangon3dRomInfo, Shangon3dRomName, NULL, NULL, NULL, NULL, ShangonInputInfo, ShangonDIPInfo,
+	ShangonInit, System16Exit, OutrunFrame, ShangonRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2304,9 +2331,19 @@ struct BurnDriver BurnDrvShangonle = {
 	"shangonle", "shangon", NULL, NULL, "1991",
 	"Limited Edition Hang-On\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN, GBF_RACING, 0,
-	NULL, ShangonleRomInfo, ShangonleRomName, NULL, NULL, ShangonInputInfo, ShangonDIPInfo,
-	ShangonInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN, GBF_RACING, 0,
+	NULL, ShangonleRomInfo, ShangonleRomName, NULL, NULL, NULL, NULL, ShangonInputInfo, ShangonDIPInfo,
+	ShangonInit, System16Exit, OutrunFrame, ShangonRender, System16Scan,
+	NULL, 0x3000, 320, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvShangonleeh = {
+	"shangonleeh", "shangon", NULL, NULL, "2014",
+	"Limited Edition Hang-On (Enhanced Edition v2.0.2)\0", NULL, "hack (Chris White)", "Out Run",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN, GBF_RACING, 0,
+	NULL, ShangonleehRomInfo, ShangonleehRomName, NULL, NULL, NULL, NULL, ShangonInputInfo, ShangonDIPInfo,
+	ShangonInit, System16Exit, OutrunFrame, ShangonRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2314,9 +2351,9 @@ struct BurnDriver BurnDrvToutrun = {
 	"toutrun", NULL, NULL, NULL, "1989",
 	"Turbo Out Run (Out Run upgrade, FD1094 317-0118)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, ToutrunRomInfo, ToutrunRomName, NULL, NULL, ToutrunInputInfo, ToutrunDIPInfo,
-	ToutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, ToutrunRomInfo, ToutrunRomName, NULL, NULL, NULL, NULL, ToutrunInputInfo, ToutrunDIPInfo,
+	ToutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2324,9 +2361,9 @@ struct BurnDriver BurnDrvToutrund = {
 	"toutrund", "toutrun", NULL, NULL, "1989",
 	"Turbo Out Run (Out Run upgrade, FD1094 317-0118 decrypted)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, ToutrundRomInfo, ToutrundRomName, NULL, NULL, ToutrunInputInfo, ToutrunDIPInfo,
-	ToutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, ToutrundRomInfo, ToutrundRomName, NULL, NULL, NULL, NULL, ToutrunInputInfo, ToutrunDIPInfo,
+	ToutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2334,9 +2371,9 @@ struct BurnDriver BurnDrvToutrunj = {
 	"toutrunj", "toutrun", NULL, NULL, "1989",
 	"Turbo Out Run (Japan, Out Run upgrade, FD1094 317-0117)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, ToutrunjRomInfo, ToutrunjRomName, NULL, NULL, ToutrunInputInfo, ToutrunDIPInfo,
-	ToutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, ToutrunjRomInfo, ToutrunjRomName, NULL, NULL, NULL, NULL, ToutrunInputInfo, ToutrunDIPInfo,
+	ToutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2344,9 +2381,9 @@ struct BurnDriver BurnDrvToutrunjd = {
 	"toutrunjd", "toutrun", NULL, NULL, "1989",
 	"Turbo Out Run (Japan, Out Run upgrade, FD1094 317-0117 decrypted)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, ToutrunjdRomInfo, ToutrunjdRomName, NULL, NULL, ToutrunInputInfo, ToutrunDIPInfo,
-	ToutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, ToutrunjdRomInfo, ToutrunjdRomName, NULL, NULL, NULL, NULL, ToutrunInputInfo, ToutrunDIPInfo,
+	ToutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2354,9 +2391,9 @@ struct BurnDriver BurnDrvToutrun1 = {
 	"toutrun1", "toutrun", NULL, NULL, "1989",
 	"Turbo Out Run (deluxe cockpit, FD1094 317-0109)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, Toutrun1RomInfo, Toutrun1RomName, NULL, NULL, ToutrunInputInfo, ToutrunmDIPInfo,
-	ToutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, Toutrun1RomInfo, Toutrun1RomName, NULL, NULL, NULL, NULL, ToutrunInputInfo, ToutrunmDIPInfo,
+	ToutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2364,9 +2401,9 @@ struct BurnDriverD BurnDrvToutrun2 = {
 	"toutrun2", "toutrun", NULL, NULL, "1989",
 	"Turbo Out Run (cockpit, FD1094 317-0106)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, Toutrun2RomInfo, Toutrun2RomName, NULL, NULL, ToutrunInputInfo, ToutrunctDIPInfo,
-	ToutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, Toutrun2RomInfo, Toutrun2RomName, NULL, NULL, NULL, NULL, ToutrunInputInfo, ToutrunctDIPInfo,
+	ToutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2374,9 +2411,9 @@ struct BurnDriverD BurnDrvToutrun2d = {
 	"toutrun2d", "toutrun", NULL, NULL, "1989",
 	"Turbo Out Run (cockpit, FD1094 317-0106 decrypted)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, Toutrun2dRomInfo, Toutrun2dRomName, NULL, NULL, ToutrunInputInfo, ToutrunctDIPInfo,
-	ToutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, Toutrun2dRomInfo, Toutrun2dRomName, NULL, NULL, NULL, NULL, ToutrunInputInfo, ToutrunctDIPInfo,
+	ToutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2384,9 +2421,9 @@ struct BurnDriver BurnDrvToutrun3 = {
 	"toutrun3", "toutrun", NULL, NULL, "1989",
 	"Turbo Out Run (cockpit, FD1094 317-0107)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, Toutrun3RomInfo, Toutrun3RomName, NULL, NULL, ToutrunInputInfo, ToutruncDIPInfo,
-	ToutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, Toutrun3RomInfo, Toutrun3RomName, NULL, NULL, NULL, NULL, ToutrunInputInfo, ToutruncDIPInfo,
+	ToutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2394,9 +2431,9 @@ struct BurnDriver BurnDrvToutrun3d = {
 	"toutrun3d", "toutrun", NULL, NULL, "1989",
 	"Turbo Out Run (cockpit, FD1094 317-0107 decrypted)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, Toutrun3dRomInfo, Toutrun3dRomName, NULL, NULL, ToutrunInputInfo, ToutruncDIPInfo,
-	ToutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, Toutrun3dRomInfo, Toutrun3dRomName, NULL, NULL, NULL, NULL, ToutrunInputInfo, ToutruncDIPInfo,
+	ToutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2404,9 +2441,9 @@ struct BurnDriver BurnDrvToutrunj1 = {
 	"toutrunj1", "toutrun", NULL, NULL, "1989",
 	"Turbo Out Run (Japan, deluxe cockpit, FD1094 317-0101)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, Toutrunj1RomInfo, Toutrunj1RomName, NULL, NULL, ToutrunInputInfo, ToutrunctDIPInfo,
-	ToutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, Toutrunj1RomInfo, Toutrunj1RomName, NULL, NULL, NULL, NULL, ToutrunInputInfo, ToutrunctDIPInfo,
+	ToutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };
 
@@ -2414,8 +2451,8 @@ struct BurnDriver BurnDrvToutrunj1d = {
 	"toutrunj1d", "toutrun", NULL, NULL, "1989",
 	"Turbo Out Run (Japan, deluxe cockpit, FD1094 317-0101 decrypted)\0", NULL, "Sega", "Out Run",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
-	NULL, Toutrunj1dRomInfo, Toutrunj1dRomName, NULL, NULL, ToutrunInputInfo, ToutrunctDIPInfo,
-	ToutrunInit, System16Exit, OutrunFrame, NULL, System16Scan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_OUTRUN | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	NULL, Toutrunj1dRomInfo, Toutrunj1dRomName, NULL, NULL, NULL, NULL, ToutrunInputInfo, ToutrunctDIPInfo,
+	ToutrunInit, System16Exit, OutrunFrame, OutrunRender, System16Scan,
 	NULL, 0x3000, 320, 224, 4, 3
 };

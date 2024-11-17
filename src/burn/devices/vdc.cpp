@@ -1,3 +1,5 @@
+// Based on MESS driver by Charles MacDonald
+
 #include "tiles_generic.h"
 #include "h6280_intf.h"
 
@@ -52,7 +54,7 @@ static void vpc_update_prio_map()
 
 void vpc_write(UINT8 offset, UINT8 data)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("vpc_write called without init\n"));
 #endif
 
@@ -106,7 +108,7 @@ void vpc_write(UINT8 offset, UINT8 data)
 
 UINT8 vpc_read(UINT8 offset)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("vpc_read called without init\n"));
 #endif
 
@@ -136,7 +138,7 @@ UINT8 vpc_read(UINT8 offset)
 
 void vpc_reset()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("vpc_reset called without init\n"));
 #endif
 
@@ -157,7 +159,7 @@ void vpc_reset()
 
 UINT8 vce_read(UINT8 offset)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("vce_read called without init\n"));
 #endif
 
@@ -177,7 +179,7 @@ UINT8 vce_read(UINT8 offset)
 
 void vce_write(UINT8 offset, UINT8 data)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("vce_write called without init\n"));
 #endif
 
@@ -208,7 +210,7 @@ void vce_write(UINT8 offset, UINT8 data)
 
 void vce_palette_init(UINT32 *Palette)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("vce_palette_init called without init\n"));
 #endif
 
@@ -227,7 +229,7 @@ void vce_palette_init(UINT32 *Palette)
 
 void vce_reset()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("vce_reset called without init\n"));
 #endif
 
@@ -799,7 +801,7 @@ static void pce_refresh_line(INT32 which, INT32 /*line*/, INT32 external_input, 
 
 void pce_interrupt()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("pce_interrupt called without init\n"));
 #endif
 
@@ -837,7 +839,7 @@ void pce_interrupt()
 
 void sgx_interrupt()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("sgx_interrupt called without init\n"));
 #endif
 
@@ -1019,7 +1021,7 @@ static void vdc_do_dma(INT32 which)
 
 void vdc_write(INT32 which, UINT8 offset, UINT8 data)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("vdc_write called without init\n"));
 #endif
 
@@ -1120,7 +1122,7 @@ void vdc_write(INT32 which, UINT8 offset, UINT8 data)
 
 UINT8 vdc_read(INT32 which, UINT8 offset)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("vdc_read called without init\n"));
 #endif
 
@@ -1150,7 +1152,7 @@ UINT8 vdc_read(INT32 which, UINT8 offset)
 
 void sgx_vdc_write(UINT8 offset, UINT8 data)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("sgx_vdc_write called without init\n"));
 #endif
 
@@ -1166,7 +1168,7 @@ void sgx_vdc_write(UINT8 offset, UINT8 data)
 
 UINT8 sgx_vdc_read(UINT8 offset)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("sgx_vdc_read called without init\n"));
 #endif
 
@@ -1175,7 +1177,7 @@ UINT8 sgx_vdc_read(UINT8 offset)
 
 void vdc_reset()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("vdc_reset called without init\n"));
 #endif
 
@@ -1202,7 +1204,7 @@ void vdc_reset()
 
 void vdc_get_dimensions(INT32 which, INT32 *x, INT32 *y)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("vdc_get_dimensions called without init\n"));
 #endif
 
@@ -1217,7 +1219,7 @@ void vdc_init()
 
 void vdc_exit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("vdc_exit called without init\n"));
 #endif
 
@@ -1226,47 +1228,31 @@ void vdc_exit()
 
 INT32 vdc_scan(INT32 nAction, INT32 *pnMin)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugDev_VDCInitted) bprintf(PRINT_ERROR, _T("vdc_scan called without init\n"));
 #endif
-
-	struct BurnArea ba;
 
 	if (pnMin) {
 		*pnMin =  0x029702;
 	}
 
 	if (nAction & ACB_DRIVER_DATA) {
-		for (INT32 i = 0; i < 2; i++) {
-			SCAN_VAR(vdc_register[i]);
-			SCAN_VAR(vdc_data[i]);
-			SCAN_VAR(vdc_latch[i]);
-			SCAN_VAR(vdc_yscroll[i]);
-			SCAN_VAR(vdc_width[i]);
-			SCAN_VAR(vdc_height[i]);
-			SCAN_VAR(vdc_inc[i]);
-			SCAN_VAR(vdc_dvssr_write[i]);
-			SCAN_VAR(vdc_status[i]);
-			SCAN_VAR(vdc_sprite_ram[i]);
-			SCAN_VAR(vdc_vblank_triggered[i]);
-			SCAN_VAR(vdc_current_segment[i]);
-			SCAN_VAR(vdc_current_segment_line[i]);
-			SCAN_VAR(vdc_raster_count[i]);
-			SCAN_VAR(vdc_curline[i]);
-			SCAN_VAR(vdc_satb_countdown[i]);
-		}
-
-		ba.Data		= vdc_sprite_ram;
-		ba.nLen		= 2 * 0x100 * sizeof(UINT16);
-		ba.nAddress	= 0;
-		ba.szName	= "VDC Sprite RAM";
-		BurnAcb(&ba);
-
-		ba.Data		= vdc_data;
-		ba.nLen		= 2 * 0x20 * sizeof(UINT16);
-		ba.nAddress	= 0;
-		ba.szName	= "VDC DATA";
-		BurnAcb(&ba);
+		SCAN_VAR(vdc_register);
+		SCAN_VAR(vdc_data);
+		SCAN_VAR(vdc_latch);
+		SCAN_VAR(vdc_yscroll);
+		SCAN_VAR(vdc_width);
+		SCAN_VAR(vdc_height);
+		SCAN_VAR(vdc_inc);
+		SCAN_VAR(vdc_dvssr_write);
+		SCAN_VAR(vdc_status);
+		SCAN_VAR(vdc_sprite_ram);
+		SCAN_VAR(vdc_vblank_triggered);
+		SCAN_VAR(vdc_current_segment);
+		SCAN_VAR(vdc_current_segment_line);
+		SCAN_VAR(vdc_raster_count);
+		SCAN_VAR(vdc_curline);
+		SCAN_VAR(vdc_satb_countdown);
 
 		SCAN_VAR(vce_address);
 		SCAN_VAR(vce_control);
@@ -1277,17 +1263,10 @@ INT32 vdc_scan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(vpc_vdc_select);
 		SCAN_VAR(vpc_priority);
 
-		for (INT32 i = 0; i < 4; i++) {
-			SCAN_VAR(vpc_prio[i]);
-			SCAN_VAR(vpc_vdc0_enabled[i]);
-			SCAN_VAR(vpc_vdc1_enabled[i]);
-		}
-
-		ba.Data		= vpc_prio_map;
-		ba.nLen		= 0x0000200;
-		ba.nAddress	= 0;
-		ba.szName	= "VPC Priority Map";
-		BurnAcb(&ba);
+		SCAN_VAR(vpc_prio);
+		SCAN_VAR(vpc_vdc0_enabled);
+		SCAN_VAR(vpc_vdc1_enabled);
+		SCAN_VAR(vpc_prio_map);
 	}
 
 	return 0;

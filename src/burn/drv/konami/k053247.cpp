@@ -1,3 +1,6 @@
+// license:BSD-3-Clause
+// copyright-holders:David Haywood
+
 // k053247
 
 #include "tiles_generic.h"
@@ -158,7 +161,7 @@ void K053247Write(INT32 offset, INT32 data)
 
 void K053247WriteRegsByte(INT32 offset, UINT8 data)
 {
-	UINT8 *regs = (UINT8*)K053247Regs;
+	UINT8 *regs = (UINT8*)&K053247Regs;
 
 	regs[(offset & 0x1f)^1] = data;
 }
@@ -170,12 +173,12 @@ void K053247WriteRegsWord(INT32 offset, UINT16 data)
 
 UINT16 K053247ReadRegs(INT32 offset)
 {
-	return K053247Regs[offset & 7];
+	return K053247Regs[offset & 0xf];
 }
 
 UINT16 K053246ReadRegs(INT32 offset)
 {
-	return K053246Regs[offset & 0xf];
+	return K053246Regs[offset & 7];
 }
 
 UINT8 K053246Read(INT32 offset)
@@ -276,6 +279,7 @@ void K053247SpritesRender()
 	count--;
 	h = count;
 
+	
 	if (!(K053247Regs[0xc/2] & 0x10))
 	{
 		// sort objects in decending order(smaller z closer) when OPSET PRI is clear
@@ -534,14 +538,41 @@ static inline UINT32 alpha_blend_r32(UINT32 d, UINT32 s, UINT32 p)
 		((((s & 0x00ff00) * p) + ((d & 0x00ff00) * a)) & 0x00ff0000)) >> 8;
 }
 
-static inline UINT32 shadow_blend(UINT32 d)
+static inline UINT32 shadow_blend_338(UINT32 d, INT32 shadow_bank) // for k054338
 {
+	INT32 r = ((d&0xff0000) >> 16) + m_shd_rgb[0 + (shadow_bank * 3)];
+	if (r > 0xff) r = 0xff;
+	if (r < 0) r = 0;
+	r = r << 16;
+
+	INT32 g = ((d&0x00ff00) >> 8) + m_shd_rgb[1 + (shadow_bank * 3)];
+	if (g > 0xff) g = 0xff;
+	if (g < 0) g = 0;
+	g = g << 8;
+
+	INT32 b = ((d&0x0000ff) >> 0) + m_shd_rgb[2 + (shadow_bank * 3)];
+	if (b > 0xff) b = 0xff;
+	if (b < 0) b = 0;
+	return r|g|b;
+}
+
+static inline UINT32 shadow_blend(UINT32 d, INT32 shadow_bank)
+{
+	if (KonamiIC_K054338InUse) return shadow_blend_338(d, shadow_bank);
 	return ((((d & 0xff00ff) * 0x9d) & 0xff00ff00) + (((d & 0x00ff00) * 0x9d) & 0x00ff0000)) / 0x100;
 }
 
 static inline UINT32 highlight_blend(UINT32 d)
 {
-	return (((0xA857A857 + ((d & 0xff00ff) * 0x56)) & 0xff00ff00) + ((0x00A85700 + ((d & 0x00ff00) * 0x56)) & 0x00ff0000)) / 0x100;
+	INT32 r = ((d&0xff0000)+0x220000);
+	if (r > 0xff0000) r = 0xff0000;
+
+	INT32 g = ((d&0x00ff00)+0x002200);
+	if (g > 0x00ff00) g = 0x00ff00;
+
+	INT32 b = ((d&0x0000ff)+0x000022);
+	if (b > 0x0000ff) b = 0x0000ff;
+	return r|g|b;
 }
 
 #define GX_ZBUFW     512
@@ -580,14 +611,16 @@ void zdrawgfxzoom32GP(UINT32 code, UINT32 color, INT32 flipx, INT32 flipy, INT32
 	INT32 dst_skipx, dst_skipy, dst_x, dst_y, dst_lastx, dst_lasty;
 	INT32 src_pitch, dst_pitch;
 
-	INT32 highlight_enable = drawmode >> 4;// for fba
+	INT32 highlight_enable = (drawmode >> 4) && (K053247Flags & 2);// for fba
+	if (highlight_enable) highlight_enable = (drawmode >> 4) & 0x7;
+	//INT32 highlight_enable = drawmode >> 4;// for fba
 	drawmode &= 0xf;
 
 	// cull illegal and transparent objects
 	if (!scalex || !scaley) return;
 
 	// find shadow pens and cull invisible shadows
-	granularity = shdpen = ((1 << nBpp) - 1);
+	granularity = shdpen = ((1 << nBpp) /*- 1*/);
 	shdpen--;
 
 	if (zcode >= 0)
@@ -836,7 +869,7 @@ void zdrawgfxzoom32GP(UINT32 code, UINT32 color, INT32 flipx, INT32 flipy, INT32
 							if (highlight_enable) {
 								dst_ptr[ecx] = highlight_blend(dst_ptr[ecx]); 
 							} else {
-								dst_ptr[ecx] = shadow_blend(dst_ptr[ecx]); //shd_base[pix.as_rgb15()];
+								dst_ptr[ecx] = shadow_blend(dst_ptr[ecx], highlight_enable); //shd_base[pix.as_rgb15()];
 							}
 							//dst_ptr[ecx] =(eax>>3&0x001f);lend_r32( eax, 0x00000000, 128);
 						}
@@ -977,7 +1010,7 @@ void zdrawgfxzoom32GP(UINT32 code, UINT32 color, INT32 flipx, INT32 flipy, INT32
 							if (highlight_enable) {
 								dst_ptr[ecx] = highlight_blend(dst_ptr[ecx]); 
 							} else {
-								dst_ptr[ecx] = shadow_blend(dst_ptr[ecx]); //shd_base[pix.as_rgb15()];
+								dst_ptr[ecx] = shadow_blend(dst_ptr[ecx], highlight_enable); //shd_base[pix.as_rgb15()];
 							}
 						}
 						while (++ecx);
@@ -1117,18 +1150,18 @@ void k053247_draw_single_sprite_gxcore(UINT8 *gx_objzbuf, UINT8 *gx_shdzbuf, INT
 		if (code & 0x20) ya += 4;
 		code &= ~0x3f;
 
-		temp4 = gx_spriteram[offs];
+		temp4 = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs]);
 
 		// mask off the upper 6 bits of coordinate and zoom registers
-		oy = gx_spriteram[offs+2] & 0x3ff;
-		ox = gx_spriteram[offs+3] & 0x3ff;
+		oy = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs+2]) & 0x3ff;
+		ox = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs+3]) & 0x3ff;
 
-		scaley = zoomy = gx_spriteram[offs+4] & 0x3ff;
+		scaley = zoomy = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs+4]) & 0x3ff;
 		if (zoomy) zoomy = (0x400000+(zoomy>>1)) / zoomy;
 		else zoomy = 0x800000;
 		if (!(temp4 & 0x4000))
 		{
-			scalex = zoomx = gx_spriteram[offs+5] & 0x3ff;
+			scalex = zoomx = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs+5]) & 0x3ff;
 			if (zoomx) zoomx = (0x400000+(zoomx>>1)) / zoomx;
 			else zoomx = 0x800000;
 		}
@@ -1139,12 +1172,12 @@ void k053247_draw_single_sprite_gxcore(UINT8 *gx_objzbuf, UINT8 *gx_shdzbuf, INT
 		flipx = temp4 & 0x1000;
 		flipy = temp4 & 0x2000;
 
-		temp = gx_spriteram[offs+6];
+		temp = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs+6]);
 		mirrorx = temp & 0x4000;
 		if (mirrorx) flipx = 0; // only applies to x mirror, proven
 		mirrory = temp & 0x8000;
 
-		INT32 objset1 = K053247ReadRegs(5);
+		INT32 objset1 = K053246ReadRegs(5);
 		// for Escape Kids (GX975)
 		if ( objset1 & 8 ) // Check only "Bit #3 is '1'?"
 		{

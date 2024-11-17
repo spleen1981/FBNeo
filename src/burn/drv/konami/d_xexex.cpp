@@ -1,4 +1,5 @@
 // FB Alpha Xexex driver module
+// Based on MAME driver by Olivier Galibert
 
 #include "tiles_generic.h"
 #include "m68000_intf.h"
@@ -34,13 +35,16 @@ static UINT8 *soundlatch3;
 static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
+static INT32 nExtraCycles[2];
+
 static INT32 layerpri[4];
 static INT32 layer_colorbase[4];
 static INT32 sprite_colorbase;
 
-static UINT8 DrvJoy1[16];
-static UINT8 DrvJoy2[16];
-static UINT8 DrvJoy3[16];
+static UINT8 DrvJoy1[8];
+static UINT8 DrvJoy2[8];
+static UINT8 DrvJoy3[8];
+static UINT8 DrvJoy4[8];
 static UINT8 DrvReset;
 static UINT16 DrvInputs[4];
 static UINT8 DrvDips[2];
@@ -52,39 +56,40 @@ static UINT16 control_data;
 static INT32 enable_alpha;
 
 static struct BurnInputInfo XexexInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 7,	"p1 start"},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"		},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 7,	"p1 start"		},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 up"			},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p1 down"		},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 left"		},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"		},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"		},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"		},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 7,	"p2 start"},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"		},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 7,	"p2 start"		},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 up"			},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 down"		},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 0,	"p2 left"		},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 right"		},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"		},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"		},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Service 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"service"},
-	{"Service 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"service"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"			},
+	{"Service 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"service"		},
+	{"Service 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"service"		},
+	{"Service Mode",	BIT_DIGITAL,	DrvJoy4 + 3,	"diagnostics"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"			},
 };
 
 STDINPUTINFO(Xexex)
 
 static struct BurnDIPInfo XexexDIPList[]=
 {
-	{0x13, 0xff, 0xff, 0xfe, NULL		},
+	{0x14, 0xff, 0xff, 0x00, NULL		},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"	},
-	{0x13, 0x01, 0x08, 0x08, "Off"		},
-	{0x13, 0x01, 0x08, 0x00, "On"		},
+	{0   , 0xfe, 0   ,    2, "PCM Volume Boost"	},
+	{0x14, 0x01, 0x08, 0x00, "Off"		},
+	{0x14, 0x01, 0x08, 0x08, "On"		},
 };
 
 STDDIPINFO(Xexex)
@@ -98,7 +103,7 @@ static void xexex_objdma()
 
 	do
 	{
-		if (*src & 0x8000)
+		if (BURN_ENDIAN_SWAP_INT16(*src) & 0x8000)
 		{
 			dst[0] = src[0x0];  dst[1] = src[0x2];
 			dst[2] = src[0x4];  dst[3] = src[0x6];
@@ -114,7 +119,15 @@ static void xexex_objdma()
 	if (num_inactive) do { *dst = 0; dst += 8; } while (--num_inactive);
 }
 
-static void _fastcall xexex_main_write_word(UINT32 address, UINT16 data)
+static void update_de000()
+{
+	K053246_set_OBJCHA_line((control_data & 0x100) >> 8);
+	EEPROMWrite((control_data & 0x04), (control_data & 0x02), (control_data & 0x01));
+	enable_alpha = ~control_data & 0x200;
+
+}
+
+static void __fastcall xexex_main_write_word(UINT32 address, UINT16 data)
 {
 	if ((address & 0xffffc0) == 0x0c0000) {
 		K056832WordWrite(address & 0x3e, data);
@@ -149,15 +162,13 @@ static void _fastcall xexex_main_write_word(UINT32 address, UINT16 data)
 	switch (address)
 	{
 		case 0x0de000:
-			EEPROMWrite((data & 0x04), (data & 0x02), (data & 0x01));
-			K053246_set_OBJCHA_line((data & 0x100) >> 8);
-			enable_alpha = ~data & 0x200;
 			control_data = data;
+			update_de000();
 		return;
 	}
 }
 
-static void _fastcall xexex_main_write_byte(UINT32 address, UINT8 data)
+static void __fastcall xexex_main_write_byte(UINT32 address, UINT8 data)
 {
 	if ((address & 0xffffc0) == 0x0c0000) {
 		K056832ByteWrite(address & 0x3f, data);
@@ -223,15 +234,13 @@ static void _fastcall xexex_main_write_byte(UINT32 address, UINT8 data)
 		return;
 
 		case 0x0de000:
-			enable_alpha = ~data & 0x02;
 			control_data = (control_data & 0x00ff) | (data << 8);
-			K053246_set_OBJCHA_line((data & 0x100) >> 8);
+			update_de000();
 		return;
 
 		case 0x0de001:
-			EEPROMWrite((data & 0x04), (data & 0x02), (data & 0x01));
 			control_data = (control_data & 0xff00) | (data << 0);
-			K053246_set_OBJCHA_line((data & 0x100) >> 8);
+			update_de000();
 		return;
 
 		case 0x170000:
@@ -239,10 +248,10 @@ static void _fastcall xexex_main_write_byte(UINT32 address, UINT8 data)
 	}
 }
 
-static UINT16 _fastcall xexex_main_read_word(UINT32 address)
+static UINT16 __fastcall xexex_main_read_word(UINT32 address)
 {
 	if ((address & 0xfffff0) == 0x0c8000) {
-		return K053250RegRead(0, address);	
+		return K053250RegRead(0, address);
 	}
 
 	if ((address & 0xffc000) == 0x180000) {
@@ -272,7 +281,7 @@ static UINT16 _fastcall xexex_main_read_word(UINT32 address)
 			return DrvInputs[0];
 
 		case 0x0dc002:
-			return DrvInputs[3] | 2 | (EEPROMRead() ? 0x0001 : 0);
+			return (DrvInputs[3] & 0x8) | 2 | (EEPROMRead() ? 0x01 : 0);
 
 		case 0x0de000:
 			return control_data;
@@ -281,7 +290,7 @@ static UINT16 _fastcall xexex_main_read_word(UINT32 address)
 	return 0;
 }
 
-static UINT8 _fastcall xexex_main_read_byte(UINT32 address)
+static UINT8 __fastcall xexex_main_read_byte(UINT32 address)
 {
 	if ((address & 0xfffff0) == 0x0c8000) {
 		return K053250RegRead(0, address);	
@@ -304,6 +313,9 @@ static UINT8 _fastcall xexex_main_read_byte(UINT32 address)
 		case 0x0c4000:
 		case 0x0c4001:
 			return K053246Read((address & 1)); // ^ 1? ??
+
+		case 0x0d6011:
+			return 0; // nop
 
 		case 0x0d6015:
 			return *soundlatch3;
@@ -330,7 +342,7 @@ static UINT8 _fastcall xexex_main_read_byte(UINT32 address)
 			return 0;
 
 		case 0x0dc003:
-			return DrvInputs[3] | 2 | (EEPROMRead() ? 0x01 : 0);
+			return (DrvInputs[3] & 0x8) | 2 | (EEPROMRead() ? 0x01 : 0);
 	}
 
 	return 0;
@@ -378,7 +390,7 @@ static UINT8 __fastcall xexex_sound_read(UINT16 address)
 	{
 		case 0xec00:
 		case 0xec01:
-			return BurnYM2151ReadStatus();
+			return BurnYM2151Read();
 
 		case 0xf002:
 			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
@@ -396,11 +408,11 @@ static void xexex_sprite_callback(INT32 */*code*/, INT32 *color, INT32 *priority
 {
 	INT32 pri = (*color & 0x3e0) >> 4;
 
-	if (pri <= layerpri[3])					*priority = 0x0000;
+	if (pri <= layerpri[3])								*priority = 0x0000;
 	else if (pri > layerpri[3] && pri <= layerpri[2])	*priority = 0xff00;
 	else if (pri > layerpri[2] && pri <= layerpri[1])	*priority = 0xfff0;
 	else if (pri > layerpri[1] && pri <= layerpri[0])	*priority = 0xfffc;
-	else							*priority = 0xfffe;
+	else												*priority = 0xfffe;
 
 	*color = sprite_colorbase | (*color & 0x001f);
 }
@@ -459,6 +471,8 @@ static INT32 DrvDoReset()
 	sound_nmi_enable = 0;
 	z80_bank = 0;
 
+	nExtraCycles[0] = nExtraCycles[1] = 0;
+
 	return 0;
 }
 
@@ -470,17 +484,17 @@ static INT32 MemIndex()
 	DrvZ80ROM		= Next; Next += 0x020000;
 
 	DrvGfxROM0		= Next; Next += 0x200000;
-	DrvGfxROMExp0		= Next; Next += 0x400000;
+	DrvGfxROMExp0	= Next; Next += 0x400000;
 	DrvGfxROM1		= Next; Next += 0x400000;
-	DrvGfxROMExp1		= Next; Next += 0x800000;
+	DrvGfxROMExp1	= Next; Next += 0x800000;
 	DrvGfxROM2		= Next; Next += 0x080000;
-	DrvGfxROMExp2		= Next; Next += 0x100000;
+	DrvGfxROMExp2	= Next; Next += 0x100000;
 
 	DrvSndROM		= Next; Next += 0x400000;
 
 	DrvEeprom		= Next; Next += 0x000080;
 
-	konami_palette32	= (UINT32*)Next;
+	konami_palette32= (UINT32*)Next;
 	DrvPalette		= (UINT32*)Next; Next += 0x1000 * sizeof(UINT32);
 
 	AllRam			= Next;
@@ -499,6 +513,11 @@ static INT32 MemIndex()
 	MemEnd			= Next;
 
 	return 0;
+}
+
+static void XexexApanCallback(double one, double two)
+{
+	//bprintf(0, _T("apan left %f, right %f. "), one, two); // not needed, never changes from init value.
 }
 
 static INT32 DrvInit()
@@ -580,17 +599,15 @@ static INT32 DrvInit()
 
 	EEPROMInit(&xexex_eeprom_interface);
 
-	if (nBurnSoundRate == 44100) {
-		BurnYM2151Init(3700000); // 3.7mhz here to match the tuning of the 48000khz k054539 chip, otherwise the music sounds horrible! - dink Nov.7.2014
-	} else {
-		BurnYM2151Init(4000000);
-	}
+	BurnYM2151Init(4000000);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.50, BURN_SND_ROUTE_BOTH);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.50, BURN_SND_ROUTE_BOTH);
 
 	K054539Init(0, 48000, DrvSndROM, 0x300000);
-	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
-	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
+	K054539SetFlags(0, K054539_REVERSE_STEREO);
+	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, (DrvDips[0] & 0x08) ? 1.40 : 1.10, BURN_SND_ROUTE_BOTH);
+	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, (DrvDips[0] & 0x08) ? 1.40 : 1.10, BURN_SND_ROUTE_BOTH);
+	K054539SetApanCallback(0, XexexApanCallback);
 
 	DrvDoReset();
 
@@ -621,7 +638,7 @@ static void DrvPaletteRecalc()
 	UINT16 *pal = (UINT16*)DrvPalRAM;
 
 	for (INT32 i = 0; i < 0x2000/2; i+=2) {
-		DrvPalette[i/2] = ((pal[i+0] & 0xff) << 16) + pal[i+1];
+		DrvPalette[i/2] = ((BURN_ENDIAN_SWAP_INT16(pal[i+0]) & 0xff) << 16) + BURN_ENDIAN_SWAP_INT16(pal[i+1]);
 	}
 }
 
@@ -629,7 +646,7 @@ static INT32 DrvDraw()
 {
 	DrvPaletteRecalc();
 
-	int layer[4], bg_colorbase, plane, alpha;
+	INT32 layer[4], bg_colorbase, plane, alpha;
 
 	sprite_colorbase = K053251GetPaletteIndex(0);
 
@@ -673,6 +690,11 @@ static INT32 DrvDraw()
 	{
 		alpha = K054338_set_alpha_level(1);
 
+		// this kludge fixes: flashy transitions in intro, cutscene after stage 3
+		// is missing several effects, continue screen is missing "zooming!" numbers.
+		if (alpha < 0x10)
+			alpha = 0x10;
+
 		if (alpha > 0)
 		{
 			if (nBurnLayer & 8) K056832Draw(1, K056832_SET_ALPHA(255-alpha), 0);
@@ -700,24 +722,19 @@ static INT32 DrvFrame()
 			DrvInputs[2] ^= (DrvJoy3[i] & 1) << i;
 		}
 
-		DrvInputs[3] = DrvDips[0] & 0x08;
+		DrvInputs[3] = (DrvJoy4[3]) ? 0x00 : 0x08; // Service Mode
 	}
 
 	INT32 nInterleave = 120;
 	INT32 nSoundBufferPos = 0;
 	INT32 nCyclesTotal[2] = { (16000000 * 100) / 5425, (8000000 * 100) / 5425 };
-	INT32 nCyclesDone[2] = { 0, 0 };
+	INT32 nCyclesDone[2] = { nExtraCycles[0], nExtraCycles[1] };
 
 	SekOpen(0);
 	ZetOpen(0);
 
 	for (INT32 i = 0; i < nInterleave; i++) {
-		INT32 nNext, nCyclesSegment;
-
-		nNext = (i + 1) * nCyclesTotal[0] / nInterleave;
-		nCyclesSegment = nNext - nCyclesDone[0];
-		nCyclesSegment = SekRun(nCyclesSegment);
-		nCyclesDone[0] += nCyclesSegment;
+		CPU_RUN(0, Sek);
 
 		if (i == 0 && control_data & 0x20) {
 			SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
@@ -729,29 +746,31 @@ static INT32 DrvFrame()
 				if (irq5_timer == 0 && control_data & 0x40) {
 					SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
 				}
-			} 
+			}
 		}
 
 		if (i == ((nInterleave/2)-1)) {
 			if (K053246_is_IRQ_enabled()) {
 				xexex_objdma();
-				irq5_timer = 5; // guess
+				irq5_timer = 2;
 			}
 
 			if (control_data & 0x0800)
 				SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
 		}
 
-		nNext = (i + 1) * nCyclesTotal[1] / nInterleave;
-		nCyclesSegment = nNext - nCyclesDone[1];
-		nCyclesSegment = ZetRun(nCyclesSegment);
-		nCyclesDone[1] += nCyclesSegment;
+		if (i == 106) {
+			if (pBurnDraw) {
+				DrvDraw();
+			}
+		}
+
+		CPU_RUN(1, Zet);
 
 		if (pBurnSoundOut) {
 			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
 			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			K054539Update(0, pSoundBuf, nSegmentLength);
 			nSoundBufferPos += nSegmentLength;
 		}
 	}
@@ -761,21 +780,20 @@ static INT32 DrvFrame()
 		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 		if (nSegmentLength) {
 			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			K054539Update(0, pSoundBuf, nSegmentLength);
 		}
+		K054539Update(0, pBurnSoundOut, nBurnSoundLen);
 	}
 
 	ZetClose();
 	SekClose();
 
-	if (pBurnDraw) {
-		DrvDraw();
-	}
+	nExtraCycles[0] = nCyclesDone[0] - nCyclesTotal[0];
+	nExtraCycles[1] = nCyclesDone[1] - nCyclesTotal[1];
 
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -783,7 +801,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		*pnMin = 0x029732;
 	}
 
-	if (nAction & ACB_VOLATILE) {		
+	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
 
 		ba.Data	  = AllRam;
@@ -794,8 +812,8 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		SekScan(nAction);
 		ZetScan(nAction);
 
-		BurnYM2151Scan(nAction);
-		K054539Scan(nAction);
+		BurnYM2151Scan(nAction, pnMin);
+		K054539Scan(nAction, pnMin);
 
 		KonamiICScan(nAction);
 
@@ -806,6 +824,8 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 
 		SCAN_VAR(control_data);
 		SCAN_VAR(enable_alpha);
+
+		SCAN_VAR(nExtraCycles);
 	}
 
 	if (nAction & ACB_WRITE) {
@@ -855,7 +875,7 @@ struct BurnDriver BurnDrvXexex = {
 	"Xexex (ver EAA)\0", NULL, "Konami", "GX067",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_KONAMI, GBF_HORSHOOT, 0,
-	NULL, xexexRomInfo, xexexRomName, NULL, NULL, XexexInputInfo, XexexDIPInfo,
+	NULL, xexexRomInfo, xexexRomName, NULL, NULL, NULL, NULL, XexexInputInfo, XexexDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 256, 4, 3
 };
@@ -895,7 +915,7 @@ struct BurnDriver BurnDrvOrius = {
 	"Orius (ver UAA)\0", NULL, "Konami", "GX067",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_HORSHOOT, 0,
-	NULL, oriusRomInfo, oriusRomName, NULL, NULL, XexexInputInfo, XexexDIPInfo,
+	NULL, oriusRomInfo, oriusRomName, NULL, NULL, NULL, NULL, XexexInputInfo, XexexDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 256, 4, 3
 };
@@ -935,7 +955,7 @@ struct BurnDriver BurnDrvXexexa = {
 	"Xexex (ver AAA)\0", NULL, "Konami", "GX067",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_HORSHOOT, 0,
-	NULL, xexexaRomInfo, xexexaRomName, NULL, NULL, XexexInputInfo, XexexDIPInfo,
+	NULL, xexexaRomInfo, xexexaRomName, NULL, NULL, NULL, NULL, XexexInputInfo, XexexDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 256, 4, 3
 };
@@ -975,7 +995,7 @@ struct BurnDriver BurnDrvXexexj = {
 	"Xexex (ver JAA)\0", NULL, "Konami", "GX067",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_HORSHOOT, 0,
-	NULL, xexexjRomInfo, xexexjRomName, NULL, NULL, XexexInputInfo, XexexDIPInfo,
+	NULL, xexexjRomInfo, xexexjRomName, NULL, NULL, NULL, NULL, XexexInputInfo, XexexDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 256, 4, 3
 };

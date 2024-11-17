@@ -54,18 +54,25 @@ typedef struct
 	UINT8	pending_irq;	/* nonzero if an IRQ is pending */
 	UINT8	after_cli;		/* pending IRQ and last insn cleared I */
 	UINT8	nmi_state;
+	UINT8   nmi_req;
 	UINT8	irq_state;
 	UINT8   so_state;
-	int 	(*irq_callback)(int irqline);	/* IRQ callback */
-//	read8_machine_func rdmem_id;					/* readmem callback for indexed instructions */
-//	write8_machine_func wrmem_id;				/* writemem callback for indexed instructions */
+	UINT8   hold_irq;
+	UINT8   hold_nmi;
+	UINT8   cpu7written;
 
-#if (HAS_M6510) || (HAS_M6510T) || (HAS_M8502) || (HAS_M7501)
-	UINT8    ddr;
-	UINT8    port;
+	INT32   IntOccured;
+	INT32   ICount;
+	INT32   segmentcycles;
+	INT32   end_run;
+
+	UINT8   ddr; // 6501/8502/7501 stuff
+	UINT8   port;
+
 	UINT8	(*port_read)(UINT8 direction);
 	void	(*port_write)(UINT8 direction, UINT8 data);
-#endif
+
+	int 	(*irq_callback)(int irqline);	/* IRQ callback */
 
 }	m6502_Regs;
 
@@ -119,19 +126,26 @@ unsigned char M6502ReadPort(unsigned short Address);
 void M6502WritePort(unsigned short Address, unsigned char Data);
 unsigned char M6502ReadByte(unsigned short Address);
 void M6502WriteByte(unsigned short Address, unsigned char Data);
-unsigned char M6502ReadMemIndex(unsigned short Address);
-void M6502WriteMemIndex(unsigned short Address, unsigned char Data);
+//unsigned char M6502ReadMemIndex(unsigned short Address);
+//void M6502WriteMemIndex(unsigned short Address, unsigned char Data);
 unsigned char M6502ReadOp(unsigned short Address);
 unsigned char M6502ReadOpArg(unsigned short Address);
 
 void m6502_init();
 void m6502_reset(void);
 void m6502_exit(void);
+void m6502_core_exit();
 void m6502_get_context (void *dst);
 void m6502_set_context (void *src);
 int m6502_execute(int cycles);
 void m6502_set_irq_line(int irqline, int state);
+void m6502_set_irq_hold();
+void m6502_set_nmi_hold();
 UINT32 m6502_get_pc();
+UINT32 m6502_get_prev_pc();
+int m6502_releaseslice();
+int m6502_dec_icount(int todec);
+int m6502_get_segmentcycles();
 
 void m65c02_init();
 void m65c02_reset();
@@ -141,7 +155,7 @@ void m65c02_set_irq_line(int irqline, int state);
 void m65sc02_init();
 
 void n2a03_init();
-void n2a03_irq(void); // used for PSG!!
+//void n2a03_irq(void); // used for PSG!!
 
 void deco16_init();
 void deco16_reset();
@@ -150,6 +164,8 @@ void deco16_set_irq_line(int irqline, int state);
 
 void m6510_init();
 void m6510_reset(void);
+
+int decocpu7_execute(int cycles);
 
 /*enum
 {

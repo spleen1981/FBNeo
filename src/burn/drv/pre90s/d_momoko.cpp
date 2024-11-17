@@ -4,6 +4,7 @@
 #include "tiles_generic.h"
 #include "z80_intf.h"
 #include "burn_ym2203.h"
+#include "watchdog.h"
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;
@@ -41,10 +42,9 @@ static UINT8 *tx_mode;
 static UINT8 *bg_scrolly;
 static UINT8 *bg_scrollx;
 static UINT8 *bg_select;
+static UINT8 *bg_latch;
 static UINT8 *bg_priority;
 static UINT8 *bg_bank;
-
-static INT32 watchdog;
 
 static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
@@ -54,27 +54,27 @@ static UINT8 DrvInputs[3];
 static UINT8 DrvReset;
 
 static struct BurnInputInfo MomokoInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 7,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 7,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 7,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Momoko)
@@ -82,7 +82,7 @@ STDINPUTINFO(Momoko)
 static struct BurnDIPInfo MomokoDIPList[]=
 {
 	{0x10, 0xff, 0xff, 0x7f, NULL			},
-	{0x11, 0xff, 0xff, 0xef, NULL			},
+	{0x11, 0xff, 0xff, 0xff, NULL			},
 	{0x12, 0xff, 0xff, 0x00, NULL			},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
@@ -113,9 +113,9 @@ static struct BurnDIPInfo MomokoDIPList[]=
 	{0x11, 0x01, 0x03, 0x02, "50k"			},
 	{0x11, 0x01, 0x03, 0x00, "100k"			},
 
-//	{0   , 0xfe, 0   ,    2, "Cabinet"		},
-//	{0x11, 0x01, 0x10, 0x00, "Upright"		},
-//	{0x11, 0x01, 0x10, 0x10, "Cocktail"		},
+	{0   , 0xfe, 0   ,    2, "Cabinet"		},
+	{0x11, 0x01, 0x10, 0x00, "Upright"		},
+	{0x11, 0x01, 0x10, 0x10, "Cocktail"		},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x11, 0x01, 0x20, 0x00, "Off"			},
@@ -144,9 +144,9 @@ static void bankswitch(INT32 data)
 	ZetMapMemory(DrvBankROM + (data & 0x1f) * 0x1000, 0xf000, 0xffff, MAP_ROM);
 }
 
-void __fastcall momoko_main_write(UINT16 address, UINT8 data)
+static void __fastcall momoko_main_write(UINT16 address, UINT8 data)
 {
-	if ((address & 0xf800) == 0xd800) {
+	if ((address & 0xfc00) == 0xd800) {
 		DrvPalRAM[(address & 0x3ff)] = data;
 		palette_write(address & 0x3fe);
 		return;
@@ -159,7 +159,7 @@ void __fastcall momoko_main_write(UINT16 address, UINT8 data)
 		return;
 
 		case 0xd404:
-			watchdog = 0;
+			BurnWatchdogWrite();
 		return;
 
 		case 0xd406:
@@ -201,7 +201,8 @@ void __fastcall momoko_main_write(UINT16 address, UINT8 data)
 		return;
 
 		case 0xf006:
-			*bg_select = data;
+			//*bg_select = data;
+			*bg_latch = data;
 		return;
 
 		case 0xf007:
@@ -210,7 +211,7 @@ void __fastcall momoko_main_write(UINT16 address, UINT8 data)
 	}
 }
 
-UINT8 __fastcall momoko_main_read(UINT16 address)
+static UINT8 __fastcall momoko_main_read(UINT16 address)
 {
 	switch (address)
 	{
@@ -230,7 +231,7 @@ UINT8 __fastcall momoko_main_read(UINT16 address)
 	return 0;
 }
 
-void __fastcall momoko_sound_write(UINT16 address, UINT8 data)
+static void __fastcall momoko_sound_write(UINT16 address, UINT8 data)
 {
 	switch (address)
 	{
@@ -246,7 +247,7 @@ void __fastcall momoko_sound_write(UINT16 address, UINT8 data)
 	}
 }
 
-UINT8 __fastcall momoko_sound_read(UINT16 address)
+static UINT8 __fastcall momoko_sound_read(UINT16 address)
 {
 	switch (address)
 	{
@@ -267,16 +268,6 @@ static UINT8 momoko_sound_read_port_A(UINT32)
 	return *soundlatch;
 }
 
-inline static INT32 DrvSynchroniseStream(INT32 nSoundRate)
-{
-	return (INT64)ZetTotalCycles() * nSoundRate / 2500000;
-}
-
-inline static double DrvGetTime()
-{
-	return (double)ZetTotalCycles() / 2500000.0;
-}
-
 static INT32 DrvDoReset(INT32 clear)
 {
 	if (clear) {
@@ -289,11 +280,10 @@ static INT32 DrvDoReset(INT32 clear)
 
 	ZetOpen(1);
 	ZetReset();
+	BurnYM2203Reset();
 	ZetClose();
 
-	BurnYM2203Reset();
-
-	watchdog = 0;
+	BurnWatchdogReset();
 
 	return 0;
 }
@@ -316,10 +306,10 @@ static INT32 MemIndex()
 	DrvGfxROM2		= Next; Next += 0x008000;
 	DrvGfxROM3		= Next; Next += 0x040000;
 
-	DrvTransTab[0]		= Next; Next += 0x008000 / 0x08;
-	DrvTransTab[1]		= Next; Next += 0x000200;
-	DrvTransTab[2]		= Next; Next += 0x008000 / 0x40;
-	DrvTransTab[3]		= Next; Next += 0x040000 / 0x80;
+	DrvTransTab[0]	= Next; Next += 0x008000 / 0x08;
+	DrvTransTab[1]	= Next; Next += 0x000200;
+	DrvTransTab[2]	= Next; Next += 0x008000 / 0x40;
+	DrvTransTab[3]	= Next; Next += 0x040000 / 0x80;
 
 	DrvPalette		= (UINT32*)Next; Next += 0x0200 * sizeof(UINT32);
 
@@ -342,6 +332,7 @@ static INT32 MemIndex()
 	bg_scrolly		= Next; Next += 0x000002;
 	bg_scrollx		= Next; Next += 0x000002;
 	bg_select		= Next; Next += 0x000001;
+	bg_latch		= Next; Next += 0x000001;
 	bg_priority		= Next; Next += 0x000001;
 	bg_bank			= Next; Next += 0x000001;
 
@@ -375,7 +366,7 @@ static INT32 DrvGfxDecode()
 
 	memcpy (tmp, DrvGfxROM2, 0x02000);
 
-	GfxDecode(0x0800, 2, 8, 1, Planes, XOffs0, YOffs0, 0x008, tmp, DrvGfxROM2);
+	GfxDecode(0x0100, 2, 8, 8, Planes, XOffs0, YOffs0, 0x040, tmp, DrvGfxROM2);
 
 	memcpy (tmp, DrvGfxROM3, 0x10000);
 
@@ -473,7 +464,9 @@ static INT32 DrvInit()
 	ZetSetReadHandler(momoko_sound_read);
 	ZetClose();
 
-	BurnYM2203Init(2, 1250000, NULL, DrvSynchroniseStream, DrvGetTime, 0);
+	BurnWatchdogInit(DrvDoReset, 180);
+
+	BurnYM2203Init(2, 1250000, NULL, 0);
 	BurnYM2203SetPorts(1, momoko_sound_read_port_A, NULL, NULL, NULL);
 	BurnTimerAttachZet(2500000);
 	BurnYM2203SetRoute(0, BURN_SND_YM2203_YM2203_ROUTE, 0.40, BURN_SND_ROUTE_BOTH);
@@ -552,7 +545,7 @@ static void draw_fg_layer()
 		INT32 code = DrvFgMPROM[ofst];
 
 		sx = (sx * 8) + dx - 6;
-		sy = (sy * 8) + dy + 9 - 16;
+		sy = (sy * 8) + dy + 1; //9 - (8);
 
 		if (DrvTransTab[2][code]) continue;
 
@@ -567,23 +560,24 @@ static void draw_txt_layer()
 		INT32 color;
 		INT32 sx = (offs & 0x1f) * 8;
 		INT32 sy = (offs / 0x20);
+		INT32 y = sy;
 
-		if (tx_mode)
+		if (*tx_mode)
 		{
-			if ((DrvColPROM[sy] & 0xf8) == 0) sy -= *tx_scrolly;
+			if ((DrvColPROM[sy] & 0xf8) == 0) sy += *tx_scrolly;
 
-			color = (DrvColPROM[sy] & 0x07) | 0x10;
+			color = (DrvColPROM[y] & 0x07) | 0x10;
 		}
 		else
 		{
 			color = DrvColPROM[(sy >> 3) + 0x100] & 0x0f;
 		}
 
-		INT32 code = DrvVidRAM[((sy >> 3) << 5) | (sx >> 3)] * 8 + (sy & 7);
+		INT32 code = DrvVidRAM[((sy >> 3) << 5) + (sx >> 3)] * 8 + (sy & 7);
 
-		if (DrvTransTab[0][code]) continue;
+		if (DrvTransTab[0][code] || (sy-16) >= nScreenHeight || (sx-8) >= nScreenWidth) continue;
 
-		RenderCustomTile_Mask_Clip(pTransDraw, 8, 1, code, sx - 8, sy - 16, color, 2, 0, 0, DrvGfxROM0);
+		RenderCustomTile_Mask_Clip(pTransDraw, 8, 1, code, sx - 8, y - 16, color, 2, 0, 0, DrvGfxROM0);
 	}
 }
 
@@ -631,31 +625,29 @@ static INT32 DrvDraw()
 
 	BurnTransferClear();
 
-	if ((*bg_select & 0x10) == 0)
+	if (((*bg_select | *bg_latch) & 0x10) == 0)
 	{
 		if (nBurnLayer & 1) draw_bg_layer(0x10);
 	}
 	else
 	{
-		for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++) {
-			pTransDraw[i] = 0x100;
-		}
+		BurnTransferClear(0x100);
 	}
 
-	draw_sprites(0, 0x24);
+	if (nSpriteEnable & 1) draw_sprites(0, 0x24);
 
-	if ((*bg_select & 0x10) == 0)
+	if (((*bg_select | *bg_latch) & 0x10) == 0)
 	{
-		draw_bg_layer(0);
+		if (nBurnLayer & 2) draw_bg_layer(0);
 	}
 
-	draw_sprites(0x24, 0x100-0x64);
+	if (nSpriteEnable & 2) draw_sprites(0x24, 0x100-0x64);
 
-	draw_txt_layer();
+	if (nBurnLayer & 4) draw_txt_layer();
 
 	if ((*fg_select & 0x10) == 0)
 	{
-		draw_fg_layer();
+		if (nBurnLayer & 8) draw_fg_layer();
 	}
 
 	BurnTransferCopy(DrvPalette);
@@ -665,10 +657,7 @@ static INT32 DrvDraw()
 
 static INT32 DrvFrame()
 {
-	watchdog++;
-	if (watchdog >= 180) {
-		DrvDoReset(0);
-	}
+	BurnWatchdogUpdate();
 
 	if (DrvReset) {
 		DrvDoReset(1);
@@ -686,30 +675,23 @@ static INT32 DrvFrame()
 		}
 	}
 
-	INT32 nCycleSegment;
 	INT32 nInterleave = 100;
 	INT32 nCyclesTotal[2] = { 5000000 / 60, 2500000 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCycleSegment = nCyclesTotal[0] / nInterleave;
-
 		ZetOpen(0);
-		nCyclesDone[0] += ZetRun(nCycleSegment);
-		if (i == 66) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
+		CPU_RUN(0, Zet);
+		if (i == nInterleave - 1) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
 
-		nCycleSegment = nCyclesTotal[1] / nInterleave;
-
 		ZetOpen(1);
-		BurnTimerUpdate(i * nCycleSegment);
-		nCyclesDone[1] += nCycleSegment;
+		CPU_RUN_TIMER(1);
 		ZetClose();
 	}
 
 	ZetOpen(1);
-	BurnTimerEndFrame(nCyclesTotal[1]);
 	if (pBurnSoundOut) {
 		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
 	}
@@ -719,10 +701,12 @@ static INT32 DrvFrame()
 		DrvDraw();
 	}
 
+	*bg_select = *bg_latch; // delay 1 frame, gets rid of corruption on scene changes -dink july 31, 2020
+
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -739,6 +723,8 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		ZetScan(nAction);
 
 		BurnYM2203Scan(nAction, pnMin);
+
+		BurnWatchdogScan(nAction);
 	}
 
 	if (nAction & ACB_WRITE)
@@ -746,42 +732,40 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		ZetOpen(0);
 		bankswitch(*bg_bank);
 		ZetClose();
-
-		DrvRecalc = 1;
 	}
 
 	return 0;
 }
 
 
-// Momoko 120%
+// Momoko 120% (Japanese text)
 
 static struct BurnRomInfo momokoRomDesc[] = {
-	{ "momoko03.bin",	0x8000, 0x386e26ed, 0x01 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
-	{ "momoko02.bin",	0x4000, 0x4255e351, 0x01 | BRF_PRG | BRF_ESS }, //  1
+	{ "momoko03.m6",	0x8000, 0x386e26ed, 0x01 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "momoko02.m5",	0x4000, 0x4255e351, 0x01 | BRF_PRG | BRF_ESS }, //  1
 
-	{ "momoko01.bin",	0x8000, 0xe8a6673c, 0x02 | BRF_PRG | BRF_ESS }, //  2 Z80 #1 Code
+	{ "momoko01.u4",	0x8000, 0xe8a6673c, 0x02 | BRF_PRG | BRF_ESS }, //  2 Z80 #1 Code
 
-	{ "momoko13.bin",	0x2000, 0x2745cf5a, 0x03 | BRF_GRA },           //  3 Character Tiles
+	{ "momoko13.u4",	0x2000, 0x2745cf5a, 0x03 | BRF_GRA },           //  3 Character Tiles
 
-	{ "momoko14.bin",	0x2000, 0xcfccca05, 0x04 | BRF_GRA },           //  4 Foreground Tiles
+	{ "momoko14.p2",	0x2000, 0xcfccca05, 0x04 | BRF_GRA },           //  4 Foreground Tiles
 
-	{ "momoko16.bin",	0x8000, 0xfc6876fc, 0x05 | BRF_GRA },           //  5 Sprite Tiles
-	{ "momoko17.bin",	0x8000, 0x45dc0247, 0x05 | BRF_GRA },           //  6
+	{ "momoko16.e5",	0x8000, 0xfc6876fc, 0x05 | BRF_GRA },           //  5 Sprite Tiles
+	{ "momoko17.e6",	0x8000, 0x45dc0247, 0x05 | BRF_GRA },           //  6
 
-	{ "momoko09.bin",	0x8000, 0x9f5847c7, 0x06 | BRF_GRA },           //  7 Background Tiles
-	{ "momoko11.bin",	0x8000, 0x9c9fbd43, 0x06 | BRF_GRA },           //  8
-	{ "momoko10.bin",	0x8000, 0xae17e74b, 0x06 | BRF_GRA },           //  9
-	{ "momoko12.bin",	0x8000, 0x1e29c9c4, 0x06 | BRF_GRA },           // 10
+	{ "momoko09.e8",	0x8000, 0x9f5847c7, 0x06 | BRF_GRA },           //  7 Background Tiles
+	{ "momoko11.c8",	0x8000, 0x9c9fbd43, 0x06 | BRF_GRA },           //  8
+	{ "momoko10.d8",	0x8000, 0xae17e74b, 0x06 | BRF_GRA },           //  9
+	{ "momoko12.a8",	0x8000, 0x1e29c9c4, 0x06 | BRF_GRA },           // 10
 
-	{ "momoko04.bin",	0x8000, 0x3ab3c2c3, 0x07 | BRF_GRA },           // 11 Background Map (Banks used by Z80 #0)
-	{ "momoko05.bin",	0x8000, 0x757cdd2b, 0x07 | BRF_GRA },           // 12
-	{ "momoko06.bin",	0x8000, 0x20cacf8b, 0x07 | BRF_GRA },           // 13
-	{ "momoko07.bin",	0x8000, 0xb94b38db, 0x07 | BRF_GRA },           // 14
+	{ "momoko04.r8",	0x8000, 0x3ab3c2c3, 0x07 | BRF_GRA },           // 11 Background Map (Banks used by Z80 #0)
+	{ "momoko05.p8",	0x8000, 0x757cdd2b, 0x07 | BRF_GRA },           // 12
+	{ "momoko06.n8",	0x8000, 0x20cacf8b, 0x07 | BRF_GRA },           // 13
+	{ "momoko07.l8",	0x8000, 0xb94b38db, 0x07 | BRF_GRA },           // 14
 
-	{ "momoko08.bin",	0x2000, 0x69b41702, 0x08 | BRF_GRA },           // 15 Background Color/Priority Table
+	{ "momoko08.h8",	0x2000, 0x69b41702, 0x08 | BRF_GRA },           // 15 Background Color/Priority Table
 
-	{ "momoko15.bin",	0x4000, 0x8028f806, 0x09 | BRF_GRA },           // 16 Foreground Map
+	{ "momoko15.k2",	0x4000, 0x8028f806, 0x09 | BRF_GRA },           // 16 Foreground Map
 
 	{ "momoko-c.bin",	0x0100, 0xf35ccae0, 0x0a | BRF_GRA },           // 17 Text Layer Color PROMs
 	{ "momoko-b.bin",	0x0020, 0x427b0e5c, 0x0a | BRF_GRA },           // 18
@@ -792,10 +776,105 @@ STD_ROM_FN(momoko)
 
 struct BurnDriver BurnDrvMomoko = {
 	"momoko", NULL, NULL, NULL, "1986",
-	"Momoko 120%\0", NULL, "Jaleco", "Miscellaneous",
+	"Momoko 120% (Japanese text)\0", NULL, "Jaleco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
-	NULL, momokoRomInfo, momokoRomName, NULL, NULL, MomokoInputInfo, MomokoDIPInfo,
+	NULL, momokoRomInfo, momokoRomName, NULL, NULL, NULL, NULL, MomokoInputInfo, MomokoDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
-	240, 224, 4, 3
+	240, 216, 4, 3
+};
+
+
+// Momoko 120% (English text)
+
+static struct BurnRomInfo momokoeRomDesc[] = {
+	{ "3.m6",			0x8000, 0x84053a7d, 0x01 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "2.m5",			0x4000, 0x98ad397b, 0x01 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "momoko01.u4",	0x8000, 0xe8a6673c, 0x02 | BRF_PRG | BRF_ESS }, //  2 Z80 #1 Code
+
+	{ "momoko13.u4",	0x2000, 0x2745cf5a, 0x03 | BRF_GRA },           //  3 Character Tiles
+
+	{ "momoko14.p2",	0x2000, 0xcfccca05, 0x04 | BRF_GRA },           //  4 Foreground Tiles
+
+	{ "momoko16.e5",	0x8000, 0xfc6876fc, 0x05 | BRF_GRA },           //  5 Sprite Tiles
+	{ "momoko17.e6",	0x8000, 0x45dc0247, 0x05 | BRF_GRA },           //  6
+
+	{ "momoko09.e8",	0x8000, 0x9f5847c7, 0x06 | BRF_GRA },           //  7 Background Tiles
+	{ "momoko11.c8",	0x8000, 0x9c9fbd43, 0x06 | BRF_GRA },           //  8
+	{ "momoko10.d8",	0x8000, 0xae17e74b, 0x06 | BRF_GRA },           //  9
+	{ "momoko12.a8",	0x8000, 0x1e29c9c4, 0x06 | BRF_GRA },           // 10
+
+	{ "momoko04.r8",	0x8000, 0x3ab3c2c3, 0x07 | BRF_GRA },           // 11 Background Map (Banks used by Z80 #0)
+	{ "momoko05.p8",	0x8000, 0x757cdd2b, 0x07 | BRF_GRA },           // 12
+	{ "momoko06.n8",	0x8000, 0x20cacf8b, 0x07 | BRF_GRA },           // 13
+	{ "momoko07.l8",	0x8000, 0xb94b38db, 0x07 | BRF_GRA },           // 14
+
+	{ "momoko08.h8",	0x2000, 0x69b41702, 0x08 | BRF_GRA },           // 15 Background Color/Priority Table
+
+	{ "momoko15.k2",	0x4000, 0x8028f806, 0x09 | BRF_GRA },           // 16 Foreground Map
+
+	{ "momoko-c.bin",	0x0100, 0xf35ccae0, 0x0a | BRF_GRA },           // 17 Text Layer Color PROMs
+	{ "momoko-b.bin",	0x0020, 0x427b0e5c, 0x0a | BRF_GRA },           // 18
+};
+
+STD_ROM_PICK(momokoe)
+STD_ROM_FN(momokoe)
+
+struct BurnDriver BurnDrvMomokoe = {
+	"momokoe", "momoko", NULL, NULL, "1986",
+	"Momoko 120% (English text)\0", NULL, "Jaleco", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, momokoeRomInfo, momokoeRomName, NULL, NULL, NULL, NULL, MomokoInputInfo, MomokoDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
+	240, 216, 4, 3
+};
+
+
+// Momoko 120% (bootleg)
+// bootleg board, almost exact copy of an original one
+
+static struct BurnRomInfo momokobRomDesc[] = {
+	{ "3.bin",			0x8000, 0xa18d7e78, 0x01 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "2.bin",			0x4000, 0x2dcf50ed, 0x01 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "momoko01.u4",	0x8000, 0xe8a6673c, 0x02 | BRF_PRG | BRF_ESS }, //  2 Z80 #1 Code
+
+	{ "momoko13.u4",	0x2000, 0x2745cf5a, 0x03 | BRF_GRA },           //  3 Character Tiles
+
+	{ "momoko14.p2",	0x2000, 0xcfccca05, 0x04 | BRF_GRA },           //  4 Foreground Tiles
+
+	{ "16.bin",			0x8000, 0x49de49a1, 0x05 | BRF_GRA },           //  5 Sprite Tiles
+	{ "17.bin",			0x8000, 0xf06a3d1a, 0x05 | BRF_GRA },           //  6
+
+	{ "momoko09.e8",	0x8000, 0x9f5847c7, 0x06 | BRF_GRA },           //  7 Background Tiles
+	{ "momoko11.c8",	0x8000, 0x9c9fbd43, 0x06 | BRF_GRA },           //  8
+	{ "10.bin",			0x8000, 0x68b9156d, 0x06 | BRF_GRA },           //  9
+	{ "12.bin",			0x8000, 0xc32f5e19, 0x06 | BRF_GRA },           // 10
+
+	{ "4.bin",			0x8000, 0x1f0226d5, 0x07 | BRF_GRA },           // 11 Background Map (Banks used by Z80 #0)
+	{ "momoko05.p8",	0x8000, 0x757cdd2b, 0x07 | BRF_GRA },           // 12
+	{ "momoko06.n8",	0x8000, 0x20cacf8b, 0x07 | BRF_GRA },           // 13
+	{ "momoko07.l8",	0x8000, 0xb94b38db, 0x07 | BRF_GRA },           // 14
+
+	{ "momoko08.h8",	0x2000, 0x69b41702, 0x08 | BRF_GRA },           // 15 Background Color/Priority Table
+
+	{ "momoko15.k2",	0x4000, 0x8028f806, 0x09 | BRF_GRA },           // 16 Foreground Map
+
+	{ "momoko-c.bin",	0x0100, 0xf35ccae0, 0x0a | BRF_GRA },           // 17 Text Layer Color PROMs
+	{ "momoko-b.bin",	0x0020, 0x427b0e5c, 0x0a | BRF_GRA },           // 18
+};
+
+STD_ROM_PICK(momokob)
+STD_ROM_FN(momokob)
+
+struct BurnDriver BurnDrvMomokob = {
+	"momokob", "momoko", NULL, NULL, "1986",
+	"Momoko 120% (bootleg)\0", NULL, "bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, momokobRomInfo, momokobRomName, NULL, NULL, NULL, NULL, MomokoInputInfo, MomokoDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
+	240, 216, 4, 3
 };

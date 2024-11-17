@@ -1,8 +1,4 @@
-// Mr. Do's Castle emu-layer for FB Alpha by dink, based on the MAME driver.
-//
-// Todo:
-//   fix DrvDip[0]
-//   figure out why CPU_IRQSTATUS_HOLD screws up the timing in Do! Run Run
+// Mr. Do's Castle emu-layer for FB Alpha by dink, based on the MAME driver by Brad Oliver.
 
 #include "tiles_generic.h"
 #include "z80_intf.h"
@@ -40,7 +36,7 @@ static UINT8 DrvReset;
 
 static INT32 flipscreen = 0;
 
-static UINT8 cpu0idle = 0;
+static UINT8 cpu0frozen = 0;
 static UINT8 dorunrunmode = 0;
 
 static struct BurnInputInfo DocastleInputList[] = {
@@ -94,8 +90,8 @@ static struct BurnDIPInfo DocastleDIPList[]=
 	{0x14, 0x01, 0x04, 0x00, "On"		},
 
 	{0   , 0xfe, 0   ,    2, "Advance Level on Getting Diamond"		},
-	{0x14, 0x01, 0x08, 0x08, "Off"		},
-	{0x14, 0x01, 0x08, 0x00, "On"		},
+	{0x14, 0x01, 0x08, 0x08, "On"		},
+	{0x14, 0x01, 0x08, 0x00, "Off"		},
 
 	{0   , 0xfe, 0   ,    2, "Difficulty of EXTRA"		},
 	{0x14, 0x01, 0x10, 0x10, "Easy"		},
@@ -417,9 +413,12 @@ STDDIPINFO(Kickridr)
 static void DrvMakeInputs()
 {
 	UINT8 *DrvJoy[3] = { DrvJoy1, DrvJoy2, DrvJoy3 };
-	UINT32 DrvJoyInit[3] = { 0xff, 0xff, 0xff };
+	UINT32 DrvJoyInit[3] = { 0, 0xff, 0xff };
 
 	CompileInput(DrvJoy, (void*)DrvInput, 3, 8, DrvJoyInit);
+
+	ProcessJoystick(&DrvInput[0], 0, 1,3,2,0, INPUT_4WAY);
+	ProcessJoystick(&DrvInput[0], 1, 5,7,6,4, INPUT_4WAY | INPUT_MAKEACTIVELOW);
 }
 
 static UINT8 shared0r(UINT8 offs)
@@ -435,7 +434,8 @@ static UINT8 shared1r(UINT8 offs)
 static void shared0w(UINT8 offs, UINT8 data)
 {
 	if (offs == 8) {
-		cpu0idle = 0;
+		cpu0frozen = 0;
+		ZetRunEnd();
 	}
 	DrvSharedRAM0[offs] = data;
 }
@@ -443,7 +443,8 @@ static void shared0w(UINT8 offs, UINT8 data)
 static void shared1w(UINT8 offs, UINT8 data)
 {
 	if (offs == 8) {
-		cpu0idle = 1;
+		cpu0frozen = 1;
+		ZetRunEnd();
 	}
 	DrvSharedRAM1[offs] = data;
 }
@@ -471,11 +472,7 @@ static void __fastcall docastle_cpu0_write(UINT16 address, UINT8 data)
 
 		case 0xb800:
 		case 0xe000:
-			ZetClose();
-			ZetOpen(1);
-			ZetNmi();
-			ZetClose();
-			ZetOpen(0);
+			ZetNmi(1);
 		return;
 	}
 }
@@ -546,10 +543,10 @@ static UINT8 __fastcall docastle_cpu1_read(UINT16 address)
 
 		case 0xc003: return DrvInput[0];
 		case 0xc005: return DrvInput[1];
-		case 0xc007: return DrvInput[2] | DrvDip[0]; // wont work because its active low, revisit.
+		case 0xc007: return (DrvInput[2] & ~0x08) | (DrvDip[0] & 0x08);
 
 		case 0xc004:
-			flipscreen = address & 0x80 ? 1 : 0;
+			flipscreen = (address & 0x80) ? 1 : 0;
 			return flipscreen;
 	}
 
@@ -606,13 +603,13 @@ static INT32 DrvDoReset()
 	HiscoreReset();
 
 	flipscreen = 0;
-	cpu0idle = 0;
+	cpu0frozen = 0;
 
 	return 0;
 }
 
 static INT32 DrvPaletteInit()
-{
+{ // mostly c&p from mame
 	UINT8 *color_prom = DrvProm;
 	UINT8 priority = dorunrunmode; // set 0 for Mr. Do's Castle, 1 for Do's Wild Ride/Do Run Run
 
@@ -786,7 +783,7 @@ static INT32 DrvInit()
 		ZetMapMemory(DrvZ80RAM,         0x8000, 0x97ff, MAP_RAM);
 		ZetMapMemory(DrvSpriteRAM,      0x9800, 0x99ff, MAP_RAM);
 		ZetMapMemory(DrvVidRAM,         0xb000, 0xb7ff, MAP_RAM);
-		ZetMapMemory(DrvVidRAM,         0xb800, 0xbfff, MAP_RAM); /* mirror */
+		ZetMapMemory(DrvVidRAM,         0xb800, 0xbfff, MAP_RAM); // mirror
 	}
 	ZetSetWriteHandler(docastle_cpu0_write);
 	ZetSetReadHandler(docastle_cpu0_read);
@@ -818,6 +815,7 @@ static INT32 DrvInit()
 	SN76496SetRoute(2, 0.20, BURN_SND_ROUTE_BOTH);
 	SN76489AInit(3, 4000000, 1);
 	SN76496SetRoute(3, 0.20, BURN_SND_ROUTE_BOTH);
+	SN76496SetBuffered(ZetTotalCycles, 4000000);
 
 	GenericTilesInit();
 
@@ -838,8 +836,6 @@ static INT32 DrvExit()
 
 	return 0;
 }
-
-extern int counter;
 
 static void RenderTileCPMP(INT32 code, INT32 color, INT32 sx, INT32 sy, INT32 flipx, INT32 flipy, INT32 width, INT32 height, INT32 offset, INT32 mode, UINT8 *gfxrom)
 {
@@ -874,7 +870,7 @@ static void RenderTileCPMP(INT32 code, INT32 color, INT32 sx, INT32 sy, INT32 fl
 }
 
 static void draw_chars(INT32 front) {
-	for (int offs = 0x380; offs > 0; offs--) {
+	for (INT32 offs = 0x380; offs > 0; offs--) {
 		INT32 sx = 8 * (offs % 32);
 		INT32 sy = 8 * (offs / 32);
 
@@ -963,48 +959,37 @@ static INT32 DrvFrame()
 	ZetNewFrame();
 
 	// we need a very high interleave here to sync the cpu's -or- dips & music/sfx won't work
-	INT32 nInterleave = 256*16; // why don't we just go single-cycle? -dink    *kidding*
+	INT32 nInterleave = 264*16;
 	INT32 nCyclesTotal[3] = { 4000000 / 60, 4000000 / 60, 4000000 / 60 };
-	INT32 nIdleCycles = 0;
+	INT32 nCyclesDone[3] = { 0, 0, 0 };
 
 	for (INT32 i = 0; i < nInterleave; i++) {
 		ZetOpen(0);
-		if (cpu0idle) {
-			nIdleCycles += nCyclesTotal[0] / nInterleave;
-			ZetIdle(nCyclesTotal[0] / nInterleave);
-		} else {
-			ZetRun((nCyclesTotal[0] / nInterleave) + nIdleCycles);
-			nIdleCycles = 0;
+		if (!cpu0frozen) {
+			CPU_RUN(0, Zet);
 		}
-		if (i == ( nInterleave - 1)) {
-			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
-			ZetRun(100);
-			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
+		if (i == 192*16) {
+			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		}
 		ZetClose();
 
 		ZetOpen(1);
-		ZetRun(nCyclesTotal[1] / nInterleave);
+		CPU_RUN(1, Zet);
 		if ((i % (nInterleave / 8)) == ((nInterleave / 8) - 1)) {
-			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
-			ZetRun(100);
-			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
+			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		}
 		ZetClose();
 
 #if 0
 		ZetOpen(2); // this z80 drives the crt controller, useless for emulation
-		ZetRun(nCyclesTotal[2] / nInterleave);
+		CPU_RUN(2, Zet);
 		if (i == (nInterleave - 1)) ZetNmi();
 		ZetClose();
 #endif
 	}
 
 	if (pBurnSoundOut) {
-		SN76496Update(0, pBurnSoundOut, nBurnSoundLen);
-		SN76496Update(1, pBurnSoundOut, nBurnSoundLen);
-		SN76496Update(2, pBurnSoundOut, nBurnSoundLen);
-		SN76496Update(3, pBurnSoundOut, nBurnSoundLen);
+		SN76496Update(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	if (pBurnDraw) {
@@ -1033,7 +1018,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		SN76496Scan(nAction, pnMin);
 
-		SCAN_VAR(cpu0idle);
+		SCAN_VAR(cpu0frozen);
 	}
 
 	return 0;
@@ -1069,8 +1054,8 @@ struct BurnDriver BurnDrvdocastle = {
 	"docastle", NULL, NULL, NULL, "1983",
 	"Mr. Do\'s Castle (set 1)\0", NULL, "Universal", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, docastleRomInfo, docastleRomName, NULL, NULL, DocastleInputInfo, DocastleDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, docastleRomInfo, docastleRomName, NULL, NULL, NULL, NULL, DocastleInputInfo, DocastleDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	192, 240, 3, 4
 };
@@ -1111,8 +1096,8 @@ struct BurnDriver BurnDrvDorunrun = {
 	"dorunrun", NULL, NULL, NULL, "1984",
 	"Do! Run Run (set 1)\0", NULL, "Universal", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, dorunrunRomInfo, dorunrunRomName, NULL, NULL, DocastleInputInfo, DorunrunDIPInfo,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, dorunrunRomInfo, dorunrunRomName, NULL, NULL, NULL, NULL, DocastleInputInfo, DorunrunDIPInfo,
 	DorunrunDrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	240, 192, 4, 3
 };
@@ -1146,8 +1131,8 @@ struct BurnDriver BurnDrvDowild = {
 	"dowild", NULL, NULL, NULL, "1984",
 	"Mr. Do's Wild Ride\0", NULL, "Universal", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, dowildRomInfo, dowildRomName, NULL, NULL, DocastleInputInfo, DowildDIPInfo,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, dowildRomInfo, dowildRomName, NULL, NULL, NULL, NULL, DocastleInputInfo, DowildDIPInfo,
 	DorunrunDrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	240, 192, 4, 3
 };
@@ -1181,8 +1166,8 @@ struct BurnDriver BurnDrvJjack = {
 	"jjack", NULL, NULL, NULL, "1984",
 	"Jumping Jack\0", NULL, "Universal", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, jjackRomInfo, jjackRomName, NULL, NULL, DocastleInputInfo, JjackDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, jjackRomInfo, jjackRomName, NULL, NULL, NULL, NULL, DocastleInputInfo, JjackDIPInfo,
 	DorunrunDrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	192, 240, 3, 4
 };
@@ -1217,8 +1202,8 @@ struct BurnDriver BurnDrvKickridr = {
 	"kickridr", NULL, NULL, NULL, "1984",
 	"Kick Rider\0", NULL, "Universal", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, kickridrRomInfo, kickridrRomName, NULL, NULL, DocastleInputInfo, KickridrDIPInfo,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	NULL, kickridrRomInfo, kickridrRomName, NULL, NULL, NULL, NULL, DocastleInputInfo, KickridrDIPInfo,
 	DorunrunDrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	240, 192, 4, 3
 };

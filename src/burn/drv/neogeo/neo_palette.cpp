@@ -1,9 +1,10 @@
 #include "neogeo.h"
 // Neo Geo -- palette functions
 
-UINT8* NeoPalSrc[2];		// Pointer to input palettes
+UINT8* NeoPalSrc[2];				// Pointer to input palettes
 UINT32* NeoPalette;
 INT32 nNeoPaletteBank;				// Selected palette bank
+INT32 bNeoDarkenPalette;			// Screen Brightness mode
 
 static UINT32* NeoPaletteData[2] = {NULL, NULL};
 static UINT16* NeoPaletteCopy[2] = {NULL, NULL};
@@ -24,6 +25,7 @@ INT32 NeoInitPalette()
 	}
 
 	NeoRecalcPalette = 1;
+	bNeoDarkenPalette = 0;
 
 	return 0;
 }
@@ -48,6 +50,12 @@ inline static UINT32 CalcCol(UINT16 nColour)
 	r |= r >> 5;
 	g |= g >> 5;
 	b |= b >> 5;
+
+	if (bNeoDarkenPalette) {
+		r /= 2;
+		g /= 2;
+		b /= 2;
+	}
 
 	return BurnHighCol(r, g, b, 0);
 }
@@ -78,6 +86,7 @@ INT32 NeoUpdatePalette()
 void NeoSetPalette()
 {
 	NeoPalette = NeoPaletteData[nNeoPaletteBank];
+	pBurnDrvPalette = NeoPalette;
 }
 
 // Update the PC copy of the palette on writes to the palette memory

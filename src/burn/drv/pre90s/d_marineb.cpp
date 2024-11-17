@@ -3,11 +3,7 @@
 
 #include "tiles_generic.h"
 #include "z80_intf.h"
-
-#include "driver.h"
-extern "C" {
- #include "ay8910.h"
-}
+#include "ay8910.h"
 
 enum { SPRINGER = 0, MARINEB, HOPPROBO, CHANGES, HOCCER, WANTED, BCRUZM12 };
 
@@ -43,9 +39,6 @@ static INT32 DrvInterruptEnable;
 static UINT8 ActiveLowFlipscreen;
 static INT32 hardware;
 
-static INT16 *pAY8910Buffer[6];
-
-
 static struct BurnInputInfo MarinebInputList[] =
 {
 	{"P1 Coin"  	   , BIT_DIGITAL  , DrvInputPort2 + 0, "p1 coin"   },
@@ -80,8 +73,14 @@ static struct BurnDIPInfo MarinebDIPList[]=
 	{0x0E, 0x01, 0x03, 0x02, "5"			},
 	{0x0E, 0x01, 0x03, 0x03, "6"			},
 
-	{0   , 0xFE, 0   ,    2, "Coinage"		},
-	{0x0E, 0x01, 0x1C, 0x00, "1 Coin 1 Credit" },
+	{0   , 0xFE, 0   ,    8, "Coinage"		},
+	{0x0E, 0x01, 0x1C, 0x00, "1 Coin 1 Credit"   },
+	{0x0E, 0x01, 0x1C, 0x04, "1 Coin 2 Credits"  },
+	{0x0E, 0x01, 0x1C, 0x08, "1 Coin 3 Credits"  },
+	{0x0E, 0x01, 0x1C, 0x0c, "1 Coin 4 Credits"  },
+	{0x0E, 0x01, 0x1C, 0x10, "1 Coin 6 Credits"  },
+	{0x0E, 0x01, 0x1C, 0x14, "2 Coins 1 Credit"  },
+	{0x0E, 0x01, 0x1C, 0x18, "3 Coins 2 Credits" },
 	{0x0E, 0x01, 0x1C, 0x1C, "Free Play"	},
 
 	{0   , 0xFE, 0   ,    2, "Bonus Life"	},
@@ -128,7 +127,9 @@ static struct BurnDIPInfo ChangesDIPList[]=
 	{0x0c, 0x01, 0x03, 0x03, "6"		},
 
 	{0   , 0xfe, 0   ,    2, "Coinage"		},
-	{0x0c, 0x01, 0x0c, 0x00, "1 Coin  1 Credits" },
+	{0x0c, 0x01, 0x0c, 0x00, "1 Coin 1 Credit" },
+//	{0x0c, 0x01, 0x0c, 0x04, "1 Coin 2 Credits" },
+//	{0x0c, 0x01, 0x0c, 0x08, "2 Coins 1 Credits" },
 	{0x0c, 0x01, 0x0c, 0x0c, "Free Play"		},
 
 	{0   , 0xfe, 0   ,    2, "1st Bonus Life"		},
@@ -184,11 +185,11 @@ static struct BurnDIPInfo HoccerDIPList[]=
 	{0x0f, 0x01, 0x02, 0x00, "Off"		},
 	{0x0f, 0x01, 0x02, 0x02, "On"		},
 
-	{0   , 0xfe, 0   ,    4, "Unknown"		},
-	{0x0f, 0x01, 0x0c, 0x00, "0"		},
-	{0x0f, 0x01, 0x0c, 0x04, "1"		},
-	{0x0f, 0x01, 0x0c, 0x08, "2"		},
-	{0x0f, 0x01, 0x0c, 0x0c, "3"		},
+	{0   , 0xfe, 0   ,    4, "Difficulty"		},
+	{0x0f, 0x01, 0x0c, 0x00, "Easy"		},
+	{0x0f, 0x01, 0x0c, 0x04, "Normal"	},
+	{0x0f, 0x01, 0x0c, 0x08, "Hard"		},
+	{0x0f, 0x01, 0x0c, 0x0c, "Hardest"	},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
 	{0x0f, 0x01, 0x30, 0x00, "3"		},
@@ -398,27 +399,20 @@ static INT32 MemIndex()
 {
 	UINT8 *Next; Next = AllMem;
 
-	DrvZ80ROM			= Next; Next += 0x10000;
-	DrvColPROM    		= Next; Next += 0x200;
-	DrvGfxROM0    		= Next; Next += 1024 * 8 * 8;
-	DrvGfxROM1   		= Next; Next += 64*2 * 16 * 16;
-	DrvGfxROM2    		= Next; Next += 64*2 * 32 * 32;
+	DrvZ80ROM	= Next; Next += 0x10000;
+	DrvColPROM    	= Next; Next += 0x200;
+	DrvGfxROM0    	= Next; Next += 1024 * 8 * 8;
+	DrvGfxROM1   	= Next; Next += 64*2 * 16 * 16;
+	DrvGfxROM2    	= Next; Next += 64*2 * 32 * 32;
 
-	DrvPalette  = (UINT32*)Next; Next += 0x100 * sizeof(UINT32);
-
-	pAY8910Buffer[0]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[1]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[2]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[3]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[4]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[5]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
+	DrvPalette  	= (UINT32*)Next; Next += 0x100 * sizeof(UINT32);
 
 	RamStart	= Next;
 
 	DrvZ80RAM	= Next;  Next += 0x800;
 	DrvVidRAM	= Next;  Next += 0x400;
-	DrvSprRAM   = Next;  Next += 0x100;
-	DrvColRAM   = Next;  Next += 0x400;
+	DrvSprRAM	= Next;  Next += 0x100;
+	DrvColRAM	= Next;  Next += 0x400;
 
 	RamEnd		= Next;
 	MemEnd		= Next;
@@ -441,12 +435,11 @@ static void CleanAndInitStuff()
 	memset(DrvInputPort2, 0, 8);
 	memset(DrvInput, 0, 3);
 
-    DrvDip = 0;
-    DrvReset = 0;
+	DrvDip = 0;
+	DrvReset = 0;
 }
 
-
-UINT8 __fastcall marineb_read(UINT16 address)
+static UINT8 __fastcall marineb_read(UINT16 address)
 {
 	switch (address) {
 		case 0xa800:
@@ -465,11 +458,10 @@ UINT8 __fastcall marineb_read(UINT16 address)
 	return 0;
 }
 
-
-void __fastcall marineb_write(UINT16 address, UINT8 data)
+static void __fastcall marineb_write(UINT16 address, UINT8 data)
 {
-	switch (address) {
-
+	switch (address)
+	{
 		case 0x9800:
 			DrvColumnScroll = data;
 			return;
@@ -497,9 +489,10 @@ void __fastcall marineb_write(UINT16 address, UINT8 data)
 	}
 }
 
-void __fastcall marineb_write_port(UINT16 port, UINT8 data)
+static void __fastcall marineb_write_port(UINT16 port, UINT8 data)
 {
-	switch (port & 0xFF) {
+	switch (port & 0xff)
+	{
 		case 0x00:
 		case 0x01:
 		case 0x08:
@@ -865,9 +858,9 @@ static INT32 DrvInit()
 
 	ZetClose();
 
-	AY8910Init(0, 1500000, nBurnSoundRate, NULL, NULL, NULL, NULL);
+	AY8910Init(0, 1500000, 0);
+	AY8910Init(1, 1500000, 1);
 	AY8910SetAllRoutes(0, 0.15, BURN_SND_ROUTE_BOTH);
-	AY8910Init(1, 1500000, nBurnSoundRate, NULL, NULL, NULL, NULL);
 	AY8910SetAllRoutes(1, 0.15, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
@@ -1621,7 +1614,7 @@ static INT32 DrvFrame()
 	ZetClose();
 
 	if (pBurnSoundOut) {
-		AY8910Render(&pAY8910Buffer[0], pBurnSoundOut, nBurnSoundLen, 0);
+		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	if (pBurnDraw) {
@@ -1750,8 +1743,8 @@ struct BurnDriver BurnDrvMarineb = {
 	"marineb", NULL, NULL, NULL, "1982",
 	"Marine Boy\0", NULL, "Orca", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
-	NULL, MarinebRomInfo, MarinebRomName, NULL, NULL, MarinebInputInfo, MarinebDIPInfo,
+	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_ACTION, 0,
+	NULL, MarinebRomInfo, MarinebRomName, NULL, NULL, NULL, NULL, MarinebInputInfo, MarinebDIPInfo,
 	MarinebInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPalette, 0x100, 256, 224, 4, 3
 };
@@ -1784,7 +1777,7 @@ struct BurnDriver BurnDrvSpringer = {
 	"Springer\0", NULL, "Orca", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
-	NULL, SpringerRomInfo, SpringerRomName, NULL, NULL, MarinebInputInfo, MarinebDIPInfo,
+	NULL, SpringerRomInfo, SpringerRomName, NULL, NULL, NULL, NULL, MarinebInputInfo, MarinebDIPInfo,
 	SpringerInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPalette, 0x100, 224, 256, 3, 4
 };
@@ -1816,7 +1809,7 @@ struct BurnDriver BurnDrvhopprobo = {
 	"Hopper Robo\0", NULL, "Sega", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
-	NULL, hopproboRomInfo, hopproboRomName, NULL, NULL, MarinebInputInfo, MarinebDIPInfo,
+	NULL, hopproboRomInfo, hopproboRomName, NULL, NULL, NULL, NULL, MarinebInputInfo, MarinebDIPInfo,
 	hopproboInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPalette, 0x100, 224, 256, 3, 4
 };
@@ -1845,8 +1838,8 @@ struct BurnDriver BurnDrvChanges = {
 	"changes", NULL, NULL, NULL, "1982",
 	"Changes\0", NULL, "Orca", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, changesRomInfo, changesRomName, NULL, NULL, ChangesInputInfo, ChangesDIPInfo,
+	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, changesRomInfo, changesRomName, NULL, NULL, NULL, NULL, ChangesInputInfo, ChangesDIPInfo,
 	changesInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPalette, 0x100, 256, 224, 4, 3
 };
@@ -1876,8 +1869,8 @@ struct BurnDriver BurnDrvChangesa = {
 	"changesa", "changes", NULL, NULL, "1982",
 	"Changes (EME license)\0", NULL, "Orca (Eastern Micro Electronics, Inc. license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, changesaRomInfo, changesaRomName, NULL, NULL, ChangesInputInfo, ChangesDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, changesaRomInfo, changesaRomName, NULL, NULL, NULL, NULL, ChangesInputInfo, ChangesDIPInfo,
 	changesInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPalette, 0x100, 256, 224, 4, 3
 };
@@ -1906,8 +1899,8 @@ struct BurnDriver BurnDrvLooper = {
 	"looper", "changes", NULL, NULL, "1982",
 	"Looper\0", NULL, "Orca", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, looperRomInfo, looperRomName, NULL, NULL, ChangesInputInfo, ChangesDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, looperRomInfo, looperRomName, NULL, NULL, NULL, NULL, ChangesInputInfo, ChangesDIPInfo,
 	changesInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPalette, 0x100, 256, 224, 4, 3
 };
@@ -1935,8 +1928,8 @@ struct BurnDriver BurnDrvHoccer = {
 	"hoccer", NULL, NULL, NULL, "1983",
 	"Hoccer (set 1)\0", NULL, "Eastern Micro Electronics, Inc.", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, hoccerRomInfo, hoccerRomName, NULL, NULL, HoccerInputInfo, HoccerDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
+	NULL, hoccerRomInfo, hoccerRomName, NULL, NULL, NULL, NULL, HoccerInputInfo, HoccerDIPInfo,
 	hoccerInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPalette, 0x100, 224, 256, 3, 4
 };
@@ -1965,8 +1958,8 @@ struct BurnDriver BurnDrvHoccer2 = {
 	"hoccer2", "hoccer", NULL, NULL, "1983",
 	"Hoccer (set 2)\0", NULL, "Eastern Micro Electronics, Inc.", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, hoccer2RomInfo, hoccer2RomName, NULL, NULL, HoccerInputInfo, HoccerDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
+	NULL, hoccer2RomInfo, hoccer2RomName, NULL, NULL, NULL, NULL, HoccerInputInfo, HoccerDIPInfo,
 	hoccerInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPalette, 0x100, 224, 256, 3, 4
 };
@@ -1996,8 +1989,8 @@ struct BurnDriver BurnDrvWanted = {
 	"wanted", NULL, NULL, NULL, "1984",
 	"Wanted\0", NULL, "Sigma Enterprises Inc.", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, wantedRomInfo, wantedRomName, NULL, NULL, WantedInputInfo, WantedDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	NULL, wantedRomInfo, wantedRomName, NULL, NULL, NULL, NULL, WantedInputInfo, WantedDIPInfo,
 	wantedInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPalette, 0x100, 224, 256, 3, 4
 };
@@ -2013,9 +2006,9 @@ static struct BurnRomInfo bcruzm12RomDesc[] = {
 	{ "d-84_5.17f",		0x2000, 0x2e963f6a, 2 | BRF_GRA }, //  3 gfx1
 	{ "d-84_4.17ef",	0x2000, 0xfe186459, 2 | BRF_GRA }, //  4
 
-	{ "d-84_7.17h",		0x2000, 0xa5be90ef, 3 | BRF_GRA }, //  5 gfx2
-	{ "d-84_6.17fh",	0x2000, 0x1337dc01, 3 | BRF_GRA }, //  6
-
+	{ "d-84_6.17fh",	0x2000, 0x1337dc01, 3 | BRF_GRA }, //  5 gfx2
+	{ "d-84_7.17h",		0x2000, 0xa5be90ef, 3 | BRF_GRA }, //  6
+	
 	{ "bcm12col.7k",	0x0100, 0xbf4f2671, 4 | BRF_GRA }, //  7 proms
 	{ "bcm12col.6k",	0x0100, 0x59f955f6, 4 | BRF_GRA }, //  8
 };
@@ -2027,8 +2020,8 @@ struct BurnDriver BurnDrvBcruzm12 = {
 	"bcruzm12", NULL, NULL, NULL, "1983",
 	"Battle Cruiser M-12\0", NULL, "Sigma Enterprises Inc.", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, bcruzm12RomInfo, bcruzm12RomName, NULL, NULL, Bcruzm12InputInfo, Bcruzm12DIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	NULL, bcruzm12RomInfo, bcruzm12RomName, NULL, NULL, NULL, NULL, Bcruzm12InputInfo, Bcruzm12DIPInfo,
 	bcruzm12Init, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPalette, 0x100, 224, 256, 3, 4
 };

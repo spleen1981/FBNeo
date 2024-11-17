@@ -15,6 +15,8 @@ static int bOldPush = 0;					// 1 if the push button was pressed last time
 
 static bool bGrabMouse = false;
 static bool bClearLock = false;				// ClearLock checkbox
+static bool bDigitalAnalog = false;				// DigitalAnalog checkbox
+static bool bGrewDialog = false;
 
 static bool bOldLeftAltkeyMapped;
 
@@ -41,6 +43,8 @@ static int InpsInit()
 
 	bGrabMouse = false;
 	bClearLock = false;
+	bDigitalAnalog = false;
+	bGrewDialog = false;
 
 	bOldLeftAltkeyMapped = bLeftAltkeyMapped;
 	bLeftAltkeyMapped = true;
@@ -58,6 +62,12 @@ static int InpsInit()
 		}
 	}
 	SetWindowText(hInpsDlg, szTitle);
+
+	if (bii.nType & BIT_GROUP_ANALOG) {
+		ShowWindow(GetDlgItem(hInpsDlg, IDC_INPS_PUSH), SW_HIDE);
+	} else {
+		ShowWindow(GetDlgItem(hInpsDlg, IDC_INPS_MAPDIG), SW_HIDE);
+	}
 
 	InputFind(2);
 
@@ -85,6 +95,40 @@ static int InpsExit()
 
 static int SetInput(int nCode)
 {
+	static unsigned int slider1;
+
+	if (nDlgState & 0x0100)
+	{
+		unsigned int slider = SendDlgItemMessage(hInpsDlg, IDC_INPS_DIGSLIDER, TBM_GETPOS, 0, 0);
+
+		pgi->nInput = GIT_KEYSLIDER;
+		pgi->Input.Slider.nSliderSpeed = slider;
+
+		// x1000 - xe000 = 2, e001 - x2000 = 0  <------------ DO
+		if (slider <= 0x1000) {
+			pgi->Input.Slider.nSliderCenter = (0x1100 - slider) / 0xdf; // 0xa @ 0x800 (default slider speed)
+		} else if (slider <= 0x1800) {
+			pgi->Input.Slider.nSliderCenter = 2;
+		} else {
+			pgi->Input.Slider.nSliderCenter = 1;
+		}
+
+		pgi->Input.Slider.SliderAxis.nSlider[1] = nCode;
+		pgi->Input.Slider.SliderAxis.nSlider[0] = slider1;
+
+		OldInp = *pgi;
+		InpdListMake(0);												// Update list with new input type
+
+		return 0;
+	}
+
+	if ((bii.nType & BIT_GROUP_ANALOG) && bDigitalAnalog)				// map analog controls to digital input #1
+	{
+		slider1 = nCode;
+
+		return 1;
+	}
+
 	if ((pgi->nInput & GIT_GROUP_MACRO) == 0) {
 
 		if (bii.nType & BIT_GROUP_CONSTANT) {							// Don't change dip switches!
@@ -114,14 +158,28 @@ static int SetInput(int nCode)
 					pgi->Input.MouseAxis.nAxis = (nCode & 0x0F) >> 1;
 				}
 			}
+
+			if (nCode == 0) {                                           // Clear Input button pressed (for Analogue/Mouse)
+				pgi->nInput = 0;
+				pgi->Input.JoyAxis.nJoy = 0;
+				pgi->Input.JoyAxis.nAxis = 0;
+				pgi->Input.MouseAxis.nMouse = 0;
+				pgi->Input.MouseAxis.nAxis = 0;
+
+				if (bClearLock) { // If ClearLock is checked, morph the analogue/mouse input to a switch (switch w/nCode of 0 == ClearLock)
+					pgi->nInput = GIT_SWITCH;
+					pgi->Input.Switch.nCode = (unsigned short)nCode;
+				}
+			}
+
 		} else {
 			pgi->nInput = GIT_SWITCH;
-			if (nCode == 0 && !bClearLock) pgi->nInput = 0;				// Clear Input button pressed
+			if (nCode == 0 && !bClearLock) pgi->nInput = 0;				// Clear Input button pressed (for buttons)
 			pgi->Input.Switch.nCode = (unsigned short)nCode;
 		}
 	} else {
 		pgi->Macro.nMode = 0x01;										// Mark macro as in use
-		if (nCode == 0 && !bClearLock) pgi->Macro.nMode = 0;			// Clear Input button pressed
+		if (nCode == 0 && !bClearLock) pgi->Macro.nMode = 0;			// Clear Input button pressed (for Macros)
 		pgi->Macro.Switch.nCode = (unsigned short)nCode;				// Assign switch
 	}
 
@@ -142,6 +200,7 @@ static int InpsPushUpdate()
 
 	// See if the push button is pressed
 	nPushState = SendDlgItemMessage(hInpsDlg, IDC_INPS_PUSH, BM_GETSTATE, 0, 0);
+
 	if (nPushState & BST_PUSHED) {
 		nPushState = 1;
 	} else {
@@ -179,7 +238,7 @@ static void InpsUpdateControl(int nCode)
 	TCHAR szControl[MAX_PATH] = _T("");
 
 	_stprintf(szString, _T("%s"), InputCodeDesc(nCode));
-	SetWindowText(GetDlgItem(hInpsDlg, IDC_INPS_CONTROL), szString);
+	SetWindowText(GetDlgItem(hInpsDlg, (nDlgState & 0x0100) ? IDC_INPS_CONTROL_S2: IDC_INPS_CONTROL), szString);
 
 	InputGetControlName(nCode, szDevice, szControl);
 	_sntprintf(szString, MAX_PATH, _T("%s %s"), szDevice, szControl);
@@ -206,17 +265,63 @@ int InpsUpdate()
 	nButtonState = SendDlgItemMessage(hInpsDlg, IDC_INPS_CLEARLOCK, BM_GETSTATE, 0, 0); // Lock Input = If checked: clear an input, and don't let a default value or default preset re-fill it in.
 	bClearLock = (nButtonState & BST_CHECKED);
 
+	bool bPrevDigitalAnalog = bDigitalAnalog;
+	nButtonState = SendDlgItemMessage(hInpsDlg, IDC_INPS_MAPDIG, BM_GETSTATE, 0, 0); // Lock Input = If checked: clear an input, and don't let a default value or default preset re-fill it in.
+	bDigitalAnalog = (nButtonState & BST_CHECKED);
+
+	if (bDigitalAnalog) {
+		if (!bPrevDigitalAnalog) {
+			nDlgState = 4;
+
+			if (bGrewDialog == false) {
+				ShowWindow(GetDlgItem(hInpsDlg, IDC_INPS_CONTROL), SW_HIDE);
+				ShowWindow(GetDlgItem(hInpsDlg, IDC_INPS_CONTROL_S1), SW_SHOW);
+				ShowWindow(GetDlgItem(hInpsDlg, IDC_INPS_CONTROL_S2), SW_SHOW);
+				ShowWindow(GetDlgItem(hInpsDlg, IDC_INPS_DIGLABEL), SW_SHOW);
+
+				// Make dialog longer to make room for the Speed: slider
+				RECT rect = { 0, 0, 4, 8 };
+				MapDialogRect(hInpsDlg, &rect);
+				int nSize = rect.bottom * 2;
+				GetWindowRect(hInpsDlg, &rect);
+				MoveWindow(hInpsDlg, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top + nSize, TRUE);
+				bGrewDialog = true;
+			}
+		}
+	} else {
+		if (bPrevDigitalAnalog) {
+			nDlgState = 4;
+
+			if (bGrewDialog) {
+				ShowWindow(GetDlgItem(hInpsDlg, IDC_INPS_CONTROL), SW_SHOW);
+				ShowWindow(GetDlgItem(hInpsDlg, IDC_INPS_CONTROL_S1), SW_HIDE);
+				ShowWindow(GetDlgItem(hInpsDlg, IDC_INPS_CONTROL_S2), SW_HIDE);
+				ShowWindow(GetDlgItem(hInpsDlg, IDC_INPS_DIGLABEL), SW_HIDE);
+
+				wchar_t szString[MAX_PATH] = _T("");
+				SetWindowText(GetDlgItem(hInpsDlg, IDC_INPS_CONTROL_S1), szString);
+
+				RECT rect = { 0, 0, 4, 8 };
+				MapDialogRect(hInpsDlg, &rect);
+				int nSize = 0-(rect.bottom * 2);
+				GetWindowRect(hInpsDlg, &rect);
+				MoveWindow(hInpsDlg, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top + nSize, TRUE);
+				bGrewDialog = false;
+			}
+		}
+	}
+
 	nButtonState = SendDlgItemMessage(hInpsDlg, IDC_INPS_GRABMOUSE, BM_GETSTATE, 0, 0);
 	if (bGrabMouse) {
 		if ((nButtonState & BST_CHECKED) == 0) {
 			bGrabMouse = false;
-			nDlgState = 2;
+			nDlgState = (nDlgState & 0xFF00) | 2;
 			return 0;
 		}
 	} else {
 		if (nButtonState & BST_CHECKED) {
 			bGrabMouse = true;
-			nDlgState = 4;
+			nDlgState = (nDlgState & 0xFF00) | 4;
 			return 0;
 		}
 	}
@@ -230,7 +335,7 @@ int InpsUpdate()
 		return 0;
 	}
 
-	nFind = InputFind(nDlgState);
+	nFind = InputFind(nDlgState & 0xFF);
 
 	if (nDlgState & 4) {										//  4 = Waiting for all controls to be released
 
@@ -251,12 +356,13 @@ int InpsUpdate()
 		// All keys released
 		SetWindowText(GetDlgItem(hInpsDlg, IDC_INPS_CONTROL), _T(""));
 		SetWindowText(GetDlgItem(hInpsDlg, IDC_INPS_CONTROL_NAME), _T(""));
-		nDlgState = 8;
+		nDlgState = (nDlgState & 0xFF00) | 8;
+		return 0;
 	}
 
 	if (nDlgState & 8) {										//  8 = Waiting for a control to be activated
 
-		if (bGrabMouse ? nFind < 0 : (nFind < 0 || nFind >= 0x8000)) {
+		if (bGrabMouse ? nFind < 0 : (nFind < 0 || (nFind >= 0x8000 && nFind < 0xC000))) {
 			return 0;
 		}
 
@@ -265,7 +371,9 @@ int InpsUpdate()
 		nInputCode = nFind;
 		InpsUpdateControl(nInputCode);
 
-		nDlgState = 16;
+		nDlgState = (nDlgState & 0xFF00) | 16;
+
+		return 0;
 	}
 
 	if (nDlgState & 16) {										// 16 = waiting for control to be released
@@ -278,11 +386,22 @@ int InpsUpdate()
 			return 0;
 		}
 
-		// Key released
-		SetInput(nInputCode);
+		// Key released (Normal input mapping)
+		if (SetInput(nInputCode) == 0)
+		{
+			nDlgState = 0;
+			SendMessage(hInpsDlg, WM_CLOSE, 0, 0);
 
-		nDlgState = 0;
-		DestroyWindow(hInpsDlg);								// Quit dialog
+			return 0;
+		}
+
+		// We end up here if "Map Digital" is checked, and the first key has been pressed.
+		wchar_t szString[MAX_PATH] = _T("");
+
+		swprintf(szString, _T("%s"), InputCodeDesc(nInputCode));
+		SetWindowText(GetDlgItem(hInpsDlg, IDC_INPS_CONTROL_S1), szString);
+
+		nDlgState = 0x0100 | 4;
 	}
 
 	return 0;
@@ -298,7 +417,27 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 			return FALSE;
 		}
 		SendMessage(hDlg, WM_NEXTDLGCTL, (WPARAM)GetDlgItem(hDlg, IDC_INPS_CONTROL), TRUE);
-		return FALSE;
+
+		// Initialise slider
+		SendDlgItemMessage(hDlg, IDC_INPS_DIGSLIDER, TBM_SETRANGE, (WPARAM)0, (LPARAM)MAKELONG(0x700, 0x2000));
+		SendDlgItemMessage(hDlg, IDC_INPS_DIGSLIDER, TBM_SETLINESIZE, (WPARAM)0, (LPARAM)0x200);
+		SendDlgItemMessage(hDlg, IDC_INPS_DIGSLIDER, TBM_SETPAGESIZE, (WPARAM)0, (LPARAM)0x400);
+		SendDlgItemMessage(hDlg, IDC_INPS_DIGSLIDER, TBM_SETTIC, (WPARAM)0, (LPARAM)0x2000);
+		SendDlgItemMessage(hDlg, IDC_INPS_DIGSLIDER, TBM_SETTIC, (WPARAM)0, (LPARAM)0x1000);
+		SendDlgItemMessage(hDlg, IDC_INPS_DIGSLIDER, TBM_SETTIC, (WPARAM)0, (LPARAM)0x0d00);
+		SendDlgItemMessage(hDlg, IDC_INPS_DIGSLIDER, TBM_SETTIC, (WPARAM)0, (LPARAM)0x0a00);
+		SendDlgItemMessage(hDlg, IDC_INPS_DIGSLIDER, TBM_SETTIC, (WPARAM)0, (LPARAM)0x0700);
+
+		SendDlgItemMessage(hDlg, IDC_INPS_DIGSLIDER, TBM_SETPOS, (WPARAM)true, (LPARAM)0x800);
+
+		// hide the label for the slider as it will be partially visible otherwise
+		ShowWindow(GetDlgItem(hDlg, IDC_INPS_DIGLABEL), SW_HIDE);
+
+		ShowWindow(GetDlgItem(hDlg, IDC_INPS_CONTROL_S1), SW_HIDE);
+		ShowWindow(GetDlgItem(hDlg, IDC_INPS_CONTROL_S2), SW_HIDE);
+
+		WndInMid(hDlg, GetParent(hDlg));
+		return false;
 	}
 	if (Msg == WM_CLOSE) {
 		DestroyWindow(hInpsDlg);
@@ -323,8 +462,11 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 			return 0;
 		}
 	}
-	if (Msg == WM_CTLCOLORSTATIC) {
-		if ((HWND)lParam == GetDlgItem(hDlg, IDC_INPS_CONTROL)) {
+	if (Msg == WM_CTLCOLORSTATIC)
+	{
+		if ((HWND)lParam == GetDlgItem(hDlg, IDC_INPS_CONTROL) ||
+			(HWND)lParam == GetDlgItem(hDlg, IDC_INPS_CONTROL_S2))
+		{
 			return (INT_PTR)hWhiteBGBrush;
 		}
 	}

@@ -1,10 +1,12 @@
+// FBAlpha YM-2151 sound core interface
 #include "burnint.h"
-#include "burn_sound.h"
 #include "burn_ym2151.h"
 
-void (*BurnYM2151Render)(INT16* pSoundBuf, INT32 nSegmentLength);
+// Irq Callback timing notes..
+// Due to the way the internal timing of the ym2151 works, BurnYM2151Render()
+// should not be called more than ~65 times per frame.  See DrvFrame() in
+// drv/konami/d_surpratk.cpp for a simple and effective work-around.
 
-UINT8 BurnYM2151Registers[0x0100];
 UINT32 nBurnCurrentYM2151Register;
 
 static INT32 nBurnYM2151SoundRate;
@@ -20,10 +22,12 @@ static UINT32 nSamplesRendered;
 static double YM2151Volumes[2];
 static INT32 YM2151RouteDirs[2];
 
-static void YM2151RenderResample(INT16* pSoundBuf, INT32 nSegmentLength)
+static INT32 YM2151BurnTimer = 0;
+
+void BurnYM2151Render(INT16* pSoundBuf, INT32 nSegmentLength)
 {
-#if defined FBA_DEBUG
-	if (!DebugSnd_YM2151Initted) bprintf(PRINT_ERROR, _T("YM2151RenderResample called without init\n"));
+#if defined FBNEO_DEBUG
+	if (!DebugSnd_YM2151Initted) bprintf(PRINT_ERROR, _T("YM2151Render called without init\n"));
 #endif
 	
 	nBurnPosition += nSegmentLength;
@@ -103,107 +107,79 @@ static void YM2151RenderResample(INT16* pSoundBuf, INT32 nSegmentLength)
 	}
 }
 
-static void YM2151RenderNormal(INT16* pSoundBuf, INT32 nSegmentLength)
-{
-#if defined FBA_DEBUG
-	if (!DebugSnd_YM2151Initted) bprintf(PRINT_ERROR, _T("YM2151RenderNormal called without init\n"));
-#endif
-
-	nBurnPosition += nSegmentLength;
-
-	pYM2151Buffer[0] = pBuffer;
-	pYM2151Buffer[1] = pBuffer + nSegmentLength;
-
-	YM2151UpdateOne(0, pYM2151Buffer, nSegmentLength);
-	
-	for (INT32 n = 0; n < nSegmentLength; n++) {
-		INT32 nLeftSample = 0, nRightSample = 0;
-		
-		if ((YM2151RouteDirs[BURN_SND_YM2151_YM2151_ROUTE_1] & BURN_SND_ROUTE_LEFT) == BURN_SND_ROUTE_LEFT) {
-			nLeftSample += (INT32)(pYM2151Buffer[0][n] * YM2151Volumes[BURN_SND_YM2151_YM2151_ROUTE_1]);
-		}
-		if ((YM2151RouteDirs[BURN_SND_YM2151_YM2151_ROUTE_1] & BURN_SND_ROUTE_RIGHT) == BURN_SND_ROUTE_RIGHT) {
-			nRightSample += (INT32)(pYM2151Buffer[0][n] * YM2151Volumes[BURN_SND_YM2151_YM2151_ROUTE_1]);
-		}
-		
-		if ((YM2151RouteDirs[BURN_SND_YM2151_YM2151_ROUTE_2] & BURN_SND_ROUTE_LEFT) == BURN_SND_ROUTE_LEFT) {
-			nLeftSample += (INT32)(pYM2151Buffer[1][n] * YM2151Volumes[BURN_SND_YM2151_YM2151_ROUTE_2]);
-		}
-		if ((YM2151RouteDirs[BURN_SND_YM2151_YM2151_ROUTE_2] & BURN_SND_ROUTE_RIGHT) == BURN_SND_ROUTE_RIGHT) {
-			nRightSample += (INT32)(pYM2151Buffer[1][n] * YM2151Volumes[BURN_SND_YM2151_YM2151_ROUTE_2]);
-		}
-		
-		nLeftSample = BURN_SND_CLIP(nLeftSample);
-		nRightSample = BURN_SND_CLIP(nRightSample);
-			
-		pSoundBuf[(n << 1) + 0] = nLeftSample;
-		pSoundBuf[(n << 1) + 1] = nRightSample;
-	}
-}
-
 void BurnYM2151Reset()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2151Initted) bprintf(PRINT_ERROR, _T("BurnYM2151Reset called without init\n"));
 #endif
 
-	memset(&BurnYM2151Registers, 0, sizeof(BurnYM2151Registers));
+	if (YM2151BurnTimer)
+		BurnTimerReset();
+
 	YM2151ResetChip(0);
 }
 
 void BurnYM2151Exit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2151Initted) bprintf(PRINT_ERROR, _T("BurnYM2151Exit called without init\n"));
 #endif
+
+	if (!DebugSnd_YM2151Initted) return;
 
 	BurnYM2151SetIrqHandler(NULL);
 	BurnYM2151SetPortHandler(NULL);
 
 	YM2151Shutdown();
 
-	if (pBuffer) {
-		free(pBuffer);
-		pBuffer = NULL;
+	if (YM2151BurnTimer) {
+		BurnTimerExit();
+		YM2151BurnTimer = 0;
 	}
+
+	BurnFree(pBuffer);
 	
 	DebugSnd_YM2151Initted = 0;
 }
 
 INT32 BurnYM2151Init(INT32 nClockFrequency)
 {
+	return BurnYM2151Init(nClockFrequency, 0);
+}
+
+INT32 BurnYM2151Init(INT32 nClockFrequency, INT32 use_timer)
+{
 	DebugSnd_YM2151Initted = 1;
 	
 	if (nBurnSoundRate <= 0) {
-		YM2151Init(1, nClockFrequency, 11025);
+		YM2151Init(1, nClockFrequency, 11025, NULL);
 		return 0;
 	}
 
-	if (nFMInterpolation == 3) {
-		// Set YM2151 core samplerate to match the hardware
-		nBurnYM2151SoundRate = nClockFrequency >> 6;
-		// Bring YM2151 core samplerate within usable range
-		while (nBurnYM2151SoundRate > nBurnSoundRate * 3) {
-			nBurnYM2151SoundRate >>= 1;
-		}
-
-		BurnYM2151Render = YM2151RenderResample;
-	} else {
-		nBurnYM2151SoundRate = nBurnSoundRate;
-		BurnYM2151Render = YM2151RenderNormal;
+	// Set YM2151 core samplerate to match the hardware
+	nBurnYM2151SoundRate = nClockFrequency >> 6;
+	// Bring YM2151 core samplerate within usable range
+	while (nBurnYM2151SoundRate > nBurnSoundRate * 3) {
+		nBurnYM2151SoundRate >>= 1;
 	}
 
-	YM2151Init(1, nClockFrequency, nBurnYM2151SoundRate);
+	if (use_timer)
+	{
+		bprintf(0, _T("YM2151: Using FM-Timer.\n"));
+		YM2151BurnTimer = 1;
+		BurnTimerInit(&ym2151_timer_over, NULL);
+	}
 
-	pBuffer = (INT16*)malloc(65536 * 2 * sizeof(INT16));
+	YM2151Init(1, nClockFrequency, nBurnYM2151SoundRate, (YM2151BurnTimer) ? BurnOPMTimerCallback : NULL);
+
+	pBuffer = (INT16*)BurnMalloc(65536 * 2 * sizeof(INT16));
 	memset(pBuffer, 0, 65536 * 2 * sizeof(INT16));
 
 	nSampleSize = (UINT32)nBurnYM2151SoundRate * (1 << 16) / nBurnSoundRate;
 	nFractionalPosition = 4 << 16;
 	nSamplesRendered = 0;
 	nBurnPosition = 0;
-	memset(&BurnYM2151Registers, 0, sizeof(BurnYM2151Registers));
-	
+
 	// default routes
 	YM2151Volumes[BURN_SND_YM2151_YM2151_ROUTE_1] = 1.00;
 	YM2151Volumes[BURN_SND_YM2151_YM2151_ROUTE_2] = 1.00;
@@ -213,9 +189,21 @@ INT32 BurnYM2151Init(INT32 nClockFrequency)
 	return 0;
 }
 
+// Some games make heavy use of the B timer, to increase the accuracy of
+// this timer, call this with the number of times per frame BurnYM2151Render()
+// is called.  See drv/dataeast/d_rohga for example usage.
+void BurnYM2151SetInterleave(INT32 nInterleave)
+{
+#if defined FBNEO_DEBUG
+	if (!DebugSnd_YM2151Initted) bprintf(PRINT_ERROR, _T("BurnYM2151SetInterleave called without init\n"));
+#endif
+
+	YM2151SetTimerInterleave(nInterleave * (nBurnFPS / 100));
+}
+
 void BurnYM2151SetRoute(INT32 nIndex, double nVolume, INT32 nRouteDir)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2151Initted) bprintf(PRINT_ERROR, _T("BurnYM2151SetRoute called without init\n"));
 	if (nIndex < 0 || nIndex > 1) bprintf(PRINT_ERROR, _T("BurnYM2151SetRoute called with invalid index %i\n"), nIndex);
 #endif
@@ -224,9 +212,9 @@ void BurnYM2151SetRoute(INT32 nIndex, double nVolume, INT32 nRouteDir)
 	YM2151RouteDirs[nIndex] = nRouteDir;
 }
 
-void BurnYM2151Scan(INT32 nAction)
+void BurnYM2151Scan(INT32 nAction, INT32 *pnMin)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2151Initted) bprintf(PRINT_ERROR, _T("BurnYM2151Scan called without init\n"));
 #endif
 	
@@ -234,29 +222,10 @@ void BurnYM2151Scan(INT32 nAction)
 		return;
 	}
 
-	{
-		// A long time ago these variables were mistakenly scanned for the savestates.
-		// Recently it was found that this causes crash situations if the samplerate or
-		// sample size had changed between machines loading the states.
-		// These dummy variables are to prevent the breaking all states for games that use the 2151.
-		double dummyYM2151Volumes[2];
-		INT32 dummyYM2151RouteDirs[2];
-		INT32 dummynBurnYM2151SoundRate;
-		INT32 dummynBurnPosition;
-		UINT32 dummynSampleSize;
-		UINT32 dummynFractionalPosition;
-		UINT32 dummynSamplesRendered;
-
-		SCAN_VAR(nBurnCurrentYM2151Register);
-		SCAN_VAR(BurnYM2151Registers);
-		SCAN_VAR(dummyYM2151Volumes);
-		SCAN_VAR(dummyYM2151RouteDirs);
-		SCAN_VAR(dummynBurnYM2151SoundRate);
-		SCAN_VAR(dummynBurnPosition);
-		SCAN_VAR(dummynSampleSize);
-		SCAN_VAR(dummynFractionalPosition);
-		SCAN_VAR(dummynSamplesRendered);
-	}
+	SCAN_VAR(nBurnCurrentYM2151Register);
 
 	BurnYM2151Scan_int(nAction); // Scan the YM2151's internal registers
+
+	if (YM2151BurnTimer)
+		BurnTimerScan(nAction, pnMin);
 }

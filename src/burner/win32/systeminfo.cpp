@@ -30,13 +30,13 @@ static const bool bPrintDriverInfo = false;
 
 static int AddLine(TCHAR* pszFormat, ...)
 {
-	TCHAR szString[128] = _T("");
+	TCHAR szString[255] = _T("");
 
 	va_list vaFormat;
 	va_start(vaFormat, pszFormat);
 
-	int nLen = _vsntprintf(szString, 70, pszFormat, vaFormat);
-	nLen = (nLen >= 0 && nLen < 70) ? nLen : 70;
+	int nLen = _vsntprintf(szString, 170, pszFormat, vaFormat);
+	nLen = (nLen >= 0 && nLen < 170) ? nLen : 170;
 	nLen += _stprintf(szString + nLen, _T("\r\n"));
 	TCHAR* pszNewBuffer = (TCHAR*)realloc(pszTextBuffer, (nLen + nTextBufferSize + 1) * sizeof(TCHAR));
 	if (pszNewBuffer) {
@@ -53,7 +53,7 @@ static int AddLine(TCHAR* pszFormat, ...)
 
 static int AddText(TCHAR* pszFormat, ...)
 {
-	TCHAR szString[128] = _T("");
+	TCHAR szString[255] = _T("");
 
 	va_list vaFormat;
 	va_start(vaFormat, pszFormat);
@@ -160,9 +160,9 @@ int PrintOSInfo()
 		osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 		GetVersionEx((OSVERSIONINFO*)&osvi);
 	}
-	
-	bprintf(PRINT_NORMAL, _T("%i, %i\n"), osvi.dwMajorVersion, osvi.dwMinorVersion);
-	
+
+//	bprintf(PRINT_NORMAL, _T("%i, %i\n"), osvi.dwMajorVersion, osvi.dwMinorVersion);
+
 	AddText(_T("OS:  "));
 	{
 		if (osvi.dwPlatformId == VER_PLATFORM_WIN32_NT) {
@@ -261,7 +261,7 @@ int PrintOSInfo()
 int PrintCPUInfo()
 {
 	AddText(_T("CPU: "));
-	
+
 	char CPUBrandStringFinal[0x40] = { 0 };
 
 #if defined _MSC_VER
@@ -289,12 +289,12 @@ int PrintCPUInfo()
 			memcpy(CPUBrandString + 32, CPUInfo, sizeof(CPUInfo));
 		}
 	}
-	
+
 	// trim the leading white space
 	int nCheckForSpace = 1;
 	for (i = 0; CPUBrandString[i] != '\0'; i++) {
 		if (!isspace(CPUBrandString[i])) nCheckForSpace = 0;
-		
+
 		if (nCheckForSpace) {
 			if (!isspace(CPUBrandString[i])) {
 				CPUBrandStringFinal[j++] = CPUBrandString[i];
@@ -608,7 +608,7 @@ int PrintFBAInfo()
 #else
 	AddLine(_T("    Using multi-byte characters for all text, active codepage is %d."), GetACP());
 #endif
-#if defined (FBA_DEBUG)
+#if defined (FBNEO_DEBUG)
 	AddLine(_T("    Debug functionality present."));
 #else
 	AddLine(_T("    Debug functionality absent."));
@@ -616,12 +616,16 @@ int PrintFBAInfo()
 	AddLine(_T(""));
 
 	AddLine(_T("MMX optimisations %s."), bBurnUseMMX ? _T("enabled") : _T("disabled"));
+#ifdef BUILD_A68K
 	if (bBurnUseASMCPUEmulation) {
 		AddLine(_T("A68K emulation core enabled for MC68000 emulation."));
 		AddLine(_T("Musashi emulation core enabled for MC68010/MC68EC020 emulation."));
 	} else {
 		AddLine(_T("Musashi emulation core enabled for MC680x0 family emulation."));
 	}
+#else
+	AddLine(_T("Musashi emulation core enabled for MC680x0 family emulation."));
+#endif
 	AddLine(_T(""));
 
 	if (bDrvOkay) {

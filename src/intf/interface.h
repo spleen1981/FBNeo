@@ -1,5 +1,5 @@
 #pragma once
-#ifdef FBA_DEBUG
+#ifdef FBNEO_DEBUG
  #define PRINT_DEBUG_INFO
 #endif
 #include <vector>
@@ -62,9 +62,10 @@ struct CDEmuDo {
 	INT32			   (*CDEmuStop)();
 	INT32			   (*CDEmuPlay)(UINT8 M, UINT8 S, UINT8 F);
 	INT32			   (*CDEmuLoadSector)(INT32 LBA, char* pBuffer);
-	UINT8* (*CDEmuReadTOC)(INT32 track);
-	UINT8* (*CDEmuReadQChannel)();
+	UINT8*             (*CDEmuReadTOC)(INT32 track);
+	UINT8*             (*CDEmuReadQChannel)();
 	INT32			   (*CDEmuGetSoundBuffer)(INT16* buffer, INT32 samples);
+	INT32              (*CDEmuScan)(INT32 nAction, INT32 *pnMin);
 	// Get plugin info
 	INT32			   (*GetPluginSettings)(InterfaceInfo* pInfo);
 	const TCHAR*	 szModuleName;
@@ -158,6 +159,7 @@ INT32 VidInit();
 INT32 VidExit();
 INT32 VidReInitialise();
 INT32 VidFrame();
+extern void (*pVidTransCallback)(void);
 INT32 VidRedraw();
 INT32 VidRecalcPal();
 INT32 VidPaint(INT32 bValidate);
@@ -200,6 +202,7 @@ extern INT32 nVidRotationAdjust;
 extern INT32 bVidUseHardwareGamma;
 extern INT32 bVidAutoSwitchFull;
 extern INT32 bVidForce16bit;
+extern INT32 bVidForce16bitDx9Alt;
 extern INT32 bVidForceFlip;
 extern INT32 nVidTransferMethod;
 extern float fVidScreenAngle;
@@ -213,10 +216,13 @@ extern double dVidCubicC;
 extern INT32 bVidDX9Bilinear;
 extern INT32 bVidHardwareVertex;
 extern INT32 bVidMotionBlur;
+extern wchar_t HorScreen[32];
+extern wchar_t VerScreen[32];
 extern INT32 nVidScrnWidth, nVidScrnHeight;
 extern INT32 nVidScrnDepth;
 
 extern INT32 nVidScrnAspectX, nVidScrnAspectY;
+extern INT32 nVidVerScrnAspectX, nVidVerScrnAspectY;
 
 extern UINT8* pVidImage;
 extern INT32 nVidImageWidth, nVidImageHeight;
@@ -226,12 +232,15 @@ extern INT32 nVidImageDepth;
 
 extern "C" UINT32 (__cdecl *VidHighCol) (INT32 r, INT32 g, INT32 b, INT32 i);
 
+extern TCHAR szPlaceHolder[MAX_PATH];
+
 // vid_directx_support.cpp
 
-INT32 VidSNewTinyMsg(const TCHAR* pText, INT32 nRGB = 0, INT32 nDuration = 0, INT32 nPiority = 5);
-
-INT32 VidSNewShortMsg(const TCHAR* pText, INT32 nRGB = 0, INT32 nDuration = 0, INT32 nPiority = 5);
+INT32 VidSNewTinyMsg(const TCHAR* pText, INT32 nRGB = 0, INT32 nDuration = 0, INT32 nPriority = 5);
+INT32 VidSNewJoystickMsg(const TCHAR* pText, INT32 nRGB = 0, INT32 nDuration = 0, INT32 nLineNo = 0);
+INT32 VidSNewShortMsg(const TCHAR* pText, INT32 nRGB = 0, INT32 nDuration = 0, INT32 nPriority = 5);
 void VidSKillShortMsg();
+void VidSKillTinyMsg();
 
 INT32 VidSAddChatMsg(const TCHAR* pID, INT32 nIDRGB, const TCHAR* pMain, INT32 nMainRGB);
 

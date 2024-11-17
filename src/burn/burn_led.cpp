@@ -104,7 +104,7 @@ static void set_led_draw_position()
 
 void BurnLEDSetFlipscreen(INT32 flip)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!Debug_BurnLedInitted) bprintf(PRINT_ERROR, _T("BurnLEDSetFlipscreen called without init\n"));
 #endif
 
@@ -118,7 +118,7 @@ void BurnLEDSetFlipscreen(INT32 flip)
 
 void BurnLEDReset()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!Debug_BurnLedInitted) bprintf(PRINT_ERROR, _T("BurnLEDReset called without init\n"));
 #endif
 
@@ -148,7 +148,7 @@ void BurnLEDInit(INT32 num, INT32 position, INT32 size, INT32 color, INT32 trans
 
 void BurnLEDSetStatus(INT32 led, UINT32 status)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!Debug_BurnLedInitted) bprintf(PRINT_ERROR, _T("BurnLEDSetStatus called without init\n"));
 	if (led >= led_count) bprintf(PRINT_ERROR, _T("BurnLEDSetStatus called with invalid led %x\n"), led);
 #endif
@@ -162,9 +162,18 @@ void BurnLEDSetStatus(INT32 led, UINT32 status)
 	led_status[led] = status ? 1 : 0;
 }
 
+void BurnLEDSetColor(INT32 color)
+{
+#if defined FBNEO_DEBUG
+	if (!Debug_BurnLedInitted) bprintf(PRINT_ERROR, _T("BurnLEDSetColor called without init\n"));
+#endif
+
+	led_color = color;
+}
+
 void BurnLEDExit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!Debug_BurnLedInitted) bprintf(PRINT_ERROR, _T("BurnLEDExit called without init\n"));
 #endif
 
@@ -193,7 +202,7 @@ void BurnLEDExit()
 
 void BurnLEDRender()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!Debug_BurnLedInitted) bprintf(PRINT_ERROR, _T("BurnLEDRender called without init\n"));
 #endif
 
@@ -242,7 +251,7 @@ void BurnLEDRender()
 
 INT32 BurnLEDScan(INT32 nAction, INT32 *pnMin)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!Debug_BurnLedInitted) bprintf(PRINT_ERROR, _T("BurnLEDScan called without init\n"));
 #endif
 

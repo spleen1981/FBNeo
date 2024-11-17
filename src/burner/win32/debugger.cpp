@@ -2,7 +2,7 @@
 
 HWND hDbgDlg = NULL;
 
-#if defined (FBA_DEBUG)
+#if defined (FBNEO_DEBUG)
 
 #include "m68000_intf.h"
 #include "m68000_debug.h"
@@ -30,7 +30,7 @@ static int nMemdumpAttrib;
 
 static bool bBreakpointHit;
 
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 extern UINT8 DebugCPU_SekInitted;
 #endif
 
@@ -107,7 +107,7 @@ static void InitFeedback(HWND hWindow)
 	TCHAR* pszBuf = szBuffer;
 
 	// RTF header and initial settings
-	pszBuf += _stprintf(pszBuf, _T("{\\rtf1\\ansi\\ansicpg1252\\deff0{\\fonttbl(\\f0\\fmodern\\charset0\\fprq0 Courier New;)}{\\colortbl\\red0\\green0\\blue0;\\red96\\green96\\blue96;\\red255\\green0\\blue0;\\red0\\green0\\blue255;}\\deflang1033\\horzdoc\\pard\\plain\\f0\\fs18\\cf2 Welcome to the FB Alpha debugger.\\par}"));
+	pszBuf += _stprintf(pszBuf, _T("{\\rtf1\\ansi\\ansicpg1252\\deff0{\\fonttbl(\\f0\\fmodern\\charset0\\fprq0 Courier New;)}{\\colortbl\\red0\\green0\\blue0;\\red96\\green96\\blue96;\\red255\\green0\\blue0;\\red0\\green0\\blue255;}\\deflang1033\\horzdoc\\pard\\plain\\f0\\fs18\\cf2 Welcome to the FinalBurn Neo debugger.\\par}"));
 	// Send the new data to the RichEdit control
 	SendMessage(hWindow, WM_SETTEXT, (WPARAM)0, (LPARAM)szBuffer);
 }
@@ -1507,7 +1507,7 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 int DebugExit()
 {
 
-#if defined (FBA_DEBUG)
+#if defined (FBNEO_DEBUG)
 
 	if (DbgMemoryAreaInfo) {
 		free(DbgMemoryAreaInfo);
@@ -1537,7 +1537,7 @@ int DebugExit()
 int DebugCreate()
 {
 
-#if defined (FBA_DEBUG)
+#if defined (FBNEO_DEBUG)
 
 	if (DebugCPU_SekInitted == 0) {
 		return 1;
@@ -1550,9 +1550,9 @@ int DebugCreate()
 	AudBlankSound();
 
 	DestroyWindow(hDbgDlg);
-
-	SystemParametersInfo(SPI_GETWORKAREA, 0, &SystemWorkArea, 0);
-	bLargeWindow = (SystemWorkArea.right - SystemWorkArea.left >= 1024 && SystemWorkArea.bottom - SystemWorkArea.top >= 768) ? true : false;
+	RECT tmpWorkArea;
+	SystemParametersInfo(SPI_GETWORKAREA, 0, &tmpWorkArea, 0);
+	bLargeWindow = (tmpWorkArea.right - tmpWorkArea.left >= 1024 && tmpWorkArea.bottom - tmpWorkArea.top >= 768) ? true : false;
 	hDbgDlg = FBACreateDialog(hAppInst, MAKEINTRESOURCE(bLargeWindow ? IDD_DEBUG_LRG : IDD_DEBUG_SML), hScrnWnd, (DLGPROC)DialogProc);
 	if (hDbgDlg == NULL) {
 		return 1;

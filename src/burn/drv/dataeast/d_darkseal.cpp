@@ -35,8 +35,6 @@ static UINT8 *DrvPfCtrlRAM0;
 static UINT8 *DrvPfCtrlRAM1;
 static UINT32 *DrvPalette;
 
-static INT16 *SoundBuffer;
-
 static UINT8 DrvJoy1[16];
 static UINT8 DrvJoy2[16];
 static UINT8 DrvDip[2];
@@ -102,7 +100,7 @@ static struct BurnDIPInfo DarksealDIPList[]=
 	{0x11, 0x01, 0x40, 0x40, "Off"			},
 	{0x11, 0x01, 0x40, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    0, "Lives"		},
+	{0   , 0xfe, 0   ,    4, "Lives"		},
 	{0x12, 0x01, 0x03, 0x00, "1"			},
 	{0x12, 0x01, 0x03, 0x01, "2"			},
 	{0x12, 0x01, 0x03, 0x03, "3"			},
@@ -120,7 +118,7 @@ static struct BurnDIPInfo DarksealDIPList[]=
 	{0x12, 0x01, 0x30, 0x30, "3"			},
 	{0x12, 0x01, 0x30, 0x20, "4"			},
 
-	{0   , 0xfe, 0   ,    4, "Allow Continue"	},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"	},
 	{0x12, 0x01, 0x40, 0x00, "No"			},
 	{0x12, 0x01, 0x40, 0x40, "Yes"			},
 
@@ -143,7 +141,7 @@ static inline void palette_write(INT32 offset)
 	DrvPalette[offset/2] = BurnHighCol(r, g, b, 0);
 }
 
-void __fastcall darkseal_write_byte(UINT32 address, UINT8 data)
+static void __fastcall darkseal_write_byte(UINT32 address, UINT8 data)
 {
 	if ((address & 0xfffff0) == 0x180000) {
 		switch (address & 0x0e)
@@ -162,7 +160,7 @@ void __fastcall darkseal_write_byte(UINT32 address, UINT8 data)
 	}
 }
 
-void __fastcall darkseal_write_word(UINT32 address, UINT16 data)
+static void __fastcall darkseal_write_word(UINT32 address, UINT16 data)
 {
 	if ((address & 0xfffff0) == 0x180000) {
 		switch (address & 0x0f)
@@ -191,7 +189,7 @@ void __fastcall darkseal_write_word(UINT32 address, UINT16 data)
 	}
 }
 
-UINT8 __fastcall darkseal_read_byte(UINT32 address)
+static UINT8 __fastcall darkseal_read_byte(UINT32 address)
 {
 	if ((address & 0xfffff0) == 0x180000) {
 		switch (address & 0xf)
@@ -221,7 +219,7 @@ UINT8 __fastcall darkseal_read_byte(UINT32 address)
 	return 0;
 }
 
-UINT16 __fastcall darkseal_read_word(UINT32 address)
+static UINT16 __fastcall darkseal_read_word(UINT32 address)
 {
 	if ((address & 0xfffff0) == 0x180000) {
 		switch (address & 0xe)
@@ -290,9 +288,6 @@ static INT32 MemIndex()
 	DrvPfCtrlRAM1	= Next; Next += 0x000010;
 
 	RamEnd		= Next;
-	
-	SoundBuffer = (INT16*)Next; Next += nBurnSoundLen * 2 * sizeof(INT16);
-
 	MemEnd		= Next;
 
 	return 0;
@@ -396,6 +391,9 @@ static INT32 DrvInit()
 
 	deco16SoundInit(DrvHucROM, DrvHucRAM, 8055000, 1, NULL, 0.55, 1006875, 1.00, 2013750, 0.60);
 	BurnYM2203SetAllRoutes(0, 0.45, BURN_SND_ROUTE_BOTH);
+	BurnYM2151SetInterleave((232/2) + 1); // "BurnYM2151Render()" called this many times per frame
+
+	deco16_music_tempofix = 1;
 
 	GenericTilesInit();
 
@@ -558,7 +556,7 @@ static void draw_pf23_layer_rowscroll(INT32 scroll_x, INT32 scroll_y)
 	for (INT32 y = 8; y < 248; y++)
 	{
 		INT32 row = (scroll_y + y) >> 4;
-		INT32 xscr = scroll_x + (BURN_ENDIAN_SWAP_INT16(rows[0x40+y]) & 0x3ff);
+		INT32 xscr = scroll_x + (BURN_ENDIAN_SWAP_INT16(rows[0x40+(y/2)]) & 0x3ff);
 		dest = pTransDraw + ((y-8) * nScreenWidth);
 
 		for (INT32 x = 0; x < 256+16; x+=16)
@@ -651,37 +649,34 @@ static INT32 DrvFrame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		nCyclesDone[0] += SekRun(nCyclesTotal[0] / nInterleave);
-		nCyclesDone[1] += h6280Run(nCyclesTotal[1] / nInterleave);
+		BurnTimerUpdate((i + 1) * nCyclesTotal[1] / nInterleave);
 
 		if (i ==   7) vblank = 0;
 		if (i == 206) vblank = 8;
-		
-		INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-		INT16* pSoundBuf = SoundBuffer + (nSoundBufferPos << 1);
-		deco16SoundUpdate(pSoundBuf, nSegmentLength);
-		nSoundBufferPos += nSegmentLength;
+
+		if (pBurnSoundOut && i&1) {
+			INT32 nSegmentLength = nBurnSoundLen / (nInterleave / 2);
+			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
+			deco16SoundUpdate(pSoundBuf, nSegmentLength);
+			nSoundBufferPos += nSegmentLength;
+		}
 	}
 
 	SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
 	BurnTimerEndFrame(nCyclesTotal[1]);
 
 	if (pBurnSoundOut) {
-		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
-		
 		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = SoundBuffer + (nSoundBufferPos << 1);
+		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 
 		if (nSegmentLength) {
 			deco16SoundUpdate(pSoundBuf, nSegmentLength);
 		}
-		
-		for (INT32 i = 0; i < nBurnSoundLen; i++) {
-			pBurnSoundOut[(i << 1) + 0] = BURN_SND_CLIP(pBurnSoundOut[(i << 1) + 0] + SoundBuffer[(i << 1) + 0]);
-			pBurnSoundOut[(i << 1) + 1] = BURN_SND_CLIP(pBurnSoundOut[(i << 1) + 1] + SoundBuffer[(i << 1) + 1]);
-		}
+
+		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
 	}
 
-	h6280Close();	
+	h6280Close();
 	SekClose();
 
 	if (pBurnDraw) {
@@ -711,8 +706,6 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SekScan(nAction);
 		
 		deco16SoundScan(nAction, pnMin);
-		
-		deco16Scan();
 		
 		SCAN_VAR(vblank);
 	}
@@ -754,7 +747,7 @@ struct BurnDriver BurnDrvDarkseal = {
 	"Dark Seal (World revision 3)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_MAZE | GBF_SCRFIGHT, 0,
-	NULL, darksealRomInfo, darksealRomName, NULL, NULL, DarksealInputInfo, DarksealDIPInfo,
+	NULL, darksealRomInfo, darksealRomName, NULL, NULL, NULL, NULL, DarksealInputInfo, DarksealDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };
@@ -763,15 +756,15 @@ struct BurnDriver BurnDrvDarkseal = {
 // Dark Seal (World revision 1)
 
 static struct BurnRomInfo darksea1RomDesc[] = {
-	{ "FZ_04-4.J12",	0x20000, 0xa1a985a9, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "FZ_01-1.H14",	0x20000, 0x98bd2940, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "FZ_00-2.H12",	0x20000, 0xfbf3ac63, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "FZ_05-2.J14",	0x20000, 0xd5e3ae3f, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "fz_04-4.j12",	0x20000, 0xa1a985a9, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "fz_01-1.h14",	0x20000, 0x98bd2940, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "fz_00-2.h12",	0x20000, 0xfbf3ac63, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "fz_05-2.j14",	0x20000, 0xd5e3ae3f, 1 | BRF_PRG | BRF_ESS }, //  3
 	
-	{ "FZ_06-1.J15",	0x10000, 0xc4828a6d, 2 | BRF_PRG | BRF_ESS }, //  4 H6280 Code
+	{ "fz_06-1.j15",	0x10000, 0xc4828a6d, 2 | BRF_PRG | BRF_ESS }, //  4 H6280 Code
 
-	{ "FZ_02-1.J1",		0x10000, 0x3c9c3012, 3 | BRF_GRA },           //  5 Text Tiles
-	{ "FZ_03-1.J2",		0x10000, 0x264b90ed, 3 | BRF_GRA },           //  6
+	{ "fz_02-1.j1",		0x10000, 0x3c9c3012, 3 | BRF_GRA },           //  5 Text Tiles
+	{ "fz_03-1.j2",		0x10000, 0x264b90ed, 3 | BRF_GRA },           //  6
 
 	{ "mac-03.h3",		0x80000, 0x9996f3dc, 4 | BRF_GRA },           //  7 Foreground Tiles
 
@@ -780,9 +773,9 @@ static struct BurnRomInfo darksea1RomDesc[] = {
 	{ "mac-00.b1",		0x80000, 0x52acf1d6, 6 | BRF_GRA },           //  9 Sprite Tiles
 	{ "mac-01.b3",		0x80000, 0xb28f7584, 6 | BRF_GRA },           // 10
 
-	{ "FZ_08-1.K17",	0x20000, 0xc9bf68e1, 7 | BRF_SND },           // 11 Oki6295 #0 Samples
+	{ "fz_08-1.k17",	0x20000, 0xc9bf68e1, 7 | BRF_SND },           // 11 Oki6295 #0 Samples
 
-	{ "FZ_07-.K14",		0x20000, 0x588dd3cb, 8 | BRF_SND },           // 12 Oki6295 #1 Samples 
+	{ "fz_07-.k14",		0x20000, 0x588dd3cb, 8 | BRF_SND },           // 12 Oki6295 #1 Samples 
 };
 
 STD_ROM_PICK(darksea1)
@@ -793,7 +786,7 @@ struct BurnDriver BurnDrvDarksea1 = {
 	"Dark Seal (World revision 1)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_MAZE | GBF_SCRFIGHT, 0,
-	NULL, darksea1RomInfo, darksea1RomName, NULL, NULL, DarksealInputInfo, DarksealDIPInfo,
+	NULL, darksea1RomInfo, darksea1RomName, NULL, NULL, NULL, NULL, DarksealInputInfo, DarksealDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };
@@ -832,7 +825,7 @@ struct BurnDriver BurnDrvDarkseaj = {
 	"Dark Seal (Japan)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_MAZE | GBF_SCRFIGHT, 0,
-	NULL, darkseajRomInfo, darkseajRomName, NULL, NULL, DarksealInputInfo, DarksealDIPInfo,
+	NULL, darkseajRomInfo, darkseajRomName, NULL, NULL, NULL, NULL, DarksealInputInfo, DarksealDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };
@@ -871,7 +864,7 @@ struct BurnDriver BurnDrvGatedoom = {
 	"Gate of Doom (US revision 4)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_MAZE | GBF_SCRFIGHT, 0,
-	NULL, gatedoomRomInfo, gatedoomRomName, NULL, NULL, DarksealInputInfo, DarksealDIPInfo,
+	NULL, gatedoomRomInfo, gatedoomRomName, NULL, NULL, NULL, NULL, DarksealInputInfo, DarksealDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };
@@ -910,7 +903,7 @@ struct BurnDriver BurnDrvGatedom1 = {
 	"Gate of Doom (US revision 1)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_MAZE | GBF_SCRFIGHT, 0,
-	NULL, gatedom1RomInfo, gatedom1RomName, NULL, NULL, DarksealInputInfo, DarksealDIPInfo,
+	NULL, gatedom1RomInfo, gatedom1RomName, NULL, NULL, NULL, NULL, DarksealInputInfo, DarksealDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
 };

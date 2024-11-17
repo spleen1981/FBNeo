@@ -1,5 +1,4 @@
 #include "burnint.h"
-#include "burn_sound.h"
 #include "burn_ym2413.h"
 
 void (*BurnYM2413Render)(INT16* pSoundBuf, INT32 nSegmentLength);
@@ -9,6 +8,7 @@ static INT32 nBurnYM2413SoundRate;
 static INT16* pBuffer;
 static INT16* pYM2413Buffer[2];
 
+static INT32 nAddSound;
 static INT32 nBurnPosition;
 static UINT32 nSampleSize;
 static INT32 nFractionalPosition;
@@ -20,7 +20,7 @@ static INT32 YM2413RouteDirs[2];
 #if 0
 static void YM2413RenderResample(INT16* pSoundBuf, INT32 nSegmentLength)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2413Initted) bprintf(PRINT_ERROR, _T("YM2413RenderResample called without init\n"));
 #endif
 
@@ -30,7 +30,7 @@ static void YM2413RenderResample(INT16* pSoundBuf, INT32 nSegmentLength)
 
 static void YM2413RenderNormal(INT16* pSoundBuf, INT32 nSegmentLength)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2413Initted) bprintf(PRINT_ERROR, _T("YM2413RenderNormal called without init\n"));
 #endif
 
@@ -60,40 +60,61 @@ static void YM2413RenderNormal(INT16* pSoundBuf, INT32 nSegmentLength)
 		
 		nLeftSample = BURN_SND_CLIP(nLeftSample);
 		nRightSample = BURN_SND_CLIP(nRightSample);
-			
-		pSoundBuf[(n << 1) + 0] = nLeftSample;
-		pSoundBuf[(n << 1) + 1] = nRightSample;
+
+		if (nAddSound) {
+			pSoundBuf[(n << 1) + 0] = BURN_SND_CLIP(pSoundBuf[(n << 1) + 0] + nLeftSample);
+			pSoundBuf[(n << 1) + 1] = BURN_SND_CLIP(pSoundBuf[(n << 1) + 1] + nRightSample);
+		} else {
+			pSoundBuf[(n << 1) + 0] = nLeftSample;
+			pSoundBuf[(n << 1) + 1] = nRightSample;
+		}
 	}
 }
 
 void BurnYM2413Reset()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2413Initted) bprintf(PRINT_ERROR, _T("BurnYM2413Reset called without init\n"));
 #endif
 
 	YM2413ResetChip(0);
 }
 
+void BurnYM2413VRC7Reset()
+{
+#if defined FBNEO_DEBUG
+	if (!DebugSnd_YM2413Initted) bprintf(PRINT_ERROR, _T("BurnYM2413Reset called without init\n"));
+#endif
+
+	YM2413ResetChipVRC7(0);
+}
+
 void BurnYM2413Exit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2413Initted) bprintf(PRINT_ERROR, _T("BurnYM2413Exit called without init\n"));
 #endif
+
+	if (!DebugSnd_YM2413Initted) return;
+
 	YM2413Shutdown();
 
-	if (pBuffer) {
-		free(pBuffer);
-		pBuffer = NULL;
-	}
+	BurnFree(pBuffer);
 	
 	DebugSnd_YM2413Initted = 0;
 }
 
 INT32 BurnYM2413Init(INT32 nClockFrequency)
 {
+	return BurnYM2413Init(nClockFrequency, 0);
+}
+
+INT32 BurnYM2413Init(INT32 nClockFrequency, INT32 nAdd)
+{
 	DebugSnd_YM2413Initted = 1;
-	
+
+	nAddSound = nAdd;
+
 	if (nBurnSoundRate <= 0) {
 		YM2413Init(1, nClockFrequency, 11025);
 		return 0;
@@ -120,7 +141,7 @@ INT32 BurnYM2413Init(INT32 nClockFrequency)
 
 	YM2413Init(1, nClockFrequency, nBurnYM2413SoundRate);
 
-	pBuffer = (INT16*)malloc(65536 * 2 * sizeof(INT16));
+	pBuffer = (INT16*)BurnMalloc(65536 * 2 * sizeof(INT16));
 	memset(pBuffer, 0, 65536 * 2 * sizeof(INT16));
 
 	nSampleSize = (UINT32)nBurnYM2413SoundRate * (1 << 16) / nBurnSoundRate;
@@ -139,7 +160,7 @@ INT32 BurnYM2413Init(INT32 nClockFrequency)
 
 void BurnYM2413SetRoute(INT32 nIndex, double nVolume, INT32 nRouteDir)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2413Initted) bprintf(PRINT_ERROR, _T("BurnYM2413SetRoute called without init\n"));
 	if (nIndex < 0 || nIndex > 1) bprintf(PRINT_ERROR, _T("BurnYM2413SetRoute called with invalid index %i\n"), nIndex);
 #endif
@@ -148,9 +169,9 @@ void BurnYM2413SetRoute(INT32 nIndex, double nVolume, INT32 nRouteDir)
 	YM2413RouteDirs[nIndex] = nRouteDir;
 }
 
-void BurnYM2413Scan(INT32 nAction)
+void BurnYM2413Scan(INT32 nAction, INT32 *)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2413Initted) bprintf(PRINT_ERROR, _T("BurnYM2413Scan called without init\n"));
 #endif
 

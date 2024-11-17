@@ -1,3 +1,6 @@
+// license:BSD-3-Clause
+// copyright-holders:David Haywood
+
 // k053245
 
 #include "tiles_generic.h"
@@ -214,7 +217,16 @@ void K053245SpritesRender(INT32 chip)
 			if (sortedlist[pri_code] == -1) sortedlist[pri_code] = offs;
 		}
 	}
-
+#if 0
+	// dbg -dink
+	bprintf(0, _T("Sprite list:\n"));
+	for (offs = 0;offs < NUM_SPRITES;offs++) {
+		if (sortedlist[offs] != -1) {
+			bprintf(0, _T("%03x  "), sortedlist[offs]);
+		}
+	}
+	bprintf(0, _T("\n"));
+#endif
 	for (pri_code = NUM_SPRITES - 1; pri_code >= 0; pri_code--)
 	{
 		INT32 ox,oy,color,code,size,w,h,x,y,flipx,flipy,mirrorx,mirrory,shadow,zoomx,zoomy,pri;

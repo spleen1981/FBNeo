@@ -61,6 +61,29 @@ static TCHAR* GetFilenameW(TCHAR* szFull)
 	return szFull;
 }
 
+static int FileExists(TCHAR *szName)
+{
+    return GetFileAttributes(szName) != INVALID_FILE_ATTRIBUTES;
+}
+
+static int RomArchiveExists(TCHAR *szName)
+{
+	TCHAR szFileName[MAX_PATH];
+	int ret = 0;
+
+	_stprintf(szFileName, _T("%s.zip"), szName);
+	ret = FileExists(szFileName);
+
+	if (ret) return ret;
+
+#ifdef INCLUDE_7Z_SUPPORT
+	_stprintf(szFileName, _T("%s.7z"), szName);
+	ret = FileExists(szFileName);
+#endif
+
+	return ret;
+}
+
 static int FindRomByName(TCHAR* szName)
 {
 	struct ZipEntry* pl;
@@ -270,11 +293,11 @@ static int __cdecl BzipBurnLoadRom(unsigned char* Dest, int* pnWrote, int i)
 		_stprintf(szTempName, _T("%s"), FBALoadStringEx(hAppInst, IDS_ERR_UNKNOWN, true));
 		sprintf(pszRomName, "%s", TCHARToANSI(szTempName, NULL, 0));
 	}
-	
+
 	TCHAR szTempLoading[100];
 	_stprintf(szTempLoading, _T("%s"), FBALoadStringEx(hAppInst, IDS_PROGRESS_LOADING_ONLY, true));
 	_stprintf(szText, _T("%s"), szTempLoading);
-	
+
 	if (ri.nType & (BRF_PRG | BRF_GRA | BRF_SND | BRF_BIOS)) {
 		if (ri.nType & BRF_BIOS) {
 			TCHAR szTempBios[100];
@@ -402,8 +425,7 @@ int BzipOpen(bool bootApp)
 
 			_stprintf(szFullName, _T("%s%hs"), szAppRomPaths[d], szName);
 
-			if (ZipOpen(TCHARToANSI(szFullName, NULL, 0)) == 0) {		// Open the rom zip file
-				ZipClose();
+			if (RomArchiveExists(szFullName)) { // Check existence of the rom zip/7z archive file
 
 				bFound = true;
 
@@ -417,10 +439,10 @@ int BzipOpen(bool bootApp)
 				z++;
 				if (z >= BZIP_MAX) break;
 
-				// Look further in the last ten paths specified, so you can put files with ROMs
+				// Look further in the last 15 paths specified, so you can put files with ROMs
 				// used only by FB Alpha there without causing problems with dat files
-				if (d < DIRS_MAX - 11) {
-					d = DIRS_MAX - 11;
+				if (d < DIRS_MAX - 16) {
+					d = DIRS_MAX - 16;
 				} else {
 					if (d >= DIRS_MAX - 1) {
 						break;
@@ -578,9 +600,60 @@ int BzipOpen(bool bootApp)
 			FBAPopupAddText(PUF_TEXT_DEFAULT, MAKEINTRESOURCE(IDS_ERR_LOAD_NODATA));
 		}
 
+		// check for hard drive images (assumed max one per game)
+		char *szHDDNameTmp = NULL;
+		BurnDrvGetHDDName(&szHDDNameTmp, 0, 0);
+
+		if (szHDDNameTmp) {
+			char *szHddFolderName = NULL;
+
+			if (BurnDrvGetTextA(DRV_PARENT)) {
+				szHddFolderName = BurnDrvGetTextA(DRV_PARENT);
+			} else {
+				szHddFolderName = BurnDrvGetTextA(DRV_NAME);
+			}
+
+			char szHDDPath[MAX_PATH];
+			sprintf(szHDDPath, "%s%s/%s", _TtoA(szAppHDDPath), szHddFolderName, szHDDNameTmp);
+
+			FILE *test = fopen(szHDDPath, "rb");
+			if (test) {
+				fclose(test);
+			} else {
+				FBAPopupAddText(PUF_TEXT_DEFAULT, _T("\n"));
+				FBAPopupAddText(PUF_TEXT_DEFAULT, MAKEINTRESOURCE(IDS_ERR_LOAD_NOHDDDATA));
+
+				nBzipError = 1;
+			}
+		}
+
 		BurnExtLoadRom = BzipBurnLoadRom;								// Okay to call our function to load each rom
 
 	} else {
+		// check for hard drive images (assumed max one per game)
+		char *szHDDNameTmp = NULL;
+		BurnDrvGetHDDName(&szHDDNameTmp, 0, 0);
+
+		if (szHDDNameTmp) {
+			char *szHddFolderName = NULL;
+
+			if (BurnDrvGetTextA(DRV_PARENT)) {
+				szHddFolderName = BurnDrvGetTextA(DRV_PARENT);
+			} else {
+				szHddFolderName = BurnDrvGetTextA(DRV_NAME);
+			}
+
+			char szHDDPath[MAX_PATH];
+			sprintf(szHDDPath, "%s%s/%s", _TtoA(szAppHDDPath), szHddFolderName, szHDDNameTmp);
+
+			FILE *test = fopen(szHDDPath, "rb");
+			if (test) {
+				fclose(test);
+			} else {
+				return 1;
+			}
+		}
+
 		return CheckRomsBoot();
 	}
 

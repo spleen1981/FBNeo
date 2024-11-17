@@ -1,10 +1,11 @@
+// Time pilot, pooyan, rallyx, tutankhm, and rocnrope sound
+// also used by Jungler and Tactician in pre90s/d_rallyx.cpp
+// Based on MAME driver by Nicola Salmoria
+
 #include "burnint.h"
 #include "z80_intf.h"
 #include "flt_rc.h"
-#include "driver.h"
-extern "C" {
 #include "ay8910.h"
-}
 
 static UINT8 soundlatch;
 static UINT8 *z80rom;
@@ -17,6 +18,7 @@ static void filter_write(INT32 num, UINT8 d)
 	INT32 C = 0;
 	if (d & 1) C += 220000;	/* 220000pF = 0.220uF */
 	if (d & 2) C +=  47000;	/*  47000pF = 0.047uF */
+
 	filter_rc_set_RC(num, FLT_RC_LOWPASS, 1000, 5100, 0, CAP_P(C));
 }
 
@@ -127,10 +129,12 @@ void TimepltSndInit(UINT8 *rom, UINT8 *ram, INT32 z80number)
 	ZetSetReadHandler(timeplt_sound_read);
 	ZetClose();
 
-	AY8910Init(0, 1789772, nBurnSoundRate, &AY8910_0_portA, &AY8910_0_portB, NULL, NULL);
-	AY8910Init(1, 1789772, nBurnSoundRate,NULL, NULL, NULL, NULL);
-	AY8910SetAllRoutes(0, 0.60, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(1, 0.60, BURN_SND_ROUTE_BOTH);
+	AY8910Init(0, 1789772, 0);
+	AY8910Init(1, 1789772, 1);
+	AY8910SetPorts(0, &AY8910_0_portA, &AY8910_0_portB, NULL, NULL);
+	AY8910SetAllRoutes(0, 0.30, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(1, 0.30, BURN_SND_ROUTE_BOTH);
+	AY8910SetBuffered(ZetTotalCycles, 1789772);
 
 	filter_rc_init(0, FLT_RC_LOWPASS, 1000, 5100, 0, CAP_P(0), 0);
 	filter_rc_init(1, FLT_RC_LOWPASS, 1000, 5100, 0, CAP_P(0), 1);
@@ -165,10 +169,12 @@ void LocomotnSndInit(UINT8 *rom, UINT8 *ram, INT32 z80number)
 	ZetSetReadHandler(timeplt_sound_read);
 	ZetClose();
 
-	AY8910Init(0, 1789772, nBurnSoundRate, &AY8910_0_portA, &AY8910_0_portB, NULL, NULL);
-	AY8910Init(1, 1789772, nBurnSoundRate,NULL, NULL, NULL, NULL);
-	AY8910SetAllRoutes(0, 0.60, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(1, 0.60, BURN_SND_ROUTE_BOTH);
+	AY8910Init(0, 1789772, 0);
+	AY8910Init(1, 1789772, 1);
+	AY8910SetPorts(0, &AY8910_0_portA, &AY8910_0_portB, NULL, NULL);
+	AY8910SetAllRoutes(0, 0.30, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(1, 0.30, BURN_SND_ROUTE_BOTH);
+	AY8910SetBuffered(ZetTotalCycles, 1789772);
 
 	filter_rc_init(0, FLT_RC_LOWPASS, 1000, 5100, 0, CAP_P(0), 0);
 	filter_rc_init(1, FLT_RC_LOWPASS, 1000, 5100, 0, CAP_P(0), 1);
@@ -196,6 +202,16 @@ void TimepltSndVol(double vol0, double vol1)
 	filter_rc_set_route(5, vol1, BURN_SND_ROUTE_BOTH);
 }
 
+void TimepltSndSrcGain(double vol)
+{
+	filter_rc_set_src_gain(0, vol);
+	filter_rc_set_src_gain(1, vol);
+	filter_rc_set_src_gain(2, vol);
+	filter_rc_set_src_gain(3, vol);
+	filter_rc_set_src_gain(4, vol);
+	filter_rc_set_src_gain(5, vol);
+}
+
 void TimepltSndExit()
 {
 	if (z80_select == 0) ZetExit();
@@ -210,12 +226,11 @@ void TimepltSndExit()
 	locomotnmode = 0;
 }
 
-void TimepltSndUpdate(INT16 **pAY8910Buffer, INT16 *pSoundBuf, INT32 nSegmentLength)
+void TimepltSndUpdate(INT16 *pSoundBuf, INT32 nSegmentLength)
 {
 	if (nSegmentLength <= 0) return;
 
-	AY8910Update(0, &pAY8910Buffer[0], nSegmentLength);
-	AY8910Update(1, &pAY8910Buffer[3], nSegmentLength);
+	AY8910RenderInternal(nSegmentLength);
 
 	filter_rc_update(0, pAY8910Buffer[0], pSoundBuf, nSegmentLength);
 	filter_rc_update(1, pAY8910Buffer[1], pSoundBuf, nSegmentLength);

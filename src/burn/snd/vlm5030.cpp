@@ -60,7 +60,7 @@ chirp  2   : volume  6- 4 : with filter
 chirp  3   : volume   4   : no filter ??
 chirp  4- 5: volume  4- 2 : with filter
 chirp  6-11: volume  2- 0 : with filter
-chirp 12-..: vokume   0   : silent
+chirp 12-..: volume   0   : silent
 
  ---------- digial output information ----------
  when ME pin = high , some status output to A0..15 pins
@@ -529,7 +529,7 @@ static void vlm5030_reset(struct vlm5030_info *chip)
 
 void vlm5030Reset(INT32 nChip)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_VLM5030Initted) bprintf(PRINT_ERROR, _T("vlm5030Reset called without init\n"));
 #endif
 
@@ -541,7 +541,7 @@ void vlm5030Reset(INT32 nChip)
 /* set speech rom address */
 void vlm5030_set_rom(INT32 nChip, void *speech_rom)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_VLM5030Initted) bprintf(PRINT_ERROR, _T("vlm5030_set_rom called without init\n"));
 #endif
 
@@ -552,7 +552,7 @@ void vlm5030_set_rom(INT32 nChip, void *speech_rom)
 /* get BSY pin level */
 INT32 vlm5030_bsy(INT32 nChip)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_VLM5030Initted) bprintf(PRINT_ERROR, _T("vlm5030_bsy called without init\n"));
 #endif
 
@@ -564,7 +564,7 @@ INT32 vlm5030_bsy(INT32 nChip)
 /* latch contoll data */
 void vlm5030_data_write(INT32 nChip, UINT8 data)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_VLM5030Initted) bprintf(PRINT_ERROR, _T("vlm5030_data_write called without init\n"));
 #endif
 
@@ -576,7 +576,7 @@ void vlm5030_data_write(INT32 nChip, UINT8 data)
 /* set RST pin level : reset / set table address A8-A15 */
 void vlm5030_rst(INT32 nChip, INT32 pin)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_VLM5030Initted) bprintf(PRINT_ERROR, _T("vlm5030_rst called without init\n"));
 #endif
 
@@ -605,7 +605,7 @@ void vlm5030_rst(INT32 nChip, INT32 pin)
 /* set VCU pin level : ?? unknown */
 void vlm5030_vcu(INT32 nChip, INT32 pin)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_VLM5030Initted) bprintf(PRINT_ERROR, _T("vlm5030_vcu called without init\n"));
 #endif
 
@@ -618,7 +618,7 @@ void vlm5030_vcu(INT32 nChip, INT32 pin)
 /* set ST pin level  : set table address A0-A7 / start speech */
 void vlm5030_st(INT32 nChip, INT32 pin)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_VLM5030Initted) bprintf(PRINT_ERROR, _T("vlm5030_st called without init\n"));
 #endif
 
@@ -705,7 +705,7 @@ void vlm5030Init(INT32 nChip, INT32 clock, UINT32 (*pSyncCallback)(INT32 samples
 
 void vlm5030SetRoute(INT32 nChip, INT32 nIndex, double nVolume, INT32 nRouteDir)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_VLM5030Initted) bprintf(PRINT_ERROR, _T("vlm5030SetRoute called without init\n"));
 #endif
 
@@ -717,18 +717,20 @@ void vlm5030SetRoute(INT32 nChip, INT32 nIndex, double nVolume, INT32 nRouteDir)
 
 void vlm5030Exit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_VLM5030Initted) bprintf(PRINT_ERROR, _T("vlm5030Exit called without init\n"));
 #endif
 
-	INT32 i;
+	if (!DebugSnd_VLM5030Initted) return;
+
 	struct vlm5030_info *chip;
 
-	for (i = 0; i < CHIP_COUNT; i++) {
+	for (INT32 i = 0; i < CHIP_COUNT; i++) {
 		chip = &vlm5030_chips[i];
 
 		if (chip->output) {
 			BurnFree(chip->output);
+			chip->output = NULL;
 		}
 	}
 	
@@ -737,7 +739,7 @@ void vlm5030Exit()
 
 void vlm5030Update(INT32 nChip, INT16 *buf, INT32 samples)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_VLM5030Initted) bprintf(PRINT_ERROR, _T("vlm5030Update called without init\n"));
 #endif
 
@@ -814,9 +816,9 @@ static void vlm5030_restore_state(INT32 nChip)
 		chip->current_k[i] = chip->old_k[i] + (chip->target_k[i] - chip->old_k[i]) * interp_effect / FR_SIZE;
 }
 
-INT32 vlm5030Scan(INT32 nAction)
+void vlm5030Scan(INT32 nAction, INT32 *)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_VLM5030Initted) bprintf(PRINT_ERROR, _T("vlm5030Scan called without init\n"));
 #endif
 
@@ -847,6 +849,4 @@ INT32 vlm5030Scan(INT32 nAction)
 			vlm5030_restore_state(i);
 		}
 	}
-
-	return 0;
 }

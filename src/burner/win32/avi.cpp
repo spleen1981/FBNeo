@@ -11,7 +11,7 @@
 //
 //  - Supported bitdepths are 15, 16, 24, and 32.
 //
-//  - Avi will be recorded at original game resolution w/double pixels.
+//  - Avi will be recorded at original game resolution w/1x, 2x, 3x pixels.
 //
 //  - Video effects will not be recorded.
 //    (i.e. stretch, scanline, 3D effects, software effects)
@@ -21,6 +21,11 @@
 //---------------------------------------------------------------------------
 //
 // Version History:
+//
+// 0.9 - Added 1x, 2x, 3x (selectable w/nAvi3x) pixel recording. -dink
+//
+// 0.8 - Automatically split the video before the 2gig mark, to prevent
+//       corruption of the video. -dink
 //
 // 0.7 - completely re-worked the image-conversion process, using
 //       burner/sshot.cpp as an example. as a result of this:
@@ -82,7 +87,11 @@
 
 INT32 nAviStatus = 0;       // 1 (recording started), 0 (recording stopped)
 INT32 nAviIntAudio = 1;     // 1 (interleave audio aka audio enabled), 0 (do not interleave aka disable audio)
-INT32 nAvi3x = 0;           // set to !0 for 3x pixel expansion
+INT32 nAvi3x = 0;           // set 1 - 3 for 1x - 3x pixel expansion
+
+INT32 nAviSplit; // number of the split (@2gig) video
+COMPVARS compvarsave;        // compression options, for split
+char szAviFileName[MAX_PATH];
 
 static INT32 nAviFlags = 0;
 
@@ -102,14 +111,15 @@ static struct FBAVI {
 	// compression options
 	COMPVARS compvar;        // compression options
 	AVICOMPRESSOPTIONS opts; // compression options
-	// other 
+	// other
 	UINT32 nFrameNum; // frame number for each compressed frame
+	LONG nAviSize;    // current bytes written, used to break up the avi @ the 2gig mark
 	INT32 nWidth;
 	INT32 nHeight;
 	UINT8 nLastDest; // number of the last pBitmapBuf# written to - for chaining effects
 	UINT8 *pBitmap; // pointer for buffer for bitmap
 	UINT8 *pBitmapBuf1; // buffer #1
-	UINT8 *pBitmapBuf2; // buffer #2 (flippy)
+	UINT8 *pBitmapBuf2; // buffer #2 (flippy, pBitmapBufX points to one of these depending on last effect used)
 } FBAvi;
 
 // Opens an avi file for writing.
@@ -118,15 +128,22 @@ static INT32 AviCreateFile()
 {
 	HRESULT hRet;
 
-	char szFilePath[MAX_PATH];
+	char szFilePath[MAX_PATH*2];
     time_t currentTime;
     tm* tmTime;
 
 	// Get the time
 	time(&currentTime);
     tmTime = localtime(&currentTime);
+
 	// construct our filename -> "romname-mm-dd-hms.avi"
-    sprintf(szFilePath, "%s%s-%.2d-%.2d-%.2d%.2d%.2d.avi", TAVI_DIRECTORY, BurnDrvGetTextA(DRV_NAME), tmTime->tm_mon + 1, tmTime->tm_mday, tmTime->tm_hour, tmTime->tm_min, tmTime->tm_sec);
+
+	if (nAviSplit == 0) { // Create the filename @ the first file in our set
+		sprintf(szAviFileName, "%s%s-%.2d-%.2d-%.2d%.2d%.2d", TAVI_DIRECTORY, BurnDrvGetTextA(DRV_NAME), tmTime->tm_mon + 1, tmTime->tm_mday, tmTime->tm_hour, tmTime->tm_min, tmTime->tm_sec);
+	}
+
+	// add the set# and extension to our file.
+	sprintf(szFilePath, "%s_%X.avi", szAviFileName, nAviSplit);
 
 	hRet = AVIFileOpenA(
 				&FBAvi.pFile,           // returned file pointer
@@ -375,17 +392,16 @@ static void AviSetVidFormat()
 	memset(&FBAvi.bih,0,sizeof(BITMAPINFOHEADER));
 	FBAvi.bih.biSize = sizeof(BITMAPINFOHEADER);
 
-	//INT32 ww,hh;
 	BurnDrvGetVisibleSize(&FBAvi.nWidth, &FBAvi.nHeight);
-	FBAvi.bih.biWidth = FBAvi.nWidth * ((nAvi3x) ? 3 : 2);
-	FBAvi.bih.biHeight = FBAvi.nHeight * ((nAvi3x) ? 3 : 2);
+	FBAvi.bih.biWidth = FBAvi.nWidth * nAvi3x;
+	FBAvi.bih.biHeight = FBAvi.nHeight * nAvi3x;
 
 	FBAvi.pBitmap = FBAvi.pBitmapBuf1;
 
 	FBAvi.bih.biPlanes = 1;
 	FBAvi.bih.biBitCount = 32;
-	FBAvi.bih.biCompression = BI_RGB;           // uncompressed RGB
-	FBAvi.bih.biSizeImage = ((nAvi3x) ? 9 : 4) * FBAvi.bih.biWidth * FBAvi.bih.biHeight;
+	FBAvi.bih.biCompression = BI_RGB;           // uncompressed RGB source
+	FBAvi.bih.biSizeImage = aviBPP * FBAvi.bih.biWidth * FBAvi.bih.biHeight;
 }
 
 // Sets the format for the audio stream.
@@ -414,7 +430,7 @@ static INT32 AviCreateVidStream()
 	stream in the file because fccHandler is unknown until the
 	compressor is chosen.  However, AVISaveOptions() requires
 	the stream to be created prior to the function call.
-	
+
 	Solution:
 	Use ICCompressorChoose() to set the	COMPVARS, create the
 	video stream in the file using the returned fccHandler,
@@ -424,26 +440,30 @@ static INT32 AviCreateVidStream()
 
 	// initialize COMPVARS
 	memset(&FBAvi.compvar, 0, sizeof(COMPVARS));
-	FBAvi.compvar.cbSize = sizeof(COMPVARS); 
+	FBAvi.compvar.cbSize = sizeof(COMPVARS);
 	FBAvi.compvar.dwFlags = ICMF_COMPVARS_VALID;
 	//FBAvi.compvar.fccHandler = comptypeDIB; // default compressor = uncompressed full frames
 	FBAvi.compvar.fccHandler = 0; // default compressor = uncompressed full frames
 	FBAvi.compvar.lQ = ICQUALITY_DEFAULT;
 
-	// let user choose the compressor and compression options
-	nRet = ICCompressorChoose(
-		hScrnWnd,
-		ICMF_CHOOSE_DATARATE | ICMF_CHOOSE_KEYFRAME,
-		(LPVOID) &FBAvi.bih, // uncompressed data input format
-		NULL,                // no preview window
-		&FBAvi.compvar,      // returned info
-		"Set video compression option");
-	if (!nRet) {
+	if (nAviSplit>0) { // next 2gig chunk, don't ask user for video type.
+		memmove(&FBAvi.compvar, &compvarsave, sizeof(COMPVARS));
+	} else {// let user choose the compressor and compression options
+		nRet = ICCompressorChoose(
+								  hScrnWnd,
+								  ICMF_CHOOSE_DATARATE | ICMF_CHOOSE_KEYFRAME,
+								  (LPVOID) &FBAvi.bih, // uncompressed data input format
+								  NULL,                // no preview window
+								  &FBAvi.compvar,      // returned info
+								  "Set video compression option");
+		if (!nRet) {
 #ifdef AVI_DEBUG
-		bprintf(0, _T("    AVI Error: ICCompressorChoose() failed.\n"));
-		ICCompressorFree(&FBAvi.compvar);
+			bprintf(0, _T("    AVI Error: ICCompressorChoose() failed.\n"));
+			ICCompressorFree(&FBAvi.compvar);
 #endif
-		return 1;
+			return 1;
+		}
+		memmove(&compvarsave, &FBAvi.compvar, sizeof(COMPVARS));
 	}
 
 	nAviFlags |= FBAVI_VID_SET; // flag |= video compression option is set
@@ -489,14 +509,14 @@ static INT32 AviCreateVidStream()
 	FBAvi.opts.dwKeyFrameEvery = FBAvi.compvar.lKey;
 	FBAvi.opts.dwQuality = FBAvi.compvar.lQ;
 	FBAvi.opts.dwBytesPerSecond = FBAvi.compvar.lDataRate * 1024L;
-	FBAvi.opts.dwFlags = AVICOMPRESSF_VALID | 
+	FBAvi.opts.dwFlags = AVICOMPRESSF_VALID |
 		(FBAvi.compvar.lDataRate ? AVICOMPRESSF_DATARATE:0L) |
 		(FBAvi.compvar.lKey ? AVICOMPRESSF_KEYFRAMES:0L);
 	FBAvi.opts.lpFormat = &FBAvi.bih;
 	FBAvi.opts.cbFormat = FBAvi.bih.biSize + FBAvi.bih.biClrUsed * sizeof(RGBQUAD);
 	FBAvi.opts.lpParms = FBAvi.compvar.lpState;
-	FBAvi.opts.cbParms = FBAvi.compvar.cbState; 
-	FBAvi.opts.dwInterleaveEvery = 0; 
+	FBAvi.opts.cbParms = FBAvi.compvar.cbState;
+	FBAvi.opts.dwInterleaveEvery = 0;
 
 	// make the compressed video stream
 	hRet = AVIMakeCompressedStream(
@@ -552,7 +572,7 @@ static INT32 AviCreateAudStream()
 	// - dwInitialFrames specifies how much to skew the
 	//   audio data ahead of the video frames in interleaved
 	//   files (typically 0.75 sec).
-	//  
+	//
 	memset(&FBAvi.audh, 0, sizeof(FBAvi.audh));
 	FBAvi.audh.fccType                = streamtypeAUDIO;    // stream type
 	FBAvi.audh.dwScale                = FBAvi.wfx.nBlockAlign;
@@ -585,16 +605,19 @@ static INT32 AviCreateAudStream()
 #endif
 		return 1;
 	}
-				
+
 	return 0;
 }
 
+INT32 AviStart_INT();
+void AviStop_INT();
 
 // Records 1 frame worth of data to the output stream
 // Returns: 0 (successful), 1 (failed)
 INT32 AviRecordFrame(INT32 bDraw)
 {
 	HRESULT hRet;
+	LONG wrote;
 	/*
 	When FBA is frame skipping (bDraw == 0), we don't
 	need to	build a new bitmap, nor encode video frame.
@@ -612,11 +635,12 @@ INT32 AviRecordFrame(INT32 bDraw)
 
 		MakeBitmapFlippedForEncoder();  // Mandatory, encoder needs image data to be flipped.
 
-		if (nAvi3x) {
-			MakeBitmap3x();            // Triple the pixels, for 720p/60hz* yt videos (yay!) *) if * 3 >= 720 && hz >= 60
-		} else {
-			MakeBitmap2x();            // Double the pixels, this must always happen otherwise the compression size and video quality - especially when uploaded to yt - will suck. -dink
+		switch (nAvi3x) {
+			case 2: MakeBitmap2x(); break; // Double the pixels, this must always happen otherwise the compression size and video quality - especially when uploaded to yt - will suck. -dink
+			case 3: MakeBitmap3x(); break; // Triple the pixels, for 720p/60hz* yt videos (yay!) *) if * 3 >= 720 && hz >= 60
 		}
+
+		wrote = 0;
 
 		// compress the bitmap and write to AVI output stream
 		hRet = AVIStreamWrite(
@@ -627,17 +651,21 @@ INT32 AviRecordFrame(INT32 bDraw)
 			FBAvi.bih.biSizeImage,      // size of this frame
 			AVIIF_KEYFRAME,             // flags
 			NULL,
-			NULL);
+			&wrote);
 		if (hRet != AVIERR_OK) {
 #ifdef AVI_DEBUG
 			bprintf(0, _T("    AVI Error: AVIStreamWrite() failed.\n"));
 #endif
 			return 1;
 		}
+
+		FBAvi.nAviSize += wrote;
 	}
 
 	// interleave audio
 	if (nAviIntAudio) {
+		wrote = 0;
+
 		// write the PCM audio data to AVI output stream
 		hRet = AVIStreamWrite(
 			FBAvi.psAud,                // stream pointer
@@ -647,16 +675,25 @@ INT32 AviRecordFrame(INT32 bDraw)
 			nBurnSoundLen<<2,           // size of data
 			AVIIF_KEYFRAME,             // flags
 			NULL,
-			NULL);
+			&wrote);
 		if (hRet != AVIERR_OK) {
 #ifdef AVI_DEBUG
 			bprintf(0, _T("    AVI Error: AVIStreamWrite() failed.\n"));
 #endif
 			return 1;
 		}
+		FBAvi.nAviSize += wrote;
 	}
 
 	FBAvi.nFrameNum++;
+
+	if (FBAvi.nAviSize >= 0x79000000) {
+		nAviSplit++;
+		bprintf(0, _T("    AVI Writer Split-Point 0x%X reached, creating new file.\n"), nAviSplit);
+		AviStop_INT();
+		AviStart_INT();
+	}
+
 	return 0;
 }
 
@@ -675,7 +712,7 @@ static void FreeBMP()
 }
 
 // Stops AVI recording.
-void AviStop()
+void AviStop_INT()
 {
 	if (nAviFlags & FBAVI_VFW_INIT) {
 		if (FBAvi.psAud) {
@@ -695,7 +732,8 @@ void AviStop()
 		}
 
 		if (nAviFlags & FBAVI_VID_SET) {
-			ICCompressorFree(&FBAvi.compvar);
+			if (nAviSplit == -1)
+				ICCompressorFree(&FBAvi.compvar);
 		}
 
 		AVIFileExit();
@@ -716,9 +754,16 @@ void AviStop()
 	}
 }
 
+void AviStop()
+{
+	nAviSplit = -1;
+	AviStop_INT();
+}
+
+
 // Starts AVI recording.
 // Returns: 0 (successful), 1 (failed)
-INT32 AviStart()
+INT32 AviStart_INT()
 {
 	// initialize local variables
 	memset (&FBAvi, 0, sizeof(FBAVI));
@@ -728,6 +773,10 @@ INT32 AviStart()
 	if (HIWORD(VideoForWindowsVersion()) < 0x010a){
 		// VFW verison is too old, disable AVI recording
 		return 1;
+	}
+
+	if (nAvi3x < 1 || nAvi3x > 3) {
+		nAvi3x = 2; // bad value, default to 2x pixels
 	}
 
 	AVIFileInit();
@@ -769,8 +818,8 @@ INT32 AviStart()
 		}
 	}
 
-	// record the first frame
-	if(AviRecordFrame(1)) {
+	// record the first frame (at init only, not on splits init)
+	if(nAviSplit == 0 && AviRecordFrame(1)) {
 		return 1;
 	}
 
@@ -778,3 +827,11 @@ INT32 AviStart()
 	MenuEnableItems();
 	return 0;
 }
+
+INT32 AviStart()
+{
+	nAviSplit = 0;
+
+	return AviStart_INT();
+}
+

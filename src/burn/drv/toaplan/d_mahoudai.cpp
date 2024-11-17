@@ -1,3 +1,6 @@
+// FB Alpha Mahou Daisakusen driver module
+// Driver and emulation by Jan Klaassen
+
 #include "toaplan.h"
 // Mahou Daisakusen
 
@@ -7,8 +10,6 @@ static UINT8 DrvJoy2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static UINT8 DrvInput[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static UINT8 DrvReset = 0;
-static UINT8 bDrawScreen;
-static bool bVBlank;
 
 // Rom information
 static struct BurnRomInfo mahoudaiRomDesc[] = {
@@ -45,7 +46,7 @@ static struct BurnRomInfo sstrikerRomDesc[] = {
 STD_ROM_PICK(sstriker)
 STD_ROM_FN(sstriker)
 
-static struct BurnRomInfo sstrikraRomDesc[] = {
+static struct BurnRomInfo sstrikerkRomDesc[] = {
 	{ "ra-ma-01_01.u65",  0x080000, 0x92259F84, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
 
 	{ "ra-ma01-rom2.u2",  0x100000, 0x54E2BD95, BRF_GRA },			 //  1 GP9001 Tile data
@@ -59,37 +60,37 @@ static struct BurnRomInfo sstrikraRomDesc[] = {
 };
 
 
-STD_ROM_PICK(sstrikra)
-STD_ROM_FN(sstrikra)
+STD_ROM_PICK(sstrikerk)
+STD_ROM_FN(sstrikerk)
 
 static struct BurnInputInfo mahoudaiInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvButton + 3,	"p1 coin"},
-	{"P1 Start",	BIT_DIGITAL,	DrvButton + 5,	"p1 start"},
+	{"P1 Coin",		BIT_DIGITAL,	DrvButton + 3,	"p1 coin"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvButton + 5,	"p1 start"	},
 
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"},
-	{"P1 Right",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"},
-	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
-	{"P1 Button 2",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"},
-	{"P1 Button 3",	BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"},
+	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
+	{"P1 Button 3",	BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvButton + 4,	"p2 coin"},
-	{"P2 Start",	BIT_DIGITAL,	DrvButton + 6,	"p2 start"},
+	{"P2 Coin",		BIT_DIGITAL,	DrvButton + 4,	"p2 coin"	},
+	{"P2 Start",	BIT_DIGITAL,	DrvButton + 6,	"p2 start"	},
 
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"},
-	{"P2 Right",	BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"},
-	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"},
-	{"P2 Button 2",	BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"},
-	{"P2 Button 3",	BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"},
+	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",	BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
+	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",	BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
+	{"P2 Button 3",	BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"},
-	{"Diagnostics",	BIT_DIGITAL,	DrvButton + 0,	"diag"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvInput + 3,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvInput + 4,	"dip"},
-	{"Dip C",		BIT_DIPSWITCH,	DrvInput + 5,	"dip"},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Diagnostics",	BIT_DIGITAL,	DrvButton + 0,	"diag"		},
+	{"Dip A",		BIT_DIPSWITCH,	DrvInput + 3,	"dip"		},
+	{"Dip B",		BIT_DIPSWITCH,	DrvInput + 4,	"dip"		},
+	{"Dip C",		BIT_DIPSWITCH,	DrvInput + 5,	"dip"		},
 };
 
 STDINPUTINFO(mahoudai)
@@ -178,8 +179,25 @@ static struct BurnDIPInfo sstrikerRegionDIPList[] = {
     {0x16,	0x01, 0x0E,	0x00, "Japan"},
 };
 
+static struct BurnDIPInfo sstrikerkRegionDIPList[] = {
+	// Defaults
+	{0x16,	0xFF, 0x0E,	0x0A, NULL},
+
+	// Region
+	{0,		0xFE, 0,	7,	  "Region"},
+    {0x16,	0x01, 0x0E,	0x02, "U.S.A."},
+    {0x16,	0x01, 0x0E,	0x04, "Europe"},
+    {0x16,	0x01, 0x0E,	0x06, "South East Asia"},
+    {0x16,	0x01, 0x0E,	0x08, "China"},
+    {0x16,	0x01, 0x0E,	0x0A, "Korea"},
+    {0x16,	0x01, 0x0E,	0x0C, "Hong Kong"},
+    {0x16,	0x01, 0x0E,	0x0E, "Taiwan"},
+    {0x16,	0x01, 0x0E,	0x00, "Japan"},
+};
+
 STDDIPINFOEXT(mahoudai, mahoudai, mahoudaiRegion)
 STDDIPINFOEXT(sstriker, mahoudai, sstrikerRegion)
+STDDIPINFOEXT(sstrikerk, mahoudai, sstrikerkRegion)
 
 static UINT8 *Mem = NULL, *MemEnd = NULL;
 static UINT8 *RamStart, *RamEnd;
@@ -234,8 +252,8 @@ static INT32 DrvScan(INT32 nAction, INT32* pnMin)
 		SekScan(nAction);				// scan 68000 states
 		ZetScan(nAction);				// Scan Z80
 
-		MSM6295Scan(0, nAction);
-		BurnYM2151Scan(nAction);
+		MSM6295Scan(nAction, pnMin);
+		BurnYM2151Scan(nAction, pnMin);
 
 		ToaScanGP9001(nAction, pnMin);
 
@@ -269,10 +287,10 @@ UINT8 __fastcall mahoudaiZ80Read(UINT16 nAddress)
 {
 //	bprintf(PRINT_NORMAL, "z80 read %4X\n", nAddress);
 	if (nAddress == 0xE001) {
-		return BurnYM2151ReadStatus();
+		return BurnYM2151Read();
 	}
 	if (nAddress == 0xE004) {
-		return MSM6295ReadStatus(0);
+		return MSM6295Read(0);
 	}
 	return 0;
 }
@@ -289,7 +307,7 @@ void __fastcall mahoudaiZ80Write(UINT16 nAddress, UINT8 nValue)
 			BurnYM2151WriteRegister(nValue);
 			break;
 		case 0xE004:
-			MSM6295Command(0, nValue);
+			MSM6295Write(0, nValue);
 //			bprintf(PRINT_NORMAL, "OKI M6295 command %02X sent\n", nValue);
 			break;
 	}
@@ -320,7 +338,7 @@ static INT32 DrvZ80Init()
 	return 0;
 }
 
-UINT8 __fastcall mahoudaiReadByte(UINT32 sekAddress)
+static UINT8 __fastcall mahoudaiReadByte(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 		case 0x21C021:								// Player 1 inputs
@@ -350,7 +368,7 @@ UINT8 __fastcall mahoudaiReadByte(UINT32 sekAddress)
 	return 0;
 }
 
-UINT16 __fastcall mahoudaiReadWord(UINT32 sekAddress)
+static UINT16 __fastcall mahoudaiReadWord(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 
@@ -389,7 +407,7 @@ UINT16 __fastcall mahoudaiReadWord(UINT32 sekAddress)
 	return 0;
 }
 
-void __fastcall mahoudaiWriteByte(UINT32 sekAddress, UINT8 byteValue)
+static void __fastcall mahoudaiWriteByte(UINT32 sekAddress, UINT8 byteValue)
 {
 //	switch (sekAddress) {
 
@@ -403,7 +421,7 @@ void __fastcall mahoudaiWriteByte(UINT32 sekAddress, UINT8 byteValue)
 //	}
 }
 
-void __fastcall mahoudaiWriteWord(UINT32 sekAddress, UINT16 wordValue)
+static void __fastcall mahoudaiWriteWord(UINT32 sekAddress, UINT16 wordValue)
 {
 	switch (sekAddress) {
 
@@ -516,8 +534,6 @@ static INT32 DrvInit()
 	MSM6295Init(0, 32000000 / 32 / 132, 1);
 	MSM6295SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
 
-	bDrawScreen = true;
-
 	DrvDoReset();												// Reset machine
 	return 0;
 }
@@ -543,19 +559,12 @@ static INT32 DrvDraw()
 {
 	ToaClearScreen(0);
 
-	if (bDrawScreen) {
-		ToaGetBitmap();
-		ToaRenderGP9001();					// Render GP9001 graphics
-		ToaExtraTextLayer();				// Render extra text layer
-	}
+	ToaGetBitmap();
+	ToaRenderGP9001();						// Render GP9001 graphics
+	ToaExtraTextLayer();					// Render extra text layer
 
 	ToaPalUpdate();							// Update the palette
 
-	return 0;
-}
-
-inline static INT32 CheckSleep(INT32)
-{
 	return 0;
 }
 
@@ -590,7 +599,7 @@ static INT32 DrvFrame()
 	SekSetCyclesScanline(nCyclesTotal[0] / 262);
 	nToaCyclesDisplayStart = nCyclesTotal[0] - ((nCyclesTotal[0] * (TOA_VBLANK_LINES + 240)) / 262);
 	nToaCyclesVBlankStart = nCyclesTotal[0] - ((nCyclesTotal[0] * TOA_VBLANK_LINES) / 262);
-	bVBlank = false;
+	bool bVBlank = false;
 
 	INT32 nSoundBufferPos = 0;
 
@@ -618,11 +627,7 @@ static INT32 DrvFrame()
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		if (bVBlank || (!CheckSleep(nCurrentCPU))) {					// See if this CPU is busywaiting
-			nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		} else {
-			nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-		}
+		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 
 		// Run Z80
 		nCurrentCPU = 1;
@@ -668,28 +673,28 @@ struct BurnDriver BurnDrvMahouDai = {
 	"mahoudai", "sstriker", NULL, NULL, "1993",
 	"Mahou Daisakusen (Japan)\0", NULL, "Raizing", "Toaplan GP9001 based",
 	L"\u9B54\u6CD5\u5927\u4F5C\u6226 (Mahou Daisakusen Japan)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, mahoudaiRomInfo, mahoudaiRomName, NULL, NULL, mahoudaiInputInfo, mahoudaiDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, FBF_MAHOU,
+	NULL, mahoudaiRomInfo, mahoudaiRomName, NULL, NULL, NULL, NULL, mahoudaiInputInfo, mahoudaiDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
 
 struct BurnDriver BurnDrvSStriker = {
 	"sstriker", NULL, NULL, NULL, "1993",
-	"Sorcer Striker (World)\0", NULL, "Raizing", "Toaplan GP9001 based",
+	"Sorcer Striker\0", NULL, "Raizing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, sstrikerRomInfo, sstrikerRomName, NULL, NULL, mahoudaiInputInfo, sstrikerDIPInfo,
+	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, FBF_MAHOU,
+	NULL, sstrikerRomInfo, sstrikerRomName, NULL, NULL, NULL, NULL, mahoudaiInputInfo, sstrikerDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
 
-struct BurnDriver BurnDrvSStrikrA = {
-	"sstrikera", "sstriker", NULL, NULL, "1993",
-	"Sorcer Striker (World, alt)\0", NULL, "Raizing", "Toaplan GP9001 based",
+struct BurnDriver BurnDrvSStrikerk = {
+	"sstrikerk", "sstriker", NULL, NULL, "1993",
+	"Sorcer Striker (Korea)\0", NULL, "Raizing (Unite Trading license)", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, sstrikraRomInfo, sstrikraRomName, NULL, NULL, mahoudaiInputInfo, sstrikerDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, FBF_MAHOU,
+	NULL, sstrikerkRomInfo, sstrikerkRomName, NULL, NULL, NULL, NULL, mahoudaiInputInfo, sstrikerkDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };

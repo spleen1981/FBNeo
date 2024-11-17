@@ -33,10 +33,18 @@ UINT32 ArmGetPC(INT32);
 
 UINT32 ArmRemainingCycles();
 INT32 ArmGetTotalCycles();
+INT32 ArmIdle(INT32 cycles);
 void ArmRunEnd();
 void ArmNewFrame();
+INT32 ArmGetActive();
 
+void Arm_write_rom_byte(UINT32 addr, UINT8 data); // for cheat core
 
+extern struct cpu_core_config ArmConfig;
+
+// depreciate this and use BurnTimerAttach directly!
+#define BurnTimerAttachArm(clock)	\
+	BurnTimerAttach(&ArmConfig, clock)
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------
 // Macros for reading/writing to 16-bit RAM regions

@@ -6,10 +6,7 @@
 
 #include "tiles_generic.h"
 #include "z80_intf.h"
-#include "driver.h"
-extern "C" {
 #include "ay8910.h"
-}
 #include "lowpass2.h"
 
 static UINT8 *AllMem;
@@ -30,8 +27,6 @@ static UINT8 *DrvFgRAM;
 
 static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
-
-static INT16 *pAY8910Buffer[6];
 
 static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
@@ -138,11 +133,7 @@ static void __fastcall supridr_main_write(UINT16 address, UINT8 data)
 
 		case 0xb800:
 			soundlatch = data;
-			ZetClose();
-			ZetOpen(1);
-			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
-			ZetClose();
-			ZetOpen(0);
+			ZetSetIRQLine(1, 0, CPU_IRQSTATUS_ACK);
 		return;
 
 		case 0xc801:
@@ -228,13 +219,8 @@ static INT32 DrvDoReset(INT32 clear_mem)
 		memset(AllRam, 0, RamEnd - AllRam);
 	}
 
-	ZetOpen(0);
-	ZetReset();
-	ZetClose();
-
-	ZetOpen(1);
-	ZetReset();
-	ZetClose();
+	ZetReset(0);
+	ZetReset(1);
 
 	AY8910Reset(0);
 	AY8910Reset(1);
@@ -277,13 +263,6 @@ static INT32 MemIndex()
 	DrvFgRAM	= Next; Next += 0x010800;
 
 	RamEnd		= Next;
-
-	pAY8910Buffer[0] = (INT16 *)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[1] = (INT16 *)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[2] = (INT16 *)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[3] = (INT16 *)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[4] = (INT16 *)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[5] = (INT16 *)Next; Next += nBurnSoundLen * sizeof(INT16);
 
 	MemEnd		= Next;
 
@@ -405,16 +384,15 @@ static INT32 DrvInit()
 	ZetSetInHandler(supridr_sound_read_port);
 	ZetClose();
 
-	AY8910Init(0, 1536000, nBurnSoundRate, NULL, NULL, NULL, NULL);
-	AY8910Init(1, 1536000, nBurnSoundRate, &ay8910_1_portA, NULL, NULL, NULL);
+	AY8910Init(0, 1536000, 0);
+	AY8910Init(1, 1536000, 1);
+	AY8910SetPorts(1, &ay8910_1_portA, NULL, NULL, NULL);
 	AY8910SetAllRoutes(0, 0.05, BURN_SND_ROUTE_BOTH);
 	AY8910SetAllRoutes(1, 0.05, BURN_SND_ROUTE_BOTH);
 	GenericTilesInit();
 
-	LP1 = new LowPass2(CutFreq, SampleFreq, Q, Gain,
-					   CutFreq2, Q2, Gain2);
-	LP2 = new LowPass2(CutFreq, SampleFreq, Q, Gain,
-					   CutFreq2, Q2, Gain2);
+	LP1 = new LowPass2(CutFreq, SampleFreq, Q, Gain, CutFreq2, Q2, Gain2);
+	LP2 = new LowPass2(CutFreq, SampleFreq, Q, Gain, CutFreq2, Q2, Gain2);
 
 	DrvDoReset(1);
 
@@ -466,7 +444,7 @@ static void draw_fg_layer()
 		INT32 sx = (offs & 0x1f) * 8;
 		INT32 sy = (offs / 0x20) * 8;
 
-		if (sx >=32 || sx < 248) sy -= fgscrolly;
+		if (sx >= 32 && sx < 248) sy -= fgscrolly;
 		if (sy < -7) sy += 256;
 		sy -= 16; // offset
 		INT32 code = DrvFgRAM[offs];
@@ -569,7 +547,7 @@ static INT32 DrvFrame()
 	}
 
 	if (pBurnSoundOut) {
-		AY8910Render(&pAY8910Buffer[0], pBurnSoundOut, nBurnSoundLen, 0);
+		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 		if (LP1 && LP2) {
 			LP1->Filter(pBurnSoundOut, nBurnSoundLen);  // Left
 			LP2->Filter(pBurnSoundOut+1, nBurnSoundLen); // Right
@@ -654,8 +632,8 @@ struct BurnDriver BurnDrvSuprridr = {
 	"suprridr", NULL, NULL, NULL, "1983",
 	"Super Rider\0", NULL, "Taito Corporation (Venture Line license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_TAITO, GBF_MISC, 0,
-	NULL, suprridrRomInfo, suprridrRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_TAITO, GBF_RACING, 0,
+	NULL, suprridrRomInfo, suprridrRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x60,
 	224, 256, 3, 4
 };

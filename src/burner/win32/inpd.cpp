@@ -1,9 +1,9 @@
-// Burner Input Dialog module
+// Burner Input Editor Dialog module
 #include "burner.h"
 
 HWND hInpdDlg = NULL;							// Handle to the Input Dialog
 static HWND hInpdList = NULL;
-static unsigned char *LastVal = NULL;			// Last input values/defined
+static unsigned short *LastVal = NULL;			// Last input values/defined
 static int bLastValDefined = 0;					//
 
 static HWND hInpdGi = NULL, hInpdPci = NULL, hInpdAnalog = NULL;	// Combo boxes
@@ -71,7 +71,7 @@ int InpdUpdate()
 {
 	unsigned int i, j = 0;
 	struct GameInp* pgi = NULL;
-	unsigned char* plv = NULL;
+	unsigned short* plv = NULL;
 	unsigned short nThisVal;
 	if (hInpdList == NULL) {
 		return 1;
@@ -96,12 +96,12 @@ int InpdUpdate()
 				nThisVal = *pgi->Input.pShortVal;
 			}
 
-			if (bLastValDefined && (pgi->nType != BIT_ANALOG_REL || nThisVal) && pgi->Input.nVal == *((unsigned short*)plv)) {
+			if (bLastValDefined && (pgi->nType != BIT_ANALOG_REL || nThisVal) && pgi->Input.nVal == *plv) {
 				j++;
 				continue;
 			}
 
-			*((unsigned short*)plv) = nThisVal;
+			*plv = nThisVal;
 		} else {
 			if (bRunPause) {														// Update LastVal
 				nThisVal = pgi->Input.nVal;
@@ -174,8 +174,8 @@ static int InpdListBegin()
 		return 1;
 	}
 
-	// Full row select style:
-	SendMessage(hInpdList, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_FULLROWSELECT);
+	// Full row select style: Add checkbox for marco Autofire.
+	SendMessage(hInpdList, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
 
 	// Make column headers
 	memset(&LvCol, 0, sizeof(LvCol));
@@ -209,7 +209,7 @@ int InpdListMake(int bBuild)
 	if (bBuild)	{
 		SendMessage(hInpdList, LVM_DELETEALLITEMS, 0, 0);
 	}
-
+	
 	// Add all the input names to the list
 	for (unsigned int i = 0; i < nGameInpCount; i++) {
 		struct BurnInputInfo bii;
@@ -228,7 +228,7 @@ int InpdListMake(int bBuild)
 		}
 
 		memset(&LvItem, 0, sizeof(LvItem));
-		LvItem.mask = LVIF_TEXT | LVIF_PARAM;
+		LvItem.mask = LVIF_TEXT |  LVIF_PARAM;
 		LvItem.iItem = j;
 		LvItem.iSubItem = 0;
 		LvItem.pszText = ANSIToTCHAR(bii.szName, NULL, 0);
@@ -252,10 +252,15 @@ int InpdListMake(int bBuild)
 			LvItem.lParam = (LPARAM)j;
 
 			SendMessage(hInpdList, bBuild ? LVM_INSERTITEM : LVM_SETITEM, 0, (LPARAM)&LvItem);
+
+			// When Marco is auto-fire, the checkbox is checked.
+			if (pgi->Macro.nSysMacro == 15 && pgi->Input.pVal) ListView_SetCheckState(hInpdList, j, TRUE);
 		}
 
 		j++;
 	}
+
+	pgi = NULL;
 
 	InpdUseUpdate();
 
@@ -310,11 +315,11 @@ static int InpdInit()
 
 	// Allocate a last val array for the last input values
 	nMemLen = nGameInpCount * sizeof(char);
-	LastVal = (unsigned char*)malloc(nMemLen);
+	LastVal = (unsigned short*)malloc(nMemLen * sizeof(unsigned short));
 	if (LastVal == NULL) {
 		return 1;
 	}
-	memset(LastVal, 0, nMemLen);
+	memset(LastVal, 0, nMemLen * sizeof(unsigned short));
 
 	InpdListBegin();
 	InpdListMake(1);
@@ -429,6 +434,7 @@ static int ListItemActivate()
 	struct BurnInputInfo bii;
 	LVITEM LvItem;
 
+	memset(&LvItem, 0, sizeof(LvItem));
 	int nSel = SendMessage(hInpdList, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
 	if (nSel < 0) {
 		return 1;
@@ -445,9 +451,10 @@ static int ListItemActivate()
 		return 1;
 	}
 
+	memset(&bii, 0, sizeof(bii));
 	bii.nType = 0;
-	BurnDrvGetInputInfo(&bii, nSel);
-	if (bii.pVal == NULL) {
+	int rc = BurnDrvGetInputInfo(&bii, nSel);
+	if (bii.pVal == NULL && rc != 1) {                  // rc == 1 for a macro or system macro.
 		return 1;
 	}
 
@@ -588,40 +595,95 @@ static int InitAnalogOptions(int nGi, int nPci)
 	return 0;
 }
 
+INT32 HardwarePresetWrite(FILE* h)
+{
+	// Write input types
+	for (UINT32 i = 0; i < nGameInpCount; i++) {
+		TCHAR* szName = NULL;
+		INT32 nPad = 0;
+		szName = InputNumToName(i);
+		_ftprintf(h, _T("input  \"%s\" "), szName);
+		nPad = 16 - _tcslen(szName);
+		for (INT32 j = 0; j < nPad; j++) {
+			_ftprintf(h, _T(" "));
+		}
+		_ftprintf(h, _T("%s\n"), InpToString(GameInp + i));
+	}
+
+	_ftprintf(h, _T("\n"));
+
+	struct GameInp* pgi = GameInp + nGameInpCount;
+	for (UINT32 i = nGameInpCount; i < nGameInpCount + nMacroCount; i++, pgi++) {
+		INT32 nPad = 0;
+
+		if (pgi->nInput & GIT_GROUP_MACRO) {
+			switch (pgi->nInput) {
+			case GIT_MACRO_AUTO:									// Auto-assigned macros
+				if (ListView_GetCheckState(hInpdList, i) &&
+					_stricmp("System Pause", pgi->Macro.szName) != 0 &&
+					_stricmp("System FFWD", pgi->Macro.szName) != 0 &&
+					_stricmp("System Load State", pgi->Macro.szName) != 0 &&
+					_stricmp("System Save State", pgi->Macro.szName) != 0 &&
+					_stricmp("System UNDO State", pgi->Macro.szName) != 0
+					)
+					_ftprintf(h, _T("afire  \"%hs\"\n"), pgi->Macro.szName);  // Create autofire (afire) tag
+				_ftprintf(h, _T("macro  \"%hs\" "), pgi->Macro.szName);
+				break;
+			case GIT_MACRO_CUSTOM:									// Custom macros
+				_ftprintf(h, _T("custom \"%hs\" "), pgi->Macro.szName);
+				break;
+			default:												// Unknown -- ignore
+				continue;
+			}
+
+			nPad = 16 - strlen(pgi->Macro.szName);
+			for (INT32 j = 0; j < nPad; j++) {
+				_ftprintf(h, _T(" "));
+			}
+			_ftprintf(h, _T("%s\n"), InpMacroToString(pgi));
+		}
+	}
+
+	return 0;
+}
+
 static void SaveHardwarePreset()
 {
-	TCHAR *szDefaultCpsFile = _T("config\\presets\\cps.ini");
-	TCHAR *szDefaultNeogeoFile = _T("config\\presets\\neogeo.ini");
-	TCHAR *szDefaultPgmFile = _T("config\\presets\\pgm.ini");
 	TCHAR *szFileName = _T("config\\presets\\preset.ini");
 	TCHAR *szHardwareString = _T("Generic hardware");
-	
+
 	int nHardwareFlag = (BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK);
 
-	if (nHardwareFlag == HARDWARE_CAPCOM_CPS1 || nHardwareFlag == HARDWARE_CAPCOM_CPS1_QSOUND || nHardwareFlag == HARDWARE_CAPCOM_CPS1_GENERIC || nHardwareFlag == HARDWARE_CAPCOM_CPSCHANGER || nHardwareFlag == HARDWARE_CAPCOM_CPS2 || nHardwareFlag == HARDWARE_CAPCOM_CPS3) {
-		szFileName = szDefaultCpsFile;
-		szHardwareString = _T("CPS-1/CPS-2/CPS-3 hardware");
+	// See if nHardwareFlag belongs to any systems (nes.ini, neogeo.ini, etc) in gamehw_config (see: burner/gami.cpp)
+	for (INT32 i = 0; gamehw_cfg[i].ini[0] != '\0'; i++) {
+		for (INT32 hw = 0; gamehw_cfg[i].hw[hw] != 0; hw++) {
+			if (gamehw_cfg[i].hw[hw] == nHardwareFlag)
+			{
+				szFileName = gamehw_cfg[i].ini;
+				szHardwareString = gamehw_cfg[i].system;
+				break;
+			}
+		}
 	}
-	
-	if (nHardwareFlag == HARDWARE_SNK_NEOGEO) {
-		szFileName = szDefaultNeogeoFile;
-		szHardwareString = _T("Neo-Geo hardware");
-	}
-	
-	if (nHardwareFlag == HARDWARE_IGS_PGM) {
-		szFileName = szDefaultPgmFile;
-		szHardwareString = _T("PGM hardware");
-	}
-	
+
 	FILE *fp = _tfopen(szFileName, _T("wt"));
 	if (fp) {
 		_ftprintf(fp, _T(APP_TITLE) _T(" - Hardware Default Preset\n\n"));
 		_ftprintf(fp, _T("%s\n\n"), szHardwareString);
 		_ftprintf(fp, _T("version 0x%06X\n\n"), nBurnVer);
-		GameInpWrite(fp);
+		HardwarePresetWrite(fp);
 		fclose(fp);
 	}
-	
+
+	// add to dropdown (if not already there)
+	TCHAR szPresetName[MAX_PATH] = _T("");
+	int iCBItem = 0;
+
+	memcpy(szPresetName, szFileName + 15, (_tcslen(szFileName) - 19) * sizeof(TCHAR));
+	iCBItem = SendMessage(hInpdPci, CB_FINDSTRING, -1, (LPARAM)szPresetName);
+	if (iCBItem == -1) SendMessage(hInpdPci, CB_ADDSTRING, 0, (LPARAM)szPresetName);
+
+	// confirm to user
 	FBAPopupAddText(PUF_TEXT_DEFAULT, MAKEINTRESOURCE(IDS_PRESET_SAVED), szFileName);
 	FBAPopupDisplay(PUF_TYPE_INFO);
 }
@@ -690,19 +752,95 @@ int UsePreset(bool bMakeDefault)
 	return 0;
 }
 
+static void SliderInit() // Analog sensitivity slider
+{
+	// Initialise slider
+	SendDlgItemMessage(hInpdDlg, IDC_INPD_ANSLIDER, TBM_SETRANGE, (WPARAM)0, (LPARAM)MAKELONG(0x40, 0x0400));
+	SendDlgItemMessage(hInpdDlg, IDC_INPD_ANSLIDER, TBM_SETLINESIZE, (WPARAM)0, (LPARAM)0x05);
+	SendDlgItemMessage(hInpdDlg, IDC_INPD_ANSLIDER, TBM_SETPAGESIZE, (WPARAM)0, (LPARAM)0x10);
+	SendDlgItemMessage(hInpdDlg, IDC_INPD_ANSLIDER, TBM_SETTIC, (WPARAM)0, (LPARAM)0x0100);
+	SendDlgItemMessage(hInpdDlg, IDC_INPD_ANSLIDER, TBM_SETTIC, (WPARAM)0, (LPARAM)0x0200);
+	SendDlgItemMessage(hInpdDlg, IDC_INPD_ANSLIDER, TBM_SETTIC, (WPARAM)0, (LPARAM)0x0300);
+	SendDlgItemMessage(hInpdDlg, IDC_INPD_ANSLIDER, TBM_SETTIC, (WPARAM)0, (LPARAM)0x0400);
+
+	// Set slider to current value
+	SendDlgItemMessage(hInpdDlg, IDC_INPD_ANSLIDER, TBM_SETPOS, (WPARAM)true, (LPARAM)nAnalogSpeed);
+
+	// Set the edit control to current value
+	TCHAR szText[16];
+	_stprintf(szText, _T("%i"), nAnalogSpeed * 100 / 256);
+	SendDlgItemMessage(hInpdDlg, IDC_INPD_ANEDIT, WM_SETTEXT, (WPARAM)0, (LPARAM)szText);
+}
+
+static void SliderUpdate()
+{
+	TCHAR szText[16] = _T("");
+	bool bValid = 1;
+	int nValue;
+
+	if (SendDlgItemMessage(hInpdDlg, IDC_INPD_ANEDIT, WM_GETTEXTLENGTH, (WPARAM)0, (LPARAM)0) < 16) {
+		SendDlgItemMessage(hInpdDlg, IDC_INPD_ANEDIT, WM_GETTEXT, (WPARAM)16, (LPARAM)szText);
+	}
+
+	// Scan string in the edit control for illegal characters
+	for (int i = 0; szText[i]; i++) {
+		if (!_istdigit(szText[i])) {
+			bValid = 0;
+			break;
+		}
+	}
+
+	if (bValid) {
+		nValue = _tcstol(szText, NULL, 0);
+		if (nValue < 25) {
+			nValue = 25;
+		} else {
+			if (nValue > 400) {
+				nValue = 400;
+			}
+		}
+
+		nValue = (int)((double)nValue * 256.0 / 100.0 + 0.5);
+
+		// Set slider to current value
+		SendDlgItemMessage(hInpdDlg, IDC_INPD_ANSLIDER, TBM_SETPOS, (WPARAM)true, (LPARAM)nValue);
+	}
+}
+
+static void SliderExit()
+{
+	TCHAR szText[16] = _T("");
+	INT32 nVal = 0;
+
+	SendDlgItemMessage(hInpdDlg, IDC_INPD_ANEDIT, WM_GETTEXT, (WPARAM)16, (LPARAM)szText);
+	nVal = _tcstol(szText, NULL, 0);
+	if (nVal < 25) {
+		nVal = 25;
+	} else {
+		if (nVal > 400) {
+			nVal = 400;
+		}
+	}
+
+	nAnalogSpeed = (int)((double)nVal * 256.0 / 100.0 + 0.5);
+	bprintf(0, _T("  * Analog Speed: %X\n"), nAnalogSpeed);
+}
+
 static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
 	if (Msg == WM_INITDIALOG) {
 		hInpdDlg = hDlg;
 		InpdInit();
+		SliderInit();
 		if (!kNetGame && bAutoPause) {
 			bRunPause = 1;
 		}
-		
+
 		return TRUE;
 	}
 
 	if (Msg == WM_CLOSE) {
+		SliderExit();
 		EnableWindow(hScrnWnd, TRUE);
 		DestroyWindow(hInpdDlg);
 		return 0;
@@ -721,7 +859,25 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 			ListItemActivate();
 			return 0;
 		}
-		if (Id == IDCANCEL && Notify == BN_CLICKED) {
+		if (Id == IDCANCEL && Notify == BN_CLICKED) {  // Save the state of auto-fire before sending WM_CLOSE messages
+			struct GameInp* pgi = GameInp;
+			int nCount = SendMessage(hInpdList, LVM_GETITEMCOUNT, 0, 0);
+
+			if (nCount > 0)
+				for (int i = 0; i < nCount; i++, pgi++) {
+					// Setting Auto-Fire
+					pgi->Macro.nSysMacro = ListView_GetCheckState(hInpdList, i) ? 15 : 0;
+					// Exclude system macros
+					if ((_stricmp("System Pause", pgi->Macro.szName) == 0 ||
+						_stricmp("System FFWD", pgi->Macro.szName) == 0 ||
+						_stricmp("System Load State", pgi->Macro.szName) == 0 ||
+						_stricmp("System Save State", pgi->Macro.szName) == 0 ||
+						_stricmp("System UNDO State", pgi->Macro.szName) == 0) &&
+						pgi->Macro.nSysMacro > 1)
+						pgi->Macro.nSysMacro = 1;
+				}
+
+
 			SendMessage(hDlg, WM_CLOSE, 0, 0);
 			return 0;
 		}
@@ -732,7 +888,7 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 
 			return 0;
 		}
-		
+
 		if (Id == IDC_INPD_SAVE_AS_PRESET && Notify == BN_CLICKED) {
 			SaveHardwarePreset();
 			return 0;
@@ -752,6 +908,12 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 			UsePreset(true);
 
 			InpdListMake(0);								// refresh view
+
+			return 0;
+		}
+
+		if (Notify == EN_UPDATE) {                          // analog slider update
+			SliderUpdate();
 
 			return 0;
 		}
@@ -829,9 +991,38 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 
 	}
 
+	if (Msg == WM_HSCROLL) { // Analog Slider updates
+		switch (LOWORD(wParam)) {
+			case TB_BOTTOM:
+			case TB_ENDTRACK:
+			case TB_LINEDOWN:
+			case TB_LINEUP:
+			case TB_PAGEDOWN:
+			case TB_PAGEUP:
+			case TB_THUMBPOSITION:
+			case TB_THUMBTRACK:
+			case TB_TOP: {
+				TCHAR szText[16] = _T("");
+				int nValue;
+
+				// Update the contents of the edit control
+				nValue = SendDlgItemMessage(hDlg, IDC_INPD_ANSLIDER, TBM_GETPOS, (WPARAM)0, (LPARAM)0);
+				nValue = (int)((double)nValue * 100.0 / 256.0 + 0.5);
+				_stprintf(szText, _T("%i"), nValue);
+				SendDlgItemMessage(hDlg, IDC_INPD_ANEDIT, WM_SETTEXT, (WPARAM)0, (LPARAM)szText);
+				break;
+			}
+		}
+
+		return 0;
+	}
+
 	if (Msg == WM_NOTIFY && lParam != 0) {
 		int Id = LOWORD(wParam);
 		NMHDR* pnm = (NMHDR*)lParam;
+
+		struct GameInp* pgi = NULL;
+		struct BurnInputInfo bii;
 
 		if (Id == IDC_INPD_LIST && pnm->code == LVN_ITEMACTIVATE) {
 			ListItemActivate();
@@ -842,13 +1033,41 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				ListItemDelete();
 			}
 		}
+		if (Id == IDC_INPD_LIST && pnm->code == LVN_ITEMCHANGED) {
+			/* Clear the checkboxs before the non Marco buttons 
+			   After that, you should not access these checkboxes that have been eliminated
+			   Otherwise, the program will throw an exception due to incorrect access */
+			NMLISTVIEW* pNMListView = (NMLISTVIEW*)pnm;
+			pgi = GameInp + pNMListView->iItem;
 
+			LVITEM LvItem;
+			memset(&LvItem, 0, sizeof(LvItem));
+
+			memset(&bii, 0, sizeof(bii));
+			BurnDrvGetInputInfo(&bii, pNMListView->iItem);
+
+			if (pgi->Macro.nSysMacro == 1 || bii.szName) {
+				LvItem.iItem = pNMListView->iItem;
+				LvItem.mask = LVIF_STATE;
+				LvItem.stateMask = LVIS_STATEIMAGEMASK;
+				LvItem.state = 0;
+
+				SendMessage(hInpdList, LVM_SETITEM, 0, (LPARAM)&LvItem);
+			}
+			// Avoid accessing checkboxes that have been eliminated
+			if (! pgi->Input.pVal && pgi->Macro.nSysMacro !=1 && pgi->Macro.szName)
+				// Check that the checkbox is properly checked
+				if (ListView_GetCheckState(hInpdList, pNMListView->iItem)){
+					ListView_SetCheckState(hInpdList, pNMListView->iItem, 0);
+					MessageBox(hInpdDlg, FBALoadStringEx(hAppInst, IDS_ERR_MACRO_NOT_MAPPING, true), NULL, MB_ICONWARNING);
+				}
+		}
 		if (Id == IDC_INPD_LIST && pnm->code == NM_CUSTOMDRAW) {
 			NMLVCUSTOMDRAW* plvcd = (NMLVCUSTOMDRAW*)lParam;
 
 			switch (plvcd->nmcd.dwDrawStage) {
 				case CDDS_PREPAINT:
-                    SetWindowLongPtr(hInpdDlg, DWLP_MSGRESULT, CDRF_NOTIFYITEMDRAW);
+					SetWindowLongPtr(hInpdDlg, DWLP_MSGRESULT, CDRF_NOTIFYITEMDRAW);
 					return 1;
 				case CDDS_ITEMPREPAINT:
 					if (plvcd->nmcd.dwItemSpec < nGameInpCount) {
@@ -883,6 +1102,7 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 					return 1;
 			}
 		}
+
 		return 0;
 	}
 
@@ -904,7 +1124,7 @@ int InpdCreate()
 
 	WndInMid(hInpdDlg, hScrnWnd);
 	ShowWindow(hInpdDlg, SW_NORMAL);
-	
+
 	return 0;
 }
 

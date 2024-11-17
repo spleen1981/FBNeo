@@ -12,6 +12,7 @@ int nIpsSelectedLanguage		= 0;
 static TCHAR szFullName[1024];
 static TCHAR szLanguages[NUM_LANGUAGES][32];
 static TCHAR szLanguageCodes[NUM_LANGUAGES][6];
+static TCHAR szPngName[MAX_PATH];
 
 static HTREEITEM hItemHandles[MAX_NODES];
 
@@ -23,6 +24,10 @@ static TCHAR szPatchFileNames[MAX_NODES][MAX_PATH];
 static HBRUSH hWhiteBGBrush;
 static HBITMAP hBmp			= NULL;
 static HBITMAP hPreview		= NULL;
+
+static TCHAR szDriverName[32];
+
+INT32 nIpsMaxFileLen = 0;
 
 TCHAR szIpsActivePatches[MAX_ACTIVE_PATCHES][MAX_PATH];
 
@@ -45,8 +50,8 @@ TCHAR szIpsActivePatches[MAX_ACTIVE_PATCHES][MAX_PATH];
 static TCHAR* GameIpsConfigName()
 {
 	// Return the path of the config file for this game
-	static TCHAR szName[32];
-	_stprintf(szName, _T("config\\ips\\%s.ini"), BurnDrvGetText(DRV_NAME));
+	static TCHAR szName[64];
+	_stprintf(szName, _T("config\\ips\\%s.ini"), szDriverName);
 	return szName;
 }
 
@@ -59,7 +64,7 @@ int GetIpsNumPatches()
 
 	_stprintf(szFilePath, _T("%s%s\\"), szAppIpsPath, BurnDrvGetText(DRV_NAME));
 	_tcscat(szFilePath, _T("*.dat"));
-	
+
 	hSearch = FindFirstFile(szFilePath, &wfd);
 
 	if (hSearch != INVALID_HANDLE_VALUE) {
@@ -80,22 +85,22 @@ static TCHAR* GetPatchDescByLangcode(FILE* fp, int nLang)
 {
 	TCHAR* result = NULL;
 	char* desc = NULL;
-	char langtag[8];
+	char langtag[10];
 
 	sprintf(langtag, "[%s]", TCHARToANSI(szLanguageCodes[nLang], NULL, 0));
-	
+
 	fseek(fp, 0, SEEK_SET);
 
 	while (!feof(fp))
 	{
 		char s[4096];
 
-		if (fgets(s, sizeof s, fp) != NULL)
+		if (fgets(s, sizeof(s), fp) != NULL)
 		{
 			if (strncmp(langtag, s, strlen(langtag)) != 0)
 				continue;
 
-			while (fgets(s, sizeof s, fp) != NULL)
+			while (fgets(s, sizeof(s), fp) != NULL)
 			{
 				char* p;
 
@@ -122,7 +127,7 @@ static TCHAR* GetPatchDescByLangcode(FILE* fp, int nLang)
 						break;
 					}
 				}
-				
+
 				if (desc)
 				{
 					char* p1;
@@ -169,48 +174,62 @@ static void FillListBox()
 	TCHAR *PatchDesc = NULL;
 	TCHAR PatchName[256];
 	int nHandlePos = 0;
-	
+
 	TV_INSERTSTRUCT TvItem;
-	
+
 	memset(&TvItem, 0, sizeof(TvItem));
 	TvItem.item.mask = TVIF_TEXT | TVIF_PARAM;
 	TvItem.hInsertAfter = TVI_LAST;
 
-	_stprintf(szFilePath, _T("%s%s\\"), szAppIpsPath, BurnDrvGetText(DRV_NAME));
+	_stprintf(szFilePath, _T("%s%s\\"), szAppIpsPath, szDriverName);
 	_stprintf(szFilePathSearch, _T("%s*.dat"), szFilePath);
-	
+
 	hSearch = FindFirstFile(szFilePathSearch, &wfd);
 
 	if (hSearch != INVALID_HANDLE_VALUE) {
 		int Done = 0;
-		
+
 		while (!Done ) {
-			memset(szFileName, '\0', MAX_PATH);
+			memset(szFileName, '\0', MAX_PATH * sizeof(TCHAR));
 			_stprintf(szFileName, _T("%s%s"), szFilePath, wfd.cFileName);
-			
+
 			FILE *fp = _tfopen(szFileName, _T("r"));
-			if (fp) {
+            if (fp) {
+                bool AllocDesc = false;
 				PatchDesc = NULL;
-				memset(PatchName, '\0', 256);
-				
+				memset(PatchName, '\0', 256 * sizeof(TCHAR));
+
 				PatchDesc = GetPatchDescByLangcode(fp, nIpsSelectedLanguage);
 				// If not available - try English first
 				if (PatchDesc == NULL) PatchDesc = GetPatchDescByLangcode(fp, 0);
 				// Simplified Chinese is the reference language (should always be available!!)
 				if (PatchDesc == NULL) PatchDesc = GetPatchDescByLangcode(fp, 1);
-				
+
+				bprintf(0, _T("PatchDesc [%s]\n"), PatchDesc);
+
+                if (PatchDesc == NULL) {
+                    PatchDesc = (TCHAR*)malloc(1024);
+                    memset(PatchDesc, 0, 1024);
+                    AllocDesc = true;
+                    _stprintf(PatchDesc, _T("%s"), wfd.cFileName);
+                }
+
 				for (unsigned int i = 0; i < _tcslen(PatchDesc); i++) {
 					if (PatchDesc[i] == '\r' || PatchDesc[i] == '\n') break;
-					PatchName[i] = PatchDesc[i];					
+					PatchName[i] = PatchDesc[i];
 				}
-				
+
+                if (AllocDesc) {
+                    free(PatchDesc);
+                }
+
 				// Check for categories
 				TCHAR *Tokens;
 				int nNumTokens = 0;
 				int nNumNodes = 0;
 				TCHAR szCategory[256];
 				unsigned int nPatchNameLength = _tcslen(PatchName);
-								
+
 				Tokens = _tcstok(PatchName, _T("/"));
 				while (Tokens != NULL) {
 					if (nNumTokens == 0) {
@@ -229,21 +248,21 @@ static void FillListBox()
 
 							if (!_tcsicmp(Tvi.pszText, Tokens)) bAddItem = 0;
 						}
-						
+
 						if (bAddItem) {
 							TvItem.hParent = TVI_ROOT;
 							TvItem.item.pszText = Tokens;
 							hItemHandles[nHandlePos] = (HTREEITEM)SendMessage(hIpsList, TVM_INSERTITEM, 0, (LPARAM)&TvItem);
 							nHandlePos++;
 						}
-						
+
 						if (_tcslen(Tokens) == nPatchNameLength) {
 							hPatchHandlesIndex[nPatchIndex] = hItemHandles[nHandlePos - 1];
 							_tcscpy(szPatchFileNames[nPatchIndex], szFileName);
-						
+
 							nPatchIndex++;
 						}
-						
+
 						_tcscpy(szCategory, Tokens);
 					} else {
 						HTREEITEM hNode = TVI_ROOT;
@@ -261,22 +280,22 @@ static void FillListBox()
 
 							if (!_tcsicmp(Tvi.pszText, szCategory)) hNode = Tvi.hItem;
 						}
-						
+
 						TvItem.hParent = hNode;
 						TvItem.item.pszText = Tokens;
 						hItemHandles[nHandlePos] = (HTREEITEM)SendMessage(hIpsList, TVM_INSERTITEM, 0, (LPARAM)&TvItem);
-												
+
 						hPatchHandlesIndex[nPatchIndex] = hItemHandles[nHandlePos];
 						_tcscpy(szPatchFileNames[nPatchIndex], szFileName);
-						
+
 						nHandlePos++;
 						nPatchIndex++;
 					}
-					
+
 					Tokens = _tcstok(NULL, _T("/"));
 					nNumTokens++;
 				}
-				
+
 				fclose(fp);
 			}
 
@@ -285,9 +304,9 @@ static void FillListBox()
 
 		FindClose(hSearch);
 	}
-	
+
 	nNumPatches = nPatchIndex;
-	
+
 	// Expand all branches
 	int nNumNodes = SendMessage(hIpsList, TVM_GETCOUNT, (WPARAM)0, (LPARAM)0);;
 	for (int i = 0; i < nNumNodes; i++) {
@@ -298,51 +317,53 @@ static void FillListBox()
 int GetIpsNumActivePatches()
 {
 	int nActivePatches = 0;
-	
+
 	for (int i = 0; i < MAX_ACTIVE_PATCHES; i++) {
 		if (_tcsicmp(szIpsActivePatches[i], _T(""))) nActivePatches++;
 	}
-	
+
 	return nActivePatches;
 }
 
 void LoadIpsActivePatches()
 {
+    _tcscpy(szDriverName, BurnDrvGetText(DRV_NAME));
+
 	for (int i = 0; i < MAX_ACTIVE_PATCHES; i++) {
 		_stprintf(szIpsActivePatches[i], _T(""));
 	}
-	
+
 	FILE* fp = _tfopen(GameIpsConfigName(), _T("rt"));
 	TCHAR szLine[MAX_PATH];
 	int nActivePatches = 0;
-	
-	if (fp) {
+
+    if (fp) {
 		while (_fgetts(szLine, sizeof(szLine), fp)) {
 			int nLen = _tcslen(szLine);
-			
+
 			// Get rid of the linefeed at the end
 			if (szLine[nLen - 1] == 10) {
 				szLine[nLen - 1] = 0;
 				nLen--;
 			}
-			
+
 			if (!_tcsnicmp(szLine, _T("//"), 2)) continue;
 			if (!_tcsicmp(szLine, _T(""))) continue;
-			
-			_stprintf(szIpsActivePatches[nActivePatches], _T("%s%s\\%s"), szAppIpsPath, BurnDrvGetText(DRV_NAME), szLine);
+
+			_stprintf(szIpsActivePatches[nActivePatches], _T("%s%s\\%s"), szAppIpsPath, szDriverName, szLine);
 			nActivePatches++;
-		}		
-		
+		}
+
 		fclose(fp);
-	}
+    }
 }
 
 static void CheckActivePatches()
 {
 	LoadIpsActivePatches();
-	
+
 	int nActivePatches = GetIpsNumActivePatches();
-	
+
 	for (int i = 0; i < nActivePatches; i++) {
 		for (int j = 0; j < nNumPatches; j++) {
 			if (!_tcsicmp(szIpsActivePatches[i], szPatchFileNames[j])) {
@@ -360,7 +381,7 @@ static int IpsManagerInit()
 	TCHAR* pszName = BurnDrvGetText(DRV_FULLNAME);
 
 	pszPosition += _sntprintf(szText, 1024, pszName);
-	
+
 	pszName = BurnDrvGetText(DRV_FULLNAME);
 	while ((pszName = BurnDrvGetText(DRV_NEXTNAME | DRV_FULLNAME)) != NULL) {
 		if (pszPosition + _tcslen(pszName) - 1024 > szText) {
@@ -368,14 +389,14 @@ static int IpsManagerInit()
 		}
 		pszPosition += _stprintf(pszPosition, _T(SEPERATOR_2) _T("%s"), pszName);
 	}
-	
+
 	_tcscpy(szFullName, szText);
-	
+
 	_stprintf(szText, _T("%s") _T(SEPERATOR_1) _T("%s"), FBALoadStringEx(hAppInst, IDS_IPSMANAGER_TITLE, true), szFullName);
-	
+
 	// Set the window caption
 	SetWindowText(hIpsDlg, szText);
-	
+
 	// Fill the combo box
 	_stprintf(szLanguages[0], FBALoadStringEx(hAppInst, IDS_LANG_ENGLISH_US, true));
 	_stprintf(szLanguages[1], FBALoadStringEx(hAppInst, IDS_LANG_SIMP_CHINESE, true));
@@ -389,7 +410,7 @@ static int IpsManagerInit()
 	_stprintf(szLanguages[9], FBALoadStringEx(hAppInst, IDS_LANG_PORTUGUESE, true));
 	_stprintf(szLanguages[10], FBALoadStringEx(hAppInst, IDS_LANG_POLISH, true));
 	_stprintf(szLanguages[11], FBALoadStringEx(hAppInst, IDS_LANG_HUNGARIAN, true));
-	
+
 	_stprintf(szLanguageCodes[0], _T("en_US"));
 	_stprintf(szLanguageCodes[1], _T("zh_CN"));
 	_stprintf(szLanguageCodes[2], _T("zh_TW"));
@@ -406,34 +427,37 @@ static int IpsManagerInit()
 	for (int i = 0; i < NUM_LANGUAGES; i++) {
 		SendDlgItemMessage(hIpsDlg, IDC_CHOOSE_LIST, CB_ADDSTRING, 0, (LPARAM)&szLanguages[i]);
 	}
-	
+
 	SendDlgItemMessage(hIpsDlg, IDC_CHOOSE_LIST, CB_SETCURSEL, (WPARAM)nIpsSelectedLanguage, (LPARAM)0);
-	
+
 	hIpsList = GetDlgItem(hIpsDlg, IDC_TREE1);
-	
+
+	_tcscpy(szDriverName, BurnDrvGetText(DRV_NAME));
+
 	FillListBox();
-	
+
 	CheckActivePatches();
-	
+
 	return 0;
 }
 
 static void RefreshPatch()
 {
+	szPngName[0] = _T('\0');  // Reset the file name of the preview picture
 	SendMessage(GetDlgItem(hIpsDlg, IDC_TEXTCOMMENT), WM_SETTEXT, (WPARAM)0, (LPARAM)NULL);
 	SendDlgItemMessage(hIpsDlg, IDC_SCREENSHOT_H, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hPreview);
-				
+
 	HTREEITEM hSelectHandle = (HTREEITEM)SendMessage(hIpsList, TVM_GETNEXTITEM, TVGN_CARET, ~0U);
-				
+
 	if (hBmp) {
 		DeleteObject((HGDIOBJ)hBmp);
 		hBmp = NULL;
 	}
-				
+
 	for (int i = 0; i < nNumPatches; i++) {
 		if (hSelectHandle == hPatchHandlesIndex[i]) {
 			TCHAR *PatchDesc = NULL;
-						
+
 			FILE *fp = _tfopen(szPatchFileNames[i], _T("r"));
 			if (fp) {
 				PatchDesc = GetPatchDescByLangcode(fp, nIpsSelectedLanguage);
@@ -441,28 +465,29 @@ static void RefreshPatch()
 				if (PatchDesc == NULL) PatchDesc = GetPatchDescByLangcode(fp, 0);
 				// Simplified Chinese is the reference language (should always be available!!)
 				if (PatchDesc == NULL) PatchDesc = GetPatchDescByLangcode(fp, 1);
-												
+
 				SendMessage(GetDlgItem(hIpsDlg, IDC_TEXTCOMMENT), WM_SETTEXT, (WPARAM)0, (LPARAM)PatchDesc);
-							
+
 				fclose(fp);
 			}
 			fp = NULL;
-						
+
 			TCHAR szImageFileName[MAX_PATH];
 			szImageFileName[0] = _T('\0');
-						
+
 			_tcscpy(szImageFileName, szPatchFileNames[i]);
 			szImageFileName[_tcslen(szImageFileName) - 3] = _T('p');
 			szImageFileName[_tcslen(szImageFileName) - 2] = _T('n');
 			szImageFileName[_tcslen(szImageFileName) - 1] = _T('g');
-			
+
 			fp = _tfopen(szImageFileName, _T("rb"));
 			HBITMAP hNewImage = NULL;
 			if (fp) {
+				_tcscpy(szPngName, szImageFileName);  // Associated preview picture
 				hNewImage = PNGLoadBitmap(hIpsDlg, fp, 304, 228, 3);
 				fclose(fp);
 			}
-						
+
 			if (hNewImage) {
 				DeleteObject((HGDIOBJ)hBmp);
 				hBmp = hNewImage;
@@ -477,24 +502,24 @@ static void RefreshPatch()
 static void SavePatches()
 {
 	int nActivePatches = 0;
-	
+
 	for (int i = 0; i < MAX_ACTIVE_PATCHES; i++) {
 		_stprintf(szIpsActivePatches[i], _T(""));
 	}
-	
+
 	for (int i = 0; i < nNumPatches; i++) {
 		int nChecked = _TreeView_GetCheckState(hIpsList, hPatchHandlesIndex[i]);
-		
+
 		if (nChecked) {
 			_tcscpy(szIpsActivePatches[nActivePatches], szPatchFileNames[i]);
 			nActivePatches++;
 		}
 	}
-	
+
 	FILE* fp = _tfopen(GameIpsConfigName(), _T("wt"));
-	
+
 	if (fp) {
-		_ftprintf(fp, _T("// ") _T(APP_TITLE) _T(" v%s --- IPS Config File for %s (%s)\n\n"), szAppBurnVer, BurnDrvGetText(DRV_NAME), ANSIToTCHAR(BurnDrvGetTextA(DRV_FULLNAME), NULL, 0));
+		_ftprintf(fp, _T("// ") _T(APP_TITLE) _T(" v%s --- IPS Config File for %s (%s)\n\n"), szAppBurnVer, szDriverName, szFullName);
 		for (int i = 0; i < nActivePatches; i++) {
 			TCHAR *Tokens;
 			TCHAR szFileName[MAX_PATH];
@@ -503,8 +528,8 @@ static void SavePatches()
 				szFileName[0] = _T('\0');
 				_tcscpy(szFileName, Tokens);
 				Tokens = _tcstok(NULL, _T("\\"));
-			}		
-			
+			}
+
 			_ftprintf(fp, _T("%s\n"), szFileName);
 		}
 		fclose(fp);
@@ -514,36 +539,36 @@ static void SavePatches()
 static void IpsManagerExit()
 {
 	SendDlgItemMessage(hIpsDlg, IDC_SCREENSHOT_H, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)NULL);
-	
+
 	for (int i = 0; i < NUM_LANGUAGES; i++) {
 		szLanguages[i][0] = _T('\0');
 		szLanguageCodes[i][0] = _T('\0');
 	}
-	
-	memset(hItemHandles, 0, MAX_NODES);
-	memset(hPatchHandlesIndex, 0, MAX_NODES);
+
+	memset(hItemHandles, 0, MAX_NODES * sizeof(HTREEITEM));
+	memset(hPatchHandlesIndex, 0, MAX_NODES * sizeof(HTREEITEM));
 
 	nPatchIndex = 0;
 	nNumPatches = 0;
-	
+
 	for (int i = 0; i < MAX_NODES; i++) {
 		szPatchFileNames[i][0] = _T('\0');
 	}
-	
+
 	if (hBmp) {
 		DeleteObject((HGDIOBJ)hBmp);
 		hBmp = NULL;
 	}
-	
+
 	if (hPreview) {
 		DeleteObject((HGDIOBJ)hPreview);
 		hPreview = NULL;
 	}
-	
+
 	DeleteObject(hWhiteBGBrush);
-	
+
 	hParent = NULL;
-	
+
 	EndDialog(hIpsDlg, 0);
 }
 
@@ -558,39 +583,67 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 	switch (Msg) {
 		case WM_INITDIALOG: {
 			hIpsDlg = hDlg;
-			
+
 			hWhiteBGBrush = CreateSolidBrush(RGB(0xFF,0xFF,0xFF));
 			hPreview = PNGLoadBitmap(hIpsDlg, NULL, 304, 228, 2);
 			SendDlgItemMessage(hIpsDlg, IDC_SCREENSHOT_H, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hPreview);
-			
+
 			LONG_PTR Style;
 			Style = GetWindowLongPtr (GetDlgItem(hIpsDlg, IDC_TREE1), GWL_STYLE);
 			Style |= TVS_CHECKBOXES;
 			SetWindowLongPtr (GetDlgItem(hIpsDlg, IDC_TREE1), GWL_STYLE, Style);
-		
-			IpsManagerInit();
 
+			IpsManagerInit();
+			int nBurnDrvActiveOld = nBurnDrvActive;		// RockyWall Add
 			WndInMid(hDlg, hScrnWnd);
-			SetFocus(hDlg);											// Enable Esc=close
+			SetFocus(hDlg);								// Enable Esc=close
+			nBurnDrvActive = nBurnDrvActiveOld;			// RockyWall Add
 			break;
 		}
-		
+
+		case WM_LBUTTONDBLCLK: {
+			RECT PreviewRect;
+			POINT Point;
+
+			memset(&PreviewRect, 0, sizeof(RECT));
+			memset(&Point, 0, sizeof(POINT));
+
+			if (GetCursorPos(&Point) && GetWindowRect(GetDlgItem(hIpsDlg, IDC_SCREENSHOT_H), &PreviewRect)) {
+				if (PtInRect(&PreviewRect, Point)) {
+					FILE* fp = NULL;
+
+					fp = _tfopen(szPngName, _T("rb"));
+					if (fp) {
+						fclose(fp);
+						ShellExecute(  // Open the image with the associated program
+							GetDlgItem(hIpsDlg, IDC_SCREENSHOT_H),
+							NULL,
+							szPngName,
+							NULL,
+							NULL,
+							SW_SHOWNORMAL);
+					}
+				}
+			}
+			return 0;
+		}
+
 		case WM_COMMAND: {
 			int wID = LOWORD(wParam);
 			int Notify = HIWORD(wParam);
-						
+
 			if (Notify == BN_CLICKED) {
 				switch (wID) {
 					case IDOK: {
 						IpsOkay();
 						break;
 					}
-				
+
 					case IDCANCEL: {
 						SendMessage(hDlg, WM_CLOSE, 0, 0);
 						return 0;
 					}
-					
+
 					case IDC_IPSMAN_DESELECTALL: {
 						for (int i = 0; i < nNumPatches; i++) {
 							for (int j = 0; j < nNumPatches; j++) {
@@ -601,7 +654,7 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 					}
 				}
 			}
-			
+
 			if (wID == IDC_CHOOSE_LIST && Notify == CBN_SELCHANGE) {
 				nIpsSelectedLanguage = SendMessage(GetDlgItem(hIpsDlg, IDC_CHOOSE_LIST), CB_GETCURSEL, 0, 0);
 				TreeView_DeleteAllItems(hIpsList);
@@ -609,26 +662,25 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				RefreshPatch();
 				return 0;
 			}
-			
 			break;
 		}
-		
+
 		case WM_NOTIFY: {
 			NMHDR* pNmHdr = (NMHDR*)lParam;
-			
+
 			if (LOWORD(wParam) == IDC_TREE1 && pNmHdr->code == TVN_SELCHANGED) {
 				RefreshPatch();
-				
+
 				return 1;
 			}
-			
+
 			if (LOWORD(wParam) == IDC_TREE1 && pNmHdr->code == NM_DBLCLK) {
 				// disable double-click node-expand
 				SetWindowLongPtr(hIpsDlg, DWLP_MSGRESULT, 1);
 
 				return 1;
 			}
-			
+
 			if (LOWORD(wParam) == IDC_TREE1 && pNmHdr->code == NM_CLICK) {
 				POINT cursorPos;
 				GetCursorPos(&cursorPos);
@@ -641,21 +693,28 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				if (thi.flags == TVHT_ONITEMSTATEICON) {
 					TreeView_SelectItem(hIpsList, thi.hItem);
 				}
-			
+
+				return 1;
+			}
+
+			if (LOWORD(wParam) == IDC_CHOOSE_LIST && pNmHdr->code == NM_DBLCLK) {
+				// disable double-click node-expand
+				SetWindowLongPtr(hIpsDlg, DWLP_MSGRESULT, 1);
+
 				return 1;
 			}
 
 			SetWindowLongPtr(hIpsDlg, DWLP_MSGRESULT, CDRF_DODEFAULT);
 			return 1;
 		}
-	
+
 		case WM_CTLCOLORSTATIC: {
 			if ((HWND)lParam == GetDlgItem(hIpsDlg, IDC_TEXTCOMMENT)) {
 				return (INT_PTR)hWhiteBGBrush;
 			}
 			break;
 		}
-		
+
 		case WM_CLOSE: {
 			IpsManagerExit();
 			break;
@@ -668,7 +727,7 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 int IpsManagerCreate(HWND hParentWND)
 {
 	hParent = hParentWND;
-	
+
 	FBADialogBox(hAppInst, MAKEINTRESOURCE(IDD_IPS_MANAGER), hParent, (DLGPROC)DefInpProc);
 	return 1;
 }
@@ -688,10 +747,10 @@ int IpsManagerCreate(HWND hParentWND)
 #define BYTE2_TO_UINT(bp) \
     (((unsigned int)(bp)[0] << 8) & 0xFF00) | \
     ((unsigned int) (bp)[1] & 0x00FF)
-    
+
 bool bDoIpsPatch = FALSE;
 
-static void PatchFile(const char* ips_path, UINT8* base)
+static void PatchFile(const char* ips_path, UINT8* base, bool readonly)
 {
 	char buf[6];
 	FILE* f = NULL;
@@ -701,15 +760,17 @@ static void PatchFile(const char* ips_path, UINT8* base)
 	if (NULL == (f = fopen(ips_path, "rb")))
 		return;
 
-	memset(buf, 0, sizeof buf);
+	memset(buf, 0, sizeof(buf));
 	fread(buf, 1, 5, f);
 	if (strcmp(buf, IPS_SIGNATURE)) {
+		bprintf(0, _T("IPS - Bad IPS-Signature in: %S.\n"), ips_path);
 		if (f)
 		{
 			fclose(f);
 		}
 		return;
 	} else {
+		bprintf(0, _T("IPS - Patching with: %S.\n"), ips_path);
 		UINT8 ch = 0;
 		int bRLE = 0;
 		while (!feof(f)) {
@@ -734,8 +795,13 @@ static void PatchFile(const char* ips_path, UINT8* base)
 
 			while (Size--) {
 				mem8 = base + Offset;
-				Offset++;
-				*mem8 = bRLE ? ch : fgetc(f);
+                Offset++;
+                if (Offset > nIpsMaxFileLen) nIpsMaxFileLen = Offset; // file size is growing
+                if (readonly) {
+                    if (!bRLE) fgetc(f);
+                } else {
+                    *mem8 = bRLE ? ch : fgetc(f);
+                }
 			}
 		}
 	}
@@ -743,23 +809,56 @@ static void PatchFile(const char* ips_path, UINT8* base)
 	fclose(f);
 }
 
-static void DoPatchGame(const char* patch_name, char* game_name, UINT8* base)
+static char* stristr_int(const char* str1, const char* str2)
+{
+    const char* p1 = str1;
+    const char* p2 = str2;
+    const char* r = (!*p2) ? str1 : NULL;
+
+    while (*p1 && *p2) {
+        if (tolower((unsigned char)*p1) == tolower((unsigned char)*p2)) {
+            if (!r) {
+                r = p1;
+            }
+
+            p2++;
+        } else {
+            p2 = str2;
+            if (r) {
+                p1 = r + 1;
+            }
+
+            if (tolower((unsigned char)*p1) == tolower((unsigned char)*p2)) {
+                r = p1;
+                p2++;
+            } else {
+                r = NULL;
+            }
+        }
+
+        p1++;
+    }
+
+    return (*p2) ? NULL : (char*)r;
+}
+
+static void DoPatchGame(const char* patch_name, char* game_name, UINT8* base, INT32 readonly)
 {
 	char s[MAX_PATH];
-	char* p = NULL;
+    char* p = NULL;
 	char* rom_name = NULL;
 	char* ips_name = NULL;
 	FILE* fp = NULL;
 	unsigned long nIpsSize;
 
-	if ((fp = fopen(patch_name, "rb")) != NULL) {
+    if ((fp = fopen(patch_name, "rb")) != NULL) {
 		// get ips size
 		fseek(fp, 0, SEEK_END);
 		nIpsSize = ftell(fp);
 		fseek(fp, 0, SEEK_SET);
 
-		while (!feof(fp)) {
-			if (fgets(s, sizeof s, fp) != NULL) {
+        while (!feof(fp)) {
+			if (fgets(s, sizeof(s), fp) != NULL) {
 				p = s;
 
 				// skip UTF-8 sig
@@ -769,7 +868,17 @@ static void DoPatchGame(const char* patch_name, char* game_name, UINT8* base)
 				if (p[0] == '[')	// '['
 					break;
 
-				rom_name = strtok(p, " \t\r\n");
+                // Can support linetypes:
+                // "rom name.bin" "patch file.ips" CRC(abcd1234)
+                // romname.bin patchfile CRC(abcd1234)
+
+                if (p[0] == '\"') { // "quoted rom name with spaces.bin"
+                    p++;
+                    rom_name = strtok(p, "\"");
+                } else {
+                    rom_name = strtok(p, " \t\r\n");
+                }
+
 				if (!rom_name)
 					continue;
 				if (*rom_name == '#')
@@ -777,25 +886,46 @@ static void DoPatchGame(const char* patch_name, char* game_name, UINT8* base)
 				if (_stricmp(rom_name, game_name))
 					continue;
 
-				ips_name = strtok(NULL, " \t\r\n");
+                ips_name = strtok(NULL, "\r\n");
+
+				if (ips_name[0] == '\t') ips_name++;
+
 				if (!ips_name)
 					continue;
 
-				// skip CRC check
-				strtok(NULL, "\r\n");
+                // remove crc portion, and end quote/spaces from ips name
+                char *c = stristr_int(ips_name, "crc");
+                if (c) {
+                    c--; // "derp.ips" CRC(abcd1234)\n"
+                         //           ^ we're now here.
+                    while (*c && (*c == ' ' || *c == '\t' || *c == '\"'))
+                    {
+                        *c = '\0';
+                        c--;
+                    }
+                }
 
-				char ips_path[MAX_PATH];
+                // clean-up IPS name beginning (could be quoted or not)
+                while (ips_name && (ips_name[0] == '\t' || ips_name[0] == ' ' || ips_name[0] == '\"'))
+                    ips_name++;
+
+                char *has_ext = stristr_int(ips_name, ".ips");
+
+                bprintf(0, _T("ips name:[%S]\n"), ips_name);
+                bprintf(0, _T("rom name:[%S]\n"), rom_name);
+
+				char ips_path[MAX_PATH*2];
 				char ips_dir[MAX_PATH];
 				TCHARToANSI(szAppIpsPath, ips_dir, sizeof(ips_dir));
 
 				if (strchr(ips_name, '\\')) {
 					// ips in parent's folder
-					sprintf(ips_path, "%s\\%s%s", ips_dir, ips_name, IPS_EXT);
+                    sprintf(ips_path, "%s\\%s%s", ips_dir, ips_name, (has_ext) ? "" : IPS_EXT);
 				} else {
-					sprintf(ips_path, "%s%s\\%s%s", ips_dir, BurnDrvGetTextA(DRV_NAME), ips_name, IPS_EXT);
+					sprintf(ips_path, "%s%s\\%s%s", ips_dir, BurnDrvGetTextA(DRV_NAME), ips_name, (has_ext) ? "" : IPS_EXT);
 				}
 
-				PatchFile(ips_path, base);
+				PatchFile(ips_path, base, readonly);
 			}
 		}
 		fclose(fp);
@@ -805,14 +935,16 @@ static void DoPatchGame(const char* patch_name, char* game_name, UINT8* base)
 void IpsApplyPatches(UINT8* base, char* rom_name)
 {
 	char ips_data[MAX_PATH];
-	
+
+    nIpsMaxFileLen = 0;
+
 	int nActivePatches = GetIpsNumActivePatches();
-	
+
 	for (int i = 0; i < nActivePatches; i++) {
 		memset(ips_data, 0, MAX_PATH);
 		TCHARToANSI(szIpsActivePatches[i], ips_data, sizeof(ips_data));
-		DoPatchGame(ips_data, rom_name, base);
-	}
+		DoPatchGame(ips_data, rom_name, base, false);
+    }
 }
 
 void IpsPatchExit()

@@ -8,10 +8,7 @@
 
 #include "tiles_generic.h"
 #include "z80_intf.h"
-#include "driver.h"
-extern "C" {
 #include "ay8910.h"
-}
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;
@@ -38,8 +35,6 @@ static UINT16 *DrvBGBitmap;
 static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
-static INT16 *pAY8910Buffer[6];
-
 static UINT8 flipscreen;
 static UINT8 nmi_enable;
 static UINT8 soundlatch;
@@ -60,16 +55,16 @@ static struct BurnInputInfo DrvInputList[] = {
 	{"P1 Left Stick Down",	BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
 	{"P1 Left Stick Left",	BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Left Stick Right",	BIT_DIGITAL,	DrvJoy2 + 3,	"p1 right"	},
-	{"P1 Right Stick Left",	BIT_DIGITAL,	DrvJoy2 + 4,	"p3 left"	},
-	{"P1 Right Stick Right",BIT_DIGITAL,	DrvJoy2 + 5,	"p3 right"	},
+	{"P1 Right Stick Left",	BIT_DIGITAL,	DrvJoy2 + 4,	"p1 left 2"	},
+	{"P1 Right Stick Right",BIT_DIGITAL,	DrvJoy2 + 5,	"p1 right 2"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 start"	},
 	{"P2 Left Stick Up",	BIT_DIGITAL,	DrvJoy3 + 0,	"p2 up"		},
 	{"P2 Left Stick Down",	BIT_DIGITAL,	DrvJoy3 + 1,	"p2 down"	},
 	{"P2 Left Stick Left",	BIT_DIGITAL,	DrvJoy3 + 2,	"p2 left"	},
 	{"P2 Left Stick Right",	BIT_DIGITAL,	DrvJoy3 + 3,	"p2 right"	},
-	{"P2 Right Stick Left",	BIT_DIGITAL,	DrvJoy3 + 4,	"p4 left"	},
-	{"P2 Right Stick Right",BIT_DIGITAL,	DrvJoy3 + 5,	"p4 right"	},
+	{"P2 Right Stick Left",	BIT_DIGITAL,	DrvJoy3 + 4,	"p2 left 2"	},
+	{"P2 Right Stick Right",BIT_DIGITAL,	DrvJoy3 + 5,	"p2 right 2"	},
 
 	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
 	{"Service",		BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
@@ -316,13 +311,6 @@ static INT32 MemIndex()
 
 	RamEnd			= Next;
 
-	pAY8910Buffer[0]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[1]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[2]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[3]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[4]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[5]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-
 	MemEnd			= Next;
 
 	return 0;
@@ -459,8 +447,8 @@ static INT32 DrvInit()
 	ZetSetReadHandler(mnchmobl_sound_read);
 	ZetClose();
 
-	AY8910Init(0, 1875000, nBurnSoundRate, NULL, NULL, NULL, NULL);
-	AY8910Init(1, 1875000, nBurnSoundRate, NULL, NULL, NULL, NULL);
+	AY8910Init(0, 1875000, 0);
+	AY8910Init(1, 1875000, 1);
 	AY8910SetAllRoutes(0, 0.50, BURN_SND_ROUTE_BOTH);
 	AY8910SetAllRoutes(1, 0.50, BURN_SND_ROUTE_BOTH);
 
@@ -501,10 +489,7 @@ static void draw_background()
 {
 	INT32 scrollx = (-(DrvVRegs[6] *2 + (DrvVRegs[7] >> 7)) - 64 - 128 - 16) & 0x1ff; 
 
-	INT32 tmpwidth = nScreenWidth;
-	INT32 tmpheight = nScreenHeight;
-	nScreenWidth = 512;
-	nScreenHeight = 512;
+	GenericTilesSetClipRaw(0, 512, 0, 512);
 
 	for (INT32 offs = 0; offs < 16 * 16; offs++)
 	{
@@ -524,8 +509,7 @@ static void draw_background()
 		}
 	}
 
-	nScreenWidth = tmpwidth;
-	nScreenHeight = tmpheight;
+	GenericTilesClearClipRaw();
 
 	// copy the BGBitmap to pTransDraw
 	for (INT32 sy = 0; sy < nScreenHeight; sy++) {
@@ -631,7 +615,7 @@ static INT32 DrvFrame()
 	}
 
 	if (pBurnSoundOut) {
-		AY8910Render(&pAY8910Buffer[0], pBurnSoundOut, nBurnSoundLen, 0);
+		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	if (pBurnDraw) {
@@ -700,8 +684,8 @@ struct BurnDriver BurnDrvJoyfulr = {
 	"joyfulr", NULL, NULL, NULL, "1983",
 	"Joyful Road (Japan)\0", NULL, "SNK", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
-	NULL, joyfulrRomInfo, joyfulrRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_PRE90S, GBF_RACING | GBF_ACTION, 0,
+	NULL, joyfulrRomInfo, joyfulrRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	240, 320, 3, 4
 };
@@ -737,8 +721,8 @@ struct BurnDriver BurnDrvMnchmobl = {
 	"mnchmobl", "joyfulr", NULL, NULL, "1983",
 	"Munch Mobile (US)\0", NULL, "SNK (Centuri license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
-	NULL, mnchmoblRomInfo, mnchmoblRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_PRE90S, GBF_RACING | GBF_ACTION, 0,
+	NULL, mnchmoblRomInfo, mnchmoblRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	240, 320, 3, 4
 };

@@ -13,6 +13,7 @@
 #define SEGA_MD_ROM_OFFS_300000										0x08
 #define SEGA_MD_ROM_RELOAD_200000_200000							0x09
 #define SEGA_MD_ROM_RELOAD_100000_300000							0x0a
+#define SEGA_MD_ARCADE_SUNMIXING									(0x4000)
 
 extern UINT8 MegadriveReset;
 extern UINT8 bMegadriveRecalcPalette;
@@ -20,10 +21,18 @@ extern UINT8 MegadriveJoy1[12];
 extern UINT8 MegadriveJoy2[12];
 extern UINT8 MegadriveJoy3[12];
 extern UINT8 MegadriveJoy4[12];
+extern UINT8 MegadriveJoy5[12];
 extern UINT8 MegadriveDIP[2];
-extern UINT16 *MegadriveCurPal;
+extern INT32 psolarmode;
 
 INT32 MegadriveInit();
 INT32 MegadriveExit();
 INT32 MegadriveFrame();
 INT32 MegadriveScan(INT32 nAction, INT32 *pnMin);
+INT32 MegadriveDraw();
+
+// pier solar
+void md_eeprom_stm95_reset();
+void md_eeprom_stm95_init(UINT8 *rom);
+void md_eeprom_stm95_scan(INT32 nAction);
+UINT16 md_psolar_rw(UINT32 offset);

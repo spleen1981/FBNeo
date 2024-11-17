@@ -160,7 +160,7 @@ char* DecorateGameName(UINT32 nBurnDrv)
 			if ((BurnDrvGetFlags() & BDF_BOOTLEG) || (BurnDrvGetTextA(DRV_COMMENT) && strlen(BurnDrvGetTextA(DRV_COMMENT)) > 0)) {
 				s10 = ", ";
 			}
-		}		
+		}
 		if (BurnDrvGetFlags() & BDF_BOOTLEG) {
 			s11 = "Bootleg";
 			if (BurnDrvGetTextA(DRV_COMMENT) && strlen(BurnDrvGetTextA(DRV_COMMENT)) > 0) {
@@ -183,145 +183,215 @@ TCHAR* DecorateGenreInfo()
 {
 	INT32 nGenre = BurnDrvGetGenreFlags();
 	INT32 nFamily = BurnDrvGetFamilyFlags();
-	
+
 	static TCHAR szDecoratedGenre[256];
 	TCHAR szFamily[256];
-	
+
 	_stprintf(szDecoratedGenre, _T(""));
 	_stprintf(szFamily, _T(""));
-	
-#ifdef BUILD_WIN32 
+
+#ifdef BUILD_WIN32
 //TODO: Translations are not working in non-win32 builds. This needs to be fixed
 
 	if (nGenre) {
 		if (nGenre & GBF_HORSHOOT) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_HORSHOOT, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_HORSHOOT, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_VERSHOOT) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_VERSHOOT, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_VERSHOOT, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_SCRFIGHT) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_SCRFIGHT, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_SCRFIGHT, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_VSFIGHT) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_VSFIGHT, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_VSFIGHT, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_BIOS) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_BIOS, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_BIOS, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_BREAKOUT) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_BREAKOUT, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_BREAKOUT, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_CASINO) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_CASINO, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_CASINO, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_BALLPADDLE) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_BALLPADDLE, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_BALLPADDLE, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_MAZE) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_MAZE, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_MAZE, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_MINIGAMES) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_MINIGAMES, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_MINIGAMES, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_PINBALL) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_PINBALL, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_PINBALL, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_PLATFORM) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_PLATFORM, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_PLATFORM, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_PUZZLE) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_PUZZLE, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_PUZZLE, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_QUIZ) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_QUIZ, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_QUIZ, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_SPORTSMISC) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_SPORTSMISC, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_SPORTSMISC, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_SPORTSFOOTBALL) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_SPORTSFOOTBALL, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_SPORTSFOOTBALL, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_MISC) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_MISC, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_MISC, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_MAHJONG) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_MAHJONG, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_MAHJONG, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_RACING) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_RACING, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_RACING, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
 		if (nGenre & GBF_SHOOT) {
-			_stprintf(szDecoratedGenre, _T("%s%s, "), szDecoratedGenre, FBALoadStringEx(hAppInst, IDS_GENRE_SHOOT, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_SHOOT, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
 		}
-		
+
+		if (nGenre & GBF_ACTION) {
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_ACTION, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
+		}
+
+		if (nGenre & GBF_RUNGUN) {
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_RUNGUN, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
+		}
+
+		if (nGenre & GBF_STRATEGY) {
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_STRATEGY, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
+		}
+
+		if (nGenre & GBF_RPG) {
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_RPG, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
+		}
+
+		if (nGenre & GBF_SIM) {
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), FBALoadStringEx(hAppInst, IDS_GENRE_SIM, true));
+			_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), _T(", "));
+		}
+
 		szDecoratedGenre[_tcslen(szDecoratedGenre) - 2] = _T('\0');
 	}
-	
+
 	if (nFamily) {
 		_stprintf(szFamily, _T(" ("));
-		
+
 		if (nFamily & FBF_MSLUG) {
-			_stprintf(szFamily, _T("%s%s, "), szFamily, FBALoadStringEx(hAppInst, IDS_FAMILY_MSLUG, true));
+			_stprintf(szFamily + _tcslen(szFamily), FBALoadStringEx(hAppInst, IDS_FAMILY_MSLUG, true));
+			_stprintf(szFamily + _tcslen(szFamily), _T(", "));
 		}
-		
+
 		if (nFamily & FBF_SF) {
-			_stprintf(szFamily, _T("%s%s, "), szFamily, FBALoadStringEx(hAppInst, IDS_FAMILY_SF, true));
+			_stprintf(szFamily + _tcslen(szFamily), FBALoadStringEx(hAppInst, IDS_FAMILY_SF, true));
+			_stprintf(szFamily + _tcslen(szFamily), _T(", "));
 		}
-		
+
 		if (nFamily & FBF_KOF) {
-			_stprintf(szFamily, _T("%s%s, "), szFamily, FBALoadStringEx(hAppInst, IDS_FAMILY_KOF, true));
+			_stprintf(szFamily + _tcslen(szFamily), FBALoadStringEx(hAppInst, IDS_FAMILY_KOF, true));
+			_stprintf(szFamily + _tcslen(szFamily), _T(", "));
 		}
-		
+
 		if (nFamily & FBF_DSTLK) {
-			_stprintf(szFamily, _T("%s%s, "), szFamily, FBALoadStringEx(hAppInst, IDS_FAMILY_DSTLK, true));
+			_stprintf(szFamily + _tcslen(szFamily), FBALoadStringEx(hAppInst, IDS_FAMILY_DSTLK, true));
+			_stprintf(szFamily + _tcslen(szFamily), _T(", "));
 		}
-		
+
 		if (nFamily & FBF_FATFURY) {
-			_stprintf(szFamily, _T("%s%s, "), szFamily, FBALoadStringEx(hAppInst, IDS_FAMILY_FATFURY, true));
+			_stprintf(szFamily + _tcslen(szFamily), FBALoadStringEx(hAppInst, IDS_FAMILY_FATFURY, true));
+			_stprintf(szFamily + _tcslen(szFamily), _T(", "));
 		}
-		
+
 		if (nFamily & FBF_SAMSHO) {
-			_stprintf(szFamily, _T("%s%s, "), szFamily, FBALoadStringEx(hAppInst, IDS_FAMILY_SAMSHO, true));
+			_stprintf(szFamily + _tcslen(szFamily), FBALoadStringEx(hAppInst, IDS_FAMILY_SAMSHO, true));
+			_stprintf(szFamily + _tcslen(szFamily), _T(", "));
 		}
-		
+
 		if (nFamily & FBF_19XX) {
-			_stprintf(szFamily, _T("%s%s, "), szFamily, FBALoadStringEx(hAppInst, IDS_FAMILY_19XX, true));
+			_stprintf(szFamily + _tcslen(szFamily), FBALoadStringEx(hAppInst, IDS_FAMILY_19XX, true));
+			_stprintf(szFamily + _tcslen(szFamily), _T(", "));
 		}
-		
+
 		if (nFamily & FBF_SONICWI) {
-			_stprintf(szFamily, _T("%s%s, "), szFamily, FBALoadStringEx(hAppInst, IDS_FAMILY_SONICWI, true));
+			_stprintf(szFamily + _tcslen(szFamily), FBALoadStringEx(hAppInst, IDS_FAMILY_SONICWI, true));
+			_stprintf(szFamily + _tcslen(szFamily), _T(", "));
 		}
-		
+
 		if (nFamily & FBF_PWRINST) {
-			_stprintf(szFamily, _T("%s%s, "), szFamily, FBALoadStringEx(hAppInst, IDS_FAMILY_PWRINST, true));
-		}		
-		
+			_stprintf(szFamily + _tcslen(szFamily), FBALoadStringEx(hAppInst, IDS_FAMILY_PWRINST, true));
+			_stprintf(szFamily + _tcslen(szFamily), _T(", "));
+		}
+
+		if (nFamily & FBF_SONIC) {
+			_stprintf(szFamily + _tcslen(szFamily), FBALoadStringEx(hAppInst, IDS_FAMILY_SONIC, true));
+			_stprintf(szFamily + _tcslen(szFamily), _T(", "));
+		}
+
+		if (nFamily & FBF_DONPACHI) {
+			_stprintf(szFamily + _tcslen(szFamily), FBALoadStringEx(hAppInst, IDS_FAMILY_DONPACHI, true));
+			_stprintf(szFamily + _tcslen(szFamily), _T(", "));
+		}
+
+		if (nFamily & FBF_MAHOU) {
+			_stprintf(szFamily + _tcslen(szFamily), FBALoadStringEx(hAppInst, IDS_FAMILY_MAHOU, true));
+			_stprintf(szFamily + _tcslen(szFamily), _T(", "));
+		}
+
 		szFamily[_tcslen(szFamily) - 2] = _T(')');
 		szFamily[_tcslen(szFamily) - 1] = _T('\0');
+
+		_stprintf(szDecoratedGenre + _tcslen(szDecoratedGenre), szFamily);
 	}
 #endif
-	_stprintf(szDecoratedGenre, _T("%s%s"), szDecoratedGenre, szFamily);
-	
+
 	return szDecoratedGenre;
 }
 
@@ -400,7 +470,7 @@ TCHAR* DriverToName(UINT32 nDrv)
 {
 	TCHAR* szName = NULL;
 	UINT32 nOldDrv;
-	
+
 	if (nDrv >= nBurnDrvCount) {
 		return NULL;
 	}
@@ -431,4 +501,46 @@ UINT32 NameToDriver(TCHAR* szName)
 	nBurnDrvActive = nOldDrv;
 
 	return nDrv;
+}
+
+TCHAR *FileExt(TCHAR *str)
+{
+	TCHAR *dot = _tcsrchr(str, _T('.'));
+
+	return (dot) ? StrLower(dot) : str;
+}
+
+bool IsFileExt(TCHAR *str, TCHAR *ext)
+{
+	return (_tcsicmp(ext, FileExt(str)) == 0);
+}
+
+TCHAR *StrReplace(TCHAR *str, TCHAR find, TCHAR replace)
+{
+	INT32 length = _tcslen(str);
+
+	for (INT32 i = 0; i < length; i++) {
+		if (str[i] == find) str[i] = replace;
+	}
+
+	return str;
+}
+
+// StrLower() - leaves str untouched, returns modified string
+TCHAR *StrLower(TCHAR *str)
+{
+	static TCHAR szBuffer[256] = _T("");
+	INT32 length = _tcslen(str);
+
+	if (length > 255) length = 255;
+
+	for (INT32 i = 0; i < length; i++) {
+		if (str[i] >= _T('A') && str[i] <= _T('Z'))
+			szBuffer[i] = (str[i] + _T(' '));
+		else
+			szBuffer[i] = str[i];
+	}
+	szBuffer[length] = 0;
+
+	return &szBuffer[0];
 }

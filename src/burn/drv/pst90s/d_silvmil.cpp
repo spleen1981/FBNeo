@@ -294,7 +294,7 @@ void __fastcall silvmil_sound_write(UINT16 address, UINT8 data)
 
 		case 0xc002:
 		case 0xc003:
-			MSM6295Command(0, data);
+			MSM6295Write(0, data);
 		return;
 	}
 }
@@ -304,11 +304,11 @@ UINT8 __fastcall silvmil_sound_read(UINT16 address)
 	switch (address)
 	{
 		case 0xc001:
-			return BurnYM2151ReadStatus();
+			return BurnYM2151Read();
 
 		case 0xc002:
 		case 0xc003:
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 
 		case 0xc006:
 			return *soundlatch;
@@ -745,8 +745,8 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		SekScan(nAction);
 		ZetScan(nAction);
 
-		BurnYM2151Scan(nAction);
-		MSM6295Scan(0, nAction);
+		BurnYM2151Scan(nAction, pnMin);
+		MSM6295Scan(nAction, pnMin);
 	}
 
 	return 0;
@@ -785,7 +785,7 @@ struct BurnDriver BurnDrvPuzzlove = {
 	"PuzzLove\0", NULL, "Para", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
-	NULL, puzzloveRomInfo, puzzloveRomName, NULL, NULL, SilvmilInputInfo, PuzzloveDIPInfo,
+	NULL, puzzloveRomInfo, puzzloveRomName, NULL, NULL, NULL, NULL, SilvmilInputInfo, PuzzloveDIPInfo,
 	puzzloveInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	320, 240, 4, 3
 };
@@ -818,7 +818,7 @@ struct BurnDriver BurnDrvPuzzlovek = {
 	"PuzzLove (Korea)\0", NULL, "Para", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
-	NULL, puzzlovekRomInfo, puzzlovekRomName, NULL, NULL, SilvmilInputInfo, PuzzlovekDIPInfo,
+	NULL, puzzlovekRomInfo, puzzlovekRomName, NULL, NULL, NULL, NULL, SilvmilInputInfo, PuzzlovekDIPInfo,
 	puzzloveInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	320, 240, 4, 3
 };
@@ -862,7 +862,7 @@ struct BurnDriver BurnDrvSilvmil = {
 	"Silver Millennium\0", NULL, "Para", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, silvmilRomInfo, silvmilRomName, NULL, NULL, SilvmilInputInfo, SilvmilDIPInfo,
+	NULL, silvmilRomInfo, silvmilRomName, NULL, NULL, NULL, NULL, SilvmilInputInfo, SilvmilDIPInfo,
 	silmilInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	240, 320, 3, 4
 };

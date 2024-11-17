@@ -13,12 +13,12 @@
 #define PFN(x)  (((x) >> PAGE_SHIFT) & 0xFFFFF)
 
 template<typename T>
-inline T fast_read(UINT8 *ptr, UINT32 adr) {
+inline T tms_fast_read(UINT8 *ptr, UINT32 adr) {
     return *((T*)  ((UINT8*) ptr + TOBYTE(adr & PAGE_MASK)));
 }
 
 template<typename T>
-inline void fast_write(UINT8 *xptr, UINT32 adr, T value) {
+inline void tms_fast_write(UINT8 *xptr, UINT32 adr, T value) {
     T *ptr = ((T*)  ((UINT8*) xptr + TOBYTE(adr & PAGE_MASK)));
     *ptr = value;
 }
@@ -54,10 +54,44 @@ void TMS34010Init()
     TMS34010MapHandler(MAXHANDLER-1, 0xc0000000, 0xc00001ff, MAP_READ | MAP_WRITE);
 }
 
-int TMS34010Run(int cycles) 
+int TMS34010Run(int cycles)
 {
-    tms::run(&tms34010, cycles);
-    return 0;
+    return tms::run(&tms34010, cycles);
+}
+
+void TMS34010TimerCB(INT64 cycles, void (*timer_cb)())
+{
+	tms::timer_arm(&tms34010, cycles, timer_cb);
+}
+
+INT64 TMS34010TotalCycles()
+{
+	return tms::total_cycles(&tms34010);
+}
+
+void TMS34010NewFrame()
+{
+	tms::new_frame(&tms34010);
+}
+
+void TMS34010RunEnd()
+{
+	tms::stop(&tms34010);
+}
+
+void TMS34010Scan(INT32 nAction)
+{
+	tms::scan(&tms34010, nAction);
+}
+
+UINT32 TMS34010GetPC()
+{
+	return tms::get_pc(&tms34010);
+}
+
+UINT32 TMS34010GetPPC()
+{
+	return tms::get_ppc(&tms34010);
 }
 
 void TMS34010Reset()
@@ -105,7 +139,7 @@ UINT16 TMS34010ReadWord(UINT32 address)
     UINT8 *pr = g_mmap.map[PFN(address)];
     if ((uintptr_t)pr >= MAXHANDLER) {
         // address is bit-address
-        return fast_read<UINT16>(pr,address);
+        return BURN_ENDIAN_SWAP_INT16(tms_fast_read<UINT16>(pr,address));
     } else {
         return g_mmap.read[(uintptr_t)pr](address);
     }
@@ -116,7 +150,7 @@ void TMS34010WriteWord(UINT32 address, UINT16 value)
     UINT8 *pr = g_mmap.map[PAGE_WADD + PFN(address)];
     if ((uintptr_t)pr >= MAXHANDLER) {
         // address is bit-address
-        return fast_write<UINT16>(pr,address,value);
+        return tms_fast_write<UINT16>(pr,address, BURN_ENDIAN_SWAP_INT16(value));
     } else {
         return g_mmap.write[(uintptr_t)pr](address, value);
     }
@@ -125,8 +159,8 @@ void TMS34010WriteWord(UINT32 address, UINT16 value)
 void TMS34010MapReset()
 {
     for (int page = 0; page < PAGE_COUNT; page++) {
-        g_mmap.map[page] = nullptr;
-        g_mmap.map[page + PAGE_WADD] = nullptr;
+        g_mmap.map[page] = NULL;
+        g_mmap.map[page + PAGE_WADD] = NULL;
     }
     for (int handler = 0; handler < MAXHANDLER; handler++) {
         g_mmap.read[handler] = default_read;
@@ -149,7 +183,7 @@ void TMS34010MapMemory(UINT8 *mem, UINT32 start, UINT32 end, UINT8 type)
     }
 }
 
-void TMS34010MapHandler(UINT32 num, UINT32 start, UINT32 end, UINT8 type)
+void TMS34010MapHandler(uintptr_t num, UINT32 start, UINT32 end, UINT8 type)
 {
     const int max_pages = (PFN(end) - PFN(start)) + 1;
 

@@ -1,9 +1,6 @@
 // Run module
 #include "burner.h"
 
-// for NeoGeo CD (WAV playback)
-void wav_pause(bool bResume);
-
 int bRunPause = 0;
 int bAltPause = 0;
 
@@ -17,7 +14,7 @@ static int nOldAudVolume;
 
 int kNetGame = 0;							// Non-zero if Kaillera is being used
 
-#ifdef FBA_DEBUG
+#ifdef FBNEO_DEBUG
 int counter;								// General purpose variable used when debugging
 #endif
 
@@ -26,6 +23,7 @@ static int nNormalFrac = 0;					// Extra fraction we did
 
 static bool bAppDoStep = 0;
 static bool bAppDoFast = 0;
+static bool bAppDoFasttoggled = 0;
 static int nFastSpeed = 6;
 
 // For System Macros (below)
@@ -69,20 +67,14 @@ static void CheckSystemMacros() // These are the Pause / FFWD macros added to th
 
 static int GetInput(bool bCopy)
 {
-	static int i = 0;
+	static unsigned int i = 0;
 	InputMake(bCopy); 						// get input
 
-        CheckSystemMacros();
+	CheckSystemMacros();
 
-	// Update Input dialog ever 3 frames
-	if (i == 0) {
+	// Update Input dialog every 3rd frame
+	if ((i%3) == 0) {
 		InpdUpdate();
-	}
-
-	i++;
-
-	if (i >= 3) {
-		i = 0;
 	}
 
 	// Update Input Set dialog
@@ -90,17 +82,28 @@ static int GetInput(bool bCopy)
 	return 0;
 }
 
+static time_t fpstimer;
+static unsigned int nPreviousFrames;
+
+static void DisplayFPSInit()
+{
+	nDoFPS = 0;
+	fpstimer = 0;
+	nPreviousFrames = nFramesRendered;
+}
+
 static void DisplayFPS()
 {
-	static time_t fpstimer;
-	static unsigned int nPreviousFrames;
-
 	TCHAR fpsstring[8];
 	time_t temptime = clock();
 	double fps = (double)(nFramesRendered - nPreviousFrames) * CLOCKS_PER_SEC / (temptime - fpstimer);
+	if (bAppDoFast) {
+		fps *= nFastSpeed+1;
+	}
 	_sntprintf(fpsstring, 7, _T("%2.2lf"), fps);
-	if (temptime - fpstimer>0) // to avoid strange fps value from division by zero at start -dink
+	if (fpstimer && temptime - fpstimer>0) { // avoid strange fps values
 		VidSNewShortMsg(fpsstring, 0xDFDFFF, 480, 0);
+	}
 
 	fpstimer = temptime;
 	nPreviousFrames = nFramesRendered;
@@ -116,13 +119,16 @@ void ToggleLayer(unsigned char thisLayer)
 
 // With or without sound, run one frame.
 // If bDraw is true, it's the last frame before we are up to date, and so we should draw the screen
-static int RunFrame(int bDraw, int bPause)
+int RunFrame(int bDraw, int bPause)
 {
 	static int bPrevPause = 0;
 	static int bPrevDraw = 0;
 
 	if (bPrevDraw && !bPause) {
 		VidPaint(0);							// paint the screen (no need to validate)
+
+		if (!nVidFullscreen && bVidDWMSync)     // Sync to DWM (Win7+, windowed)
+			SuperWaitVBlank();
 	}
 
 	if (!bDrvOkay) {
@@ -148,10 +154,9 @@ static int RunFrame(int bDraw, int bPause)
 			if (nReplayStatus == 2) {
 				GetInput(false);				// Update burner inputs, but not game inputs
 				if (ReplayInput()) {			// Read input from file
-					bAltPause = 1;
-					bRunPause = 1;
-					// clear audio buffer here. -dink
-					AudBlankSound();
+					SetPauseMode(1);            // Replay has finished
+					bAppDoFast = 0;
+					bAppDoFasttoggled = 0;      // Disable FFWD
 					MenuEnableItems();
 					InputSetCooperativeLevel(false, false);
 					return 0;
@@ -165,7 +170,7 @@ static int RunFrame(int bDraw, int bPause)
 			RecordInput();						// Write input to file
 		}
 
-		if (bDraw) {
+		if (bDraw) {                            // Draw Frame
 			nFramesRendered++;
 
 			if (VidFrame()) {					// Do one frame
@@ -217,30 +222,46 @@ static int RunGetNextSound(int bDraw)
 		return 0;
 	}
 
+	int bBrokeOutOfFFWD = 0;
 	if (bAppDoFast) {									// do more frames
 		for (int i = 0; i < nFastSpeed; i++) {
+			if (!bAppDoFast) {
+				bBrokeOutOfFFWD = 1; // recording ended, etc.
+				break;
+			}                     // break out if no longer in ffwd
+#ifdef INCLUDE_AVI_RECORDING
+			if (nAviStatus) {
+				// Render frame with sound
+				pBurnSoundOut = nAudNextSound;
+				RunFrame(bDraw, 0);
+			} else {
+				RunFrame(0, 0);
+			}
+#else
 			RunFrame(0, 0);
+#endif
 		}
 	}
 
-	// Render frame with sound
-	pBurnSoundOut = nAudNextSound;
-	RunFrame(bDraw, 0);
+	if (!bBrokeOutOfFFWD) {
+		// Render frame with sound
+		pBurnSoundOut = nAudNextSound;
+		RunFrame(bDraw, 0);
+	}
 
 	if (WaveLog != NULL && pBurnSoundOut != NULL) {		// log to the file
 		fwrite(pBurnSoundOut, 1, nBurnSoundLen << 2, WaveLog);
 		pBurnSoundOut = NULL;
 	}
 
-	if (bAppDoStep) {
+	if (bAppDoStep || (bBrokeOutOfFFWD && bRunPause)) {
 		memset(nAudNextSound, 0, nAudSegLen << 2);		// Write silence into the buffer
+		AudBlankSound();
 	}
 	bAppDoStep = 0;										// done one step
 
 	return 0;
 }
-
-extern bool bRunFrame;
 
 int RunIdle()
 {
@@ -248,19 +269,8 @@ int RunIdle()
 
 	if (bAudPlaying) {
 		// Run with sound
-		
-		if(bRunFrame) {
-			bRunFrame = false;
-			if(bAlwaysDrawFrames) {
-				RunFrame(1, 0);
-			} else {
-				RunGetNextSound(0);
-			}
-			return 0;
-		} else {
-			AudSoundCheck();
-			return 0;
-		}
+		AudSoundCheck();
+		return 0;
 	}
 
 	// Run without sound
@@ -293,7 +303,15 @@ int RunIdle()
 
 	if (bAppDoFast) {									// do more frames
 		for (int i = 0; i < nFastSpeed; i++) {
+#ifdef INCLUDE_AVI_RECORDING
+			if (nAviStatus) {
+				RunFrame(1, 0);
+			} else {
+				RunFrame(0, 0);
+			}
+#else
 			RunFrame(0, 0);
+#endif
 		}
 	}
 
@@ -311,8 +329,9 @@ int RunReset()
 {
 	// Reset the speed throttling code
 	nNormalLast = 0; nNormalFrac = 0;
+
 	// Reset FPS display
-	nDoFPS = 0;
+	DisplayFPSInit();
 
 	if (!bAudPlaying) {
 		// run without sound
@@ -337,7 +356,26 @@ static int RunExit()
 	nNormalLast = 0;
 	// Stop sound if it was playing
 	AudSoundStop();
+
+	bAppDoFast = 0;
+	bAppDoFasttoggled = 0;
+
 	return 0;
+}
+
+// Keyboard callback function, a way to provide a driver with shifted/unshifted ASCII data from the keyboard.  see drv/msx/d_msx.cpp for usage
+void (*cBurnerKeyCallback)(UINT8 code, UINT8 KeyType, UINT8 down) = NULL;
+
+static void BurnerHandlerKeyCallback(MSG *Msg, INT32 KeyDown, INT32 KeyType)
+{
+	INT32 shifted = (GetAsyncKeyState(VK_SHIFT) & 0x80000000) ? 0xf0 : 0;
+	INT32 scancode = (Msg->lParam >> 16) & 0xFF;
+	UINT8 keyboardState[256];
+	GetKeyboardState(keyboardState);
+	char charvalue[2];
+	if (ToAsciiEx(Msg->wParam, scancode, keyboardState, (LPWORD)&charvalue[0], 0, GetKeyboardLayout(0)) == 1) {
+		cBurnerKeyCallback(charvalue[0], shifted|KeyType, KeyDown);
+	}
 }
 
 // The main message loop
@@ -366,8 +404,17 @@ int RunMessageLoop()
 		GameInpCheckLeftAlt();
 		GameInpCheckMouse();															// Hide the cursor
 
-		if(bVidDWMCore) {
-			DWM_StutterFix();
+		if (bVidDWMSync) {
+			bprintf(0, _T("[Win7+] Sync to DWM is enabled (if available).\n"));
+			SuperWaitVBlankInit();
+		}
+
+		if (bAutoLoadGameList && !nCmdOptUsed) {
+			static INT32 bLoaded = 0; // only do this once (at startup!)
+
+			if (bLoaded == 0)
+				PostMessage(hScrnWnd, WM_KEYDOWN, VK_F6, 0);
+			bLoaded = 1;
 		}
 
 		while (1) {
@@ -392,7 +439,7 @@ int RunMessageLoop()
 						// An Alt/AltGr-key was pressed
 						switch (Msg.wParam) {
 
-#if defined (FBA_DEBUG)
+#if defined (FBNEO_DEBUG)
 							case 'C': {
 								static int count = 0;
 								if (count == 0) {
@@ -402,13 +449,14 @@ int RunMessageLoop()
 								break;
 							}
 #endif
-							
-              				// 'Silence' & 'Sound Restored' Code (added by CaptainCPS-X) 
+
+              				// 'Silence' & 'Sound Restored' Code (added by CaptainCPS-X)
 							case 'S': {
-								TCHAR buffer[15];
+								TCHAR buffer[60];
 								bMute = !bMute;
 
 								if (bMute) {
+									nOldAudVolume = nAudVolume;
 									nAudVolume = 0;// mute sound
 									_stprintf(buffer, FBALoadStringEx(hAppInst, IDS_SOUND_MUTE, true), nAudVolume / 100);
 								} else {
@@ -422,15 +470,16 @@ int RunMessageLoop()
 								}
 								break;
 							}
-							
+
 							case VK_OEM_PLUS: {
 								if (bMute) break; // if mute, not do this
 								nOldAudVolume = nAudVolume;
-								TCHAR buffer[15];
+								TCHAR buffer[60];
 
-								nAudVolume += 100;
 								if (GetAsyncKeyState(VK_CONTROL) & 0x80000000) {
-									nAudVolume += 900;
+									nAudVolume += 100;
+								} else {
+									nAudVolume += 1000;
 								}
 
 								if (nAudVolume > 10000) {
@@ -447,11 +496,12 @@ int RunMessageLoop()
 							case VK_OEM_MINUS: {
 								if (bMute) break; // if mute, not do this
 							  	nOldAudVolume = nAudVolume;
-								TCHAR buffer[15];
+								TCHAR buffer[60];
 
-								nAudVolume -= 100;
 								if (GetAsyncKeyState(VK_CONTROL) & 0x80000000) {
-									nAudVolume -= 900;
+									nAudVolume -= 100;
+								} else {
+									nAudVolume -= 1000;
 								}
 
 								if (nAudVolume < 0) {
@@ -470,23 +520,35 @@ int RunMessageLoop()
 							}
 						}
 					} else {
+
+						if (cBurnerKeyCallback)
+							BurnerHandlerKeyCallback(&Msg, (Msg.message == WM_KEYDOWN) ? 1 : 0, 0);
+
 						switch (Msg.wParam) {
 
-#if defined (FBA_DEBUG)
+#if defined (FBNEO_DEBUG)
 							case 'N':
 								counter--;
-								bprintf(PRINT_IMPORTANT, _T("*** New counter value: %04X.\n"), counter);
+								if (counter < 0) {
+									bprintf(PRINT_IMPORTANT, _T("*** New counter value: %04X (%d).\n"), counter, counter);
+								} else {
+									bprintf(PRINT_IMPORTANT, _T("*** New counter value: %04X.\n"), counter);
+								}
 								break;
 							case 'M':
 								counter++;
-								bprintf(PRINT_IMPORTANT, _T("*** New counter value: %04X.\n"), counter);
+								if (counter < 0) {
+									bprintf(PRINT_IMPORTANT, _T("*** New counter value: %04X (%d).\n"), counter, counter);
+								} else {
+									bprintf(PRINT_IMPORTANT, _T("*** New counter value: %04X.\n"), counter);
+								}
 								break;
 #endif
 							case VK_ESCAPE: {
 								if (hwndChat) {
 									DeActivateChat();
 								} else {
-									if (bCmdOptUsed) {
+									if (nCmdOptUsed & 1) {
 										PostQuitMessage(0);
 									} else {
 										if (nVidFullscreen) {
@@ -523,6 +585,8 @@ int RunMessageLoop()
 								break;
 							}
 							case VK_F1: {
+								bool bOldAppDoFast = bAppDoFast;
+
 								if (kNetGame) {
 									break;
 								}
@@ -534,15 +598,33 @@ int RunMessageLoop()
 										bAppDoFast = 1;
 									}
 								}
+
+								if ((GetAsyncKeyState(VK_SHIFT) & 0x80000000) && !GetAsyncKeyState(VK_CONTROL)) { // Shift-F1: toggles FFWD state
+									bAppDoFast = !bAppDoFast;
+									bAppDoFasttoggled = bAppDoFast;
+								}
+
+								if (bOldAppDoFast != bAppDoFast) {
+									DisplayFPSInit(); // resync fps display
+								}
 								break;
 							}
 							case VK_BACK: {
-								bShowFPS = !bShowFPS;
-								if (bShowFPS) {
-									DisplayFPS();
-								} else {
-									VidSKillShortMsg();
-									VidSKillOSDMsg();
+								if ((GetAsyncKeyState(VK_SHIFT) & 0x80000000) && !GetAsyncKeyState(VK_CONTROL))
+								{ // Shift-Backspace: toggles recording/replay frame counter
+									bReplayFrameCounterDisplay = !bReplayFrameCounterDisplay;
+									if (!bReplayFrameCounterDisplay) {
+										VidSKillTinyMsg();
+									}
+								} else
+								{ // Backspace: toggles FPS counter
+									bShowFPS = !bShowFPS;
+									if (bShowFPS) {
+										DisplayFPSInit();
+									} else {
+										VidSKillShortMsg();
+										VidSKillOSDMsg();
+									}
 								}
 								break;
 							}
@@ -558,12 +640,24 @@ int RunMessageLoop()
 					}
 				} else {
 					if (Msg.message == WM_SYSKEYUP || Msg.message == WM_KEYUP) {
+
+						if (cBurnerKeyCallback)
+							BurnerHandlerKeyCallback(&Msg, (Msg.message == WM_KEYDOWN) ? 1 : 0, 0);
+
 						switch (Msg.wParam) {
 							case VK_MENU:
 								continue;
-							case VK_F1:
-								bAppDoFast = 0;
+							case VK_F1: {
+								bool bOldAppDoFast = bAppDoFast;
+
+								if (!bAppDoFasttoggled)
+									bAppDoFast = 0;
+								bAppDoFasttoggled = 0;
+								if (bOldAppDoFast != bAppDoFast) {
+									DisplayFPSInit(); // resync fps display
+								}
 								break;
+							}
 						}
 					}
 				}
@@ -578,9 +672,6 @@ int RunMessageLoop()
 					}
 				}
 			} else {
-				
-				bRunPause ? wav_pause(false) : wav_pause(true);
-
 				// No messages are waiting
 				SplashDestroy(0);
 				RunIdle();
@@ -591,9 +682,9 @@ int RunMessageLoop()
 		MediaExit();
 		if (bRestartVideo) {
 			MediaInit();
+			PausedRedraw();
 		}
 	} while (bRestartVideo);
 
 	return 0;
 }
-

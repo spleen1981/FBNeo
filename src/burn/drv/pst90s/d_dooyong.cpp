@@ -1,12 +1,6 @@
 // FB Alpha Dooyong driver module
 // Based on MAME driver by Nicola Salmoria
 
-/*
-   Notes:
-    A seriously ugly hack has been used to get sound+music in Pollux and Gulf Storm
-	After 2 days of hacking, I couldn't find a better way. - Jan 9, 2015 Dink
-*/
-
 #include "tiles_generic.h"
 #include "m68000_intf.h"
 #include "z80_intf.h"
@@ -54,7 +48,6 @@ static UINT8 priority_select;
 static UINT8 text_layer_enable;
 static UINT8 gulf_storm = 0;
 static UINT8 vblank = 0;
-static UINT8 pollux_gulfstrm_irq_kicker_hack = 0;
 
 static UINT8 DrvJoy1[16];
 static UINT8 DrvJoy2[16];
@@ -71,141 +64,170 @@ static UINT8 *DrvTransTab[6] = { NULL, NULL, NULL, NULL, NULL, NULL };
 
 
 static struct BurnInputInfo LastdayInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 6,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 6,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 5,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy1 + 3,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 5,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy1 + 3,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Lastday)
 
 static struct BurnInputInfo GulfstrmInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 6,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Gulfstrm)
 
 static struct BurnInputInfo PolluxInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 6,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Pollux)
 
 static struct BurnInputInfo BluehawkInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 2,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 2,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 4,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 4,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Bluehawk)
 
+static struct BurnInputInfo SadariInputList[] = {
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 start"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
+	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p1 fire 3"	},
+
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 2,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"	},
+	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 fire 3"	},
+
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 4,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+};
+
+STDINPUTINFO(Sadari)
+
 static struct BurnInputInfo RsharkInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 	{"P1 Button 4",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 4"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy1 + 10,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy1 + 11,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy1 + 10,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 8,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy1 + 14,	"p2 fire 3"	},
 	{"P2 Button 4",		BIT_DIGITAL,	DrvJoy1 + 15,	"p2 fire 4"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 4,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 4,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Rshark)
@@ -219,10 +241,6 @@ static struct BurnDIPInfo LastdayDIPList[]=
 	{0x13, 0x01, 0x01, 0x01, "Off"			},
 	{0x13, 0x01, 0x01, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    2, "Coin Type"		},
-	{0x13, 0x01, 0x02, 0x02, "A"			},
-	{0x13, 0x01, 0x02, 0x00, "B"			},
-
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x13, 0x01, 0x04, 0x00, "Off"			},
 	{0x13, 0x01, 0x04, 0x04, "On"			},
@@ -231,25 +249,17 @@ static struct BurnDIPInfo LastdayDIPList[]=
 	{0x13, 0x01, 0x08, 0x08, "Off"			},
 	{0x13, 0x01, 0x08, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    8, "Coin A"		},
+	{0   , 0xfe, 0   ,    4, "Coin A"		},
 	{0x13, 0x01, 0x30, 0x10, "2 Coins 1 Credits"	},
 	{0x13, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 	{0x13, 0x01, 0x30, 0x00, "2 Coins 3 Credits"	},
 	{0x13, 0x01, 0x30, 0x20, "1 Coin  2 Credits"	},
-	{0x13, 0x01, 0x30, 0x00, "4 Coins 1 Credits"	},
-	{0x13, 0x01, 0x30, 0x10, "3 Coins 1 Credits"	},
-	{0x13, 0x01, 0x30, 0x20, "2 Coins 1 Credits"	},
-	{0x13, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 
-	{0   , 0xfe, 0   ,    8, "Coin B"		},
+	{0   , 0xfe, 0   ,    4, "Coin B"		},
 	{0x13, 0x01, 0xc0, 0x40, "2 Coins 1 Credits"	},
 	{0x13, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
 	{0x13, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"	},
 	{0x13, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"	},
-	{0x13, 0x01, 0xc0, 0xc0, "1 Coin  2 Credits"	},
-	{0x13, 0x01, 0xc0, 0x80, "1 Coin  3 Credits"	},
-	{0x13, 0x01, 0xc0, 0x40, "1 Coin  4 Credits"	},
-	{0x13, 0x01, 0xc0, 0x00, "1 Coin  6 Credits"	},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
 	{0x14, 0x01, 0x03, 0x00, "1"			},
@@ -289,10 +299,6 @@ static struct BurnDIPInfo GulfstrmDIPList[]=
 	{0x12, 0x01, 0x01, 0x01, "Off"			},
 	{0x12, 0x01, 0x01, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    2, "Coin Type"		},
-	{0x12, 0x01, 0x02, 0x02, "A"			},
-	{0x12, 0x01, 0x02, 0x00, "B"			},
-
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x12, 0x01, 0x04, 0x00, "Off"			},
 	{0x12, 0x01, 0x04, 0x04, "On"			},
@@ -301,25 +307,17 @@ static struct BurnDIPInfo GulfstrmDIPList[]=
 	{0x12, 0x01, 0x08, 0x08, "Off"			},
 	{0x12, 0x01, 0x08, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    8, "Coin A"		},
+	{0   , 0xfe, 0   ,    4, "Coin A"		},
 	{0x12, 0x01, 0x30, 0x10, "2 Coins 1 Credits"	},
 	{0x12, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 	{0x12, 0x01, 0x30, 0x00, "2 Coins 3 Credits"	},
 	{0x12, 0x01, 0x30, 0x20, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0x30, 0x00, "4 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x10, "3 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x20, "2 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 
-	{0   , 0xfe, 0   ,    8, "Coin B"		},
+	{0   , 0xfe, 0   ,    4, "Coin B"		},
 	{0x12, 0x01, 0xc0, 0x40, "2 Coins 1 Credits"	},
 	{0x12, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
 	{0x12, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"	},
 	{0x12, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0xc0, 0xc0, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0xc0, 0x80, "1 Coin  3 Credits"	},
-	{0x12, 0x01, 0xc0, 0x40, "1 Coin  4 Credits"	},
-	{0x12, 0x01, 0xc0, 0x00, "1 Coin  6 Credits"	},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
 	{0x13, 0x01, 0x03, 0x00, "1"			},
@@ -359,10 +357,6 @@ static struct BurnDIPInfo PolluxDIPList[]=
 	{0x12, 0x01, 0x01, 0x01, "Off"			},
 	{0x12, 0x01, 0x01, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    2, "Coin Type"		},
-	{0x12, 0x01, 0x02, 0x02, "A"			},
-	{0x12, 0x01, 0x02, 0x00, "B"			},
-
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x12, 0x01, 0x04, 0x00, "Off"			},
 	{0x12, 0x01, 0x04, 0x04, "On"			},
@@ -371,25 +365,17 @@ static struct BurnDIPInfo PolluxDIPList[]=
 	{0x12, 0x01, 0x08, 0x08, "Off"			},
 	{0x12, 0x01, 0x08, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    8, "Coin A"		},
+	{0   , 0xfe, 0   ,    4, "Coin A"		},
 	{0x12, 0x01, 0x30, 0x10, "2 Coins 1 Credits"	},
 	{0x12, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 	{0x12, 0x01, 0x30, 0x00, "2 Coins 3 Credits"	},
 	{0x12, 0x01, 0x30, 0x20, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0x30, 0x00, "4 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x10, "3 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x20, "2 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 
-	{0   , 0xfe, 0   ,    8, "Coin B"		},
+	{0   , 0xfe, 0   ,    4, "Coin B"		},
 	{0x12, 0x01, 0xc0, 0x40, "2 Coins 1 Credits"	},
 	{0x12, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
 	{0x12, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"	},
 	{0x12, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0xc0, 0xc0, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0xc0, 0x80, "1 Coin  3 Credits"	},
-	{0x12, 0x01, 0xc0, 0x40, "1 Coin  4 Credits"	},
-	{0x12, 0x01, 0xc0, 0x00, "1 Coin  6 Credits"	},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
 	{0x13, 0x01, 0x03, 0x00, "1"			},
@@ -419,10 +405,6 @@ static struct BurnDIPInfo FlytigerDIPList[]=
 	{0x12, 0x01, 0x01, 0x01, "Off"			},
 	{0x12, 0x01, 0x01, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    2, "Coin Type"		},
-	{0x12, 0x01, 0x02, 0x02, "A"			},
-	{0x12, 0x01, 0x02, 0x00, "B"			},
-
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x12, 0x01, 0x04, 0x00, "Off"			},
 	{0x12, 0x01, 0x04, 0x04, "On"			},
@@ -431,25 +413,17 @@ static struct BurnDIPInfo FlytigerDIPList[]=
 	{0x12, 0x01, 0x08, 0x08, "Off"			},
 	{0x12, 0x01, 0x08, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    8, "Coin A"		},
+	{0   , 0xfe, 0   ,    4, "Coin A"		},
 	{0x12, 0x01, 0x30, 0x10, "2 Coins 1 Credits"	},
 	{0x12, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 	{0x12, 0x01, 0x30, 0x00, "2 Coins 3 Credits"	},
 	{0x12, 0x01, 0x30, 0x20, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0x30, 0x00, "4 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x10, "3 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x20, "2 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 
-	{0   , 0xfe, 0   ,    8, "Coin B"		},
+	{0   , 0xfe, 0   ,    4, "Coin B"		},
 	{0x12, 0x01, 0xc0, 0x40, "2 Coins 1 Credits"	},
 	{0x12, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
 	{0x12, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"	},
 	{0x12, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0xc0, 0xc0, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0xc0, 0x80, "1 Coin  3 Credits"	},
-	{0x12, 0x01, 0xc0, 0x40, "1 Coin  4 Credits"	},
-	{0x12, 0x01, 0xc0, 0x00, "1 Coin  6 Credits"	},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
 	{0x13, 0x01, 0x03, 0x00, "1"			},
@@ -483,10 +457,6 @@ static struct BurnDIPInfo BluehawkDIPList[]=
 	{0x12, 0x01, 0x01, 0x01, "Off"			},
 	{0x12, 0x01, 0x01, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    2, "Coin Type"		},
-	{0x12, 0x01, 0x02, 0x02, "A"			},
-	{0x12, 0x01, 0x02, 0x00, "B"			},
-
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x12, 0x01, 0x04, 0x00, "Off"			},
 	{0x12, 0x01, 0x04, 0x04, "On"			},
@@ -495,25 +465,17 @@ static struct BurnDIPInfo BluehawkDIPList[]=
 	{0x12, 0x01, 0x08, 0x08, "Off"			},
 	{0x12, 0x01, 0x08, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    8, "Coin A"		},
+	{0   , 0xfe, 0   ,    4, "Coin A"		},
 	{0x12, 0x01, 0x30, 0x10, "2 Coins 1 Credits"	},
 	{0x12, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 	{0x12, 0x01, 0x30, 0x00, "2 Coins 3 Credits"	},
 	{0x12, 0x01, 0x30, 0x20, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0x30, 0x00, "4 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x10, "3 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x20, "2 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 
-	{0   , 0xfe, 0   ,    8, "Coin B"		},
+	{0   , 0xfe, 0   ,    4, "Coin B"		},
 	{0x12, 0x01, 0xc0, 0x40, "2 Coins 1 Credits"	},
 	{0x12, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
 	{0x12, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"	},
 	{0x12, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0xc0, 0xc0, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0xc0, 0x80, "1 Coin  3 Credits"	},
-	{0x12, 0x01, 0xc0, 0x40, "1 Coin  4 Credits"	},
-	{0x12, 0x01, 0xc0, 0x00, "1 Coin  6 Credits"	},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
 	{0x13, 0x01, 0x03, 0x00, "1"			},
@@ -543,10 +505,6 @@ static struct BurnDIPInfo PrimellaDIPList[]=
 	{0x12, 0x01, 0x01, 0x01, "Off"			},
 	{0x12, 0x01, 0x01, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    2, "Coin Type"		},
-	{0x12, 0x01, 0x02, 0x02, "A"			},
-	{0x12, 0x01, 0x02, 0x00, "B"			},
-
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x12, 0x01, 0x04, 0x00, "Off"			},
 	{0x12, 0x01, 0x04, 0x04, "On"			},
@@ -555,25 +513,17 @@ static struct BurnDIPInfo PrimellaDIPList[]=
 	{0x12, 0x01, 0x08, 0x08, "Off"			},
 	{0x12, 0x01, 0x08, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    8, "Coin A"		},
+	{0   , 0xfe, 0   ,    4, "Coin A"		},
 	{0x12, 0x01, 0x30, 0x10, "2 Coins 1 Credits"	},
 	{0x12, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 	{0x12, 0x01, 0x30, 0x00, "2 Coins 3 Credits"	},
 	{0x12, 0x01, 0x30, 0x20, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0x30, 0x00, "4 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x10, "3 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x20, "2 Coins 1 Credits"	},
-	{0x12, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 
-	{0   , 0xfe, 0   ,    8, "Coin B"		},
+	{0   , 0xfe, 0   ,    4, "Coin B"		},
 	{0x12, 0x01, 0xc0, 0x40, "2 Coins 1 Credits"	},
 	{0x12, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
 	{0x12, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"	},
 	{0x12, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0xc0, 0xc0, "1 Coin  2 Credits"	},
-	{0x12, 0x01, 0xc0, 0x80, "1 Coin  3 Credits"	},
-	{0x12, 0x01, 0xc0, 0x40, "1 Coin  4 Credits"	},
-	{0x12, 0x01, 0xc0, 0x00, "1 Coin  6 Credits"	},
 
 	{0   , 0xfe, 0   ,    4, "Show Girl"		},
 	{0x13, 0x01, 0x03, 0x00, "Skip Skip Skip"	},
@@ -598,6 +548,58 @@ static struct BurnDIPInfo PrimellaDIPList[]=
 
 STDDIPINFO(Primella)
 
+static struct BurnDIPInfo SadariDIPList[]=
+{
+	{0x14, 0xff, 0xff, 0xff, NULL			},
+	{0x15, 0xff, 0xff, 0x9d, NULL			},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"		},
+	{0x14, 0x01, 0x01, 0x01, "Off"			},
+	{0x14, 0x01, 0x01, 0x00, "On"			},
+
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
+	{0x14, 0x01, 0x04, 0x00, "Off"			},
+	{0x14, 0x01, 0x04, 0x04, "On"			},
+
+	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
+	{0x14, 0x01, 0x08, 0x08, "Off"			},
+	{0x14, 0x01, 0x08, 0x00, "On"			},
+
+	{0   , 0xfe, 0   ,    4, "Coin A"		},
+	{0x14, 0x01, 0x30, 0x10, "2 Coins 1 Credits"	},
+	{0x14, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
+	{0x14, 0x01, 0x30, 0x00, "2 Coins 3 Credits"	},
+	{0x14, 0x01, 0x30, 0x20, "1 Coin  2 Credits"	},
+
+	{0   , 0xfe, 0   ,    4, "Coin B"		},
+	{0x14, 0x01, 0xc0, 0x40, "2 Coins 1 Credits"	},
+	{0x14, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
+	{0x14, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"	},
+	{0x14, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"	},
+
+	{0   , 0xfe, 0   ,    4, "Show Girl"		},
+	{0x15, 0x01, 0x03, 0x00, "Skip Skip Skip"	},
+	{0x15, 0x01, 0x03, 0x03, "Dress Dress Dress"	},
+	{0x15, 0x01, 0x03, 0x02, "Dress Half Half"	},
+	{0x15, 0x01, 0x03, 0x01, "Dress Half Naked"	},
+
+	{0   , 0xfe, 0   ,    4, "Difficulty"		},
+	{0x15, 0x01, 0x0c, 0x08, "Easy"			},
+	{0x15, 0x01, 0x0c, 0x0c, "Normal"		},
+	{0x15, 0x01, 0x0c, 0x04, "Hard"			},
+	{0x15, 0x01, 0x0c, 0x00, "Hardest"		},
+
+	{0   , 0xfe, 0   ,    2, "Cabinet"		},
+	{0x15, 0x01, 0x10, 0x10, "Upright"		},
+	{0x15, 0x01, 0x10, 0x00, "Cocktail"		},
+
+	{0   , 0xfe, 0   ,    2, "Allow Continue"	},
+	{0x15, 0x01, 0x80, 0x00, "No"			},
+	{0x15, 0x01, 0x80, 0x80, "Yes"			},
+};
+
+STDDIPINFO(Sadari)
+
 static struct BurnDIPInfo RsharkDIPList[]=
 {
 	{0x16, 0xff, 0xff, 0xff, NULL			},
@@ -607,10 +609,6 @@ static struct BurnDIPInfo RsharkDIPList[]=
 	{0x16, 0x01, 0x01, 0x01, "Off"			},
 	{0x16, 0x01, 0x01, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    2, "Coin Type"		},
-	{0x16, 0x01, 0x02, 0x02, "A"			},
-	{0x16, 0x01, 0x02, 0x00, "B"			},
-
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x16, 0x01, 0x04, 0x00, "Off"			},
 	{0x16, 0x01, 0x04, 0x04, "On"			},
@@ -619,25 +617,17 @@ static struct BurnDIPInfo RsharkDIPList[]=
 	{0x16, 0x01, 0x08, 0x08, "Off"			},
 	{0x16, 0x01, 0x08, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    8, "Coin A"		},
+	{0   , 0xfe, 0   ,    4, "Coin A"		},
 	{0x16, 0x01, 0x30, 0x10, "2 Coins 1 Credits"	},
 	{0x16, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 	{0x16, 0x01, 0x30, 0x00, "2 Coins 3 Credits"	},
 	{0x16, 0x01, 0x30, 0x20, "1 Coin  2 Credits"	},
-	{0x16, 0x01, 0x30, 0x00, "4 Coins 1 Credits"	},
-	{0x16, 0x01, 0x30, 0x10, "3 Coins 1 Credits"	},
-	{0x16, 0x01, 0x30, 0x20, "2 Coins 1 Credits"	},
-	{0x16, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 
-	{0   , 0xfe, 0   ,    8, "Coin B"		},
+	{0   , 0xfe, 0   ,    4, "Coin B"		},
 	{0x16, 0x01, 0xc0, 0x40, "2 Coins 1 Credits"	},
 	{0x16, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
 	{0x16, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"	},
 	{0x16, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"	},
-	{0x16, 0x01, 0xc0, 0xc0, "1 Coin  2 Credits"	},
-	{0x16, 0x01, 0xc0, 0x80, "1 Coin  3 Credits"	},
-	{0x16, 0x01, 0xc0, 0x40, "1 Coin  4 Credits"	},
-	{0x16, 0x01, 0xc0, 0x00, "1 Coin  6 Credits"	},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
 	{0x17, 0x01, 0x03, 0x00, "1"			},
@@ -663,10 +653,6 @@ static struct BurnDIPInfo SuperxDIPList[]=
 	{0x16, 0xff, 0xff, 0xfe, NULL			},
 	{0x17, 0xff, 0xff, 0xff, NULL			},
 
-	{0   , 0xfe, 0   ,    2, "Coin Type"		},
-	{0x16, 0x01, 0x02, 0x02, "A"			},
-	{0x16, 0x01, 0x02, 0x00, "B"			},
-
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x16, 0x01, 0x04, 0x00, "Off"			},
 	{0x16, 0x01, 0x04, 0x04, "On"			},
@@ -675,25 +661,17 @@ static struct BurnDIPInfo SuperxDIPList[]=
 	{0x16, 0x01, 0x08, 0x08, "Off"			},
 	{0x16, 0x01, 0x08, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    8, "Coin A"		},
+	{0   , 0xfe, 0   ,    4, "Coin A"		},
 	{0x16, 0x01, 0x30, 0x10, "2 Coins 1 Credits"	},
 	{0x16, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 	{0x16, 0x01, 0x30, 0x00, "2 Coins 3 Credits"	},
 	{0x16, 0x01, 0x30, 0x20, "1 Coin  2 Credits"	},
-	{0x16, 0x01, 0x30, 0x00, "4 Coins 1 Credits"	},
-	{0x16, 0x01, 0x30, 0x10, "3 Coins 1 Credits"	},
-	{0x16, 0x01, 0x30, 0x20, "2 Coins 1 Credits"	},
-	{0x16, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 
-	{0   , 0xfe, 0   ,    8, "Coin B"		},
+	{0   , 0xfe, 0   ,    4, "Coin B"		},
 	{0x16, 0x01, 0xc0, 0x40, "2 Coins 1 Credits"	},
 	{0x16, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
 	{0x16, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"	},
 	{0x16, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"	},
-	{0x16, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
-	{0x16, 0x01, 0xc0, 0x80, "1 Coin  3 Credits"	},
-	{0x16, 0x01, 0xc0, 0x40, "1 Coin  4 Credits"	},
-	{0x16, 0x01, 0xc0, 0x00, "1 Coin  6 Credits"	},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
 	{0x17, 0x01, 0x03, 0x00, "1"			},
@@ -723,10 +701,6 @@ static struct BurnDIPInfo PopbingoDIPList[]=
 	{0x16, 0x01, 0x01, 0x01, "Off"			},
 	{0x16, 0x01, 0x01, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    2, "Coin Type"		},
-	{0x16, 0x01, 0x02, 0x02, "A"			},
-	{0x16, 0x01, 0x02, 0x00, "B"			},
-
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
 	{0x16, 0x01, 0x04, 0x04, "Off"			},
 	{0x16, 0x01, 0x04, 0x00, "On"			},
@@ -735,25 +709,17 @@ static struct BurnDIPInfo PopbingoDIPList[]=
 	{0x16, 0x01, 0x08, 0x08, "Off"			},
 	{0x16, 0x01, 0x08, 0x00, "On"			},
 
-	{0   , 0xfe, 0   ,    8, "Coin A"		},
+	{0   , 0xfe, 0   ,    4, "Coin A"		},
 	{0x16, 0x01, 0x30, 0x10, "2 Coins 1 Credits"	},
 	{0x16, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 	{0x16, 0x01, 0x30, 0x00, "2 Coins 3 Credits"	},
 	{0x16, 0x01, 0x30, 0x20, "1 Coin  2 Credits"	},
-	{0x16, 0x01, 0x30, 0x00, "4 Coins 1 Credits"	},
-	{0x16, 0x01, 0x30, 0x10, "3 Coins 1 Credits"	},
-	{0x16, 0x01, 0x30, 0x20, "2 Coins 1 Credits"	},
-	{0x16, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
 
-	{0   , 0xfe, 0   ,    8, "Coin B"		},
+	{0   , 0xfe, 0   ,    4, "Coin B"		},
 	{0x16, 0x01, 0xc0, 0x40, "2 Coins 1 Credits"	},
 	{0x16, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
 	{0x16, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"	},
 	{0x16, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"	},
-	{0x16, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
-	{0x16, 0x01, 0xc0, 0x80, "1 Coin  3 Credits"	},
-	{0x16, 0x01, 0xc0, 0x40, "1 Coin  4 Credits"	},
-	{0x16, 0x01, 0xc0, 0x00, "1 Coin  6 Credits"	},
 
 	{0   , 0xfe, 0   ,    2, "VS Max Round"		},
 	{0x17, 0x01, 0x01, 0x01, "3"			},
@@ -893,6 +859,7 @@ static void __fastcall gulfstrm_main_write(UINT16 address, UINT8 data)
 		return;
 
 		case 0xf010:
+			ZetSetIRQLine(1, 0, CPU_IRQSTATUS_HOLD);
 			soundlatch = data;
 		return;
 	}
@@ -1257,16 +1224,22 @@ static UINT8 __fastcall superx_main_read_byte(UINT32 address)
 	switch (address)
 	{
 		case 0x080002:
+			return DrvDips[1];
+
 		case 0x080003:
-			return (DrvDips[1] << 8) | DrvDips[0];
+			return DrvDips[0];
 
 		case 0x080004:
+			return (DrvInputs[0] >> 8) & 0xff;
+
 		case 0x080005:
-			return DrvInputs[0];
+			return DrvInputs[0] & 0xff;
 
 		case 0x080006:
+			return (DrvInputs[1] >> 8) & 0xff;
+
 		case 0x080007:
-			return DrvInputs[1];
+			return DrvInputs[1] & 0xff;
 	}
 
 	return 0;
@@ -1301,7 +1274,7 @@ static void __fastcall sound_write(UINT16 address, UINT8 data)
 		return;
 
 		case 0xf80a:
-			MSM6295Command(0, data);
+			MSM6295Write(0, data);
 		return;
 	}
 }
@@ -1330,10 +1303,10 @@ static UINT8 __fastcall sound_read(UINT16 address)
 	// flytiger
 		case 0xf808:
 		case 0xf809:
-			return BurnYM2151ReadStatus();
+			return BurnYM2151Read();
 
 		case 0xf80a:
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 	}
 
 	return 0;
@@ -1342,33 +1315,12 @@ static UINT8 __fastcall sound_read(UINT16 address)
 inline static void DrvYM2203IRQHandler(INT32 n, INT32 nStatus)
 {
 	sound_irq_line[n] = nStatus;
-
-	ZetSetIRQLine(0, ((sound_irq_line[0] | sound_irq_line[1]) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE));
+	ZetSetIRQLine(0, ((sound_irq_line[0] || sound_irq_line[1]) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE));
 }
 
 static void DrvYM2151IrqHandler(INT32 nStatus)
 {
 	ZetSetIRQLine(0, (nStatus ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE));
-}
-
-inline static INT32 DrvSynchroniseStream(INT32 nSoundRate)
-{
-	return (INT64)ZetTotalCycles() * nSoundRate / 4000000;
-}
-
-inline static INT32 DrvSynchroniseStream8Mhz(INT32 nSoundRate)
-{
-	return (INT64)ZetTotalCycles() * nSoundRate / 8000000;
-}
-
-inline static double DrvGetTime()
-{
-	return (double)ZetTotalCycles() / 4000000.0;
-}
-
-inline static double DrvGetTime8Mhz()
-{
-	return (double)ZetTotalCycles() / 8000000.0;
 }
 
 static INT32 Z80YM2203DoReset()
@@ -1379,12 +1331,13 @@ static INT32 Z80YM2203DoReset()
 	ZetReset();
 	ZetClose();
 
+	sound_irq_line[0] = sound_irq_line[1] = 0;
+
 	ZetOpen(1);
-	ZetReset();
 	BurnYM2203Reset();
+	ZetReset();
 	ZetClose();
 
-	sound_irq_line[0] = sound_irq_line[1] = 0;
 	sprite_enable = 0;
 	soundlatch = 0;
 	priority_select = 0;
@@ -1618,7 +1571,7 @@ static void DrvGfxDecode(INT32 gfx, UINT8 *src, INT32 nLen, INT32 nType)
 			count+=advcnt;
 		}
 
-#ifdef FBA_DEBUG
+#ifdef FBNEO_DEBUG
 		bprintf (0, _T("%d, mask: %x, transpcnt: %x\n"), gfx, gfxmask[gfx], count);
 #endif
 	}
@@ -1693,7 +1646,7 @@ static INT32 LastdayInit()
 
 	DrvSoundCPUInit(1,0);
 
-	BurnYM2203Init(2, 4000000, &DrvYM2203IRQHandler, DrvSynchroniseStream8Mhz, DrvGetTime8Mhz, 0);
+	BurnYM2203Init(2, 4000000, &DrvYM2203IRQHandler, 0);
 	BurnTimerAttachZet(8000000);
 	BurnYM2203SetAllRoutes(0, 0.40, BURN_SND_ROUTE_BOTH);
 	BurnYM2203SetAllRoutes(1, 0.40, BURN_SND_ROUTE_BOTH);
@@ -1760,14 +1713,12 @@ static INT32 GulfstrmInit()
 
 	DrvSoundCPUInit(1,0);
 
-	BurnYM2203Init(2, 1500000, &DrvYM2203IRQHandler, DrvSynchroniseStream8Mhz, DrvGetTime8Mhz, 0);
+	BurnYM2203Init(2, 1500000, &DrvYM2203IRQHandler, 0);
 	BurnTimerAttachZet(8000000);
 	BurnYM2203SetAllRoutes(0, 0.40, BURN_SND_ROUTE_BOTH);
 	BurnYM2203SetPSGVolume(0, 0.20);
 	BurnYM2203SetAllRoutes(1, 0.40, BURN_SND_ROUTE_BOTH);
 	BurnYM2203SetPSGVolume(1, 0.20);
-
-	pollux_gulfstrm_irq_kicker_hack = 10;
 
 	GenericTilesInit();
 
@@ -1830,13 +1781,12 @@ static INT32 PolluxInit()
 
 	DrvSoundCPUInit(1,1);
 
-	BurnYM2203Init(2, 1500000, &DrvYM2203IRQHandler, DrvSynchroniseStream8Mhz, DrvGetTime8Mhz, 0);
+	BurnYM2203Init(2, 1500000, &DrvYM2203IRQHandler, 0);
 	BurnTimerAttachZet(8000000);
 	BurnYM2203SetAllRoutes(0, 0.40, BURN_SND_ROUTE_BOTH);
 	BurnYM2203SetAllRoutes(1, 0.40, BURN_SND_ROUTE_BOTH);
 
-	pollux_gulfstrm_irq_kicker_hack = 13;
-	main_cpu_clock = 12000000; // +4Mhz hack so the video scrolls better.
+	main_cpu_clock = 8000000;
 
 	GenericTilesInit();
 
@@ -2287,7 +2237,6 @@ static INT32 Z80YM2203Exit()
 	main_cpu_clock = 8000000;
 	vblank = 0;
 	gulf_storm = 0;
-	pollux_gulfstrm_irq_kicker_hack = 0;
 
 	return 0;
 }
@@ -2843,46 +2792,36 @@ static INT32 LastdayFrame()
 		}
 	}
 
-	INT32 nInterleave = 100;
+	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[2] = { main_cpu_clock / 60, 8000000 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
-	vblank = 0;
+	vblank = 1;
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		ZetOpen(0);
-		nCyclesDone[0] += ZetRun(nCyclesTotal[0] / nInterleave);
-		if (gulf_storm) {
-			if (i == 92) { ZetSetIRQLine(0, CPU_IRQSTATUS_ACK); vblank = 1; }
-			if (i == 93) { ZetSetIRQLine(0, CPU_IRQSTATUS_NONE); vblank = 0; }
-		} else {
-			if (i == (nInterleave - 2)) ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
-			if (i == (nInterleave - 1)) ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
+		CPU_RUN(0, Zet);
+
+		if (i == (nInterleave - 1)) {
+			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
+			vblank = 1;
+			}
+		if (i == 1) {
+			vblank = 0;
 		}
 		ZetClose();
 
 		ZetOpen(1);
-		BurnTimerUpdate((i + 1) * nCyclesTotal[1] / nInterleave);
-		if (pollux_gulfstrm_irq_kicker_hack && (i % pollux_gulfstrm_irq_kicker_hack) == 0) { // ugly hack for pollux musix+sfx
-			if (!(sound_irq_line[0] | sound_irq_line[1])) {
-				ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
-				ZetRun(60);
-				ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
-			}
-		}
+		CPU_RUN_TIMER(1);
 		ZetClose();
 	}
 
-	ZetOpen(1);
-
-	BurnTimerEndFrame(nCyclesTotal[1]);
-
 	if (pBurnSoundOut) {
+		ZetOpen(1);
 		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
+		ZetClose();
 	}
-
-	ZetClose();
 
 	if (pBurnDraw) {
 		BurnDrvRedraw();
@@ -2919,15 +2858,12 @@ static INT32 FlytigerFrame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		ZetOpen(0);
-		nCyclesDone[0] += ZetRun(nCyclesTotal[0] / nInterleave);
-		if (i == (nInterleave - 2)) ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
-		if (i == (nInterleave - 1)) ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
+		CPU_RUN(0, Zet);
+		if (i == (nInterleave - 1)) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
 
 		ZetOpen(1);
-
-		nCyclesDone[1] += ZetRun(nCyclesTotal[1] / nInterleave);
-
+		CPU_RUN(1, Zet);
 		if (pBurnSoundOut) {
 			nSegment = nBurnSoundLen / nInterleave;
 
@@ -2936,7 +2872,6 @@ static INT32 FlytigerFrame()
 
 			nSoundBufferPos += nSegment;
 		}
-
 		ZetClose();
 	}
 
@@ -2961,6 +2896,16 @@ static INT32 FlytigerFrame()
 	return 0;
 }
 
+static inline void JoyClearOpposites(UINT8* nJoystickInputs)
+{ // works on active-high
+	if ((*nJoystickInputs & 0x03) == 0x03) {
+		*nJoystickInputs &= ~0x03;
+	}
+	if ((*nJoystickInputs & 0x0c) == 0x0c) {
+		*nJoystickInputs &= ~0x0c;
+	}
+}
+
 static INT32 RsharkFrame()
 {
 	if (DrvReset) {
@@ -2972,10 +2917,17 @@ static INT32 RsharkFrame()
 
 	{
 		memset (DrvInputs, 0xff, 3*sizeof(INT16));
+		DrvInputs[0] = 0;
 		for (INT32 i = 0; i < 16; i++) {
 			DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;
 			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
 		}
+
+		UINT8 *p1p2 = (UINT8 *)&DrvInputs[0];
+		JoyClearOpposites(p1p2 + 0);
+		JoyClearOpposites(p1p2 + 1);
+
+		DrvInputs[0] ^= 0xffff; // convert to active-low
 	}
 
 	INT32 nSegment = 0;
@@ -3078,8 +3030,8 @@ static INT32 Z80YM2151Scan(INT32 nAction,INT32 *pnMin)
 
 		ZetScan(nAction);
 
-		BurnYM2151Scan(nAction);
-		MSM6295Scan(0, nAction);
+		BurnYM2151Scan(nAction, pnMin);
+		MSM6295Scan(nAction, pnMin);
 
 		SCAN_VAR(sprite_enable);
 		SCAN_VAR(soundlatch);
@@ -3115,8 +3067,8 @@ static INT32 Drv68KScan(INT32 nAction,INT32 *pnMin)
 		SekScan(nAction);
 		ZetScan(nAction);
 
-		BurnYM2151Scan(nAction);
-		MSM6295Scan(0, nAction);
+		BurnYM2151Scan(nAction, pnMin);
+		MSM6295Scan(nAction, pnMin);
 
 		SCAN_VAR(sprite_enable);
 		SCAN_VAR(soundlatch);
@@ -3164,7 +3116,7 @@ struct BurnDriver BurnDrvLastday = {
 	"The Last Day (set 1)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, lastdayRomInfo, lastdayRomName, NULL, NULL, LastdayInputInfo, LastdayDIPInfo,
+	NULL, lastdayRomInfo, lastdayRomName, NULL, NULL, NULL, NULL, LastdayInputInfo, LastdayDIPInfo,
 	LastdayInit, Z80YM2203Exit, LastdayFrame, LastdayDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3206,7 +3158,7 @@ struct BurnDriver BurnDrvLastdaya = {
 	"The Last Day (set 2)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, lastdayaRomInfo, lastdayaRomName, NULL, NULL, LastdayInputInfo, LastdayDIPInfo,
+	NULL, lastdayaRomInfo, lastdayaRomName, NULL, NULL, NULL, NULL, LastdayInputInfo, LastdayDIPInfo,
 	LastdayInit, Z80YM2203Exit, LastdayFrame, LastdayDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3248,7 +3200,7 @@ struct BurnDriver BurnDrvDdaydoo = {
 	"Chulgyeok D-Day (Korea)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, ddaydooRomInfo, ddaydooRomName, NULL, NULL, LastdayInputInfo, LastdayDIPInfo,
+	NULL, ddaydooRomInfo, ddaydooRomName, NULL, NULL, NULL, NULL, LastdayInputInfo, LastdayDIPInfo,
 	LastdayInit, Z80YM2203Exit, LastdayFrame, LastdayDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3291,7 +3243,7 @@ struct BurnDriver BurnDrvGulfstrm = {
 	"Gulf Storm (set 1)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, gulfstrmRomInfo, gulfstrmRomName, NULL, NULL, GulfstrmInputInfo, GulfstrmDIPInfo,
+	NULL, gulfstrmRomInfo, gulfstrmRomName, NULL, NULL, NULL, NULL, GulfstrmInputInfo, GulfstrmDIPInfo,
 	GulfstrmInit, Z80YM2203Exit, LastdayFrame, GulfstrmDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3334,7 +3286,7 @@ struct BurnDriver BurnDrvGulfstrma = {
 	"Gulf Storm (set 2)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, gulfstrmaRomInfo, gulfstrmaRomName, NULL, NULL, GulfstrmInputInfo, GulfstrmDIPInfo,
+	NULL, gulfstrmaRomInfo, gulfstrmaRomName, NULL, NULL, NULL, NULL, GulfstrmInputInfo, GulfstrmDIPInfo,
 	GulfstrmInit, Z80YM2203Exit, LastdayFrame, GulfstrmDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3377,7 +3329,7 @@ struct BurnDriver BurnDrvGulfstrmb = {
 	"Gulf Storm (set 3)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, gulfstrmbRomInfo, gulfstrmbRomName, NULL, NULL, GulfstrmInputInfo, GulfstrmDIPInfo,
+	NULL, gulfstrmbRomInfo, gulfstrmbRomName, NULL, NULL, NULL, NULL, GulfstrmInputInfo, GulfstrmDIPInfo,
 	GulfstrmInit, Z80YM2203Exit, LastdayFrame, GulfstrmDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3420,7 +3372,50 @@ struct BurnDriver BurnDrvGulfstrmm = {
 	"Gulf Storm (Media Shoji)\0", NULL, "Dooyong (Media Shoji license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, gulfstrmmRomInfo, gulfstrmmRomName, NULL, NULL, GulfstrmInputInfo, GulfstrmDIPInfo,
+	NULL, gulfstrmmRomInfo, gulfstrmmRomName, NULL, NULL, NULL, NULL, GulfstrmInputInfo, GulfstrmDIPInfo,
+	GulfstrmInit, Z80YM2203Exit, LastdayFrame, GulfstrmDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
+	240, 384, 3, 4
+};
+
+
+// Gulf Storm (Korea)
+
+static struct BurnRomInfo gulfstrmkRomDesc[] = {
+	{ "18.4l",	0x20000, 0x02bcf56d, 1 | BRF_PRG | BRF_ESS }, //  0 Main CPU Code
+
+	{ "3.c5",	0x10000, 0xc029b015, 2 | BRF_PRG | BRF_ESS }, //  1 Audio CPU Code
+
+	{ "2.bin",	0x10000, 0xcb555d96, 3 | BRF_GRA },           //  2 Characters
+
+	{ "14.b1",	0x20000, 0x67bdf73d, 4 | BRF_GRA },           //  3 Sprites
+	{ "16.c1",	0x20000, 0x7770a76f, 4 | BRF_GRA },           //  4
+	{ "15.b1",	0x20000, 0x84803f7e, 4 | BRF_GRA },           //  5
+	{ "17.e1",	0x20000, 0x94706500, 4 | BRF_GRA },           //  6
+
+	{ "4.d8",	0x20000, 0x858fdbb6, 5 | BRF_GRA },           //  7 Tiles
+	{ "5.b9",	0x20000, 0xc0a552e8, 5 | BRF_GRA },           //  8
+	{ "6.d8",	0x20000, 0x20eedda3, 5 | BRF_GRA },           //  9
+	{ "7.d9",	0x20000, 0x294f8c40, 5 | BRF_GRA },           // 10
+
+	{ "12.bin",	0x20000, 0x3e3d3b57, 6 | BRF_GRA },           // 11 Tiles
+	{ "13.bin",	0x20000, 0x66fcce80, 6 | BRF_GRA },           // 12
+
+	{ "8.e8",	0x10000, 0x8d7f4693, 7 | BRF_GRA },           // 13 Tiles
+	{ "9.e9",	0x10000, 0x34d440c4, 7 | BRF_GRA },           // 14
+
+	{ "10.bin",	0x10000, 0x08149140, 8 | BRF_GRA },           // 15 Tiles
+	{ "11.bin",	0x10000, 0x2ed7545b, 8 | BRF_GRA },           // 16
+};
+
+STD_ROM_PICK(gulfstrmk)
+STD_ROM_FN(gulfstrmk)
+
+struct BurnDriver BurnDrvGulfstrmk = {
+	"gulfstrmk", "gulfstrm", NULL, NULL, "1991",
+	"Gulf Storm (Korea)\0", NULL, "Dooyong", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	NULL, gulfstrmkRomInfo, gulfstrmkRomName, NULL, NULL, NULL, NULL, GulfstrmInputInfo, GulfstrmDIPInfo,
 	GulfstrmInit, Z80YM2203Exit, LastdayFrame, GulfstrmDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3457,7 +3452,7 @@ struct BurnDriver BurnDrvPollux = {
 	"Pollux (set 1)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, polluxRomInfo, polluxRomName, NULL, NULL, PolluxInputInfo, PolluxDIPInfo,
+	NULL, polluxRomInfo, polluxRomName, NULL, NULL, NULL, NULL, PolluxInputInfo, PolluxDIPInfo,
 	PolluxInit, Z80YM2203Exit, LastdayFrame, PolluxDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3494,7 +3489,7 @@ struct BurnDriver BurnDrvPolluxa = {
 	"Pollux (set 2)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, polluxaRomInfo, polluxaRomName, NULL, NULL, PolluxInputInfo, PolluxDIPInfo,
+	NULL, polluxaRomInfo, polluxaRomName, NULL, NULL, NULL, NULL, PolluxInputInfo, PolluxDIPInfo,
 	PolluxInit, Z80YM2203Exit, LastdayFrame, PolluxDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3531,7 +3526,7 @@ struct BurnDriver BurnDrvPolluxa2 = {
 	"Pollux (set 3)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, polluxa2RomInfo, polluxa2RomName, NULL, NULL, PolluxInputInfo, PolluxDIPInfo,
+	NULL, polluxa2RomInfo, polluxa2RomName, NULL, NULL, NULL, NULL, PolluxInputInfo, PolluxDIPInfo,
 	PolluxInit, Z80YM2203Exit, LastdayFrame, PolluxDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3568,7 +3563,7 @@ struct BurnDriver BurnDrvPolluxn = {
 	"Pollux (Japan, NTC license)\0", NULL, "Dooyong (NTC license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, polluxnRomInfo, polluxnRomName, NULL, NULL, PolluxInputInfo, PolluxDIPInfo,
+	NULL, polluxnRomInfo, polluxnRomName, NULL, NULL, NULL, NULL, PolluxInputInfo, PolluxDIPInfo,
 	PolluxInit, Z80YM2203Exit, LastdayFrame, PolluxDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3608,7 +3603,7 @@ struct BurnDriver BurnDrvFlytiger = {
 	"Flying Tiger (set 1)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, flytigerRomInfo, flytigerRomName, NULL, NULL, BluehawkInputInfo, FlytigerDIPInfo,
+	NULL, flytigerRomInfo, flytigerRomName, NULL, NULL, NULL, NULL, BluehawkInputInfo, FlytigerDIPInfo,
 	FlytigerInit, Z80YM2151Exit, FlytigerFrame, FlytigerDraw, Z80YM2151Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3654,7 +3649,7 @@ struct BurnDriver BurnDrvFlytigera = {
 	"Flying Tiger (set 2)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, flytigeraRomInfo, flytigeraRomName, NULL, NULL, BluehawkInputInfo, FlytigerDIPInfo,
+	NULL, flytigeraRomInfo, flytigeraRomName, NULL, NULL, NULL, NULL, BluehawkInputInfo, FlytigerDIPInfo,
 	FlytigeraInit, Z80YM2151Exit, FlytigerFrame, FlytigerDraw, Z80YM2151Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3689,7 +3684,7 @@ struct BurnDriver BurnDrvBluehawk = {
 	"Blue Hawk\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, bluehawkRomInfo, bluehawkRomName, NULL, NULL, BluehawkInputInfo, BluehawkDIPInfo,
+	NULL, bluehawkRomInfo, bluehawkRomName, NULL, NULL, NULL, NULL, BluehawkInputInfo, BluehawkDIPInfo,
 	BluehawkInit, Z80YM2151Exit, FlytigerFrame, BluehawkDraw, Z80YM2151Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3724,7 +3719,7 @@ struct BurnDriver BurnDrvBluehawkn = {
 	"Blue Hawk (NTC)\0", NULL, "Dooyong (NTC license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, bluehawknRomInfo, bluehawknRomName, NULL, NULL, BluehawkInputInfo, BluehawkDIPInfo,
+	NULL, bluehawknRomInfo, bluehawknRomName, NULL, NULL, NULL, NULL, BluehawkInputInfo, BluehawkDIPInfo,
 	BluehawkInit, Z80YM2151Exit, FlytigerFrame, BluehawkDraw, Z80YM2151Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
 };
@@ -3764,8 +3759,8 @@ struct BurnDriver BurnDrvSadari = {
 	"sadari", NULL, NULL, NULL, "1993",
 	"Sadari\0", NULL, "Dooyong (NTC license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
-	NULL, sadariRomInfo, sadariRomName, NULL, NULL, BluehawkInputInfo, PrimellaDIPInfo,
+	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	NULL, sadariRomInfo, sadariRomName, NULL, NULL, NULL, NULL, SadariInputInfo, SadariDIPInfo,
 	SadariInit, Z80YM2151Exit, FlytigerFrame, PrimellaDraw, Z80YM2151Scan, &DrvRecalc, 0x400,
 	384, 256, 4, 3
 };
@@ -3806,8 +3801,8 @@ struct BurnDriver BurnDrvGundl94 = {
 	"gundl94", NULL, NULL, NULL, "1994",
 	"Gun Dealer '94\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
-	NULL, gundl94RomInfo, gundl94RomName, NULL, NULL, BluehawkInputInfo, PrimellaDIPInfo,
+	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	NULL, gundl94RomInfo, gundl94RomName, NULL, NULL, NULL, NULL, BluehawkInputInfo, PrimellaDIPInfo,
 	PrimellaInit, Z80YM2151Exit, FlytigerFrame, PrimellaDraw, Z80YM2151Scan, &DrvRecalc, 0x400,
 	384, 256, 4, 3
 };
@@ -3838,8 +3833,8 @@ struct BurnDriver BurnDrvPrimella = {
 	"primella", "gundl94", NULL, NULL, "1994",
 	"Primella\0", NULL, "Dooyong (NTC license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
-	NULL, primellaRomInfo, primellaRomName, NULL, NULL, BluehawkInputInfo, PrimellaDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	NULL, primellaRomInfo, primellaRomName, NULL, NULL, NULL, NULL, BluehawkInputInfo, PrimellaDIPInfo,
 	PrimellaInit, Z80YM2151Exit, FlytigerFrame, PrimellaDraw, Z80YM2151Scan, &DrvRecalc, 0x400,
 	384, 256, 4, 3
 };
@@ -3885,7 +3880,7 @@ struct BurnDriver BurnDrvSuperx = {
 	"Super-X (NTC)\0", NULL, "Dooyong (NTC license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, superxRomInfo, superxRomName, NULL, NULL, RsharkInputInfo, SuperxDIPInfo,
+	NULL, superxRomInfo, superxRomName, NULL, NULL, NULL, NULL, RsharkInputInfo, SuperxDIPInfo,
 	SuperxInit, Drv68KExit, RsharkFrame, RsharkDraw, Drv68KScan, &DrvRecalc, 0x800,
 	240, 384, 3, 4
 };
@@ -3926,7 +3921,7 @@ struct BurnDriver BurnDrvSuperxm = {
 	"Super-X (Mitchell)\0", NULL, "Dooyong (Mitchell license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, superxmRomInfo, superxmRomName, NULL, NULL, RsharkInputInfo, SuperxDIPInfo,
+	NULL, superxmRomInfo, superxmRomName, NULL, NULL, NULL, NULL, RsharkInputInfo, SuperxDIPInfo,
 	SuperxInit, Drv68KExit, RsharkFrame, RsharkDraw, Drv68KScan, &DrvRecalc, 0x800,
 	240, 384, 3, 4
 };
@@ -3979,7 +3974,7 @@ struct BurnDriver BurnDrvRshark = {
 	"R-Shark\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, rsharkRomInfo, rsharkRomName, NULL, NULL, RsharkInputInfo, RsharkDIPInfo,
+	NULL, rsharkRomInfo, rsharkRomName, NULL, NULL, NULL, NULL, RsharkInputInfo, RsharkDIPInfo,
 	RsharkInit, Drv68KExit, RsharkFrame, RsharkDraw, Drv68KScan, &DrvRecalc, 0x800,
 	240, 384, 3, 4
 };
@@ -4017,7 +4012,7 @@ struct BurnDriver BurnDrvPopbingo = {
 	"Pop Bingo\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
-	NULL, popbingoRomInfo, popbingoRomName, NULL, NULL, RsharkInputInfo, PopbingoDIPInfo,
+	NULL, popbingoRomInfo, popbingoRomName, NULL, NULL, NULL, NULL, RsharkInputInfo, PopbingoDIPInfo,
 	PopbingoInit, Drv68KExit, RsharkFrame, PopbingoDraw, Drv68KScan, &DrvRecalc, 0x800,
 	384, 240, 4, 3
 };

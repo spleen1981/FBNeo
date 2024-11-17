@@ -1,5 +1,4 @@
 #include "burnint.h"
-#include "burn_sound.h"
 #include "burn_ym2612.h"
 
 #define MAX_YM2612	2
@@ -42,7 +41,7 @@ static INT32 YM2612StreamCallbackDummy(INT32)
 
 static void YM2612Render(INT32 nSegmentLength)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2612Initted) bprintf(PRINT_ERROR, _T("YM2612Render called without init\n"));
 #endif
 	
@@ -89,7 +88,7 @@ static void YM2612Render(INT32 nSegmentLength)
 
 static void YM2612UpdateResample(INT16* pSoundBuf, INT32 nSegmentEnd)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2612Initted) bprintf(PRINT_ERROR, _T("YM2612UpdateResample called without init\n"));
 #endif
 
@@ -168,7 +167,7 @@ static void YM2612UpdateResample(INT16* pSoundBuf, INT32 nSegmentEnd)
 
 static void YM2612UpdateNormal(INT16* pSoundBuf, INT32 nSegmentEnd)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2612Initted) bprintf(PRINT_ERROR, _T("YM2612UpdateNormal called without init\n"));
 #endif
 
@@ -264,7 +263,7 @@ static void YM2612UpdateNormal(INT16* pSoundBuf, INT32 nSegmentEnd)
 
 void BurnYM2612UpdateRequest()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2612Initted) bprintf(PRINT_ERROR, _T("YM2612UpdateRequest called without init\n"));
 #endif
 
@@ -276,7 +275,7 @@ void BurnYM2612UpdateRequest()
 
 void BurnYM2612Reset()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2612Initted) bprintf(PRINT_ERROR, _T("BurnYM2612Reset called without init\n"));
 #endif
 
@@ -289,18 +288,17 @@ void BurnYM2612Reset()
 
 void BurnYM2612Exit()
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2612Initted) bprintf(PRINT_ERROR, _T("BurnYM2612Exit called without init\n"));
 #endif
+
+	if (!DebugSnd_YM2612Initted) return;
 
 	YM2612Shutdown();
 
 	BurnTimerExit();
 
-	if (pBuffer) {
-		free(pBuffer);
-		pBuffer = NULL;
-	}
+	BurnFree(pBuffer);
 	
 	nNumChips = 0;
 	bYM2612AddSignal = 0;
@@ -309,6 +307,11 @@ void BurnYM2612Exit()
 }
 
 void BurnStateExit();
+
+INT32 BurnYM2612Init(INT32 num, INT32 nClockFrequency, FM_IRQHANDLER IRQCallback, INT32 bAddSignal)
+{
+	return BurnYM2612Init(num, nClockFrequency, IRQCallback, BurnSynchroniseStream, BurnGetTime, bAddSignal);
+}
 
 INT32 BurnYM2612Init(INT32 num, INT32 nClockFrequency, FM_IRQHANDLER IRQCallback, INT32 (*StreamCallback)(INT32), double (*GetTimeCallback)(), INT32 bAddSignal)
 {
@@ -350,7 +353,7 @@ INT32 BurnYM2612Init(INT32 num, INT32 nClockFrequency, FM_IRQHANDLER IRQCallback
 	
 	YM2612Init(num, nClockFrequency, nBurnYM2612SoundRate, &BurnOPNTimerCallback, IRQCallback);
 
-	pBuffer = (INT16*)malloc(4096 * 2 * num * sizeof(INT16));
+	pBuffer = (INT16*)BurnMalloc(4096 * 2 * num * sizeof(INT16));
 	memset(pBuffer, 0, 4096 * 2 * num * sizeof(INT16));
 	
 	nYM2612Position = 0;
@@ -377,7 +380,7 @@ INT32 BurnYM2612Init(INT32 num, INT32 nClockFrequency, FM_IRQHANDLER IRQCallback
 
 void BurnYM2612SetRoute(INT32 nChip, INT32 nIndex, double nVolume, INT32 nRouteDir)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2612Initted) bprintf(PRINT_ERROR, _T("BurnYM2612SetRoute called without init\n"));
 	if (nIndex < 0 || nIndex > 1) bprintf(PRINT_ERROR, _T("BurnYM2612SetRoute called with invalid index %i\n"), nIndex);
 	if (nChip >= nNumChips) bprintf(PRINT_ERROR, _T("BurnYM2612SetRoute called with invalid chip %i\n"), nChip);
@@ -396,7 +399,7 @@ void BurnYM2612SetRoute(INT32 nChip, INT32 nIndex, double nVolume, INT32 nRouteD
 
 void BurnYM2612Scan(INT32 nAction, INT32* pnMin)
 {
-#if defined FBA_DEBUG
+#if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2612Initted) bprintf(PRINT_ERROR, _T("BurnYM2612Scan called without init\n"));
 #endif
 

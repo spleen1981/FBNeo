@@ -22,8 +22,6 @@ static UINT8 *DrvM6809RAM;
 static UINT8 *DrvZ80RAM;
 static UINT8 *DrvSprRAM;
 
-static INT16 *pAY8910Buffer[6];
-
 static UINT32 *DrvPalette;
 static UINT8  DrvRecalc;
 
@@ -39,29 +37,29 @@ static UINT8 DrvReset;
 static INT32 watchdog;
 
 static struct BurnInputInfo RocnropeInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 0,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Rocnrope)
@@ -263,7 +261,7 @@ static INT32 MemIndex()
 	UINT8 *Next; Next = AllMem;
 
 	DrvM6809ROM		= Next; Next += 0x010000;
-	DrvM6809ROMDec		= Next; Next += 0x010000;
+	DrvM6809ROMDec	= Next; Next += 0x010000;
 	DrvZ80ROM		= Next; Next += 0x003000;
 
 	DrvGfxROM0		= Next; Next += 0x010000;
@@ -282,13 +280,6 @@ static INT32 MemIndex()
 	DrvZ80RAM		= Next; Next += 0x000400;
 
 	RamEnd			= Next;
-
-	pAY8910Buffer[0]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[1]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[2]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[3]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[4]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[5]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
 
 	MemEnd			= Next;
 
@@ -369,7 +360,7 @@ static INT32 DrvInit()
 		}
 	}
 
-	M6809Init(1);
+	M6809Init(0);
 	M6809Open(0);
 	M6809MapMemory(DrvSprRAM,		0x4000, 0x47ff, MAP_RAM);
 	M6809MapMemory(DrvColRAM,		0x4800, 0x4bff, MAP_RAM);
@@ -484,8 +475,10 @@ static INT32 DrvDraw()
 		DrvRecalc = 0;
 	}
 
-	draw_layer();
-	draw_sprites();
+	BurnTransferClear();
+
+	if (nBurnLayer & 1) draw_layer();
+	if (nSpriteEnable & 1) draw_sprites();
 
 	BurnTransferCopy(DrvPalette);
 
@@ -523,35 +516,23 @@ static INT32 DrvFrame()
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[2] = { 1536000 / 60, 1789772 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
-	INT32 nSoundBufferPos = 0;
 
 	M6809Open(0);
 	ZetOpen(0);
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		INT32 nSegment = (nCyclesTotal[0] * (i + 1)) / nInterleave;
-		nCyclesDone[0] += M6809Run(nSegment - nCyclesDone[0]);
+		CPU_RUN(0, M6809);
 		if (i == (nInterleave - 1) && irq_enable) M6809SetIRQLine(0, CPU_IRQSTATUS_ACK);
 
-		nSegment = (nCyclesTotal[1] * i) / nInterleave;
-		nCyclesDone[1] += ZetRun(nSegment - nCyclesDone[1]);
-
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			TimepltSndUpdate(pAY8910Buffer, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
+		CPU_RUN(1, Zet);
 	}
 
 	ZetClose();
 	M6809Close();
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		TimepltSndUpdate(pAY8910Buffer, pSoundBuf, nSegmentLength);
+		TimepltSndUpdate(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	if (pBurnDraw) {
@@ -633,7 +614,7 @@ struct BurnDriver BurnDrvRocnrope = {
 	"Roc'n Rope\0", NULL, "Konami", "GX364",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_PLATFORM, 0,
-	NULL, rocnropeRomInfo, rocnropeRomName, NULL, NULL, RocnropeInputInfo, RocnropeDIPInfo,
+	NULL, rocnropeRomInfo, rocnropeRomName, NULL, NULL, NULL, NULL, RocnropeInputInfo, RocnropeDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -674,7 +655,7 @@ struct BurnDriver BurnDrvRocnropek = {
 	"Roc'n Rope (Kosuka)\0", NULL, "Konami / Kosuka", "GX364",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_PLATFORM, 0,
-	NULL, rocnropekRomInfo, rocnropekRomName, NULL, NULL, RocnropeInputInfo, RocnropeDIPInfo,
+	NULL, rocnropekRomInfo, rocnropekRomName, NULL, NULL, NULL, NULL, RocnropeInputInfo, RocnropeDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -692,8 +673,8 @@ static struct BurnRomInfo ropemanRomDesc[] = {
 	{ "r12.7a",		0x1000, 0x75d2c4e2, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 Code
 	{ "r13.8a",		0x1000, 0xca4325ae, 2 | BRF_PRG | BRF_ESS }, //  6
 
-	{ "r10.11a",		0x2000, 0xafdaba5e, 3 | BRF_GRA },           //  7 Sprites
-	{ "r11.12a",		0x2000, 0x054cafeb, 3 | BRF_GRA },           //  8
+	{ "r10.11a",	0x2000, 0xafdaba5e, 3 | BRF_GRA },           //  7 Sprites
+	{ "r11.12a",	0x2000, 0x054cafeb, 3 | BRF_GRA },           //  8
 	{ "r8.9a",		0x2000, 0x9d2166b2, 3 | BRF_GRA },           //  9
 	{ "r9.10a",		0x2000, 0xaff6e22f, 3 | BRF_GRA },           // 10
 
@@ -704,9 +685,9 @@ static struct BurnRomInfo ropemanRomDesc[] = {
 	{ "2.16b",		0x0100, 0x750a9677, 5 | BRF_GRA },           // 14
 	{ "3.16g",		0x0100, 0xb5c75a27, 5 | BRF_GRA },           // 15
 
-	{ "pal10l8.6g",		0x0001, 0x00000000, 6 | BRF_OPT | BRF_NODUMP }, // 16 PALs
-	{ "n82s153.pal1.bin",	0x00eb, 0xbaebe804, 6 | BRF_OPT },           // 17
-	{ "n82s153.pal2.bin",	0x00eb, 0xa0e1b7a0, 6 | BRF_OPT },           // 18
+	{ "pal10l8.6g",			0x002c, 0x82e98da9, 6 | BRF_OPT }, 	 // 16 PALs
+	{ "n82s153.pal1.bin",	0x00eb, 0xbaebe804, 6 | BRF_OPT },   // 17
+	{ "n82s153.pal2.bin",	0x00eb, 0xa0e1b7a0, 6 | BRF_OPT },   // 18
 };
 
 STD_ROM_PICK(ropeman)
@@ -717,7 +698,7 @@ struct BurnDriver BurnDrvRopeman = {
 	"Ropeman (bootleg of Roc'n Rope)\0", NULL, "bootleg", "GX364",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_PLATFORM, 0,
-	NULL, ropemanRomInfo, ropemanRomName, NULL, NULL, RocnropeInputInfo, RocnropeDIPInfo,
+	NULL, ropemanRomInfo, ropemanRomName, NULL, NULL, NULL, NULL, RocnropeInputInfo, RocnropeDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };

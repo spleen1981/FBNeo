@@ -117,7 +117,7 @@ static struct BurnDIPInfo TumblepDIPList[]=
 
 STDDIPINFO(Tumblep)
 
-void __fastcall tumblep_main_write_word(UINT32 address, UINT16 data)
+static void __fastcall tumblep_main_write_word(UINT32 address, UINT16 data)
 {
 	deco16_write_control_word(0, address, 0x300000, data)
 
@@ -130,7 +130,7 @@ void __fastcall tumblep_main_write_word(UINT32 address, UINT16 data)
 	}
 }
 
-void __fastcall tumblep_main_write_byte(UINT32 address, UINT8 data)
+static void __fastcall tumblep_main_write_byte(UINT32 address, UINT8 data)
 {
 	switch (address)
 	{
@@ -142,7 +142,7 @@ void __fastcall tumblep_main_write_byte(UINT32 address, UINT8 data)
 	}
 }
 
-UINT16 __fastcall tumblep_main_read_word(UINT32 address)
+static UINT16 __fastcall tumblep_main_read_word(UINT32 address)
 {
 	switch (address)
 	{
@@ -159,7 +159,7 @@ UINT16 __fastcall tumblep_main_read_word(UINT32 address)
 	return 0;
 }
 
-UINT8 __fastcall tumblep_main_read_byte(UINT32 address)
+static UINT8 __fastcall tumblep_main_read_byte(UINT32 address)
 {
 	switch (address)
 	{
@@ -192,6 +192,8 @@ static INT32 DrvDoReset()
 	deco16SoundReset();
 
 	deco16Reset();
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -507,7 +509,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 	if (nAction & ACB_DRIVER_DATA) {
 		SekScan(nAction);
-	
+
 		deco16SoundScan(nAction, pnMin);
 
 		deco16Scan();
@@ -540,8 +542,8 @@ struct BurnDriver BurnDrvTumblep = {
 	"tumblep", NULL, NULL, NULL, "1991",
 	"Tumble Pop (World)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
-	NULL, tumblepRomInfo, tumblepRomName, NULL, NULL, TumblepInputInfo, TumblepDIPInfo,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
+	NULL, tumblepRomInfo, tumblepRomName, NULL, NULL, NULL, NULL, TumblepInputInfo, TumblepDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };
@@ -570,8 +572,8 @@ struct BurnDriver BurnDrvTumblepj = {
 	"tumblepj", "tumblep", NULL, NULL, "1991",
 	"Tumble Pop (Japan)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
-	NULL, tumblepjRomInfo, tumblepjRomName, NULL, NULL, TumblepInputInfo, TumblepDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
+	NULL, tumblepjRomInfo, tumblepjRomName, NULL, NULL, NULL, NULL, TumblepInputInfo, TumblepDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };

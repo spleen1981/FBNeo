@@ -1,4 +1,9 @@
+// FB Alpha Batrider driver module
+// Driver and emulation by Jan Klaassen
+
 #include "toaplan.h"
+#include "nmk112.h"
+
 // Batrider
 
 static UINT8 drvButton[8] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -7,10 +12,8 @@ static UINT8 drvJoy2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static UINT8 drvInput[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 static UINT8 drvRegion = 0;
 static UINT8 drvReset = 0;
-static UINT8 bDrawScreen;
 
 static UINT8 nIRQPending;
-static bool bVBlank;
 
 static INT32 nData;
 
@@ -20,35 +23,35 @@ static INT32 nTextROMStatus;
 static void Map68KTextROM(bool bMapTextROM);
 
 static struct BurnInputInfo batriderInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	drvButton + 3,	"p1 coin"},
-	{"P1 Start",	BIT_DIGITAL,	drvButton + 5,	"p1 start"},
+	{"P1 Coin",		BIT_DIGITAL,	drvButton + 3,	"p1 coin"	},
+	{"P1 Start",	BIT_DIGITAL,	drvButton + 5,	"p1 start"	},
 
-	{"P1 Up",		BIT_DIGITAL,	drvJoy1 + 0,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	drvJoy1 + 1,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	drvJoy1 + 2,	"p1 left"},
-	{"P1 Right",	BIT_DIGITAL,	drvJoy1 + 3,	"p1 right"},
-	{"P1 Shoot 1",	BIT_DIGITAL,	drvJoy1 + 4,	"p1 fire 1"},
-	{"P1 Shoot 2",	BIT_DIGITAL,	drvJoy1 + 5,	"p1 fire 2"},
-	{"P1 Shoot 3",	BIT_DIGITAL,	drvJoy1 + 6,	"p1 fire 3"},
+	{"P1 Up",		BIT_DIGITAL,	drvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",		BIT_DIGITAL,	drvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",		BIT_DIGITAL,	drvJoy1 + 2,	"p1 left"	},
+	{"P1 Right",	BIT_DIGITAL,	drvJoy1 + 3,	"p1 right"	},
+	{"P1 Shoot 1",	BIT_DIGITAL,	drvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Shoot 2",	BIT_DIGITAL,	drvJoy1 + 5,	"p1 fire 2"	},
+	{"P1 Shoot 3",	BIT_DIGITAL,	drvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	drvButton + 4,	"p2 coin"},
-	{"P2 Start",	BIT_DIGITAL,	drvButton + 6,	"p2 start"},
+	{"P2 Coin",		BIT_DIGITAL,	drvButton + 4,	"p2 coin"	},
+	{"P2 Start",	BIT_DIGITAL,	drvButton + 6,	"p2 start"	},
 
-	{"P2 Up",		BIT_DIGITAL,	drvJoy2 + 0,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	drvJoy2 + 1,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	drvJoy2 + 2,	"p2 left"},
-	{"P2 Right",	BIT_DIGITAL,	drvJoy2 + 3,	"p2 right"},
-	{"P2 Shoot 1",	BIT_DIGITAL,	drvJoy2 + 4,	"p2 fire 1"},
-	{"P2 Shoot 2",	BIT_DIGITAL,	drvJoy2 + 5,	"p2 fire 2"},
-	{"P2 Shoot 3",	BIT_DIGITAL,	drvJoy2 + 6,	"p2 fire 3"},
+	{"P2 Up",		BIT_DIGITAL,	drvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",		BIT_DIGITAL,	drvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",		BIT_DIGITAL,	drvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",	BIT_DIGITAL,	drvJoy2 + 3,	"p2 right"	},
+	{"P2 Shoot 1",	BIT_DIGITAL,	drvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Shoot 2",	BIT_DIGITAL,	drvJoy2 + 5,	"p2 fire 2"	},
+	{"P2 Shoot 3",	BIT_DIGITAL,	drvJoy2 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	  &drvReset,		"reset"},
-	{"Test",	  BIT_DIGITAL,	 drvButton + 2,	"diag"},
-	{"Service",	BIT_DIGITAL,	 drvButton + 0,	"service"},
-	{"Dip 1",		BIT_DIPSWITCH,	drvInput + 3,	"dip"},
-	{"Dip 2",		BIT_DIPSWITCH,	drvInput + 4,	"dip"},
-	{"Dip 3",		BIT_DIPSWITCH,	drvInput + 5,	"dip"},
-	{"Region",  BIT_DIPSWITCH,	&drvRegion  ,	"dip"},
+	{"Reset",		BIT_DIGITAL,	&drvReset,		"reset"		},
+	{"Test",	  	BIT_DIGITAL,	drvButton + 2,	"diag"		},
+	{"Service",		BIT_DIGITAL,	drvButton + 0,	"service"	},
+	{"Dip 1",		BIT_DIPSWITCH,	drvInput + 3,	"dip"		},
+	{"Dip 2",		BIT_DIPSWITCH,	drvInput + 4,	"dip"		},
+	{"Dip 3",		BIT_DIPSWITCH,	drvInput + 5,	"dip"		},
+	{"Region",  	BIT_DIPSWITCH,	&drvRegion  ,	"dip"		},
 };
 
 STDINPUTINFO(batrider)
@@ -254,7 +257,7 @@ static UINT8 *Mem = NULL, *MemEnd = NULL;
 static UINT8 *RamStart, *RamEnd;
 static UINT8 *Rom01;
 static UINT8 *Ram01, *Ram02, *RamPal;
-UINT8 *RamShared;
+static UINT8 *RamShared;
 static INT32 nColCount = 0x0800;
 
 static INT32 MemIndex()
@@ -284,13 +287,20 @@ static INT32 MemIndex()
 	return 0;
 }
 
+static void DrvZ80Sync()
+{
+	INT32 todo = ((SekTotalCycles() / 4) - nCyclesDone[1]);
+	if (todo > 0) nCyclesDone[1] += ZetRun(todo);
+}
+
+
 static void drvZ80Bankswitch(INT32 nBank)
 {
 	nBank &= 0x0F;
 	if (nBank != nCurrentBank) {
 		UINT8* nStartAddress = RomZ80 + (nBank << 14);
-		ZetMapArea(0x8000, 0xBFFF, 0, nStartAddress);
-		ZetMapArea(0x8000, 0xBFFF, 2, nStartAddress);
+
+		ZetMapMemory(nStartAddress, 0x8000, 0xbfff, MAP_ROM);
 
 		nCurrentBank = nBank;
 	}
@@ -314,18 +324,17 @@ static INT32 drvScan(INT32 nAction, INT32* pnMin)
 
 		SekScan(nAction);				// Scan 68000
 		ZetScan(nAction);				// Scan Z80
-		SCAN_VAR(nCurrentBank);
 
-		MSM6295Scan(0, nAction);
-		MSM6295Scan(1, nAction);
-		BurnYM2151Scan(nAction);
+		MSM6295Scan(nAction, pnMin);
+		BurnYM2151Scan(nAction, pnMin);
+		NMK112_Scan(nAction);
 
 		ToaScanGP9001(nAction, pnMin);
 
 		SCAN_VAR(nIRQPending);
 		SCAN_VAR(nTextROMStatus);
-
-		SCAN_VAR(drvInput);
+		SCAN_VAR(nCurrentBank);
+		SCAN_VAR(nData);
 
 		if (nAction & ACB_WRITE) {
 			INT32 n = nTextROMStatus;
@@ -367,7 +376,7 @@ static INT32 LoadRoms()
 	return 0;
 }
 
-UINT8 __fastcall batriderZIn(UINT16 nAddress)
+static UINT8 __fastcall batriderZIn(UINT16 nAddress)
 {
 	nAddress &= 0xFF;
 
@@ -380,17 +389,17 @@ UINT8 __fastcall batriderZIn(UINT16 nAddress)
 			return RamShared[1];
 
 		case 0x81:
-			return BurnYM2151ReadStatus();
+			return BurnYM2151Read();
 		case 0x82:
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 		case 0x84:
-			return MSM6295ReadStatus(1);
+			return MSM6295Read(1);
 	}
 
 	return 0;
 }
 
-void __fastcall batriderZOut(UINT16 nAddress, UINT8 nValue)
+static void __fastcall batriderZOut(UINT16 nAddress, UINT8 nValue)
 {
 	nAddress &= 0xFF;
 
@@ -416,10 +425,10 @@ void __fastcall batriderZOut(UINT16 nAddress, UINT8 nValue)
 			break;
 
 		case 0x82:
-			MSM6295Command(0, nValue);
+			MSM6295Write(0, nValue);
 			break;
 		case 0x84:
-			MSM6295Command(1, nValue);
+			MSM6295Write(1, nValue);
 			break;
 
 		case 0x88: {
@@ -427,28 +436,11 @@ void __fastcall batriderZOut(UINT16 nAddress, UINT8 nValue)
 			break;
 
 		case 0xC0:
-			MSM6295SampleInfo[0][0] = MSM6295ROM + ((nValue & 0x0F) << 16);
-			MSM6295SampleData[0][0] = MSM6295ROM + ((nValue & 0x0F) << 16);
-			MSM6295SampleInfo[0][1] = MSM6295ROM + ((nValue & 0xF0) << 12) + 0x0100;
-			MSM6295SampleData[0][1] = MSM6295ROM + ((nValue & 0xF0) << 12);
-			break;
 		case 0xC2:
-			MSM6295SampleInfo[0][2] = MSM6295ROM + ((nValue & 0x0F) << 16) + 0x0200;
-			MSM6295SampleData[0][2] = MSM6295ROM + ((nValue & 0x0F) << 16);
-			MSM6295SampleInfo[0][3] = MSM6295ROM + ((nValue & 0xF0) << 12) + 0x0300;
-			MSM6295SampleData[0][3] = MSM6295ROM + ((nValue & 0xF0) << 12);
-			break;
 		case 0xC4:
-			MSM6295SampleInfo[1][0] = MSM6295ROM + 0x0100000 + ((nValue & 0x0F) << 16);
-			MSM6295SampleData[1][0] = MSM6295ROM + 0x0100000 + ((nValue & 0x0F) << 16);
-			MSM6295SampleInfo[1][1] = MSM6295ROM + 0x0100000 + ((nValue & 0xF0) << 12) + 0x0100;
-			MSM6295SampleData[1][1] = MSM6295ROM + 0x0100000 + ((nValue & 0xF0) << 12);
-			break;
 		case 0xC6:
-			MSM6295SampleInfo[1][2] = MSM6295ROM + 0x0100000 + ((nValue & 0x0F) << 16) + 0x0200;
-			MSM6295SampleData[1][2] = MSM6295ROM + 0x0100000 + ((nValue & 0x0F) << 16);
-			MSM6295SampleInfo[1][3] = MSM6295ROM + 0x0100000 + ((nValue & 0xF0) << 12) + 0x0300;
-			MSM6295SampleData[1][3] = MSM6295ROM + 0x0100000 + ((nValue & 0xF0) << 12);
+			NMK112_okibank_write((nAddress & 6) + 0, nValue & 0xf);
+			NMK112_okibank_write((nAddress & 6) + 1, nValue >> 4);
 			break;
 		}
 	}
@@ -481,7 +473,7 @@ static INT32 drvZInit()
 	return 0;
 }
 
-UINT8 __fastcall batriderReadByte(UINT32 sekAddress)
+static UINT8 __fastcall batriderReadByte(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 
@@ -493,7 +485,7 @@ UINT8 __fastcall batriderReadByte(UINT32 sekAddress)
 			return drvInput[5];
 		case 0x500003:								// Other inputs
 			return drvInput[2];
-        case 0x500004:								// Dipswitch 2
+		case 0x500004:								// Dipswitch 2
 			return drvInput[4];
 		case 0x500005:								// Dipswitch 1
 			return drvInput[3];
@@ -510,7 +502,7 @@ UINT8 __fastcall batriderReadByte(UINT32 sekAddress)
 	return 0;
 }
 
-UINT16 __fastcall batriderReadWord(UINT32 sekAddress)
+static UINT16 __fastcall batriderReadWord(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 		case 0x500006:
@@ -534,7 +526,7 @@ UINT16 __fastcall batriderReadWord(UINT32 sekAddress)
 	return 0;
 }
 
-void __fastcall batriderWriteByte(UINT32 sekAddress, UINT8)	// UINT8 byteValue
+static void __fastcall batriderWriteByte(UINT32 sekAddress, UINT8)	// UINT8 byteValue
 {
 	switch (sekAddress) {
 
@@ -546,27 +538,27 @@ void __fastcall batriderWriteByte(UINT32 sekAddress, UINT8)	// UINT8 byteValue
 	}
 }
 
-void __fastcall batriderWriteWord(UINT32 sekAddress, UINT16 wordValue)
+static void __fastcall batriderWriteWord(UINT32 sekAddress, UINT16 wordValue)
 {
 	switch (sekAddress) {
 		case 0x500020: {
+			DrvZ80Sync();
 			RamShared[0] = wordValue;
 
 			// The 68K program normally writes 0x500020/0x500022 as a single longword,
 			// except during the communications test.
 			if (wordValue == 0x55) {
 				ZetNmi();
-				nCyclesDone[1] += ZetRun(0x1800);
 			}
 			break;
 		}
 		case 0x500022:
+			DrvZ80Sync();
 			RamShared[1] = wordValue;
 
 			// Sound commands are processed by the Z80 using an NMI
 			// So, trigger a Z80 NMI and execute it
 			ZetNmi();
-			nCyclesDone[1] += ZetRun(0x1800);
 			break;
 
 		case 0x500024:
@@ -615,7 +607,7 @@ void __fastcall batriderWriteWord(UINT32 sekAddress, UINT16 wordValue)
 	}
 }
 
-UINT16 __fastcall batriderReadWordGP9001(UINT32 sekAddress)
+static UINT16 __fastcall batriderReadWordGP9001(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 		case 0x400008:
@@ -628,7 +620,7 @@ UINT16 __fastcall batriderReadWordGP9001(UINT32 sekAddress)
 	return 0;
 }
 
-void __fastcall batriderWriteWordGP9001(UINT32 sekAddress, UINT16 wordValue)
+static void __fastcall batriderWriteWordGP9001(UINT32 sekAddress, UINT16 wordValue)
 {
 	switch (sekAddress) {
 
@@ -651,12 +643,12 @@ void __fastcall batriderWriteWordGP9001(UINT32 sekAddress, UINT16 wordValue)
 	}
 }
 
-UINT8 __fastcall batriderReadByteZ80ROM(UINT32 sekAddress)
+static UINT8 __fastcall batriderReadByteZ80ROM(UINT32 sekAddress)
 {
 	return RomZ80[(sekAddress & 0x7FFFF) >> 1];
 }
 
-UINT16 __fastcall batriderReadWordZ80ROM(UINT32 sekAddress)
+static UINT16 __fastcall batriderReadWordZ80ROM(UINT32 sekAddress)
 {
 	return RomZ80[(sekAddress & 0x7FFFF) >> 1];
 }
@@ -684,14 +676,15 @@ static INT32 drvDoReset()
 {
 	// Insert region code into 68K ROM, code by BisonSAS
 	UINT8 nRegion = drvRegion & 0x1F;
-  if (nRegion<=25) {
-  	Rom01[0x00000^1]=(UINT8)(nRegion<<13) | (drvRegion & 0x1F);
-  }
+
+	if (nRegion<=25) {
+  		Rom01[0x00000^1]=(UINT8)(nRegion<<13) | (drvRegion & 0x1F);
+  	}
 
 	SekOpen(0);
 
 	nIRQPending = 0;
-  SekSetIRQLine(0, CPU_IRQSTATUS_NONE);
+	SekSetIRQLine(0, CPU_IRQSTATUS_NONE);
 
 	Map68KTextROM(true);
 
@@ -702,9 +695,9 @@ static INT32 drvDoReset()
 	ZetReset();
 	ZetClose();
 
-	MSM6295Reset(0);
-	MSM6295Reset(1);
+	MSM6295Reset();
 	BurnYM2151Reset();
+	NMK112Reset();
 
 	HiscoreReset();
 
@@ -737,7 +730,7 @@ static INT32 drvInit()
 
 	{
 		SekInit(0, 0x68000);									// Allocate 68000
-	    SekOpen(0);
+		SekOpen(0);
 
 		// Map 68000 memory:
 		SekMapMemory(Rom01, 0x000000, 0x1FFFFF, MAP_ROM);		// CPU 0 ROM
@@ -784,21 +777,22 @@ static INT32 drvInit()
 	MSM6295SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
 	MSM6295SetRoute(1, 1.00, BURN_SND_ROUTE_BOTH);
 
+	NMK112_init(0, MSM6295ROM, MSM6295ROM + 0x100000, 0x100000, 0x100000);
+
 	nToaPalLen = nColCount;
 	ToaPalSrc = RamPal;
 	ToaPalInit();
 
 	nTextROMStatus = -1;
-	bDrawScreen = true;
 
 	drvDoReset(); // Reset machine
+
 	return 0;
 }
 
 static INT32 drvExit()
 {
-	MSM6295Exit(0);
-	MSM6295Exit(1);
+	MSM6295Exit();
 	BurnYM2151Exit();
 
 	ToaPalExit();
@@ -812,22 +806,15 @@ static INT32 drvExit()
 	return 0;
 }
 
-inline static INT32 CheckSleep(INT32)
-{
-	return 0;
-}
-
 static INT32 drvDraw()
 {
 	ToaClearScreen(0);
 
-	if (bDrawScreen) {
-		ToaGetBitmap();
-		ToaRenderGP9001();					// Render GP9001 graphics
-		ToaExtraTextLayer();				// Render extra text layer
-	}
+	ToaGetBitmap();
+	ToaRenderGP9001();					// Render GP9001 graphics
+	ToaExtraTextLayer();				// Render extra text layer
 
-	ToaPalUpdate();							// Update the palette
+	ToaPalUpdate();						// Update the palette
 
 	return 0;
 }
@@ -863,29 +850,21 @@ static INT32 drvFrame()
 	SekSetCyclesScanline(nCyclesTotal[0] / 262);
 	nToaCyclesDisplayStart = nCyclesTotal[0] - ((nCyclesTotal[0] * (TOA_VBLANK_LINES + 240)) / 262);
 	nToaCyclesVBlankStart = nCyclesTotal[0] - ((nCyclesTotal[0] * TOA_VBLANK_LINES) / 262);
-	bVBlank = false;
 
+	bool bVBlank = false;
 	INT32 nSoundBufferPos = 0;
 
 	ZetOpen(0);
 	for (INT32 i = 1; i <= nInterleave; i++) {
-    	INT32 nCurrentCPU;
-		INT32 nNext;
-
 		// Run 68000
-
-		nCurrentCPU = 0;
-		nNext = i * nCyclesTotal[nCurrentCPU] / nInterleave;
+		INT32 nCurrentCPU = 0;
+		INT32 nNext = i * nCyclesTotal[nCurrentCPU] / nInterleave;
 
 		// Trigger VBlank interrupt
 		if (!bVBlank && nNext > nToaCyclesVBlankStart) {
 			if (nCyclesDone[nCurrentCPU] < nToaCyclesVBlankStart) {
 				nCyclesSegment = nToaCyclesVBlankStart - nCyclesDone[nCurrentCPU];
-				if (!CheckSleep(nCurrentCPU)) {
-					nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-				} else {
-					nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-				}
+				nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 			}
 
 			ToaBufferGP9001Sprites();
@@ -900,28 +879,21 @@ static INT32 drvFrame()
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		if (!CheckSleep(nCurrentCPU)) {									// See if this CPU is busywaiting
-			nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		} else {
-			nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-		}
+		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 
-		if ((i & 1) == 0) {
-			// Run Z80
-			nCurrentCPU = 1;
-			nNext = i * nCyclesTotal[nCurrentCPU] / nInterleave;
-			nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-			nCyclesDone[nCurrentCPU] += ZetRun(nCyclesSegment);
+		// Run Z80
+		nCurrentCPU = 1;
+		nNext = i * nCyclesTotal[nCurrentCPU] / nInterleave;
+		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
+		nCyclesDone[nCurrentCPU] += ZetRun(nCyclesSegment);
 
-			// Render sound segment
-			if (pBurnSoundOut) {
-				INT32 nSegmentLength = (nBurnSoundLen * i / nInterleave) - nSoundBufferPos;
-				INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-				BurnYM2151Render(pSoundBuf, nSegmentLength);
-				MSM6295Render(0, pSoundBuf, nSegmentLength);
-				MSM6295Render(1, pSoundBuf, nSegmentLength);
-				nSoundBufferPos += nSegmentLength;
-			}
+		// Render sound segment
+		if (pBurnSoundOut) {
+			INT32 nSegmentLength = (nBurnSoundLen * i / nInterleave) - nSoundBufferPos;
+			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
+			BurnYM2151Render(pSoundBuf, nSegmentLength);
+			MSM6295Render(pSoundBuf, nSegmentLength);
+			nSoundBufferPos += nSegmentLength;
 		}
 	}
 
@@ -934,8 +906,7 @@ static INT32 drvFrame()
 			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 			if (nSegmentLength) {
 				BurnYM2151Render(pSoundBuf, nSegmentLength);
-				MSM6295Render(0, pSoundBuf, nSegmentLength);
-				MSM6295Render(1, pSoundBuf, nSegmentLength);
+				MSM6295Render(pSoundBuf, nSegmentLength);
 			}
 		}
 	}
@@ -1186,7 +1157,7 @@ struct BurnDriver BurnDrvBatrid = {
 	"Armed Police Batrider (Europe) (Fri Feb 13 1998)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, batridRomInfo, batridRomName, NULL, NULL, batriderInputInfo, batridDIPInfo,
+	NULL, batridRomInfo, batridRomName, NULL, NULL, NULL, NULL, batriderInputInfo, batridDIPInfo,
 	drvInit, drvExit, drvFrame, drvDraw, drvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1196,7 +1167,7 @@ struct BurnDriver BurnDrvBatridu = {
 	"Armed Police Batrider (U.S.A.) (Fri Feb 13 1998)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, batriduRomInfo, batriduRomName, NULL, NULL, batriderInputInfo, batriduDIPInfo,
+	NULL, batriduRomInfo, batriduRomName, NULL, NULL, NULL, NULL, batriderInputInfo, batriduDIPInfo,
 	drvInit, drvExit, drvFrame, drvDraw, drvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1206,7 +1177,7 @@ struct BurnDriver BurnDrvBatridc = {
 	"Armed Police Batrider (China) (Fri Feb 13 1998)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, batridcRomInfo, batridcRomName, NULL, NULL, batriderInputInfo, batridcDIPInfo,
+	NULL, batridcRomInfo, batridcRomName, NULL, NULL, NULL, NULL, batriderInputInfo, batridcDIPInfo,
 	drvInit, drvExit, drvFrame, drvDraw, drvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1216,7 +1187,7 @@ struct BurnDriver BurnDrvBatridhk = {
 	"Armed Police Batrider - A Version (Hong Kong) (Mon Dec 22 1997)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, batridhkRomInfo, batridhkRomName, NULL, NULL, batriderInputInfo, batridhkDIPInfo,
+	NULL, batridhkRomInfo, batridhkRomName, NULL, NULL, NULL, NULL, batriderInputInfo, batridhkDIPInfo,
 	drvInit, drvExit, drvFrame, drvDraw, drvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1226,7 +1197,7 @@ struct BurnDriver BurnDrvBatridj = {
 	"Armed Police Batrider - B Version (Japan) (Fri Feb 13 1998)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, batridjRomInfo, batridjRomName, NULL, NULL, batriderInputInfo, batriderDIPInfo,
+	NULL, batridjRomInfo, batridjRomName, NULL, NULL, NULL, NULL, batriderInputInfo, batriderDIPInfo,
 	drvInit, drvExit, drvFrame, drvDraw, drvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1236,7 +1207,7 @@ struct BurnDriver BurnDrvBatridk = {
 	"Armed Police Batrider (Korea) (Fri Feb 13 1998)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, batridkRomInfo, batridkRomName, NULL, NULL, batriderInputInfo, batridkDIPInfo,
+	NULL, batridkRomInfo, batridkRomName, NULL, NULL, NULL, NULL, batriderInputInfo, batridkDIPInfo,
 	drvInit, drvExit, drvFrame, drvDraw, drvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1246,7 +1217,7 @@ struct BurnDriver BurnDrvBatridja = {
 	"Armed Police Batrider - A Version (Japan) (Mon Dec 22 1997)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, batridjaRomInfo, batridjaRomName, NULL, NULL, batriderInputInfo, batriderDIPInfo,
+	NULL, batridjaRomInfo, batridjaRomName, NULL, NULL, NULL, NULL, batriderInputInfo, batriderDIPInfo,
 	drvInit, drvExit, drvFrame, drvDraw, drvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -1256,7 +1227,7 @@ struct BurnDriver BurnDrvBatridta = {
 	"Armed Police Batrider - A Version (Taiwan) (Mon Dec 22 1997)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, batridtaRomInfo, batridtaRomName, NULL, NULL, batriderInputInfo, batridtaDIPInfo,
+	NULL, batridtaRomInfo, batridtaRomName, NULL, NULL, NULL, NULL, batriderInputInfo, batridtaDIPInfo,
 	drvInit, drvExit, drvFrame, drvDraw, drvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };

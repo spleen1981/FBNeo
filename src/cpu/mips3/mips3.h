@@ -10,7 +10,10 @@
 #include "mips3_common.h"
 
 #include <string>
+
+#if MIPS3_ENABLE_BREAKPOINTS
 #include <unordered_set>
+#endif
 
 namespace mips
 {
@@ -122,6 +125,7 @@ private:
     bool check_breakpoint();
 #endif
     void tlb_init();
+    void tlb_exit();
     void tlb_flush();
     void cop0_reset();
     void cop0_execute(uint32_t opcode);

@@ -1,3 +1,6 @@
+// FB Alpha Shippu Mahou Daisakusen driver module
+// Driver and emulation by Jan Klaassen
+
 #include "toaplan.h"
 // Shippu Mahou Daisakusen
 
@@ -7,8 +10,6 @@ static UINT8 DrvJoy2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static UINT8 DrvInput[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static UINT8 DrvReset = 0;
-static UINT8 bDrawScreen;
-static bool bVBlank;
 
 // Rom information
 static struct BurnRomInfo shippumdRomDesc[] = {
@@ -48,33 +49,33 @@ STD_ROM_PICK(kingdmgp)
 STD_ROM_FN(kingdmgp)
 
 static struct BurnInputInfo shippumdInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvButton + 3,	"p1 coin"},
-	{"P1 Start",	BIT_DIGITAL,	DrvButton + 5,	"p1 start"},
+	{"P1 Coin",		BIT_DIGITAL,	DrvButton + 3,	"p1 coin"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvButton + 5,	"p1 start"	},
 
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"},
-	{"P1 Right",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"},
-	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
-	{"P1 Button 2",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"},
-	{"P1 Button 3",	BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"},
+	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
+	{"P1 Button 3",	BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvButton + 4,	"p2 coin"},
-	{"P2 Start",	BIT_DIGITAL,	DrvButton + 6,	"p2 start"},
+	{"P2 Coin",		BIT_DIGITAL,	DrvButton + 4,	"p2 coin"	},
+	{"P2 Start",	BIT_DIGITAL,	DrvButton + 6,	"p2 start"	},
 
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"},
-	{"P2 Right",	BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"},
-	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"},
-	{"P2 Button 2",	BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"},
-	{"P2 Button 3",	BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"},
+	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",	BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
+	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",	BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
+	{"P2 Button 3",	BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"},
-	{"Diagnostics",	BIT_DIGITAL,	DrvButton + 0,	"diag"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvInput + 3,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvInput + 4,	"dip"},
-	{"Dip C",		BIT_DIPSWITCH,	DrvInput + 5,	"dip"},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Diagnostics",	BIT_DIGITAL,	DrvButton + 0,	"diag"		},
+	{"Dip A",		BIT_DIPSWITCH,	DrvInput + 3,	"dip"		},
+	{"Dip B",		BIT_DIPSWITCH,	DrvInput + 4,	"dip"		},
+	{"Dip C",		BIT_DIPSWITCH,	DrvInput + 5,	"dip"		},
 };
 
 STDINPUTINFO(shippumd)
@@ -219,8 +220,8 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		SekScan(nAction);				// Scan 68000
 		ZetScan(nAction);				// Scan Z80
 
-		MSM6295Scan(0, nAction);
-		BurnYM2151Scan(nAction);
+		MSM6295Scan(nAction, pnMin);
+		BurnYM2151Scan(nAction, pnMin);
 
 		ToaScanGP9001(nAction, pnMin);
 
@@ -252,18 +253,18 @@ static INT32 LoadRoms()
 	return 0;
 }
 
-UINT8 __fastcall shippumdZ80Read(UINT16 nAddress)
+static UINT8 __fastcall shippumdZ80Read(UINT16 nAddress)
 {
 	if (nAddress == 0xE001) {
-		return BurnYM2151ReadStatus();
+		return BurnYM2151Read();
 	}
 	if (nAddress == 0xE004) {
-		return MSM6295ReadStatus(0);
+		return MSM6295Read(0);
 	}
 	return 0;
 }
 
-void __fastcall shippumdZ80Write(UINT16 nAddress, UINT8 nValue)
+static void __fastcall shippumdZ80Write(UINT16 nAddress, UINT8 nValue)
 {
 	switch (nAddress) {
 		case 0xE000:
@@ -273,7 +274,7 @@ void __fastcall shippumdZ80Write(UINT16 nAddress, UINT8 nValue)
 			BurnYM2151WriteRegister(nValue);
 			break;
 		case 0xE004:
-			MSM6295Command(0, nValue);
+			MSM6295Write(0, nValue);
 			break;
 	}
 }
@@ -303,7 +304,7 @@ static INT32 DrvZ80Init()
 	return 0;
 }
 
-UINT8 __fastcall shippumdReadByte(UINT32 sekAddress)
+static UINT8 __fastcall shippumdReadByte(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 		case 0x21C021:								// Player 1 inputs
@@ -333,7 +334,7 @@ UINT8 __fastcall shippumdReadByte(UINT32 sekAddress)
 	return 0;
 }
 
-UINT16 __fastcall shippumdReadWord(UINT32 sekAddress)
+static UINT16 __fastcall shippumdReadWord(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 
@@ -372,24 +373,11 @@ UINT16 __fastcall shippumdReadWord(UINT32 sekAddress)
 	return 0;
 }
 
-void __fastcall shippumdWriteByte(UINT32 sekAddress, UINT8 byteValue)
+static void __fastcall shippumdWriteByte(UINT32 sekAddress, UINT8 byteValue)
 {
 	switch (sekAddress) {
 		case 0x21C01D: {
-			INT32 nBankOffset;
-			if (byteValue & 0x10) {
-				nBankOffset = 0x40000;
-			} else {
-				nBankOffset = 0x00000;
-			}
-			MSM6295SampleInfo[0][0] = MSM6295ROM + nBankOffset;
-			MSM6295SampleData[0][0] = MSM6295ROM + nBankOffset;
-			MSM6295SampleInfo[0][1] = MSM6295ROM + nBankOffset + 0x0100;
-			MSM6295SampleData[0][1] = MSM6295ROM + nBankOffset + 0x10000;
-			MSM6295SampleInfo[0][2] = MSM6295ROM + nBankOffset + 0x0200;
-			MSM6295SampleData[0][2] = MSM6295ROM + nBankOffset + 0x20000;
-			MSM6295SampleInfo[0][3] = MSM6295ROM + nBankOffset + 0x0300;
-			MSM6295SampleData[0][3] = MSM6295ROM + nBankOffset + 0x30000;
+			MSM6295SetBank(0, MSM6295ROM + ((byteValue & 0x10) << 14), 0x00000, 0x3ffff);
 			break;
 		}
 
@@ -403,25 +391,12 @@ void __fastcall shippumdWriteByte(UINT32 sekAddress, UINT8 byteValue)
 	}
 }
 
-void __fastcall shippumdWriteWord(UINT32 sekAddress, UINT16 wordValue)
+static void __fastcall shippumdWriteWord(UINT32 sekAddress, UINT16 wordValue)
 {
 	switch (sekAddress) {
 
 		case 0x21C01C: {
-			INT32 nBankOffset;
-			if (wordValue & 0x10) {
-				nBankOffset = 0x40000;
-			} else {
-				nBankOffset = 0x00000;
-			}
-			MSM6295SampleInfo[0][0] = MSM6295ROM + nBankOffset;
-			MSM6295SampleData[0][0] = MSM6295ROM + nBankOffset;
-			MSM6295SampleInfo[0][1] = MSM6295ROM + nBankOffset + 0x0100;
-			MSM6295SampleData[0][1] = MSM6295ROM + nBankOffset + 0x10000;
-			MSM6295SampleInfo[0][2] = MSM6295ROM + nBankOffset + 0x0200;
-			MSM6295SampleData[0][2] = MSM6295ROM + nBankOffset + 0x20000;
-			MSM6295SampleInfo[0][3] = MSM6295ROM + nBankOffset + 0x0300;
-			MSM6295SampleData[0][3] = MSM6295ROM + nBankOffset + 0x30000;
+			MSM6295SetBank(0, MSM6295ROM + ((wordValue & 0x10) << 14), 0x00000, 0x3ffff);
 			break;
 		}
 
@@ -500,10 +475,10 @@ static INT32 DrvInit()
 	    SekOpen(0);
 
 		// Map 68000 memory:
-		SekMapMemory(Rom01,			0x000000, 0x0FFFFF, MAP_ROM);	// CPU 0 ROM
-		SekMapMemory(Ram01,			0x100000, 0x10FFFF, MAP_RAM);
+		SekMapMemory(Rom01,		0x000000, 0x0FFFFF, MAP_ROM);	// CPU 0 ROM
+		SekMapMemory(Ram01,		0x100000, 0x10FFFF, MAP_RAM);
 		SekMapMemory(RamPal,		0x400000, 0x400FFF, MAP_RAM);	// Palette RAM
-		SekMapMemory(Ram02,			0x401000, 0x4017FF, MAP_RAM);	// Unused
+		SekMapMemory(Ram02,		0x401000, 0x4017FF, MAP_RAM);	// Unused
 		SekMapMemory(ExtraTRAM,		0x500000, 0x502FFF, MAP_RAM);
 		SekMapMemory(ExtraTSelect,	0x502000, 0x502FFF, MAP_RAM);	// 0x502000 - Scroll; 0x502200 - RAM
 		SekMapMemory(ExtraTScroll,	0x503000, 0x503FFF, MAP_RAM);	// 0x203000 - Offset; 0x503200 - RAM
@@ -535,8 +510,6 @@ static INT32 DrvInit()
 	MSM6295Init(0, 32000000 / 32 / 132, 1);
 	MSM6295SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
 
-	bDrawScreen = true;
-
 	DrvDoReset();				// Reset machine
 	return 0;
 }
@@ -562,19 +535,12 @@ static INT32 DrvDraw()
 {
 	ToaClearScreen(0);
 
-	if (bDrawScreen) {
-		ToaGetBitmap();
-		ToaRenderGP9001();					// Render GP9001 graphics
-		ToaExtraTextLayer();				// Render extra text layer
-	}
+	ToaGetBitmap();
+	ToaRenderGP9001();						// Render GP9001 graphics
+	ToaExtraTextLayer();					// Render extra text layer
 
 	ToaPalUpdate();							// Update the palette
 
-	return 0;
-}
-
-inline static INT32 CheckSleep(INT32)
-{
 	return 0;
 }
 
@@ -609,7 +575,7 @@ static INT32 DrvFrame()
 	SekSetCyclesScanline(nCyclesTotal[0] / 262);
 	nToaCyclesDisplayStart = nCyclesTotal[0] - ((nCyclesTotal[0] * (TOA_VBLANK_LINES + 240)) / 262);
 	nToaCyclesVBlankStart = nCyclesTotal[0] - ((nCyclesTotal[0] * TOA_VBLANK_LINES) / 262);
-	bVBlank = false;
+	bool bVBlank = false;
 
 	INT32 nSoundBufferPos = 0;
 
@@ -637,11 +603,7 @@ static INT32 DrvFrame()
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		if (bVBlank || (!CheckSleep(nCurrentCPU))) {					// See if this CPU is busywaiting
-			nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		} else {
-			nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-		}
+		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 
 		// Run Z80
 		nCurrentCPU = 1;
@@ -687,8 +649,8 @@ struct BurnDriver BurnDrvShippuMD = {
 	"shippumd", "kingdmgp", NULL, NULL, "1994",
 	"Shippu Mahou Daisakusen - Kingdom Grandprix\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	L"\u75BE\u98A8\u9B54\u6CD5\u5927\u4F5C\u6226 (Shippu Mahou Daisakusen - Kingdom Grandprix Japan)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, shippumdRomInfo, shippumdRomName, NULL, NULL, shippumdInputInfo, shippumdDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, FBF_MAHOU,
+	NULL, shippumdRomInfo, shippumdRomName, NULL, NULL, NULL, NULL, shippumdInputInfo, shippumdDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };
@@ -697,8 +659,8 @@ struct BurnDriver BurnDrvKingdmGP = {
 	"kingdmgp", NULL, NULL, NULL, "1994",
 	"Kingdom Grandprix (World)\0", NULL, "Raizing / 8ing", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
-	NULL, kingdmgpRomInfo, kingdmgpRomName, NULL, NULL, shippumdInputInfo, kingdmgpDIPInfo,
+	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, FBF_MAHOU,
+	NULL, kingdmgpRomInfo, kingdmgpRomName, NULL, NULL, NULL, NULL, shippumdInputInfo, kingdmgpDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };

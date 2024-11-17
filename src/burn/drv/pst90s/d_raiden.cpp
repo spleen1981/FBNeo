@@ -356,6 +356,8 @@ static INT32 DrvDoReset()
 
 	DrvLayerEnable = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -541,13 +543,31 @@ static INT32 DrvInit(INT32 drv_select)
 		if (BurnLoadRom(tmp + 0x08000,  8, 1)) return 1;
 		decode_gfx_1(RomGfx1, tmp);
 
-		if (BurnLoadRom(tmp + 0x00000,  9, 1)) return 1;
-		decode_gfx_2(RomGfx2, tmp);
-		if (BurnLoadRom(tmp + 0x00000, 10, 1)) return 1;
-		decode_gfx_2(RomGfx3, tmp);
-		if (BurnLoadRom(tmp + 0x00000, 11, 1)) return 1;
-		decode_gfx_2(RomGfx4, tmp);
-
+		if (!strcmp(BurnDrvGetTextA(DRV_NAME), "raidenkb")) {
+			if (BurnLoadRom(tmp + 0x00000,  9, 2)) return 1;
+			if (BurnLoadRom(tmp + 0x00001, 10, 2)) return 1;
+			if (BurnLoadRom(tmp + 0x40000, 11, 2)) return 1;
+			if (BurnLoadRom(tmp + 0x40001, 12, 2)) return 1;
+			decode_gfx_2(RomGfx2, tmp);
+			if (BurnLoadRom(tmp + 0x00000, 13, 2)) return 1;
+			if (BurnLoadRom(tmp + 0x00001, 14, 2)) return 1;
+			if (BurnLoadRom(tmp + 0x40000, 15, 2)) return 1;
+			if (BurnLoadRom(tmp + 0x40001, 16, 2)) return 1;
+			decode_gfx_2(RomGfx3, tmp);
+			if (BurnLoadRom(tmp + 0x00000, 17, 2)) return 1;
+			if (BurnLoadRom(tmp + 0x00001, 18, 2)) return 1;
+			if (BurnLoadRom(tmp + 0x40000, 19, 2)) return 1;
+			if (BurnLoadRom(tmp + 0x40001, 20, 2)) return 1;
+			decode_gfx_2(RomGfx4, tmp);
+		} else {
+			if (BurnLoadRom(tmp + 0x00000,  9, 1)) return 1;
+			decode_gfx_2(RomGfx2, tmp);
+			if (BurnLoadRom(tmp + 0x00000, 10, 1)) return 1;
+			decode_gfx_2(RomGfx3, tmp);
+			if (BurnLoadRom(tmp + 0x00000, 11, 1)) return 1;
+			decode_gfx_2(RomGfx4, tmp);
+		}
+		
 		BurnFree(tmp);
 	}
 
@@ -892,7 +912,7 @@ static INT32 DrvFrame()
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	if ( pnMin ) *pnMin =  0x029671;
 
@@ -900,20 +920,16 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 
 	if (nAction & ACB_MEMORY_RAM) {
 		memset(&ba, 0, sizeof(ba));
-			ba.Data   = RamStart;
+		ba.Data   = RamStart;
 		ba.nLen   = RamEnd-RamStart;
 		ba.szName = "All Ram";
 		BurnAcb(&ba);
 	}
 
-	if (nAction & ACB_WRITE) {
-		bRecalcPalette = 1;
-	}
-
 	if (nAction & ACB_DRIVER_DATA) {
 		VezScan(nAction);
 
-		seibu_sound_scan(pnMin, nAction);
+		seibu_sound_scan(nAction, pnMin);
 
 		SCAN_VAR(DrvLayerEnable);
 	}
@@ -941,6 +957,11 @@ static struct BurnRomInfo raidenRomDesc[] = {
 	{ "sei440",         0x080000, 0x946d7bde, BRF_GRA },
 
 	{ "7.u203",     	0x010000, 0x8f927822, BRF_SND },        	// Sound
+	
+	{ "rd010.u087",		0x000100, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd012.u094",		0x000100, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd003b.u0168",	0x000884, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd006b.u0365",	0x000884, 0x00000000, BRF_OPT | BRF_NODUMP },
 };
 
 STD_ROM_PICK(raiden)
@@ -954,8 +975,8 @@ struct BurnDriver BurnDrvRaiden = {
 	"raiden", NULL, NULL, NULL, "1990",
 	"Raiden (set 1)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, raidenRomInfo, raidenRomName, NULL, NULL, raidenInputInfo, raidenDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	NULL, raidenRomInfo, raidenRomName, NULL, NULL, NULL, NULL, raidenInputInfo, raidenDIPInfo,
 	RaidenInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &bRecalcPalette, 0x800,
 	224, 256, 3, 4
 };
@@ -981,6 +1002,11 @@ static struct BurnRomInfo raidenaRomDesc[] = {
 	{ "sei440",     	0x080000, 0x946d7bde, BRF_GRA },
 
 	{ "7.u203",     	0x010000, 0x8f927822, BRF_SND },        	// Sound
+	
+	{ "rd010.u087",		0x000100, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd012.u094",		0x000100, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd003b.u0168",	0x000884, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd006b.u0365",	0x000884, 0x00000000, BRF_OPT | BRF_NODUMP },
 };
 
 STD_ROM_PICK(raidena)
@@ -990,8 +1016,8 @@ struct BurnDriver BurnDrvRaidena = {
 	"raidena", "raiden", NULL, NULL, "1990",
 	"Raiden (set 2)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, raidenaRomInfo, raidenaRomName, NULL, NULL, raidenInputInfo, raidenDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	NULL, raidenaRomInfo, raidenaRomName, NULL, NULL, NULL, NULL, raidenInputInfo, raidenDIPInfo,
 	RaidenInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &bRecalcPalette, 0x800,
 	224, 256, 3, 4
 };
@@ -1017,6 +1043,11 @@ static struct BurnRomInfo raidentRomDesc[] = {
 	{ "sei440",     	0x080000, 0x946d7bde, BRF_GRA },
 
 	{ "7.u203",     	0x010000, 0x8f927822, BRF_SND },        	// Sound
+	
+	{ "rd010.u087",		0x000100, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd012.u094",		0x000100, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd003b.u0168",	0x000884, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd006b.u0365",	0x000884, 0x00000000, BRF_OPT | BRF_NODUMP },
 };
 
 STD_ROM_PICK(raident)
@@ -1026,8 +1057,8 @@ struct BurnDriver BurnDrvRaident = {
 	"raident", "raiden", NULL, NULL, "1990",
 	"Raiden (Taiwan)\0", NULL, "Seibu Kaihatsu (Liang HWA Electronics license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, raidentRomInfo, raidentRomName, NULL, NULL, raidenInputInfo, raidenDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	NULL, raidentRomInfo, raidentRomName, NULL, NULL, NULL, NULL, raidenInputInfo, raidenDIPInfo,
 	RaidenInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &bRecalcPalette, 0x800,
 	224, 256, 3, 4
 };
@@ -1053,6 +1084,11 @@ static struct BurnRomInfo raidenuRomDesc[] = {
 	{ "sei440",     	0x080000, 0x946d7bde, BRF_GRA },
 
 	{ "7.u203",     	0x010000, 0x8f927822, BRF_SND },        	// Sound
+	
+	{ "rd010.u087",		0x000100, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd012.u094",		0x000100, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd003b.u0168",	0x000884, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd006b.u0365",	0x000884, 0x00000000, BRF_OPT | BRF_NODUMP },
 };
 
 STD_ROM_PICK(raidenu)
@@ -1062,8 +1098,8 @@ struct BurnDriver BurnDrvRaidenu = {
 	"raidenu", "raiden", NULL, NULL, "1990",
 	"Raiden (US, set 1)\0", NULL, "Seibu Kaihatsu (Fabtek license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, raidenuRomInfo, raidenuRomName, NULL, NULL, raidenInputInfo, raidenDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	NULL, raidenuRomInfo, raidenuRomName, NULL, NULL, NULL, NULL, raidenInputInfo, raidenDIPInfo,
 	RaidenInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &bRecalcPalette, 0x800,
 	224, 256, 3, 4
 };
@@ -1089,6 +1125,11 @@ static struct BurnRomInfo raidenkRomDesc[] = {
 	{ "sei440",     	0x080000, 0x946d7bde, BRF_GRA },
 
 	{ "7.u203",     	0x010000, 0x8f927822, BRF_SND },        	// Sound
+	
+	{ "rd010.u087",		0x000100, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd012.u094",		0x000100, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd003b.u0168",	0x000884, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "rd006b.u0365",	0x000884, 0x00000000, BRF_OPT | BRF_NODUMP },
 };
 
 STD_ROM_PICK(raidenk)
@@ -1102,23 +1143,69 @@ struct BurnDriver BurnDrvRaidenk = {
 	"raidenk", "raiden", NULL, NULL, "1990",
 	"Raiden (Korea)\0", NULL, "Seibu Kaihatsu (IBL Corporation license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, raidenkRomInfo, raidenkRomName, NULL, NULL, raidenInputInfo, raidenDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	NULL, raidenkRomInfo, raidenkRomName, NULL, NULL, NULL, NULL, raidenInputInfo, raidenDIPInfo,
 	RaidenkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &bRecalcPalette, 0x800,
 	224, 256, 3, 4
 };
 
 
-// Raiden (set 3, Alternate hardware)
+// Raiden (Korea, bootleg)
+
+static struct BurnRomInfo raidenkbRomDesc[] = {
+	{ "1.u0253",        0x010000, 0xa4b12785, BRF_ESS | BRF_PRG },  // CPU 0, V30
+	{ "2.u0252",        0x010000, 0x17640bd5, BRF_ESS | BRF_PRG },
+	{ "3.u022",     	0x020000, 0xf6af09d0, BRF_ESS | BRF_PRG },
+	{ "4k.u023",        0x020000, 0xfddf24da, BRF_ESS | BRF_PRG },
+
+	{ "5.u042",     	0x020000, 0xed03562e, BRF_ESS | BRF_PRG },  // CPU 1, V30
+	{ "6.u043",     	0x020000, 0xa19d5b5d, BRF_ESS | BRF_PRG },
+
+	{ "8b.u212",        0x010000, 0x99ee7505, BRF_ESS | BRF_PRG },  // CPU 2, Z80
+
+	{ "9",          	0x008000, 0x1922b25e, BRF_GRA },        	// Tiles
+	{ "10",         	0x008000, 0x5f90786a, BRF_GRA },
+	{ "rkb15bg.bin",    0x020000, 0x13a69064, BRF_GRA },
+	{ "rkb17bg.bin",    0x020000, 0xd7a6c649, BRF_GRA },
+	{ "rkb16bg.bin",    0x020000, 0x66ea8484, BRF_GRA },
+	{ "rkb18bg.bin",    0x020000, 0x42362d56, BRF_GRA },
+	{ "rkb7bg.bin",     0x020000, 0x25239711, BRF_GRA },
+	{ "rkb9bg.bin",     0x020000, 0x6ca0d7b3, BRF_GRA },
+	{ "rkb8bg.bin",     0x020000, 0x3cad38fc, BRF_GRA },
+	{ "rkb10bg.bin",    0x020000, 0x6fce95a3, BRF_GRA },
+	{ "rkb19obj.bin",   0x020000, 0x34fa4485, BRF_GRA },
+	{ "rkb21obj.bin",   0x020000, 0xd806395b, BRF_GRA },
+	{ "rkb20obj.bin",   0x020000, 0x8b7ca3c6, BRF_GRA },
+	{ "rkb22obj.bin",   0x020000, 0x82ee78a0, BRF_GRA },
+
+	{ "7.u203",     	0x010000, 0x8f927822, BRF_SND },        	// Sound
+	
+	{ "82s147.h7",		0x000200, 0x00000000, BRF_OPT | BRF_NODUMP },
+};
+
+STD_ROM_PICK(raidenkb)
+STD_ROM_FN(raidenkb)
+
+struct BurnDriver BurnDrvRaidenkb = {
+	"raidenkb", "raiden", NULL, NULL, "1990",
+	"Raiden (Korea, bootleg)\0", NULL, "bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	NULL, raidenkbRomInfo, raidenkbRomName, NULL, NULL, NULL, NULL, raidenInputInfo, raidenDIPInfo,
+	RaidenkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &bRecalcPalette, 0x800,
+	224, 256, 3, 4
+};
+
+// Raiden (set 3)
 
 static struct BurnRomInfo raidenbRomDesc[] = {
 	{ "1.u0253",        	0x010000, 0xa4b12785, BRF_ESS | BRF_PRG },  // CPU 0, V30
 	{ "2.u0252",        	0x010000, 0x17640bd5, BRF_ESS | BRF_PRG },
-	{ "3__(raidenb).u022",  0x020000, 0x9d735bf5, BRF_ESS | BRF_PRG },
-	{ "4__(raidenb).u023",  0x020000, 0x8d184b99, BRF_ESS | BRF_PRG },
+	{ "3__,raidenb.u022",   0x020000, 0x9d735bf5, BRF_ESS | BRF_PRG },
+	{ "4__,raidenb.u023",   0x020000, 0x8d184b99, BRF_ESS | BRF_PRG },
 
-	{ "5__(raidenb).u042",  0x020000, 0x7aca6d61, BRF_ESS | BRF_PRG },  // CPU 1, V30
-	{ "6__(raidenb).u043",  0x020000, 0xe3d35cc2, BRF_ESS | BRF_PRG },
+	{ "5__,raidenb.u042",   0x020000, 0x7aca6d61, BRF_ESS | BRF_PRG },  // CPU 1, V30
+	{ "6__,raidenb.u043",   0x020000, 0xe3d35cc2, BRF_ESS | BRF_PRG },
 
 	{ "rai6.u212",      	0x010000, 0x723a483b, BRF_ESS | BRF_PRG },  // CPU 2, Z80
 
@@ -1130,8 +1217,7 @@ static struct BurnRomInfo raidenbRomDesc[] = {
 
 	{ "7.u203",     		0x010000, 0x8f927822, BRF_SND },        	// Sound
 
-	{ "ep910pc-1.bin",  	0x000884, 0x00000000, BRF_NODUMP },
-	{ "ep910pc-2.bin",  	0x000884, 0x00000000, BRF_NODUMP },
+	{ "jj3010.u0116", 	 	0x000100, 0x00000000, BRF_NODUMP },
 };
 
 STD_ROM_PICK(raidenb)
@@ -1143,10 +1229,10 @@ static INT32 RaidenbInit() {
 
 struct BurnDriver BurnDrvRaidenb = {
 	"raidenb", "raiden", NULL, NULL, "1990",
-	"Raiden (set 3, Alternate hardware)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
+	"Raiden (set 3)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, raidenbRomInfo, raidenbRomName, NULL, NULL, raidenInputInfo, raidenDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	NULL, raidenbRomInfo, raidenbRomName, NULL, NULL, NULL, NULL, raidenInputInfo, raidenDIPInfo,
 	RaidenbInit, DrvExit, DrvFrame, DrvDrawAlt, DrvScan, &bRecalcPalette, 0x800,
 	224, 256, 3, 4
 };
@@ -1172,6 +1258,9 @@ static struct BurnRomInfo raidenuaRomDesc[] = {
 	{ "sei440",     	0x080000, 0x946d7bde, BRF_GRA },
 
 	{ "7.x10",      	0x010000, 0x2051263e, BRF_SND },        	// Sound
+	
+	{ "prom.n2",		0x000100, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "prom.u3",		0x000100, 0x00000000, BRF_OPT | BRF_NODUMP },
 };
 
 STD_ROM_PICK(raidenua)
@@ -1186,8 +1275,47 @@ struct BurnDriver BurnDrvRaidenua = {
 	"raidenua", "raiden", NULL, NULL, "1990",
 	"Raiden (US, set 2, SEI8904 + SEI9008 PCBs)\0", NULL, "Seibu Kaihatsu (Fabtek license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, raidenuaRomInfo, raidenuaRomName, NULL, NULL, raidenInputInfo, raidenDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	NULL, raidenuaRomInfo, raidenuaRomName, NULL, NULL, NULL, NULL, raidenInputInfo, raidenDIPInfo,
 	RaidenuInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &bRecalcPalette, 0x800,
+	224, 256, 3, 4
+};
+
+
+// Raiden (US set 3)
+// only region bits differ from raidenb
+
+static struct BurnRomInfo raidenubRomDesc[] = {
+	{ "1.u0253",        	0x010000, 0xa4b12785, BRF_ESS | BRF_PRG },  // CPU 0, V30
+	{ "2.u0252",        	0x010000, 0x17640bd5, BRF_ESS | BRF_PRG },
+	{ "3u.u022",   			0x020000, 0x9d735bf5, BRF_ESS | BRF_PRG },
+	{ "4u.u023",   			0x020000, 0x95c110ef, BRF_ESS | BRF_PRG },
+
+	{ "5__,raidenb.u042",   0x020000, 0x7aca6d61, BRF_ESS | BRF_PRG },  // CPU 1, V30
+	{ "6__,raidenb.u043",   0x020000, 0xe3d35cc2, BRF_ESS | BRF_PRG },
+
+	{ "rai6.u212",      	0x010000, 0x723a483b, BRF_ESS | BRF_PRG },  // CPU 2, Z80
+
+	{ "9",          		0x008000, 0x1922b25e, BRF_GRA },        	// Tiles
+	{ "10",         		0x008000, 0x5f90786a, BRF_GRA },
+	{ "sei420",     		0x080000, 0xda151f0b, BRF_GRA },
+	{ "sei430",     		0x080000, 0xac1f57ac, BRF_GRA },
+	{ "sei440",     		0x080000, 0x946d7bde, BRF_GRA },
+
+	{ "7.u203",     		0x010000, 0x8f927822, BRF_SND },        	// Sound
+
+	{ "jj3010.u0116", 	 	0x000100, 0x00000000, BRF_NODUMP },
+};
+
+STD_ROM_PICK(raidenub)
+STD_ROM_FN(raidenub)
+
+struct BurnDriver BurnDrvRaidenub = {
+	"raidenub", "raiden", NULL, NULL, "1990",
+	"Raiden (US set 3)\0", NULL, "Seibu Kaihatsu (Fabtek license)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	NULL, raidenubRomInfo, raidenubRomName, NULL, NULL, NULL, NULL, raidenInputInfo, raidenDIPInfo,
+	RaidenbInit, DrvExit, DrvFrame, DrvDrawAlt, DrvScan, &bRecalcPalette, 0x800,
 	224, 256, 3, 4
 };

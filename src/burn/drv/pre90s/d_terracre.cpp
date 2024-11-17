@@ -1,3 +1,6 @@
+// FB Alpha Terra Cresta driver module
+// Based on MAME driver by Carlos A. Lozano
+
 #include "tiles_generic.h"
 #include "m68000_intf.h"
 #include "z80_intf.h"
@@ -23,6 +26,7 @@ static UINT8 *DrvZ80Ram           = NULL;
 static UINT8 *DrvProms            = NULL;
 static UINT8 *DrvSpritePalBank    = NULL;
 static UINT8 *DrvSpriteRam        = NULL;
+static UINT8 *DrvSpriteRamBuffer  = NULL;
 static UINT8 *DrvBgVideoRam       = NULL;
 static UINT8 *DrvFgVideoRam       = NULL;
 static UINT8 *DrvChars            = NULL;
@@ -34,6 +38,7 @@ static UINT32 *DrvPalette         = NULL;
 static UINT8 DrvRecalcPal         = 0;
 static UINT16 DrvScrollX          = 0;
 static UINT16 DrvScrollY          = 0;
+static UINT16 DrvDisableFg        = 0;
 static UINT16 DrvDisableBg        = 0;
 static UINT16 DrvFlipScreen       = 0;
 static UINT8 DrvSoundLatch        = 0;
@@ -154,7 +159,7 @@ static struct BurnDIPInfo DrvDIPList[]=
 {
 	// Default Values
 	{0x12, 0xff, 0xff, 0x20, NULL                     },
-	{0x13, 0xff, 0xff, 0xff, NULL                     },
+	{0x13, 0xff, 0xff, 0xdf, NULL                     },
 	{0x14, 0xff, 0xff, 0xff, NULL                     },
 	
 	// Dip 1
@@ -219,7 +224,7 @@ static struct BurnDIPInfo AmazonDIPList[]=
 {
 	// Default Values
 	{0x12, 0xff, 0xff, 0x20, NULL                     },
-	{0x13, 0xff, 0xff, 0xff, NULL                     },
+	{0x13, 0xff, 0xff, 0xdf, NULL                     },
 	{0x14, 0xff, 0xff, 0xff, NULL                     },
 	
 	// Dip 1
@@ -284,7 +289,7 @@ static struct BurnDIPInfo HorekidDIPList[]=
 {
 	// Default Values
 	{0x12, 0xff, 0xff, 0x20, NULL                     },
-	{0x13, 0xff, 0xff, 0xef, NULL                     },
+	{0x13, 0xff, 0xff, 0xcf, NULL                     },
 	{0x14, 0xff, 0xff, 0xff, NULL                     },
 	
 	// Dip 1
@@ -344,135 +349,155 @@ static struct BurnDIPInfo HorekidDIPList[]=
 STDDIPINFO(Horekid)
 
 static struct BurnRomInfo DrvRomDesc[] = {
-	{ "bk1_1.4b",      0x08000, 0x60932770, BRF_ESS | BRF_PRG },	//  0	68000 Program Code
-	{ "bk1_3.4d",      0x08000, 0xcb36240e, BRF_ESS | BRF_PRG },	//  1
-	{ "bk1_2.6b",      0x08000, 0x539352f2, BRF_ESS | BRF_PRG },	//  2
-	{ "bk1_4.6d",      0x08000, 0x19387586, BRF_ESS | BRF_PRG },	//  3
+	{ "1.4b",      		0x08000, 0x60932770, BRF_ESS | BRF_PRG },	 //  0	68000 Program Code
+	{ "3.4d",      		0x08000, 0xcb36240e, BRF_ESS | BRF_PRG },	 //  1
+	{ "2.6b",      		0x08000, 0x539352f2, BRF_ESS | BRF_PRG },	 //  2
+	{ "4.6d",      		0x08000, 0x19387586, BRF_ESS | BRF_PRG },	 //  3
 	
-	{ "bk2_11.15b",    0x04000, 0x604c3b11, BRF_ESS | BRF_PRG },	//  4	Z80 Program Code
-	{ "bk2_12.17b",    0x04000, 0xaffc898d, BRF_ESS | BRF_PRG },	//  5
-	{ "bk2_13.18b",    0x04000, 0x302dc0ab, BRF_ESS | BRF_PRG },	//  6
+	{ "11.15b",    		0x04000, 0x604c3b11, BRF_ESS | BRF_PRG },	 //  4	Z80 Program Code
+	{ "12.17b",    		0x04000, 0xaffc898d, BRF_ESS | BRF_PRG },	 //  5
+	{ "13.18b",    		0x04000, 0x302dc0ab, BRF_ESS | BRF_PRG },	 //  6
 	
-	{ "bk2_14.16g",    0x02000, 0x591a3804, BRF_GRA },				//  7	Chars
+	{ "14.16g",    		0x02000, 0x591a3804, BRF_GRA },				 //  7	Chars
 	
-	{ "bk1_5.15f",     0x08000, 0x984a597f, BRF_GRA },				//  8	Tiles
-	{ "bk1_6.17f",     0x08000, 0x30e297ff, BRF_GRA },				//  9
+	{ "5.15f",     		0x08000, 0x984a597f, BRF_GRA },				 //  8	Tiles
+	{ "6.17f",     		0x08000, 0x30e297ff, BRF_GRA },				 //  9
 	
-	{ "bk2_7.6e",      0x04000, 0xbcf7740b, BRF_GRA },				// 10	Sprites
-	{ "bk2_8.7e",      0x04000, 0xa70b565c, BRF_GRA },				// 11
-	{ "bk2_9.6g",      0x04000, 0x4a9ec3e6, BRF_GRA },				// 12
-	{ "bk2_10.7g",     0x04000, 0x450749fc, BRF_GRA },				// 13
+	{ "7.6e",      		0x04000, 0xbcf7740b, BRF_GRA },				 // 10	Sprites
+	{ "8.7e",      		0x04000, 0xa70b565c, BRF_GRA },				 // 11
+	{ "9.6g",      		0x04000, 0x4a9ec3e6, BRF_GRA },				 // 12
+	{ "10.7g",     		0x04000, 0x450749fc, BRF_GRA },				 // 13
 	
-	{ "bk1_3.10f",     0x00100, 0xce07c544, BRF_GRA },				// 14	PROMs
-	{ "bk1_2.11f",     0x00100, 0x566d323a, BRF_GRA },				// 15
-	{ "bk1_1.12f",     0x00100, 0x7ea63946, BRF_GRA },				// 16
-	{ "bk2_4.2g",      0x00100, 0x08609bad, BRF_GRA },				// 17
+	{ "3.10f",     		0x00100, 0xce07c544, BRF_GRA },				 // 14	PROMs
+	{ "2.11f",     		0x00100, 0x566d323a, BRF_GRA },				 // 15
+	{ "1.12f",     		0x00100, 0x7ea63946, BRF_GRA },				 // 16
+	{ "4.2g",      		0x00100, 0x08609bad, BRF_GRA },				 // 17
 	
-	{ "bk2_5.4e",      0x00100, 0x2c43991f, BRF_GRA },				// 18	Sprite Palette Bank
+	{ "5.4e",      		0x00100, 0x2c43991f, BRF_GRA },				 // 18	Sprite Palette Bank
+	
+	{ "11e",			0x00104, 0x00000000, BRF_OPT | BRF_NODUMP }, // 19 plds
+	{ "12a",			0x00104, 0x00000000, BRF_OPT | BRF_NODUMP }, // 20
+	{ "12f",			0x00104, 0x00000000, BRF_OPT | BRF_NODUMP }, // 21
 };
 
 STD_ROM_PICK(Drv)
 STD_ROM_FN(Drv)
 
 static struct BurnRomInfo DrvoRomDesc[] = {
-	{ "1a_4b.rom",     0x04000, 0x76f17479, BRF_ESS | BRF_PRG },	//  0	68000 Program Code
-	{ "1a_4d.rom",     0x04000, 0x8119f06e, BRF_ESS | BRF_PRG },	//  1
-	{ "1a_6b.rom",     0x04000, 0xba4b5822, BRF_ESS | BRF_PRG },	//  2
-	{ "1a_6d.rom",     0x04000, 0xca4852f6, BRF_ESS | BRF_PRG },	//  3
-	{ "1a_7b.rom",     0x04000, 0xd0771bba, BRF_ESS | BRF_PRG },	//  4
-	{ "1a_7d.rom",     0x04000, 0x029d59d9, BRF_ESS | BRF_PRG },	//  5
-	{ "1a_9b.rom",     0x04000, 0x69227b56, BRF_ESS | BRF_PRG },	//  6
-	{ "1a_9d.rom",     0x04000, 0x5a672942, BRF_ESS | BRF_PRG },	//  7
+	// older pcb TC-1A & TC-2A and oldest ROM-set with glitches in the music when the ship appears
+	{ "1.4b",     		0x04000, 0x76f17479, BRF_ESS | BRF_PRG },	 //  0	68000 Program Code
+	{ "5.4d",     		0x04000, 0x8119f06e, BRF_ESS | BRF_PRG },	 //  1
+	{ "2.6b",     		0x04000, 0xba4b5822, BRF_ESS | BRF_PRG },	 //  2
+	{ "6.6d",     		0x04000, 0xca4852f6, BRF_ESS | BRF_PRG },	 //  3
+	{ "3.7b",     		0x04000, 0xd0771bba, BRF_ESS | BRF_PRG },	 //  4
+	{ "7.7d",     		0x04000, 0x029d59d9, BRF_ESS | BRF_PRG },	 //  5
+	{ "4.9b",     		0x04000, 0x69227b56, BRF_ESS | BRF_PRG },	 //  6
+	{ "8.9d",     		0x04000, 0x5a672942, BRF_ESS | BRF_PRG },	 //  7
 	
-	{ "2a_15b.rom",    0x04000, 0x604c3b11, BRF_ESS | BRF_PRG },	//  8	Z80 Program Code
-	{ "2a_17b.rom",    0x04000, 0xaffc898d, BRF_ESS | BRF_PRG },	//  9
-	{ "2a_18b.rom",    0x04000, 0x302dc0ab, BRF_ESS | BRF_PRG },	// 10
+	{ "11.15b",    		0x04000, 0x604c3b11, BRF_ESS | BRF_PRG },	 //  8	Z80 Program Code
+	{ "12.17b",    		0x04000, 0xaffc898d, BRF_ESS | BRF_PRG },	 //  9
+	{ "13.18b",    		0x04000, 0x302dc0ab, BRF_ESS | BRF_PRG },	 // 10
 	
-	{ "2a_16b.rom",    0x02000, 0x591a3804, BRF_GRA },				// 11	Chars
+	{ "18.16g",    		0x02000, 0x591a3804, BRF_GRA },				 // 11	Chars
 	
-	{ "1a_15f.rom",    0x08000, 0x984a597f, BRF_GRA },				// 12	Tiles
-	{ "1a_17f.rom",    0x08000, 0x30e297ff, BRF_GRA },				// 13
+	{ "9.15f",    		0x08000, 0x984a597f, BRF_GRA },				 // 12	Tiles
+	{ "10.17f",    		0x08000, 0x30e297ff, BRF_GRA },				 // 13
 	
-	{ "2a_6e.rom",     0x04000, 0xbcf7740b, BRF_GRA },				// 14	Sprites
-	{ "2a_7e.rom",     0x04000, 0xa70b565c, BRF_GRA },				// 15
-	{ "2a_6g.rom",     0x04000, 0x4a9ec3e6, BRF_GRA },				// 16
-	{ "2a_7g.rom",     0x04000, 0x450749fc, BRF_GRA },				// 17
+	{ "14.6e",     		0x04000, 0xbcf7740b, BRF_GRA },				 // 14	Sprites
+	{ "15.7e",     		0x04000, 0xa70b565c, BRF_GRA },				 // 15
+	{ "16.6g",     		0x04000, 0x4a9ec3e6, BRF_GRA },				 // 16
+	{ "17.7g",     		0x04000, 0x450749fc, BRF_GRA },				 // 17
 	
-	{ "tc1a_10f.bin",  0x00100, 0xce07c544, BRF_GRA },				// 18	PROMs
-	{ "tc1a_11f.bin",  0x00100, 0x566d323a, BRF_GRA },				// 19
-	{ "tc1a_12f.bin",  0x00100, 0x7ea63946, BRF_GRA },				// 20
-	{ "tc2a_2g.bin",   0x00100, 0x08609bad, BRF_GRA },				// 21
+	{ "3.10f",  		0x00100, 0xce07c544, BRF_GRA },				 // 18	PROMs
+	{ "2.11f",  		0x00100, 0x566d323a, BRF_GRA },				 // 19
+	{ "1.12f",  		0x00100, 0x7ea63946, BRF_GRA },				 // 20
+	{ "4.2g",   		0x00100, 0x08609bad, BRF_GRA },				 // 21
 	
-	{ "tc2a_4e.bin",   0x00100, 0x2c43991f, BRF_GRA },				// 22	Sprite Palette Bank
+	{ "5.4e",   		0x00100, 0x2c43991f, BRF_GRA },				 // 22	Sprite Palette Bank
+
+	{ "cp1408.11e",		0x00104, 0x00000000, BRF_OPT | BRF_NODUMP }, // 23 plds
+	{ "tc1411.12a",		0x00104, 0x00000000, BRF_OPT | BRF_NODUMP }, // 24
+	{ "tc1412.12f",		0x00104, 0x00000000, BRF_OPT | BRF_NODUMP }, // 25
 };
 
 STD_ROM_PICK(Drvo)
 STD_ROM_FN(Drvo)
 
+// older pcb TC-1A & TC-2A and oldest ROM-set with glitches in the music when the ship appears
 static struct BurnRomInfo DrvaRomDesc[] = {
-	{ "1a_4b.rom",     0x04000, 0x76f17479, BRF_ESS | BRF_PRG },	//  0	68000 Program Code
-	{ "1a_4d.rom",     0x04000, 0x8119f06e, BRF_ESS | BRF_PRG },	//  1
-	{ "1a_6b.rom",     0x04000, 0xba4b5822, BRF_ESS | BRF_PRG },	//  2
-	{ "1a_6d.rom",     0x04000, 0xca4852f6, BRF_ESS | BRF_PRG },	//  3
-	{ "1a_7b.rom",     0x04000, 0xd0771bba, BRF_ESS | BRF_PRG },	//  4
-	{ "1a_7d.rom",     0x04000, 0x029d59d9, BRF_ESS | BRF_PRG },	//  5
-	{ "1a_9b.rom",     0x04000, 0x69227b56, BRF_ESS | BRF_PRG },	//  6
-	{ "1a_9d.rom",     0x04000, 0x5a672942, BRF_ESS | BRF_PRG },	//  7
+	// older pcb TC-1A & TC-2A, the only difference is one sound rom
+	{ "1.4b",     		0x04000, 0x76f17479, BRF_ESS | BRF_PRG },	 //  0	68000 Program Code
+	{ "5.4d",     		0x04000, 0x8119f06e, BRF_ESS | BRF_PRG },	 //  1
+	{ "2.6b",     		0x04000, 0xba4b5822, BRF_ESS | BRF_PRG },	 //  2
+	{ "6.6d",     		0x04000, 0xca4852f6, BRF_ESS | BRF_PRG },	 //  3
+	{ "3.7b",     		0x04000, 0xd0771bba, BRF_ESS | BRF_PRG },	 //  4
+	{ "7.7d",     		0x04000, 0x029d59d9, BRF_ESS | BRF_PRG },	 //  5
+	{ "4.9b",     		0x04000, 0x69227b56, BRF_ESS | BRF_PRG },	 //  6
+	{ "8.9d",     		0x04000, 0x5a672942, BRF_ESS | BRF_PRG },	 //  7
 	
-	{ "2a_15b.rom",    0x04000, 0x604c3b11, BRF_ESS | BRF_PRG },	//  8	Z80 Program Code
-	{ "dg.12",         0x04000, 0x9e9b3808, BRF_ESS | BRF_PRG },	//  9
-	{ "2a_18b.rom",    0x04000, 0x302dc0ab, BRF_ESS | BRF_PRG },	// 10
+	{ "11.15b",    		0x04000, 0x604c3b11, BRF_ESS | BRF_PRG },	 //  8	Z80 Program Code
+	{ "12.17b",         0x04000, 0x9e9b3808, BRF_ESS | BRF_PRG },	 //  9
+	{ "13.18b",    		0x04000, 0x302dc0ab, BRF_ESS | BRF_PRG },	 // 10
 	
-	{ "2a_16b.rom",    0x02000, 0x591a3804, BRF_GRA },				// 11	Chars
+	{ "18.16g",    		0x02000, 0x591a3804, BRF_GRA },				 // 11	Chars
 	
-	{ "1a_15f.rom",    0x08000, 0x984a597f, BRF_GRA },				// 12	Tiles
-	{ "1a_17f.rom",    0x08000, 0x30e297ff, BRF_GRA },				// 13
+	{ "9.15f",    		0x08000, 0x984a597f, BRF_GRA },				 // 12	Tiles
+	{ "10.17f",    		0x08000, 0x30e297ff, BRF_GRA },				 // 13
 	
-	{ "2a_6e.rom",     0x04000, 0xbcf7740b, BRF_GRA },				// 14	Sprites
-	{ "2a_7e.rom",     0x04000, 0xa70b565c, BRF_GRA },				// 15
-	{ "2a_6g.rom",     0x04000, 0x4a9ec3e6, BRF_GRA },				// 16
-	{ "2a_7g.rom",     0x04000, 0x450749fc, BRF_GRA },				// 17
+	{ "14.6e",     		0x04000, 0xbcf7740b, BRF_GRA },				 // 14	Sprites
+	{ "15.7e",     		0x04000, 0xa70b565c, BRF_GRA },				 // 15
+	{ "16.6g",     		0x04000, 0x4a9ec3e6, BRF_GRA },				 // 16
+	{ "17.7g",     		0x04000, 0x450749fc, BRF_GRA },				 // 17
 	
-	{ "tc1a_10f.bin",  0x00100, 0xce07c544, BRF_GRA },				// 18	PROMs
-	{ "tc1a_11f.bin",  0x00100, 0x566d323a, BRF_GRA },				// 19
-	{ "tc1a_12f.bin",  0x00100, 0x7ea63946, BRF_GRA },				// 20
-	{ "tc2a_2g.bin",   0x00100, 0x08609bad, BRF_GRA },				// 21
+	{ "3.10f",  		0x00100, 0xce07c544, BRF_GRA },				 // 18	PROMs
+	{ "2.11f",  		0x00100, 0x566d323a, BRF_GRA },				 // 19
+	{ "1.12f",  		0x00100, 0x7ea63946, BRF_GRA },				 // 20
+	{ "4.2g",   		0x00100, 0x08609bad, BRF_GRA },				 // 21
 	
-	{ "tc2a_4e.bin",   0x00100, 0x2c43991f, BRF_GRA },				// 22	Sprite Palette Bank
+	{ "5.4e",   		0x00100, 0x2c43991f, BRF_GRA },				 // 22	Sprite Palette Bank
+	
+	{ "cp1408.11e",		0x00104, 0x00000000, BRF_OPT | BRF_NODUMP }, // 23 plds
+	{ "tc1411.12a",		0x00104, 0x00000000, BRF_OPT | BRF_NODUMP }, // 24
+	{ "tc1412.12f",		0x00104, 0x00000000, BRF_OPT | BRF_NODUMP }, // 25
 };
 
 STD_ROM_PICK(Drva)
 STD_ROM_FN(Drva)
 
 static struct BurnRomInfo DrvnRomDesc[] = {
-	{ "1a_4b.rom",     0x04000, 0x76f17479, BRF_ESS | BRF_PRG },	//  0	68000 Program Code
-	{ "1a_4d.rom",     0x04000, 0x8119f06e, BRF_ESS | BRF_PRG },	//  1
-	{ "1a_6b.rom",     0x04000, 0xba4b5822, BRF_ESS | BRF_PRG },	//  2
-	{ "1a_6d.rom",     0x04000, 0xca4852f6, BRF_ESS | BRF_PRG },	//  3
-	{ "1a_7b.rom",     0x04000, 0xd0771bba, BRF_ESS | BRF_PRG },	//  4
-	{ "1a_7d.rom",     0x04000, 0x029d59d9, BRF_ESS | BRF_PRG },	//  5
-	{ "1a_9b.rom",     0x04000, 0x69227b56, BRF_ESS | BRF_PRG },	//  6
-	{ "1a_9d.rom",     0x04000, 0x5a672942, BRF_ESS | BRF_PRG },	//  7
+	// 'n' for OPN(YM2203), newer than YM3526 sets because it uses a daughterboard to convert the existing YM3526 socket to a YM2203
+	{ "1.4b",     		0x04000, 0x76f17479, BRF_ESS | BRF_PRG },	 //  0	68000 Program Code
+	{ "5.4d",     		0x04000, 0x8119f06e, BRF_ESS | BRF_PRG },	 //  1
+	{ "2.6b",     		0x04000, 0xba4b5822, BRF_ESS | BRF_PRG },	 //  2
+	{ "6.6d",     		0x04000, 0xca4852f6, BRF_ESS | BRF_PRG },	 //  3
+	{ "3.7b",     		0x04000, 0xd0771bba, BRF_ESS | BRF_PRG },	 //  4
+	{ "7.7d",     		0x04000, 0x029d59d9, BRF_ESS | BRF_PRG },	 //  5
+	{ "4.9b",     		0x04000, 0x69227b56, BRF_ESS | BRF_PRG },	 //  6
+	{ "8.9d",     		0x04000, 0x5a672942, BRF_ESS | BRF_PRG },	 //  7
 	
-	{ "tc2a_15b.bin",  0x04000, 0x790ddfa9, BRF_ESS | BRF_PRG },	//  8	Z80 Program Code
-	{ "tc2a_17b.bin",  0x04000, 0xd4531113, BRF_ESS | BRF_PRG },	//  9
+	{ "11.15b",  		0x04000, 0x790ddfa9, BRF_ESS | BRF_PRG },	 //  8	Z80 Program Code
+	{ "12.17b",  		0x04000, 0xd4531113, BRF_ESS | BRF_PRG },	 //  9
 	
-	{ "2a_16b.rom",    0x02000, 0x591a3804, BRF_GRA },				// 10	Chars
+	{ "18.16g",    		0x02000, 0x591a3804, BRF_GRA },				 // 10	Chars
 	
-	{ "1a_15f.rom",    0x08000, 0x984a597f, BRF_GRA },				// 11	Tiles
-	{ "1a_17f.rom",    0x08000, 0x30e297ff, BRF_GRA },				// 12
+	{ "9.15f",    		0x08000, 0x984a597f, BRF_GRA },				 // 11	Tiles
+	{ "10.17f",    		0x08000, 0x30e297ff, BRF_GRA },				 // 12
 	
-	{ "2a_6e.rom",     0x04000, 0xbcf7740b, BRF_GRA },				// 13	Sprites
-	{ "2a_7e.rom",     0x04000, 0xa70b565c, BRF_GRA },				// 14
-	{ "2a_6g.rom",     0x04000, 0x4a9ec3e6, BRF_GRA },				// 15
-	{ "2a_7g.rom",     0x04000, 0x450749fc, BRF_GRA },				// 16
+	{ "14.6e",     		0x04000, 0xbcf7740b, BRF_GRA },				 // 13	Sprites
+	{ "15.7e",     		0x04000, 0xa70b565c, BRF_GRA },				 // 14
+	{ "16.6g",     		0x04000, 0x4a9ec3e6, BRF_GRA },				 // 15
+	{ "17.7g",     		0x04000, 0x450749fc, BRF_GRA },				 // 16
 	
-	{ "tc1a_10f.bin",  0x00100, 0xce07c544, BRF_GRA },				// 17	PROMs
-	{ "tc1a_11f.bin",  0x00100, 0x566d323a, BRF_GRA },				// 18
-	{ "tc1a_12f.bin",  0x00100, 0x7ea63946, BRF_GRA },				// 19
-	{ "tc2a_2g.bin",   0x00100, 0x08609bad, BRF_GRA },				// 20
+	{ "3.10f",  		0x00100, 0xce07c544, BRF_GRA },				 // 17	PROMs
+	{ "2.11f",  		0x00100, 0x566d323a, BRF_GRA },				 // 18
+	{ "1.12f",  		0x00100, 0x7ea63946, BRF_GRA },				 // 19
+	{ "4.2g",   		0x00100, 0x08609bad, BRF_GRA },				 // 20
 	
-	{ "tc2a_4e.bin",   0x00100, 0x2c43991f, BRF_GRA },				// 21	Sprite Palette Bank
+	{ "5.4e",   		0x00100, 0x2c43991f, BRF_GRA },				 // 21	Sprite Palette Bank
+	
+	{ "cp1408.11e",		0x00104, 0x00000000, BRF_OPT | BRF_NODUMP }, // 22 plds
+	{ "tc1411.12a",		0x00104, 0x00000000, BRF_OPT | BRF_NODUMP }, // 23
+	{ "tc1412.12f",		0x00104, 0x00000000, BRF_OPT | BRF_NODUMP }, // 24
 };
 
 STD_ROM_PICK(Drvn)
@@ -511,6 +536,41 @@ static struct BurnRomInfo AmazonRomDesc[] = {
 
 STD_ROM_PICK(Amazon)
 STD_ROM_FN(Amazon)
+
+static struct BurnRomInfo AmazontRomDesc[] = {
+	/* Found a on Tecfri TC-1A and TC-2A boardset */
+	{ "5.4d",          0x08000, 0xae39432f, BRF_ESS | BRF_PRG },	//  0	68000 Program Code
+	{ "7.4b",          0x08000, 0xa74cdcea, BRF_ESS | BRF_PRG },	//  1
+	{ "4.6d",          0x08000, 0x0c6b0772, BRF_ESS | BRF_PRG },	//  2
+	{ "6.6b",          0x08000, 0xedbaad3f, BRF_ESS | BRF_PRG },	//  3
+	
+	{ "1.15b",         0x04000, 0x55a8b5e7, BRF_ESS | BRF_PRG },	//  4	Z80 Program Code
+	{ "2.17b",         0x04000, 0x427a7cca, BRF_ESS | BRF_PRG },	//  5
+	{ "3.18b",         0x04000, 0xb8cceaf7, BRF_ESS | BRF_PRG },	//  6
+	
+	{ "8.16g",         0x02000, 0x0cec8644, BRF_GRA },				//  7	Chars
+	
+	{ "13.15f",        0x08000, 0x415ff4d9, BRF_GRA },				//  8	Tiles
+	{ "14.17f",        0x08000, 0x492b5c48, BRF_GRA },				//  9
+	{ "15.18f",        0x08000, 0xb1ac0b9d, BRF_GRA },				// 10
+	
+	{ "4.6e",          0x04000, 0xf77ced7a, BRF_GRA },				// 11	Sprites
+	{ "5.7e",          0x04000, 0x16ef1465, BRF_GRA },				// 12
+	{ "6.6g",          0x04000, 0x936ec941, BRF_GRA },				// 13
+	{ "7.7g",          0x04000, 0x66dd718e, BRF_GRA },				// 14
+	
+	{ "clr.10f",       0x00100, 0x6440b341, BRF_GRA },				// 15	PROMs
+	{ "clr.11f",       0x00100, 0x271e947f, BRF_GRA },				// 16
+	{ "clr.12f",       0x00100, 0x7d38621b, BRF_GRA },				// 17
+	{ "2g",            0x00100, 0x44ca16b9, BRF_GRA },				// 18
+	
+	{ "4e",            0x00100, 0x035f2c7b, BRF_GRA },				// 19	Sprite Palette Bank
+	
+	{ "16.18g",        0x02000, 0x1d8d592b, BRF_OPT },				// 20	Unknown
+};
+
+STD_ROM_PICK(Amazont)
+STD_ROM_FN(Amazont)
 
 static struct BurnRomInfo AmatelasRomDesc[] = {
 	{ "a11.4d",        0x08000, 0x3d226d0b, BRF_ESS | BRF_PRG },	//  0	68000 Program Code
@@ -662,6 +722,7 @@ static INT32 MemIndex()
 	
 	Drv68KRam              = Next; Next += 0x001000;
 	DrvSpriteRam           = Next; Next += 0x002000;
+	DrvSpriteRamBuffer     = Next; Next += 0x002000;
 	DrvBgVideoRam          = Next; Next += 0x001000;
 	DrvFgVideoRam          = Next; Next += 0x001000;
 	DrvZ80Ram              = Next; Next += 0x001000;
@@ -697,6 +758,7 @@ static INT32 DrvDoReset()
 	
 	DrvScrollX = 0;
 	DrvScrollY = 0;
+	DrvDisableFg = 0;
 	DrvDisableBg = 0;
 	DrvFlipScreen = 0;
 	DrvSoundLatch = 0;
@@ -765,6 +827,7 @@ void __fastcall Terracre68KWriteWord(UINT32 a, UINT16 d)
 		
 		case 0x026002: {
 			DrvScrollX = d & 0x3ff;
+			DrvDisableFg = (d & 0x1000) ? 1 : 0;
 			DrvDisableBg = (d & 0x2000) ? 1 : 0;
 			return;
 		}
@@ -820,7 +883,7 @@ void __fastcall Amazon68KWriteByte(UINT32 a, UINT8 d)
 {
 	switch (a) {
 		case 0x070001: {
-			if (AmazonProtCmd >= 32 && AmazonProtCmd <= 0x37) {
+			if (AmazonProtCmd >= 0x32 && AmazonProtCmd <= 0x37) {
 				AmazonProtReg[AmazonProtCmd - 0x32] = d;
 			}
 			return;
@@ -886,6 +949,7 @@ void __fastcall Amazon68KWriteWord(UINT32 a, UINT16 d)
 		
 		case 0x046002: {
 			DrvScrollX = d & 0x3ff;
+			DrvDisableFg = (d & 0x1000) ? 1 : 0;
 			DrvDisableBg = (d & 0x2000) ? 1 : 0;
 			return;
 		}
@@ -1000,16 +1064,6 @@ void __fastcall TerracreYM2203Z80PortWrite(UINT16 a, UINT8 d)
 	}
 }
 
-static INT32 DrvSynchroniseStream(INT32 nSoundRate)
-{
-	return (INT64)ZetTotalCycles() * nSoundRate / 4000000;
-}
-
-inline static double DrvGetTime()
-{
-	return (double)ZetTotalCycles() / 4000000;
-}
-
 static INT32 TerracreSyncDAC()
 {
 	return (INT32)(float)(nBurnSoundLen * (ZetTotalCycles() / (4000000.0000 / (nBurnFPS / 100.0000))));
@@ -1068,15 +1122,15 @@ static INT32 DrvInit()
 	ZetClose();
 	
 	if (DrvUseYM2203) {
-		BurnYM2203Init(1, 4000000, NULL, DrvSynchroniseStream, DrvGetTime, 0);
+		BurnYM2203Init(1, 4000000, NULL, 0);
 		BurnTimerAttachZet(4000000);
 		BurnYM2203SetRoute(0, BURN_SND_YM2203_YM2203_ROUTE, 0.40, BURN_SND_ROUTE_BOTH);
 		BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_1, 0.20, BURN_SND_ROUTE_BOTH);
 		BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_2, 0.20, BURN_SND_ROUTE_BOTH);
 		BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_3, 0.20, BURN_SND_ROUTE_BOTH);
 	} else {
-		BurnYM3526Init(4000000, NULL, &DrvSynchroniseStream, 0);
-		BurnTimerAttachZetYM3526(4000000);
+		BurnYM3526Init(4000000, NULL, 0);
+		BurnTimerAttachYM3526(&ZetConfig, 4000000);
 		BurnYM3526SetRoute(BURN_SND_YM3526_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 	}
 	
@@ -1130,8 +1184,8 @@ static INT32 DrvAmazonInit()
 	ZetMapArea(0xc000, 0xcfff, 2, DrvZ80Ram);
 	ZetClose();
 	
-	BurnYM3526Init(4000000, NULL, &DrvSynchroniseStream, 0);
-	BurnTimerAttachZetYM3526(4000000);
+	BurnYM3526Init(4000000, NULL, 0);
+	BurnTimerAttachYM3526(&ZetConfig, 4000000);
 	BurnYM3526SetRoute(BURN_SND_YM3526_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 	
 	DACInit(0, 0, 1, TerracreSyncDAC);
@@ -1469,6 +1523,7 @@ static INT32 DrvExit()
 	
 	DrvScrollX = 0;
 	DrvScrollY = 0;
+	DrvDisableFg = 0;
 	DrvDisableBg = 0;
 	DrvFlipScreen = 0;
 	DrvSoundLatch = 0;
@@ -1620,7 +1675,7 @@ static void DrvRenderFgLayer()
 
 static void DrawSprites()
 {
-	UINT16 *pSource = (UINT16*)DrvSpriteRam;
+	UINT16 *pSource = (UINT16*)DrvSpriteRamBuffer;
 	INT32 TransparentPen = 0x00;
 	if (DrvIsHorekid) TransparentPen = 0x0f;
 
@@ -1695,21 +1750,24 @@ static void DrawSprites()
 	}
 }
 
-static void DrvDraw()
+static INT32 DrvDraw()
 {
 	BurnTransferClear();
 	if (DrvRecalcPal) DrvCalcPalette();
 	if (nBurnLayer & 0x01 && !DrvDisableBg) DrvRenderBgLayer();
 	if (nSpriteEnable & 0x01) DrawSprites();
-	if (nBurnLayer & 0x02) DrvRenderFgLayer();
+	if (nBurnLayer & 0x02 && !DrvDisableFg) DrvRenderFgLayer();
 	BurnTransferCopy(DrvPalette);
+
+	return 0;
 }
 
 static INT32 DrvFrame()
 {
 	INT32 nCyclesTotal[2] = { 8000000 / 60, 4000000 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
-	INT32 nInterleave = 17*8; // 136
+	// INT32 nInterleave = 17*8; // 136 // BGM too fast at this value
+	INT32 nInterleave = 130;
 	
 	if (DrvReset) DrvDoReset();
 
@@ -1761,6 +1819,7 @@ static INT32 DrvFrame()
 	ZetClose();
 	
 	if (pBurnDraw) DrvDraw();
+	memcpy(DrvSpriteRamBuffer, DrvSpriteRam, 0x002000);
 
 	return 0;
 }
@@ -1795,6 +1854,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		
 		SCAN_VAR(DrvScrollX);
 		SCAN_VAR(DrvScrollY);
+		SCAN_VAR(DrvDisableFg);
 		SCAN_VAR(DrvDisableBg);
 		SCAN_VAR(DrvFlipScreen);
 		SCAN_VAR(DrvSoundLatch);
@@ -1814,8 +1874,8 @@ struct BurnDriver BurnDrvTerracre = {
 	"Terra Cresta (YM3526 set 1)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, DrvRomInfo, DrvRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
-	TerracreInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, DrvRomInfo, DrvRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	TerracreInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPal, 0x1110, 224, 256, 3, 4
 };
 
@@ -1824,8 +1884,8 @@ struct BurnDriver BurnDrvTerracreo = {
 	"Terra Cresta (YM3526 set 2)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, DrvoRomInfo, DrvoRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
-	TerracreoInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, DrvoRomInfo, DrvoRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	TerracreoInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPal, 0x1110, 224, 256, 3, 4
 };
 
@@ -1834,8 +1894,8 @@ struct BurnDriver BurnDrvTerracrea = {
 	"Terra Cresta (YM3526 set 3)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, DrvaRomInfo, DrvaRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
-	TerracreoInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, DrvaRomInfo, DrvaRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	TerracreoInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPal, 0x1110, 224, 256, 3, 4
 };
 
@@ -1844,8 +1904,8 @@ struct BurnDriver BurnDrvTerracren = {
 	"Terra Cresta (YM2203)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, DrvnRomInfo, DrvnRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
-	TerracrenInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, DrvnRomInfo, DrvnRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	TerracrenInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPal, 0x1110, 224, 256, 3, 4
 };
 
@@ -1853,9 +1913,19 @@ struct BurnDriver BurnDrvAmazon = {
 	"amazon", NULL, NULL, NULL, "1986",
 	"Soldier Girl Amazon\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, AmazonRomInfo, AmazonRomName, NULL, NULL, AmazonInputInfo, AmazonDIPInfo,
-	AmazonInit, DrvExit, DrvFrame, NULL, DrvScan,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RUNGUN, 0,
+	NULL, AmazonRomInfo, AmazonRomName, NULL, NULL, NULL, NULL, AmazonInputInfo, AmazonDIPInfo,
+	AmazonInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
+	&DrvRecalcPal, 0x1110, 224, 256, 3, 4
+};
+
+struct BurnDriver BurnDrvAmazont = {
+	"amazont", "amazon", NULL, NULL, "1986",
+	"Soldier Girl Amazon (Tecfri license)\0", NULL, "Nichibutsu (Tecfri license)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RUNGUN, 0,
+	NULL, AmazontRomInfo, AmazontRomName, NULL, NULL, NULL, NULL, AmazonInputInfo, AmazonDIPInfo,
+	AmazonInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPal, 0x1110, 224, 256, 3, 4
 };
 
@@ -1863,9 +1933,9 @@ struct BurnDriver BurnDrvAmatelas = {
 	"amatelas", "amazon", NULL, NULL, "1986",
 	"Sei Senshi Amatelass\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, AmatelasRomInfo, AmatelasRomName, NULL, NULL, AmazonInputInfo, AmazonDIPInfo,
-	AmatelasInit, DrvExit, DrvFrame, NULL, DrvScan,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RUNGUN, 0,
+	NULL, AmatelasRomInfo, AmatelasRomName, NULL, NULL, NULL, NULL, AmazonInputInfo, AmazonDIPInfo,
+	AmatelasInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPal, 0x1110, 224, 256, 3, 4
 };
 
@@ -1874,8 +1944,8 @@ struct BurnDriver BurnDrvHorekid = {
 	"Kid no Hore Hore Daisakusen\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, HorekidRomInfo, HorekidRomName, NULL, NULL, HorekidInputInfo, HorekidDIPInfo,
-	HorekidInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, HorekidRomInfo, HorekidRomName, NULL, NULL, NULL, NULL, HorekidInputInfo, HorekidDIPInfo,
+	HorekidInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPal, 0x1110, 224, 256, 3, 4
 };
 
@@ -1884,8 +1954,8 @@ struct BurnDriver BurnDrvHorekidb = {
 	"Kid no Hore Hore Daisakusen (bootleg)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, HorekidbRomInfo, HorekidbRomName, NULL, NULL, HorekidInputInfo, HorekidDIPInfo,
-	HorekidInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, HorekidbRomInfo, HorekidbRomName, NULL, NULL, NULL, NULL, HorekidInputInfo, HorekidDIPInfo,
+	HorekidInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPal, 0x1110, 224, 256, 3, 4
 };
 
@@ -1894,7 +1964,7 @@ struct BurnDriver BurnDrvBoobhack = {
 	"Booby Kids (Italian manufactured graphic hack / bootleg of Kid no Hore Hore Daisakusen (bootleg))\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, BoobhackRomInfo, BoobhackRomName, NULL, NULL, HorekidInputInfo, HorekidDIPInfo,
-	HorekidInit, DrvExit, DrvFrame, NULL, DrvScan,
+	NULL, BoobhackRomInfo, BoobhackRomName, NULL, NULL, NULL, NULL, HorekidInputInfo, HorekidDIPInfo,
+	HorekidInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalcPal, 0x1110, 224, 256, 3, 4
 };

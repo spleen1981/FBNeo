@@ -48,6 +48,7 @@
 #define IDD_NCD_COVER_DLG					80
 #define IDD_GAMEINFO						81
 #define IDD_DOWNLOAD_LOCAL					82
+#define IDD_CHOOSEMONITOR					83
 
 #define IDR_MENU                        	100
 #define IDR_MENU_BLITTER_1					110
@@ -57,7 +58,11 @@
 #define IDR_MENU_BLITTER_5					114
 #define IDR_MENU_AUD_PLUGIN_1				130
 #define IDR_MENU_AUD_PLUGIN_2				131
+#define	IDR_MENU_GAMESEL					140
 #define IDR_ACCELERATOR                 	150
+
+#define IDD_REPLAYINP                   233
+#define IDD_RECORDINP                   234
 
 #define MENU_MENU_0							2000
 #define MENU_MENU_1							2001
@@ -89,6 +94,15 @@
 #define ID_VALUE_CLOSE                  	20019
 #define IDC_VALUE_EDIT                  	20020
                                        // 	20021 is used by IDC_INPS_CLEARLOCK.
+#define IDC_INPD_ANSLIDER					20022
+#define IDC_INPD_ANEDIT						20023
+
+#define IDC_INPS_CONTROL_S1					20024
+#define IDC_INPS_CONTROL_S2					20025
+
+#define IDC_INPS_MAPDIG						20026
+#define IDC_INPS_DIGSLIDER					20027
+#define IDC_INPS_DIGLABEL					20028
 
 #define IDC_FBA_VER                     	20050
 #define IDC_SPECIALSTRING               	20051
@@ -180,6 +194,13 @@
 #define IDC_CHECKUNAVAILABLE              	20137
 #define IDC_SYSINFO_LOG_SAVE                20138
 #define IDC_LOCAL_DOWNLOAD_LANG				20139
+#define IDC_SEL_SEARCHTIMER                 20140
+#define IDC_CHOOSE_MONITOR_HOR				20141
+#define IDC_CHOOSE_MONITOR_HOR_LIST			20142
+#define IDC_CHOOSE_MONITOR_VER				20143
+#define IDC_CHOOSE_MONITOR_VER_LIST			20144
+#define IDC_CHOOSE_MONITOR_TEXT				20145
+#define IDC_LIST3							20146
 
 #define IDC_DRVCOUNT						20200
 #define IDC_TREE2							20201
@@ -188,6 +209,17 @@
 #define IDC_LAYER3							20204
 #define IDC_LAYER4							20205
 #define IDC_SHOW							20206
+
+#define IDC_LENGTH                      20255
+#define IDC_FRAMES                      20256
+#define IDC_UNDO                        20257
+#define IDC_METADATA                    20258
+#define IDC_READONLY                    20259
+#define IDC_FILENAME                    20260
+#define IDC_BROWSE                      20261
+#define IDC_REPLAYRESET                 20262
+#define IDC_REPLAYTIME                  20263
+#define IDC_SHOWMOVEMENT                20264
 
 #define IDC_STATIC_SYS                  	20300
 #define IDC_STATIC_OPT                  	20301
@@ -245,6 +277,7 @@
 #define IDRESCAN                        	20601
 #define IDGAMEINFO                       	20602
 #define IDRESCANSET                        	20603
+#define IDFAVORITESET                       20604
 
 #define IDC_MVS_CART1                 		20700
 #define IDC_MVS_CART2                   	20701
@@ -332,6 +365,8 @@
 #define IDC_SUPPORTDIR_EDIT20				20919
 #define IDC_SUPPORTDIR_EDIT21				20920
 #define IDC_SUPPORTDIR_EDIT22				20921
+#define IDC_SUPPORTDIR_EDIT23				20922
+#define IDC_SUPPORTDIR_EDIT24				20923
 
 #define IDC_SUPPORTDIR_BR1					20950
 #define IDC_SUPPORTDIR_BR2					20951
@@ -355,6 +390,8 @@
 #define IDC_SUPPORTDIR_BR20					20969
 #define IDC_SUPPORTDIR_BR21					20970
 #define IDC_SUPPORTDIR_BR22					20971
+#define IDC_SUPPORTDIR_BR23					20972
+#define IDC_SUPPORTDIR_BR24					20973
 
 #define ID_LICENSE                      	21000
 #define ID_DX9EFFECT                    	21001
@@ -508,6 +545,15 @@
 #define MENU_INPUT_AUTOFIRE_RATE_3			10262
 #define MENU_INPUT_AUTOFIRE_RATE_4			10263
 
+#define MENU_ASPECTNORMALVERL				10270
+#define MENU_ASPECTLCDVERL					10271
+#define MENU_ASPECTWIDEVERL					10272
+#define MENU_ASPECTWIDELCDVERL				10273
+#define MENU_ASPECTNORMALVERP				10274
+#define MENU_ASPECTLCDVERP					10275
+#define MENU_ASPECTWIDEVERP					10276
+#define MENU_ASPECTWIDELCDVERP				10277
+
 #define MENU_AUTOPAUSE                 	 	10300
 #define MENU_PROCESSINPUT					10301
 #define MENU_DISPLAYINDICATOR				10302
@@ -525,6 +571,8 @@
 #define MENU_PRIORITY_LOW               	10315
 #define MENU_SNAPFACT                   	10317
 #define MENU_SAVESNAP                   	10318
+#define MENU_HIGHRESTIMER                   10319
+#define MENU_DEBUGCONSOLE                   10320
 #define MENU_ASSOCIATE						10330
 #define MENU_DISASSOCIATE					10331
 #define MENU_SAVEGAMEINPUTNOW				10332
@@ -541,6 +589,7 @@
 #define MENU_WWW_HOME                   	10504
 #define MENU_WHATSNEW                  		10505
 #define MENU_WWW_NSFORUM					10506
+#define MENU_WWW_GITHUB						10507
 #define MENU_WLOGSTART						10606
 #define MENU_WLOGEND						10607
 #define MENU_AUTOSWITCHFULL					10613
@@ -593,9 +642,10 @@
 #define MENU_LANGUAGE_GL_EXPORT				10674
 #define MENU_LANGUAGE_GL_RESET				10675
 #define MENU_ENABLEICONS					10676
-#define MENU_ICONS_SIZE_16					10677
-#define MENU_ICONS_SIZE_24					10678
-#define MENU_ICONS_SIZE_32					10679
+#define MENU_ICONS_PARENTSONLY              10677
+#define MENU_ICONS_SIZE_16					10678
+#define MENU_ICONS_SIZE_24					10679
+#define MENU_ICONS_SIZE_32					10680
 #define MENU_RES_ARCADE_VERTICAL			10700
 #define MENU_RES_1_VERTICAL					10701
 #define MENU_RES_2_VERTICAL					10702
@@ -619,7 +669,21 @@
 #define MENU_USEBLEND						10720
 #define MENU_CLRMAME_PRO_XML_SMS_ONLY		10721
 #define MENU_CLRMAME_PRO_XML_GG_ONLY		10722
-#define MENU_AVI3X							10723
+#define MENU_CLRMAME_PRO_XML_MSX_ONLY		10723
+#define MENU_AVI1X							10724
+#define MENU_AVI2X							10725
+#define MENU_AVI3X							10726
+#define MENU_GEARSHIFT						10727
+#define MENU_FULLSCREEN_MONITOR				10728
+#define MENU_CLRMAME_PRO_ALL_DATS			10729
+#define MENU_SELECTPLACEHOLDER				10730
+#define MENU_DISABLEPLACEHOLDER				10731
+#define MENU_CLRMAME_PRO_XML_SPECTRUM_ONLY	10732
+#define MENU_AUTOLOADGAMELIST               10733
+#define MENU_AUTOSCANGAMELIST               10734
+#define MENU_CLRMAME_PRO_XML_NES_ONLY       10735
+#define MENU_CLRMAME_PRO_XML_FDS_ONLY       10736
+#define MENU_CLRMAME_PRO_XML_NGP_ONLY		10737
 
 #define MENU_BASIC_NORMAL          	    	11001
 #define MENU_BASIC_SCAN                	    11002
@@ -774,6 +838,7 @@
 #define MENU_DX9_ALT_SOFT_4XBR_C			11434
 #define MENU_DX9_ALT_SOFT_DDT3X             11435
 #define MENU_DX9_ALT_SOFT_AUTOSIZE			11490
+#define MENU_DX9_ALT_FORCE_16BIT			11491
 
 #define MENU_DX9_POINT						11601
 #define MENU_DX9_LINEAR						11602
@@ -804,6 +869,11 @@
 #define MENU_AVISTART					    11827
 #define MENU_AVISTOP					    11828
 #define MENU_AVIINTAUD					    11829
+
+#define GAMESEL_MENU_PLAY					11900
+#define GAMESEL_MENU_GAMEINFO				11901
+#define GAMESEL_MENU_VIEWEMMA				11902
+#define GAMESEL_MENU_FAVORITE				11903
 
 // Next default values for new objects
 //

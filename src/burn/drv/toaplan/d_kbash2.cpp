@@ -1,3 +1,6 @@
+// FB Alpha Knuckle Bash 2 driver module
+// Driver and emulation by Jan Klaassen
+
 #include "toaplan.h"
 // Knuckle Bash 2
 
@@ -7,8 +10,6 @@ static UINT8 DrvJoy2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static UINT8 DrvInput[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static UINT8 DrvReset = 0;
-static UINT8 bDrawScreen;
-static bool bVBlank;
 
 static INT32 nPreviousOkiBank;
 
@@ -194,8 +195,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 
 		SekScan(nAction);				// scan 68000 states
 
-		MSM6295Scan(0, nAction);
-		MSM6295Scan(1, nAction);
+		MSM6295Scan(nAction, pnMin);
 
 		ToaScanGP9001(nAction, pnMin);
 
@@ -244,10 +244,10 @@ static UINT8 __fastcall kbash2ReadByte(UINT32 sekAddress)
 			return DrvInput[2];
 
 		case 0x200021:
-			return MSM6295ReadStatus(1);
+			return MSM6295Read(1);
 
 		case 0x200025:
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 
 		case 0x20002D:
 			return ToaScanlineRegister();
@@ -281,10 +281,10 @@ static UINT16 __fastcall kbash2ReadWord(UINT32 sekAddress)
 			return DrvInput[2];
 
 		case 0x200020:
-			return MSM6295ReadStatus(1);
+			return MSM6295Read(1);
 
 		case 0x200024:
-			return MSM6295ReadStatus(0);
+			return MSM6295Read(0);
 
 		case 0x20002c:
 			return ToaScanlineRegister();
@@ -308,11 +308,11 @@ static void __fastcall kbash2WriteByte(UINT32 sekAddress, UINT8 byteValue)
 {
 	switch (sekAddress) {
 		case 0x200021:
-			MSM6295Command(1, byteValue);
+			MSM6295Write(1, byteValue);
 		return;
 
 		case 0x200025:
-			MSM6295Command(0, byteValue);
+			MSM6295Write(0, byteValue);
 		return;
 
 		case 0x200029:
@@ -357,8 +357,7 @@ static INT32 DrvDoReset()
 	SekReset();
 	SekClose();
 
-	MSM6295Reset(0);
-	MSM6295Reset(1);
+	MSM6295Reset();
 
 	nPreviousOkiBank = -1;
 	oki_set_bank(0);
@@ -423,8 +422,6 @@ static INT32 DrvInit()
 	ToaPalSrc = RamPal;
 	ToaPalInit();
 
-	bDrawScreen = true;
-
 	DrvDoReset();			// Reset machine
 	return 0;
 }
@@ -436,8 +433,7 @@ static INT32 DrvExit()
 	ToaExitGP9001();
 	SekExit();				// Deallocate 68000s
 	
-	MSM6295Exit(0);
-	MSM6295Exit(1);
+	MSM6295Exit();
 
 	BurnFree(Mem);
 
@@ -448,18 +444,11 @@ static INT32 DrvDraw()
 {
 	ToaClearScreen(0);
 
-	if (bDrawScreen) {
-		ToaGetBitmap();
-		ToaRenderGP9001();					// Render GP9001 graphics
-	}
+	ToaGetBitmap();
+	ToaRenderGP9001();						// Render GP9001 graphics
 
 	ToaPalUpdate();							// Update the palette
 
-	return 0;
-}
-
-inline static INT32 CheckSleep(INT32)
-{
 	return 0;
 }
 
@@ -493,7 +482,7 @@ static INT32 DrvFrame()
 	SekSetCyclesScanline(nCyclesTotal[0] / 262);
 	nToaCyclesDisplayStart = nCyclesTotal[0] - ((nCyclesTotal[0] * (TOA_VBLANK_LINES + 240)) / 262);
 	nToaCyclesVBlankStart = nCyclesTotal[0] - ((nCyclesTotal[0] * TOA_VBLANK_LINES) / 262);
-	bVBlank = false;
+	bool bVBlank = false;
 
 	for (INT32 i = 0; i < nInterleave; i++) {
     	INT32 nCurrentCPU;
@@ -502,7 +491,6 @@ static INT32 DrvFrame()
 		// Run 68000
 		nCurrentCPU = 0;
 		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
-
 
 		// Trigger VBlank interrupt
 		if (!bVBlank && nNext > nToaCyclesVBlankStart) {
@@ -520,18 +508,12 @@ static INT32 DrvFrame()
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		if (bVBlank || (!CheckSleep(nCurrentCPU))) {					// See if this CPU is busywaiting
-			nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		} else {
-			nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-		}
-
+		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 	}
 
 	if (pBurnSoundOut) {
 		memset (pBurnSoundOut, 0, nBurnSoundLen * 2 * sizeof(INT16));
-		MSM6295Render(0, pBurnSoundOut, nBurnSoundLen);
-		MSM6295Render(1, pBurnSoundOut, nBurnSoundLen);
+		MSM6295Render(pBurnSoundOut, nBurnSoundLen);
 	}
 	
 	SekClose();
@@ -548,7 +530,7 @@ struct BurnDriver BurnDrvKbash2 = {
 	"Knuckle Bash 2 (bootleg)\0", NULL, "bootleg", "Toaplan GP9001 based",
 	L"Knuckle Bash 2\0Knuckle Bash \u30CA\u30C3\u30AF\u30EB\u30D0\u30C3\u30B7\u30E5 \uFF12 (bootleg)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_BOOTLEG, 2, HARDWARE_TOAPLAN_68K_ONLY, GBF_SCRFIGHT, 0,
-	NULL, kbash2RomInfo, kbash2RomName, NULL, NULL, Kbash2InputInfo, Kbash2DIPInfo,
+	NULL, kbash2RomInfo, kbash2RomName, NULL, NULL, NULL, NULL, Kbash2InputInfo, Kbash2DIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	320, 240, 4, 3
 };

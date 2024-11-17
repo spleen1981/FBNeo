@@ -307,6 +307,7 @@ static void DrvCpuMap(INT32 cpu)
 {
 	UINT8 *rom = (cpu) ? DrvM6809ROM1 : DrvM6809ROM0;
 
+	M6809Init(cpu);
 	M6809Open(cpu);
 	M6809MapMemory(DrvShareRAM,	0x0000, 0x0fff, MAP_RAM);
 	M6809MapMemory(DrvTileRAM,	0x1000, 0x17ff, MAP_RAM);
@@ -344,12 +345,11 @@ static INT32 DrvInit()
 		DrvGfxDecode();
 	}
 
-	M6809Init(2);
 	DrvCpuMap(0);
 	DrvCpuMap(1);
 
 	BurnYM3526Init(3000000, DrvYM3526IRQHandler, &DrvYM3526SynchroniseStream, 0);
-	BurnTimerAttachM6809YM3526(1500000);
+	BurnTimerAttachYM3526(&M6809Config, 1500000);
 	BurnYM3526SetRoute(BURN_SND_YM3526_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
@@ -637,7 +637,7 @@ struct BurnDriver BurnDrvBattlane = {
 	"Battle Lane! Vol. 5 (set 1)\0", NULL, "Technos Japan (Taito license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
-	NULL, battlaneRomInfo, battlaneRomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	NULL, battlaneRomInfo, battlaneRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 256, 3, 4
 };
@@ -671,7 +671,7 @@ struct BurnDriver BurnDrvBattlane2 = {
 	"Battle Lane! Vol. 5 (set 2)\0", NULL, "Technos Japan (Taito license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
-	NULL, battlane2RomInfo, battlane2RomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	NULL, battlane2RomInfo, battlane2RomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 256, 3, 4
 };
@@ -705,7 +705,7 @@ struct BurnDriver BurnDrvBattlane3 = {
 	"Battle Lane! Vol. 5 (set 3)\0", NULL, "Technos Japan (Taito license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
-	NULL, battlane3RomInfo, battlane3RomName, NULL, NULL, DrvInputInfo, DrvDIPInfo,
+	NULL, battlane3RomInfo, battlane3RomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 256, 3, 4
 };

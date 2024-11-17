@@ -17,8 +17,6 @@ static UINT8 *DrvM6809RAM;
 static UINT8 *DrvZ80RAM;
 static UINT8 *DrvPalRAM;
 
-static INT16 *pAY8910Buffer[6];
-
 static UINT32 *DrvPalette;
 static UINT8  DrvRecalc;
 
@@ -38,8 +36,11 @@ static UINT8 DrvReset;
 
 static INT32 watchdog;
 
+static INT32 StarsEnabled;
+static INT32 StarScrollX, StarScrollY;
+
 static struct BurnInputInfo TutankhmInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 start"	},
 	{"P1 Left Stick Up",	BIT_DIGITAL,	DrvJoy2 + 2,	"p1 up"		},
 	{"P1 Left Stick Down",	BIT_DIGITAL,	DrvJoy2 + 3,	"p1 down"	},
@@ -49,7 +50,7 @@ static struct BurnInputInfo TutankhmInputList[] = {
 	{"P1 Right Stick Right",BIT_DIGITAL,	DrvJoy2 + 5,	"p3 right"	},
 	{"P1 Flash Bomb",	BIT_DIGITAL,	DrvJoy2 + 6,	"p1 fire 1"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 start"	},
 	{"P2 Left Stick Up",	BIT_DIGITAL,	DrvJoy3 + 2,	"p2 up"		},
 	{"P2 Left Stick Down",	BIT_DIGITAL,	DrvJoy3 + 3,	"p2 down"	},
@@ -59,10 +60,10 @@ static struct BurnInputInfo TutankhmInputList[] = {
 	{"P2 Right Stick Right",BIT_DIGITAL,	DrvJoy3 + 5,	"p4 right"	},
 	{"P2 Flash Bomb",	BIT_DIGITAL,	DrvJoy3 + 6,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Tutankhm)
@@ -173,6 +174,7 @@ static void tutankhm_write(UINT16 address, UINT8 data)
 		return;
 
 		case 0x8204:
+			StarsEnabled = data & 1;
 		return;
 
 		case 0x8205:
@@ -210,7 +212,7 @@ static UINT8 tutankhm_read(UINT16 address)
 			return 0;
 
 		case 0x8160:
-			return DrvDips[1];
+			return DrvDips[0];
 
 		case 0x8180:
 			return DrvInputs[0];
@@ -222,7 +224,7 @@ static UINT8 tutankhm_read(UINT16 address)
 			return DrvInputs[2];
 
 		case 0x81e0:
-			return DrvDips[0];
+			return DrvDips[1];
 
 		case 0x8200:
 			return 0;
@@ -251,7 +253,92 @@ static INT32 DrvDoReset(INT32 clear_ram)
 	flipscreenx = 0;
 	flipscreeny = 0;
 
+	StarsEnabled = 0;
+	StarScrollX = StarScrollY = 0;
+
+	HiscoreReset();
+
 	return 0;
+}
+
+struct Star {
+	UINT16 x, y;
+	UINT8 Colour, Set;
+};
+
+#define MAX_STARS 252
+static struct Star StarSeedTab[MAX_STARS];
+
+static void DrvInitStars()
+{
+	/*
+	  Galaga star line and pixel locations pulled directly from
+	  a clocked stepping of the 05 starfield. The chip was clocked
+	  on a test rig with hblank and vblank simulated, each X & Y
+	  location of a star being recorded along with it's color value.
+
+	  The lookup table is generated using a reverse engineered
+	  linear feedback shift register + XOR boolean expression.
+
+	  Because the starfield begins generating stars at the point
+	  in time it's enabled the exact horiz location of the stars
+	  on Galaga depends on the length of time of the POST for the
+	  original board.
+
+	  Two control bits determine which of two sets are displayed
+	  set 0 or 1 and simultaneously 2 or 3.
+
+	  There are 63 stars in each set, 126 displayed at any one time
+	  Code: jmakovicka, based on info from http://www.pin4.at/pro_custom_05xx.php
+	*/
+
+	const UINT16 feed = 0x9420;
+
+	INT32 idx = 0;
+	for (UINT16 sf = 0; sf < 4; ++sf)
+	{
+		// starfield select flags
+		UINT16 sf1 = (sf >> 1) & 1;
+		UINT16 sf2 = sf & 1;
+
+		UINT16 i = 0x70cc;
+		for (INT32 cnt = 0; cnt < 65535; ++cnt)
+		{
+			// output enable lookup
+			UINT16 xor1 = i ^ (i >> 3);
+			UINT16 xor2 = xor1 ^ (i >> 2);
+			UINT16 oe = (sf1 ? 0 : 0x4000) | ((sf1 ^ sf2) ? 0 : 0x1000);
+			if ((i & 0x8007) == 0x8007
+			    && (~i & 0x2008) == 0x2008
+			    && (xor1 & 0x0100) == (sf1 ? 0 : 0x0100)
+			    && (xor2 & 0x0040) == (sf2 ? 0 : 0x0040)
+			    && (i & 0x5000) == oe
+			    && cnt >= 256 * 4)
+			{
+				// color lookup
+				UINT16 xor3 = (i >> 1) ^ (i >> 6);
+				UINT16 clr =
+					(((i >> 9) & 0x07)
+					 | ((xor3 ^ (i >> 4) ^ (i >> 7)) & 0x08)
+					 | (~xor3 & 0x10)
+					 | (((i >> 2) ^ (i >> 5)) & 0x20))
+					^ ((i & 0x4000) ? 0 : 0x24)
+					^ ((((i >> 2) ^ i) & 0x1000) ? 0x21 : 0);
+
+				StarSeedTab[idx].x = cnt % 256;
+				StarSeedTab[idx].y = cnt / 256;
+				StarSeedTab[idx].Colour = clr;
+				StarSeedTab[idx].Set = sf;
+				++idx;
+			}
+
+			// update the LFSR
+			if (i & 1)
+				i = (i >> 1) ^ feed;
+			else
+				i = (i >> 1);
+		}
+	}
 }
 
 static INT32 MemIndex()
@@ -261,7 +348,7 @@ static INT32 MemIndex()
 	DrvM6809ROM		= Next; Next += 0x020000;
 	DrvZ80ROM		= Next; Next += 0x003000;
 
-	DrvPalette		= (UINT32*)Next; Next += 0x0010 * sizeof(UINT32);
+	DrvPalette		= (UINT32*)Next; Next += (0x0010 + 0x0080) * sizeof(UINT32);
 
 	AllRam			= Next;
 
@@ -271,13 +358,6 @@ static INT32 MemIndex()
 	DrvPalRAM		= Next; Next += 0x000010;
 
 	RamEnd			= Next;
-
-	pAY8910Buffer[0]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[1]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[2]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[3]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[4]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[5]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
 
 	MemEnd			= Next;
 
@@ -314,7 +394,7 @@ static INT32 DrvInit()
 		if (BurnLoadRom(DrvZ80ROM   + 0x01000, 16, 1)) return 1;
 	}
 
-	M6809Init(1);
+	M6809Init(0);
 	M6809Open(0);
 	M6809MapMemory(DrvVidRAM,		0x0000, 0x7fff, MAP_RAM);
 	M6809MapMemory(DrvM6809RAM,		0x8800, 0x8fff, MAP_RAM);
@@ -324,8 +404,11 @@ static INT32 DrvInit()
 	M6809Close();
 
 	TimepltSndInit(DrvZ80ROM, DrvZ80RAM, 0);
+	TimepltSndSrcGain(0.55); // quench distortion when enemy spawns
 
 	GenericTilesInit();
+
+	DrvInitStars();
 
 	DrvDoReset(1);
 
@@ -358,6 +441,19 @@ static void DrvPaletteUpdate()
 
 		DrvPalette[i] = BurnHighCol(r,g,b,0);
 	}
+
+	for (INT32 i = 0; i < 0x40; i++) { // starfield palette
+		static const INT32 map[4] = { 0x00, 0x47, 0x97, 0xde };
+
+		INT32 bits = (i >> 0) & 0x03;
+		INT32 r = map[bits];
+		bits = (i >> 2) & 0x03;
+		INT32 g = map[bits];
+		bits = (i >> 4) & 0x03;
+		INT32 b = map[bits];
+
+		DrvPalette[0x20 + i] = BurnHighCol(r, g, b, 0);
+	}
 }
 
 static void draw_layer()
@@ -379,6 +475,33 @@ static void draw_layer()
 	}
 }
 
+static void render_stars()
+{
+	if (StarsEnabled) {
+		INT32 StarCounter;
+		INT32 SetA, SetB;
+		INT32 transloc;
+		SetA = ((nCurrentFrame+0x40) & 0x80) ? 1 : 0;
+		SetB = (nCurrentFrame & 0x80) ? 2 : 3;
+
+		for (StarCounter = 0; StarCounter < 252; StarCounter++) {
+			INT32 x, y;
+
+			if ((SetA == StarSeedTab[StarCounter].Set) || (SetB == StarSeedTab[StarCounter].Set)) {
+				x = (StarSeedTab[StarCounter].x + StarScrollX) % 256 + 16;
+				y = (112 + StarSeedTab[StarCounter].y + StarScrollY) % 256;
+
+				if (x >= 0 && x < nScreenWidth && y >= 0 && y < nScreenHeight) {
+					transloc = (y * nScreenWidth) + x;
+					if (!pTransDraw[transloc])
+						pTransDraw[transloc] = StarSeedTab[StarCounter].Colour + 0x20;
+				}
+			}
+
+		}
+	}
+}
+
 static INT32 DrvDraw()
 {
 //	if (DrvRecalc) {
@@ -386,7 +509,11 @@ static INT32 DrvDraw()
 		DrvRecalc = 0;
 //	}
 
-	draw_layer();
+	BurnTransferClear();
+
+	if (nBurnLayer & 1) draw_layer();
+
+	if (nBurnLayer & 2) render_stars();
 
 	BurnTransferCopy(DrvPalette);
 
@@ -426,39 +553,26 @@ static INT32 DrvFrame()
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[2] = { 1536000 / 60, 1789772 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
-	INT32 nSoundBufferPos = 0;
 
 	M6809Open(0);
 	ZetOpen(0);
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		INT32 nSegment = (nCyclesTotal[0] * (i + 1)) / nInterleave;
-		nCyclesDone[0] += M6809Run(nSegment - nCyclesDone[0]);
+		CPU_RUN(0, M6809);
 		if (i == (nInterleave - 1) && irq_enable && (nCurrentFrame & 1)) M6809SetIRQLine(0, CPU_IRQSTATUS_ACK);
 
-		nSegment = (nCyclesTotal[1] * i) / nInterleave;
-		nCyclesDone[1] += ZetRun(nSegment - nCyclesDone[1]);
-
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			if (!sound_mute) TimepltSndUpdate(pAY8910Buffer, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
+		CPU_RUN(1, Zet);
 	}
 
 	ZetClose();
 	M6809Close();
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-
 		if (sound_mute) {
-			memset (pBurnSoundOut, 0, nBurnSoundLen * sizeof(INT16) * 2);
+			BurnSoundClear();
 		} else {
-			TimepltSndUpdate(pAY8910Buffer, pSoundBuf, nSegmentLength);
+			TimepltSndUpdate(pBurnSoundOut, nBurnSoundLen);
 		}
 	}
 
@@ -469,7 +583,7 @@ static INT32 DrvFrame()
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -494,6 +608,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		SCAN_VAR(flipscreenx);
 		SCAN_VAR(flipscreeny);
 		SCAN_VAR(nRomBank);
+		SCAN_VAR(StarsEnabled);
 	}
 
 	if (nAction & ACB_WRITE) {
@@ -536,8 +651,8 @@ struct BurnDriver BurnDrvTutankhm = {
 	"tutankhm", NULL, NULL, NULL, "1982",
 	"Tutankham\0", NULL, "Konami", "GX350",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 4, HARDWARE_PREFIX_KONAMI, GBF_MAZE, 0,
-	NULL, tutankhmRomInfo, tutankhmRomName, NULL, NULL, TutankhmInputInfo, TutankhmDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_MAZE, 0,
+	NULL, tutankhmRomInfo, tutankhmRomName, NULL, NULL, NULL, NULL, TutankhmInputInfo, TutankhmDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	224, 256, 3, 4
 };
@@ -573,8 +688,8 @@ struct BurnDriver BurnDrvTutankhms = {
 	"tutankhms", "tutankhm", NULL, NULL, "1982",
 	"Tutankham (Stern Electronics)\0", NULL, "Konami (Stern Electronics license)", "GX350",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 4, HARDWARE_PREFIX_KONAMI, GBF_MAZE, 0,
-	NULL, tutankhmsRomInfo, tutankhmsRomName, NULL, NULL, TutankhmInputInfo, TutankhmDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_MAZE, 0,
+	NULL, tutankhmsRomInfo, tutankhmsRomName, NULL, NULL, NULL, NULL, TutankhmInputInfo, TutankhmDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	224, 256, 3, 4
 };

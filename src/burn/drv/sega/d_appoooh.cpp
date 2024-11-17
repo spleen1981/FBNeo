@@ -580,7 +580,7 @@ static INT32 DrvDraw()
 	if (priority == 0)
 		if (nBurnLayer & 2) DrawFgTiles();
 
-	if (priority) {
+	if (priority == 1) {
 		if (nSpriteEnable & 1) DrawSprites(DrvSprRAM0, DrvGfxROM2, 0);
 		if (nSpriteEnable & 2) DrawSprites(DrvSprRAM1, DrvGfxROM3, 0x100);
 	} else {
@@ -602,6 +602,7 @@ static INT32 DrvDoReset()
 	DrvZ80Bank0 = 0;
 	scroll_x = 0;
 	flipscreen = 0;
+	priority = 0;
 	adpcm_address = 0xffffffff;
 	adpcm_data = 0;
 	MSM5205Reset();
@@ -996,8 +997,8 @@ struct BurnDriver BurnDrvAppoooh = {
 	"appoooh", NULL, NULL, NULL, "1984",
 	"Appoooh\0", NULL, "Sanritsu / Sega", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, appooohRomInfo, appooohRomName, NULL, NULL, AppooohInputInfo, AppooohDIPInfo,
+	BDF_GAME_WORKING, 2, HARDWARE_SEGA_MISC, GBF_VSFIGHT, 0,
+	NULL, appooohRomInfo, appooohRomName, NULL, NULL, NULL, NULL, AppooohInputInfo, AppooohDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x220,
 	256, 224, 4, 3
 };
@@ -1006,8 +1007,8 @@ struct BurnDriver BurnDrvRobowres = {
 	"robowres", NULL, NULL, NULL, "1986",
 	"Robo Wres 2001\0", NULL, "Sanritsu / Sega", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
-	NULL, robowresRomInfo, robowresRomName, NULL, NULL, AppooohInputInfo, RobowresDIPInfo,
+	BDF_GAME_WORKING, 2, HARDWARE_SEGA_MISC, GBF_VSFIGHT, 0,
+	NULL, robowresRomInfo, robowresRomName, NULL, NULL, NULL, NULL, AppooohInputInfo, RobowresDIPInfo,
 	DrvRobowresInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x220,
 	256, 224, 4, 3
 };

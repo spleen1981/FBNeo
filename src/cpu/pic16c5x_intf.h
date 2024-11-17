@@ -16,6 +16,21 @@ void pic16c5xOpen(INT32 nCpu);
 void pic16c5xClose();
 
 extern INT32 pic16c5xScan(INT32 nAction);
-extern void pic16c5xRunEnd();
+
+void pic16c5xRunEnd();
+INT32 pic16c5xIdle();
+INT32 pic16c5xGetActive();
+INT32 pic16c5xTotalCycles();
+void pic16c5xNewFrame();
+INT32 pic16c5xIdle(INT32);
 
 INT32 BurnLoadPicROM(UINT8 *src, INT32 offset, INT32 len);
+
+UINT8 pic16c5xCheatRead(UINT32 address);
+void pic16c5xCheatWrite(UINT32 address, UINT8 data);
+
+extern struct cpu_core_config pic16c5xConfig;
+
+// depreciate this and use BurnTimerAttach directly!
+#define BurnTimerAttachpic16c5x(clock)	\
+	BurnTimerAttach(&pic16c5xConfig, clock)
