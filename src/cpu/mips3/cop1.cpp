@@ -208,7 +208,7 @@ void mips3::cop1_execute_32(uint32_t opcode)
 
         // C.UN.x fs, ft
         case 0x32:
-            if (SP) FCR31 = (isnan(FS_s) || isnan(FT_s)) ? FCR31 | 0x800000 : FCR31 & ~0x800000;
+            if (SP) FCR31 = (_isnan(FS_s) || _isnan(FT_s)) ? FCR31 | 0x800000 : FCR31 & ~0x800000;
             else    FCR31 &= ~0x800000;
             break;
 
