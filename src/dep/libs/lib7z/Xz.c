@@ -1,15 +1,13 @@
 /* Xz.c - Xz
-2015-05-01 : Igor Pavlov : Public domain */
-
-#include "Precomp.h"
+2009-04-15 : Igor Pavlov : Public domain */
 
 #include "7zCrc.h"
 #include "CpuArch.h"
 #include "Xz.h"
 #include "XzCrc64.h"
 
-const Byte XZ_SIG[XZ_SIG_SIZE] = { 0xFD, '7', 'z', 'X', 'Z', 0 };
-const Byte XZ_FOOTER_SIG[XZ_FOOTER_SIG_SIZE] = { 'Y', 'Z' };
+Byte XZ_SIG[XZ_SIG_SIZE] = { 0xFD, '7', 'z', 'X', 'Z', 0 };
+Byte XZ_FOOTER_SIG[XZ_FOOTER_SIG_SIZE] = { 'Y', 'Z' };
 
 unsigned Xz_WriteVarInt(Byte *buf, UInt64 v)
 {
@@ -40,11 +38,11 @@ void Xz_Free(CXzStream *p, ISzAlloc *alloc)
 
 unsigned XzFlags_GetCheckSize(CXzStreamFlags f)
 {
-  unsigned t = XzFlags_GetCheckType(f);
+  int t = XzFlags_GetCheckType(f);
   return (t == 0) ? 0 : (4 << ((t - 1) / 3));
 }
 
-void XzCheck_Init(CXzCheck *p, unsigned mode)
+void XzCheck_Init(CXzCheck *p, int mode)
 {
   p->mode = mode;
   switch (mode)

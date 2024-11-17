@@ -6,8 +6,12 @@
 
 #include <stddef.h>
 
+#ifdef _XBOX
+#include <xtl.h>
+#else
 #ifdef _WIN32
-//#include <windows.h>
+#include <windows.h>
+#endif
 #endif
 
 #ifndef EXTERN_C_BEGIN
@@ -42,11 +46,11 @@ EXTERN_C_BEGIN
 
 typedef int SRes;
 
-//#ifdef 0
-//typedef DWORD WRes;
-//#else
+#ifdef _WIN32
+typedef DWORD WRes;
+#else
 typedef int WRes;
-//#endif
+#endif
 
 #ifndef RINOK
 #define RINOK(x) { int __result__ = (x); if (__result__ != 0) return __result__; }

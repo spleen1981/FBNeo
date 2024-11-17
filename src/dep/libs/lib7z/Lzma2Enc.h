@@ -1,12 +1,14 @@
 /* Lzma2Enc.h -- LZMA2 Encoder
-2013-01-18 : Igor Pavlov : Public domain */
+2009-02-07 : Igor Pavlov : Public domain */
 
 #ifndef __LZMA2_ENC_H
 #define __LZMA2_ENC_H
 
 #include "LzmaEnc.h"
 
-EXTERN_C_BEGIN
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct
 {
@@ -57,6 +59,8 @@ SRes Lzma2Encode(Byte *dest, SizeT *destLen, const Byte *src, SizeT srcLen,
     ICompressProgress *progress, ISzAlloc *alloc, ISzAlloc *allocBig);
 */
 
-EXTERN_C_END
+#ifdef __cplusplus
+}
+#endif
 
 #endif
