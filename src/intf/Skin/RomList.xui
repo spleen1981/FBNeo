@@ -76,7 +76,7 @@
 <Position>984.668457,532.531189,0.000000</Position>
 <Opacity>0.800000</Opacity>
 <SizeMode>16</SizeMode>
-<ImagePath>20866139.jpg</ImagePath>
+<ImagePath>logo_small.png</ImagePath>
 <BrushFlags>48</BrushFlags>
 </Properties>
 </XuiImage>
@@ -234,6 +234,18 @@
 <InterItemSpacing>0.000000,10.000000,0.000000</InterItemSpacing>
 </Properties>
 </XuiListItem>
+<XuiListItem>
+<Properties>
+<Id>control_ListItem</Id>
+<Width>226.000000</Width>
+<Height>45.000000</Height>
+<Position>7.000000,22.000000,0.000000</Position>
+<Anchor>5</Anchor>
+<Show>false</Show>
+<Visual>XuiButton</Visual>
+<InterItemSpacing>0.000000,10.000000,0.000000</InterItemSpacing>
+</Properties>
+</XuiListItem>
 </XuiList>
 <XuiText>
 <Properties>
@@ -375,7 +387,7 @@
 <Opacity>0.800000</Opacity>
 <Pivot>0.001709,1.390625,0.000000</Pivot>
 <SizeMode>16</SizeMode>
-<ImagePath>20866139.jpg</ImagePath>
+<ImagePath>logo_small.png</ImagePath>
 <BrushFlags>48</BrushFlags>
 </Properties>
 </XuiImage>
