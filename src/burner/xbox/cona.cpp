@@ -70,8 +70,9 @@ int ConfigAppLoad()
 		VAR(nIniVersion);
 
 		// Emulation
+#ifdef BUILD_A68K
 		VAR(bBurnUseASMCPUEmulation);
-
+#endif
 		// Video
 		VAR(nVidDepth); VAR(nVidRefresh);
 		VAR(nVidRotationAdjust);
@@ -298,7 +299,9 @@ int ConfigAppSave()
 	_ftprintf(h, _T("// --- emulation --------------------------------------------------------------\n"));
 
 	_ftprintf(h, _T("\n// If non-zero, use A68K for MC68000 emulation\n"));
+#if defined BUILD_A68K
 	VAR(bBurnUseASMCPUEmulation);
+#endif
 
 	_ftprintf(h, _T("\n\n\n"));
 	_ftprintf(h, _T("// --- Video ------------------------------------------------------------------\n"));

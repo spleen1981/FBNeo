@@ -1,7 +1,7 @@
 // Functions for recording & replaying input
 #include "burner.h"
 #include "dynhuff.h"
-#include <commdlg.h>
+//#include <commdlg.h>
 
 #define MAX_METADATA 1024
 wchar_t wszMetadata[MAX_METADATA];
@@ -22,7 +22,7 @@ static short nPrevInputs[0x0100];
 
 static int ReplayDialog(HWND);
 static int RecordDialog(HWND);
-
+/*
 int RecordInput()
 {
 	struct BurnInputInfo bii;
@@ -481,9 +481,9 @@ static inline unsigned short Read16(const unsigned char*& ptr)
 	v |= (unsigned short)((*ptr++)<<8);
 	return v;
 }
-
+*/
 int FreezeInput(unsigned char** buf, int* size)
-{
+{/*
 	*size = 4 + 2*nGameInpCount;
 	*buf = (unsigned char*)malloc(*size);
 	if (!*buf)
@@ -498,13 +498,13 @@ int FreezeInput(unsigned char** buf, int* size)
 	{
 		Write16(ptr, nPrevInputs[i]);
 	}
-
+	*/
 	return 0;
 }
 
 int UnfreezeInput(const unsigned char* buf, int size)
 {
-	unsigned int n=Read32(buf);
+	/*unsigned int n=Read32(buf);
 	if (n>0x100 || (unsigned)size < (4 + 2*n))
 	{
 		return -1;
@@ -514,10 +514,10 @@ int UnfreezeInput(const unsigned char* buf, int size)
 	{
 		nPrevInputs[i]=Read16(buf);
 	}
-
+	*/
 	return 0;
 }
-
+/*
 //------------------------------------------------------
 
 static void GetRecordingPath(TCHAR* szPath)
@@ -912,3 +912,13 @@ static int RecordDialog(HWND parent)
 {
 	return FBADialogBox(IDD_RECORDINP, parent, (DLGPROC)RecordDialogProc);
 }
+*/
+
+struct MovieExtInfo
+{
+	// date & time
+	UINT32 year, month, day;
+	UINT32 hour, minute, second;
+};
+
+struct MovieExtInfo MovieInfo = { 0, 0, 0, 0, 0, 0 };

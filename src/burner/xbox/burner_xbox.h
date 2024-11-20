@@ -453,4 +453,5 @@ extern "C" int __stdcall ObCreateSymbolicLink( STRING*, STRING*);
 void DebugMsg(const char* format, ...);
 
 extern ScalingEffect	*psEffect;
+
 #endif

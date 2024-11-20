@@ -157,3 +157,8 @@ void Reinitialise()
 	bRestartVideo=1;
 	//VidReInitialise();
 }
+
+INT32 is_netgame_or_recording() // returns: 1 = netgame, 2 = recording/playback
+{
+	return 0;
+}

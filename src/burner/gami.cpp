@@ -2000,34 +2000,25 @@ INT32 GameInputAutoIni(INT32 nPlayer, TCHAR* lpszFile, bool bOverWrite)
 }
 
 tIniStruct gamehw_cfg[] = {
-	{_T("CPS-1/CPS-2/CPS-3 hardware"),	_T("config/presets/cps.ini"),		{ HARDWARE_CAPCOM_CPS1, HARDWARE_CAPCOM_CPS1_QSOUND, HARDWARE_CAPCOM_CPS1_GENERIC, HARDWARE_CAPCOM_CPSCHANGER, HARDWARE_CAPCOM_CPS2, HARDWARE_CAPCOM_CPS3, 0 } },
-	{_T("Neo-Geo hardware"),			_T("config/presets/neogeo.ini"),	{ HARDWARE_SNK_NEOGEO, HARDWARE_SNK_NEOCD, 0 } },
-	{_T("Neo Geo Pocket hardware"),     _T("config/presets/ngp.ini"),       { HARDWARE_SNK_NGP, HARDWARE_SNK_NGPC, 0 } },
-	{_T("NES hardware"),				_T("config/presets/nes.ini"),		{ HARDWARE_NES, 0 } },
-	{_T("FDS hardware"),				_T("config/presets/fds.ini"),		{ HARDWARE_FDS, 0 } },
-	{_T("PGM hardware"),				_T("config/presets/pgm.ini"),		{ HARDWARE_IGS_PGM, 0 } },
-	{_T("MegaDrive hardware"),			_T("config/presets/megadrive.ini"),	{ HARDWARE_SEGA_MEGADRIVE, 0 } },
-	{_T("PCE/TG16/SGX hardware"),		_T("config/presets/pce.ini"),		{ HARDWARE_PCENGINE_PCENGINE, HARDWARE_PCENGINE_TG16, 0 } },
-	{_T("MSX1 hardware"),				_T("config/presets/msx.ini"),		{ HARDWARE_MSX, 0 } },
-	{_T("Coleco hardware"),				_T("config/presets/coleco.ini"),	{ HARDWARE_COLECO, 0 } },
-	{_T("SG1000 hardware"),				_T("config/presets/sg1000.ini"),	{ HARDWARE_SEGA_SG1000, 0 } },
-	{_T("Sega Master System hardware"),	_T("config/presets/sms.ini"),		{ HARDWARE_SEGA_MASTER_SYSTEM, 0 } },
-	{_T("Sega Game Gear hardware"),		_T("config/presets/gg.ini"),		{ HARDWARE_SEGA_GAME_GEAR, 0 } },
-	{_T("Sinclair Spectrum hardware"),	_T("config/presets/spectrum.ini"),	{ HARDWARE_SPECTRUM, 0 } },
+	{_T("CPS-1/CPS-2/CPS-3 hardware"),	_T("GAME:\\config\\presets\\cps.ini"),		{ HARDWARE_CAPCOM_CPS1, HARDWARE_CAPCOM_CPS1_QSOUND, HARDWARE_CAPCOM_CPS1_GENERIC, HARDWARE_CAPCOM_CPSCHANGER, HARDWARE_CAPCOM_CPS2, HARDWARE_CAPCOM_CPS3, 0 } },
+	{_T("Neo-Geo hardware"),			_T("GAME:\\config\\presets\\neogeo.ini"),	{ HARDWARE_SNK_NEOGEO, HARDWARE_SNK_NEOCD, 0 } },
+	{_T("Neo Geo Pocket hardware"),     _T("GAME:\\config\\presets\\ngp.ini"),       { HARDWARE_SNK_NGP, HARDWARE_SNK_NGPC, 0 } },
+	{_T("NES hardware"),				_T("GAME:\\config\\presets\\nes.ini"),		{ HARDWARE_NES, 0 } },
+	{_T("FDS hardware"),				_T("GAME:\\config\\presets\\fds.ini"),		{ HARDWARE_FDS, 0 } },
+	{_T("PGM hardware"),				_T("GAME:\\config\\presets\\pgm.ini"),		{ HARDWARE_IGS_PGM, 0 } },
+	{_T("MegaDrive hardware"),			_T("GAME:\\config\\presets\\megadrive.ini"),	{ HARDWARE_SEGA_MEGADRIVE, 0 } },
+	{_T("PCE/TG16/SGX hardware"),		_T("GAME:\\config\\presets\\pce.ini"),		{ HARDWARE_PCENGINE_PCENGINE, HARDWARE_PCENGINE_TG16, 0 } },
+	{_T("MSX1 hardware"),				_T("GAME:\\config\\presets\\msx.ini"),		{ HARDWARE_MSX, 0 } },
+	{_T("Coleco hardware"),				_T("GAME:\\config\\presets\\coleco.ini"),	{ HARDWARE_COLECO, 0 } },
+	{_T("SG1000 hardware"),				_T("GAME:\\config\\presets\\sg1000.ini"),	{ HARDWARE_SEGA_SG1000, 0 } },
+	{_T("Sega Master System hardware"),	_T("GAME:\\config\\presets\\sms.ini"),		{ HARDWARE_SEGA_MASTER_SYSTEM, 0 } },
+	{_T("Sega Game Gear hardware"),		_T("GAME:\\config\\presets\\gg.ini"),		{ HARDWARE_SEGA_GAME_GEAR, 0 } },
+	{_T("Sinclair Spectrum hardware"),	_T("GAME:\\config\\presets\\spectrum.ini"),	{ HARDWARE_SPECTRUM, 0 } },
 	{_T("\0"), _T("\0"), { 0 } } // END of list
 };
 
 INT32 ConfigGameLoadHardwareDefaults()
 {
-#if defined (_XBOX)
-	TCHAR *szDefaultCpsFile = _T("config/presets/cps.ini");
-	TCHAR *szDefaultNeogeoFile = _T("config/presets/neogeo.ini");
-	TCHAR *szDefaultPgmFile = _T("config/presets/pgm.ini");
-#else
-	TCHAR *szDefaultCpsFile = _T("GAME:\\config\\presets\\cps.ini");
-	TCHAR *szDefaultNeogeoFile = _T("GAME:\\config\\presets\\neogeo.ini");
-	TCHAR *szDefaultPgmFile = _T("GAME:\\config\\presets\\pgm.ini");
-#endif
 	TCHAR *szFileName = _T("");
 	INT32 nApplyHardwareDefaults = 0;
 

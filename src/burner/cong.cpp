@@ -25,7 +25,7 @@ static TCHAR* GameConfigName()
 		}
 	#else
 		// Return the path of the config file for this game
--#if defined (_XBOX)
+#if defined (_XBOX)
 		if (NeoCDInfo_ID()) {
 			_stprintf(szName, _T("GAME:\\config\\games\\ngcd_%s.ini"), NeoCDInfo_Text(DRV_NAME));
 		} else {

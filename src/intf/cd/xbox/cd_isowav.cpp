@@ -595,4 +595,19 @@ static int isowavGetSettings(InterfaceInfo* /*pInfo*/)
 	return 0;
 }
 
-struct CDEmuDo isowavDo = { isowavExit, isowavInit, isowavStop, isowavPlay, isowavLoadSector, isowavReadTOC, isowavReadQChannel, isowavGetSoundBuffer, isowavGetSettings, _T("cue/iso/wav CD emulation") };
+static INT32 isowavScan(INT32 nAction, INT32 *pnMin)
+{
+	if (nAction & ACB_VOLATILE) {
+		SCAN_VAR(CDEmuStatus);
+		SCAN_VAR(isowavTrack);
+		SCAN_VAR(isowavLBA);
+	}
+
+	if (nAction & ACB_WRITE) {
+		isowavExit();
+	}
+
+	return 0;
+}
+
+struct CDEmuDo cdimgDo = { isowavExit, isowavInit, isowavStop, isowavPlay, isowavLoadSector, isowavReadTOC, isowavReadQChannel, isowavGetSoundBuffer, isowavScan, isowavGetSettings, _T("cue/iso/wav CD emulation") };
