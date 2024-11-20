@@ -27,9 +27,9 @@
 <XuiImage>
 <Properties>
 <Id>XuiImage1</Id>
-<Width>164.000000</Width>
+<Width>293.000000</Width>
 <Height>164.000000</Height>
-<Position>274.711975,278.920013,0.000000</Position>
+<Position>256.711975,278.920013,0.000000</Position>
 <ImagePath>logo_small.png</ImagePath>
 </Properties>
 </XuiImage>
@@ -38,7 +38,7 @@
 <Id>XuiText1</Id>
 <Width>502.936035</Width>
 <Height>38.623993</Height>
-<Position>488.536011,276.528015,0.000000</Position>
+<Position>599.536011,299.528015,0.000000</Position>
 <Text>FBNeo is Scanning Roms. Please Wait....</Text>
 <TextColor>0xffffffff</TextColor>
 <DropShadowColor>0xff7f8aff</DropShadowColor>
@@ -52,7 +52,7 @@
 <Id>XuiText2</Id>
 <Width>357.784058</Width>
 <Height>74.911987</Height>
-<Position>538.903992,331.272034,0.000000</Position>
+<Position>649.903992,354.272034,0.000000</Position>
 <Text>This will only happen once the first time you run FBNeo. You can also rescan roms inside the rom browser with the BACK button.</Text>
 <TextColor>0xffffffff</TextColor>
 <DropShadowColor>0xff7f8aff</DropShadowColor>
@@ -79,7 +79,7 @@
 <Id>XuiRomCount</Id>
 <Width>792.136047</Width>
 <Height>38.623993</Height>
-<Position>264.663940,515.544067,0.000000</Position>
+<Position>265.663940,515.544067,0.000000</Position>
 <TextColor>0xffffffff</TextColor>
 <DropShadowColor>0xff7f8aff</DropShadowColor>
 <PointSize>18.000000</PointSize>
