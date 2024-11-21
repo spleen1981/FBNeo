@@ -428,11 +428,12 @@ static INT32 MemIndex()
 
 static INT32 DrvInit()
 {
+#ifdef BUILD_A68K
 	if (bBurnUseASMCPUEmulation) {
 		bUseAsm68KCoreOldValue = bBurnUseASMCPUEmulation;
 		bBurnUseASMCPUEmulation = false;
 	}
-
+#endif
 	INT32 nLen;
 
 //	bToaRotateScreen = true;
