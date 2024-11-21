@@ -22,8 +22,10 @@ bool bRunFrame = false;
 bool bAlwaysProcessKeyboardInput = false;
 int nAppVirtualFps = 6000;
 BOOL IsCurrentlyInGame = false;
+BOOL IsDATGenerationRequested = false;
 HXUIOBJ hMainScene;
 HXUIOBJ hMVSplashScene;
+HXUIOBJ hSplashVideo;
 HINSTANCE hAppInst = NULL;		// Application Instance
 HANDLE hMainThread;
 int nAppThreadPriority = THREAD_PRIORITY_NORMAL;
@@ -334,7 +336,7 @@ static int AppInit()
 
 	//setWindowAspect();
  
-	//SplashCreate();
+	SplashCreate();
 
 
 #if 1 || !defined (FBA_DEBUG)
@@ -761,44 +763,95 @@ int MVSLoadCreate(void)
 
 }
 
-int SplashCreate(void)
-{
+void FadeBlack(HXUIOBJ pBlackOverlay, bool to_black, float sec_duration) {
 
-   // Load the skin file used for the scene.
-	app.LoadSkin( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\skin.xur" );     	
-	XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"Splash.xur", NULL, &hMainScene );	
-	XuiSceneNavigateFirst( app.GetRootObj(), hMainScene, XUSER_INDEX_FOCUS ); 	 
- 
-	if (!fileExists("GAME:\\runonce.dat"))
-	{
-		while(!IsCurrentlyInGame)
-		{
+	float init_alpha = to_black ? 0 : 1;
+	float step_alpha = 0.005;
+	float sign_alpha = to_black ? 1 : -1;
+	float end_alpha = init_alpha + step_alpha * 255;
 
-			 			 
-				// Render game graphics.
-	 
+	XuiElementSetOpacity(pBlackOverlay, init_alpha);
+
+	for (float alpha = init_alpha; sign_alpha * alpha - sign_alpha * init_alpha <= 1; alpha += step_alpha * sign_alpha) {
+		XuiElementSetOpacity(pBlackOverlay, alpha);
+       	Sleep(sec_duration * 1000 *step_alpha);
+		// Render game graphics.
 				RenderGame( pDevice );
-	  	 
 				// Update XUI
 				app.RunFrame();
-
 				// Render XUI
 				app.Render();
-
 				// Update XUI Timers
 				XuiTimersRun();
-
 				// Present the frame.
-				pDevice->Present( NULL, NULL, NULL, NULL );
-			 
-		}
-
-		HANDLE hFile = CreateFile("GAME:\\runonce.dat", GENERIC_WRITE, FILE_SHARE_WRITE,
-                   NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-
-		CloseHandle(hFile);
+		pDevice->Present( NULL, NULL, NULL, NULL );
 	}
- 
+}
+
+int SplashCreate(void)
+{
+	HXUIOBJ hFadeRect;
+	HXUIOBJ hButtonGroup;
+	HXUIOBJ hGenerating;
+
+	// Load the skin file used for the scene.
+	app.LoadSkin( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\skin.xur" );
+	XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"Splash.xur", NULL, &hMainScene );
+
+	XUIMessageTimer timerMsg;
+	ZeroMemory(&timerMsg, sizeof(timerMsg));
+	timerMsg.nId = 1;
+
+	XuiSetTimer(hMainScene, 1, 4000);
+
+	XuiSceneNavigateFirst( app.GetRootObj(), hMainScene, XUSER_INDEX_FOCUS );
+	XuiElementGetChildById( hMainScene, L"XuiVideoSplash", &hSplashVideo );
+	XuiElementGetChildById( hMainScene, L"XuiButtonGroup", &hButtonGroup );
+	XuiElementGetChildById( hMainScene, L"XuiFadeRect", &hFadeRect );
+	XuiElementGetChildById( hMainScene, L"XuiGenerating", &hGenerating );
+
+
+	XuiElementSetShow(hSplashVideo, true);
+	XuiElementSetShow(hButtonGroup, true);
+	XuiElementSetShow(hFadeRect, true);
+	XuiElementSetShow(hGenerating, false);
+
+	char VideoFName[MAX_PATH+1];
+
+	FadeBlack(hFadeRect, false, 2);
+
+	while(!IsCurrentlyInGame)
+	{
+		if (IsDATGenerationRequested)
+		{
+			IsCurrentlyInGame = true;
+			XuiElementSetShow(hGenerating, true);
+		}
+		// Render game graphics.
+		RenderGame( pDevice );
+		// Update XUI
+		app.RunFrame();
+		// Render XUI
+		app.Render();
+		// Update XUI Timers
+		XuiTimersRun();
+		// Present the frame.
+		pDevice->Present( NULL, NULL, NULL, NULL );
+	}
+	FadeBlack(hFadeRect, true, 2);
+
+	XuiElementSetShow(hSplashVideo, false);
+	XuiElementSetShow(hButtonGroup, false);
+	XuiElementSetShow(hFadeRect, false);
+
+	if (IsDATGenerationRequested) {
+			IsDATGenerationRequested = false;
+			create_datfile(_T("GAME:\\FBNeo.dat"), 0);
+	}
+
+	XuiElementSetShow(hGenerating, false);
+	XuiSceneNavigateBack(hMainScene,NULL,XUSER_INDEX_FOCUS);
+
 	return 0;
 
 }

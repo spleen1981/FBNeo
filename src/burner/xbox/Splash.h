@@ -12,17 +12,20 @@
 class CSplashScene : public CXuiSceneImpl
 {
 
-	CXuiControl m_Continue; 
+	CXuiControl m_Continue;
+	CXuiControl m_Dat;
 
 	    // Message map.
     XUI_BEGIN_MSG_MAP()
 		XUI_ON_XM_INIT( OnInit )
-		XUI_ON_XM_NOTIFY_PRESS( OnNotifyPress )			 
+		XUI_ON_XM_NOTIFY_PRESS( OnNotifyPress )
+		XUI_ON_XM_TIMER( OnTimer )
     XUI_END_MSG_MAP()
 public:
     HRESULT OnInit( XUIMessageInit* pInitData, BOOL& bHandled );
 	HRESULT OnNotifyPress( HXUIOBJ hObjPressed, BOOL& bHandled );
 	HRESULT OnInGameMenu ( int iVal1, BOOL& bHandled );
+	HRESULT OnTimer(XUIMessageTimer *pXUIMessageTimer, BOOL& bHandled);
 
 public:
 
