@@ -61,6 +61,8 @@ static UINT64 SekCycleCnt, SekCycleAim, SekCycleCntDELTA, line_base_cycles;
 #define SekCyclesBurnRun(c)     { m68k_ICount -= c; }
 #define SekEndRun(after)        { SekCycleCnt -= m68k_ICount - (after); m68k_ICount = after; }
 
+extern INT32 nIpsMaxFileLen = 0;
+
 static void SekRunM68k(INT32 cyc)
 {
 	INT32 cyc_do;

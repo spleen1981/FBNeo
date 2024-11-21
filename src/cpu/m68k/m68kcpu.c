@@ -45,7 +45,6 @@ extern void m68040_fpu_op1(void);
 /* ======================================================================== */
 /* ================================= DATA ================================= */
 /* ======================================================================== */
-int m68k_ICount = 0;
 
 uint m68ki_tracing = 0;
 uint m68ki_address_space;
@@ -680,6 +679,7 @@ void m68k_set_instr_hook_callback(void  (*callback)(unsigned int pc))
 
 #include <stdio.h>
 /* Set the CPU type. */
+
 void m68k_set_cpu_type(unsigned int cpu_type)
 {
 	switch(cpu_type)

@@ -845,7 +845,6 @@ union _fp_reg
 	double f;
 };
 
-
 typedef struct _m68ki_cpu_core m68ki_cpu_core;
 struct _m68ki_cpu_core
 {
@@ -922,21 +921,25 @@ struct _m68ki_cpu_core
 
 };
 
-
+#ifdef __cplusplus
+ extern "C" {
+#endif
 extern m68ki_cpu_core m68ki_cpu;
 extern sint           m68ki_remaining_cycles;
 extern uint           m68ki_tracing;
+extern const uint8    m68ki_exception_cycle_table[][256];
+extern uint           m68ki_address_space;
 extern const uint8    m68ki_shift_8_table[];
 extern const uint16   m68ki_shift_16_table[];
 extern const uint     m68ki_shift_32_table[];
-extern const uint8    m68ki_exception_cycle_table[][256];
-extern uint           m68ki_address_space;
 extern const uint8    m68ki_ea_idx_cycle_table[];
-
+extern int            megadrive_sr_checkint_mode;
+#ifdef __cplusplus
+ }
+#endif
 extern uint           m68ki_aerr_address;
 extern uint           m68ki_aerr_write_mode;
 extern uint           m68ki_aerr_fc;
-extern int            megadrive_sr_checkint_mode;
 
 /* Read data immediately after the program counter */
 INLINE uint m68ki_read_imm_16(void);
@@ -2062,5 +2065,4 @@ INLINE void m68ki_check_interrupts(void)
 /* ======================================================================== */
 /* ============================== END OF FILE ============================= */
 /* ======================================================================== */
-
 #endif /* M68KCPU__HEADER */

@@ -20,9 +20,9 @@
 #include "state.h"
 #include <stddef.h>
 
-#define AY8910_CORE
+//#define AY8910_CORE
 #include "ay8910.h"
-#undef AY8910_CORE
+//#undef AY8910_CORE
 
 #if defined FBNEO_DEBUG
 #ifdef __GNUC__
@@ -66,9 +66,10 @@ static INT32 nPosition[MAX_8910];
 static INT16 *soundbuf[MAX_8910];
 
 // for as long as ay8910.c is .c:
-extern INT32 nBurnSoundLen;
-extern INT32 nBurnFPS;
-extern UINT32 nCurrentFrame;
+extern "C" INT32 nBurnSoundLen;
+extern "C" INT32 nBurnSoundRate;
+extern "C" INT32 nBurnFPS;
+extern "C" UINT32 nCurrentFrame;
 
 // Streambuffer handling
 static INT32 SyncInternal()
@@ -885,7 +886,6 @@ INT32 AY8910Init(INT32 chip, INT32 clock, INT32 add_signal)
 
 	AYStreamUpdate = dummy_callback;
 	if (chip == 0) AY8910AddSignal = add_signal;
-	extern INT32 nBurnSoundLen, nBurnSoundRate;
 
 	struct AY8910 *PSG = &AYPSG[chip];
 
