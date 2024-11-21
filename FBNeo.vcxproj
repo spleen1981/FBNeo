@@ -108,7 +108,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PreprocessorDefinitions>_DEBUG;_XBOX;USE_SPEEDHACKS;INLINE=static __inline;MAME_INLINE=static __inline;NO_ASMCORE;NO_COMBO;NO_CHEATSEARCH;WORDS_BIGENDIAN;INCLUDE_LIB_PNGH;INCLUDE_7Z_SUPPORT</PreprocessorDefinitions>
       <CallAttributedProfiling>Callcap</CallAttributedProfiling>
-      <AdditionalIncludeDirectories>src\burn;src\burn\snd;src\burn\devices;src\burn\drv\pre90s;src\burn\drv\pst90s;src\burn\drv\taito;src\burn\drv\dataeast;src\burner;src\burner\xbox;src\cpu;src\dep\generated;src\cpu\m6809;src\cpu\m6805;src\cpu\m6800;src\cpu\nec;src\cpu\hd6309;src\cpu\arm7;src\cpu\i8039;src\cpu\m68k;src\cpu\konami;src\cpu\c68k;src\cpu\m6502;src\cpu\z80;src\cpu\sh2;src\cpu\s2650;src\cpu\h6280;src\dep\libs\zlib;src\dep\libs\libpng;src\dep\libs\lib7z;src\intf;src\intf\input;src\intf\cd;src\intf\audio;src\intf\video;src\intf\perfcount;src\intf\video\xbox;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src\burn;src\burn\snd;src\burn\devices;src\burn\drv\pre90s;src\burn\drv\pst90s;src\burn\drv\taito;src\burn\drv\dataeast;src\burn\drv\sega;src\burn\drv\konami;src\burn\drv\coleco;src\burn\drv\atari;src\burn\drv\irem;src\burn\drv\sc1000;src\burner;src\burner\xbox;src\cpu;src\dep\generated;src\cpu\m6809;src\cpu\m6805;src\cpu\m6800;src\cpu\nec;src\cpu\hd6309;src\cpu\arm7;src\cpu\i8039;src\cpu\m68k;src\cpu\konami;src\cpu\c68k;src\cpu\m6502;src\cpu\z180;src\cpu\z80;src\cpu\sh2;src\cpu\pic16c5x;src\cpu\s2650;src\cpu\h6280;src\cpu\tms34010;src\cpu\mips3;src\cpu\i8051;src\cpu\e132xs;src\cpu\i8x41;src\cpu\tlcs900;src\cpu\tms32010;src\cpu\upd7725;src\cpu\upd7810;src\cpu\v60;src\dep\libs\zlib;src\dep\libs\libpng;src\dep\libs\lib7z;src\intf;src\intf\input;src\intf\cd;src\intf\audio;src\intf\video;src\intf\perfcount;src\intf\video\xbox;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -1208,6 +1208,7 @@
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
     </ClCompile>
+    <ClCompile Include="src\cpu\m68k\m68kfpu.c" />
     <ClCompile Include="src\cpu\m68k\m68kopac.c">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
@@ -1470,9 +1471,6 @@
     <ClCompile Include="src\intf\video\xbox\ScalingEffect.cpp" />
     <ClCompile Include="src\intf\video\xbox\vid_d3d9.cpp" />
     <ClCompile Include="src\intf\video\xbox\vid_directx_support.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\burner\xbox\compat_funct.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

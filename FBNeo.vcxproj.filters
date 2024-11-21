@@ -3230,10 +3230,8 @@
     <ClCompile Include="src\burner\xbox\replay.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\burner\xbox\compat_funct.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+    <ClCompile Include="src\cpu\m68k\m68kfpu.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
