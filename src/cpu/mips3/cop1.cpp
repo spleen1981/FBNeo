@@ -7,6 +7,7 @@
 #include "mips3.h"
 #include "mipsdef.h"
 #include "mips3_memory.h"
+#include "compat_funct.h"
 //#include <QDebug>
 
 #define FPR_s(n)    (*(float  *) ((void *)&m_state.cpr[1][n]))

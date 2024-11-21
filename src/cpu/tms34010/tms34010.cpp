@@ -11,6 +11,7 @@
 #include "tms34010_shift.h"
 #include "tms34010_gfx.h"
 #include "stddef.h"
+#include "compat_funct.h"
 
 #ifdef TMS34010_DEBUGGER
 #include <algorithm>

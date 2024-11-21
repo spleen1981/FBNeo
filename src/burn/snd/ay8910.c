@@ -83,7 +83,8 @@ static void UpdateStream(INT32 chip, INT32 samples_len)
     if (!ay8910_buffered) return;
     if (samples_len > nBurnSoundLen) samples_len = nBurnSoundLen;
 
-	INT32 nSamplesNeeded = samples_len - nPosition[chip];
+	INT32 nSamplesNeeded;
+	nSamplesNeeded = samples_len - nPosition[chip];
     if (nSamplesNeeded <= 0) return;
 
 #if defined FBNEO_DEBUG

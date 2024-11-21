@@ -21,6 +21,7 @@
 #include "burnint.h"
 #include "msm5205.h"
 #include "math.h"
+#include "compat_funct.h"
 
 #define MAX_MSM5205	2
 
