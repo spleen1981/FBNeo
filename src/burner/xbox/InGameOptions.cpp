@@ -189,11 +189,11 @@ HRESULT CInGameOptions::OnNotifyPress( HXUIOBJ hObjPressed,
 		   
 			if (StatedSave(1)==0)
 			{			 
-				ShowMessageBoxEx(NULL,NULL,L"FBANext - Save State", L"Saved state successfully.", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
+				ShowMessageBoxEx(NULL,NULL,L"FBNeo - Save State", L"Saved state successfully.", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
 			}
 			else
 			{
-				ShowMessageBoxEx(NULL,NULL,L"FBANext - Save State", L"Error saving savestate file.", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
+				ShowMessageBoxEx(NULL,NULL,L"FBNeo - Save State", L"Error saving savestate file.", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
 			}
 			 
 
@@ -215,11 +215,11 @@ HRESULT CInGameOptions::OnNotifyPress( HXUIOBJ hObjPressed,
 
 			if (nRet==0)
 			{			 
-				ShowMessageBoxEx(NULL,NULL,L"FBANext - Load State", L"Loaded state successfully", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 				
+				ShowMessageBoxEx(NULL,NULL,L"FBNeo - Load State", L"Loaded state successfully", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 				
 			}
 			else
 			{
-				ShowMessageBoxEx(NULL,NULL,L"FBANext - Load State", L"Error loading savestate file.", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
+				ShowMessageBoxEx(NULL,NULL,L"FBNeo - Load State", L"Error loading savestate file.", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
 			}			 
  			 			 
 
@@ -238,7 +238,7 @@ HRESULT CInGameOptions::OnNotifyPress( HXUIOBJ hObjPressed,
 		}
 		else if (hObjPressed == m_FilterOptions)
 		{
-			XuiSceneCreate( L"file://game:/media/FBANext.xzp#src\\Intf\\Skin\\", L"Filters.xur", NULL, &hFilterOptionsScene );
+			XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"Filters.xur", NULL, &hFilterOptionsScene );
 			this->NavigateForward(hFilterOptionsScene);	
 			bHandled = TRUE;			 			 
 			return S_OK;
@@ -246,7 +246,7 @@ HRESULT CInGameOptions::OnNotifyPress( HXUIOBJ hObjPressed,
 		}
 		else if (hObjPressed == m_SetInputOptions)
 		{
-			XuiSceneCreate( L"file://game:/media/FBANext.xzp#src\\Intf\\Skin\\", L"InputOptions.xur", NULL, &hInputOptionsScene );
+			XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"InputOptions.xur", NULL, &hInputOptionsScene );
 			this->NavigateForward(hInputOptionsScene);	
 			bHandled = TRUE;			 			 
 			return S_OK;
@@ -254,14 +254,14 @@ HRESULT CInGameOptions::OnNotifyPress( HXUIOBJ hObjPressed,
 		}
 		else if (hObjPressed == m_OtherOptions)
 		{
-			XuiSceneCreate( L"file://game:/media/FBANext.xzp#src\\Intf\\Skin\\", L"OtherOptions.xur", NULL, &hOtherOptionsScene );
+			XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"OtherOptions.xur", NULL, &hOtherOptionsScene );
 			this->NavigateForward(hOtherOptionsScene);	
 			bHandled = TRUE;			 			 
 			return S_OK;
 		}
 		else if (hObjPressed == m_SetDipSwitches)
 		{
-			XuiSceneCreate( L"file://game:/media/FBANext.xzp#src\\Intf\\Skin\\", L"DipOptions.xur", NULL, &hDipOptionsScene );
+			XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"DipOptions.xur", NULL, &hDipOptionsScene );
 			this->NavigateForward(hDipOptionsScene);	
 			bHandled = TRUE;			 			 
 			return S_OK;
@@ -568,7 +568,7 @@ HRESULT CFilterOptions::OnNotifyPress( HXUIOBJ hObjPressed,
 			wchar_t msg[1024];
 
 			swprintf(msg,L"%S",psEffect->getErrors());
-			ShowMessageBoxEx(L"XuiMessageBox1",NULL,L"FBANext - Shader Error", msg, 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
+			ShowMessageBoxEx(L"XuiMessageBox1",NULL,L"FBNeo - Shader Error", msg, 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
 			
 			psEffect->LoadEffect(selectedShader);
 			psEnabled = false;
@@ -1614,11 +1614,11 @@ HRESULT CInputOptions::OnNotifyPress( HXUIOBJ hObjPressed,
 
 		if (SaveDefaultInput()==0)
 		{
-			ShowMessageBoxEx(NULL,NULL,L"FBANext - Input Preset", L"Preset Saved.", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
+			ShowMessageBoxEx(NULL,NULL,L"FBNeo - Input Preset", L"Preset Saved.", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
 		}
 		else
 		{
-			ShowMessageBoxEx(NULL,NULL,L"FBANext - Input Preset", L"Error saving preset.", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
+			ShowMessageBoxEx(NULL,NULL,L"FBNeo - Input Preset", L"Error saving preset.", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
 		}
 	
 		bHandled = TRUE;			 		 

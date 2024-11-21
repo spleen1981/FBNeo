@@ -14,7 +14,7 @@ static HANDLE hEvent = NULL;
 
 static void CreateRomDatName(TCHAR* szRomDat)
 {
-	_stprintf(szRomDat, _T("GAME:\\config\\FBANext.roms.dat"));
+	_stprintf(szRomDat, _T("GAME:\\config\\FBNeo.roms.dat"));
 
 	return;
 }
@@ -219,7 +219,7 @@ int CreateROMInfo(HXUIOBJ hParentWND)
 			memset(gameAv, 0, sizeof(gameAv));
  
 			avOk = false;
-			XuiSceneCreate( L"file://game:/media/FBANext.xzp#src\\Intf\\Skin\\", L"BuildingRoms.xur", NULL, &hBuildRomsScene );
+			XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"BuildingRoms.xur", NULL, &hBuildRomsScene );
 
 			if (hParentWND == NULL)
 				XuiSceneNavigateFirst( app.GetRootObj(), hBuildRomsScene, XUSER_INDEX_FOCUS );

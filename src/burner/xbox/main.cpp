@@ -476,7 +476,7 @@ int WINAPI main()
 	}
 
     // Load the skin file used for the scene.
-	app.LoadSkin( L"file://game:/media/FBANext.xzp#src\\Intf\\Skin\\skin.xur" );     	
+	app.LoadSkin( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\skin.xur" );     	
 
 	// Simply get the state of the controller from XInput.
 	
@@ -493,7 +493,7 @@ int WINAPI main()
 		 CreateDatfileWindows(0);
 	}	
 
-	XuiSceneCreate( L"file://game:/media/FBANext.xzp#src\\Intf\\Skin\\", L"RomList.xur", NULL, &hMainScene );	
+	XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"RomList.xur", NULL, &hMainScene );	
 
 	if (bStartInMVSSlotMode)
 	{		
@@ -501,7 +501,7 @@ int WINAPI main()
 		{ 
 			MediaInit();
 			XuiSceneNavigateForward(hMVSplashScene,FALSE, hMainScene, XUSER_INDEX_FOCUS);
-			XuiSceneCreate( L"file://game:/media/FBANext.xzp#src\\Intf\\Skin\\", L"InGameOptions.xur", NULL, &hInGameOptionsScene );
+			XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"InGameOptions.xur", NULL, &hInGameOptionsScene );
 			XuiSceneNavigateForward(hMainScene,FALSE,hInGameOptionsScene,XUSER_INDEX_FOCUS);									
 			RunMessageLoop(); 
 			ConfigAppSave();	
@@ -740,7 +740,7 @@ inline BOOL fileExists(const TCHAR* filename)
 int MVSLoadCreate(void)
 {
 	
-	XuiSceneCreate( L"file://game:/media/FBANext.xzp#src\\Intf\\Skin\\", L"MVSLoading.xur", NULL, &hMVSplashScene );
+	XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"MVSLoading.xur", NULL, &hMVSplashScene );
 	XuiSceneNavigateFirst( app.GetRootObj(), hMVSplashScene, XUSER_INDEX_FOCUS ); 	
 
 	RenderGame( pDevice );
@@ -765,8 +765,8 @@ int SplashCreate(void)
 {
 
    // Load the skin file used for the scene.
-	app.LoadSkin( L"file://game:/media/FBANext.xzp#src\\Intf\\Skin\\skin.xur" );     	
-	XuiSceneCreate( L"file://game:/media/FBANext.xzp#src\\Intf\\Skin\\", L"Splash.xur", NULL, &hMainScene );	
+	app.LoadSkin( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\skin.xur" );     	
+	XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"Splash.xur", NULL, &hMainScene );	
 	XuiSceneNavigateFirst( app.GetRootObj(), hMainScene, XUSER_INDEX_FOCUS ); 	 
  
 	if (!fileExists("GAME:\\runonce.dat"))

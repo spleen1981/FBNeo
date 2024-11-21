@@ -288,7 +288,7 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 						nLastRom = m_RomList.GetCurSel();
 						nLastFilter = CurrentFilter;
 						MediaInit();
-						XuiSceneCreate( L"file://game:/media/FBANext.xzp#src\\Intf\\Skin\\", L"InGameOptions.xur", NULL, &hInGameOptionsScene );
+						XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"InGameOptions.xur", NULL, &hInGameOptionsScene );
 						this->NavigateForward(hInGameOptionsScene);									
 						RunMessageLoop(); 
 						ConfigAppSave();
@@ -309,7 +309,7 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 						nLastRom = m_RomList.GetCurSel();
 						nLastFilter = CurrentFilter;
 						MediaInit();
-						XuiSceneCreate( L"file://game:/media/FBANext.xzp#src\\Intf\\Skin\\", L"InGameOptions.xur", NULL, &hInGameOptionsScene );
+						XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"InGameOptions.xur", NULL, &hInGameOptionsScene );
 						this->NavigateForward(hInGameOptionsScene);									
 						RunMessageLoop(); 
 						ConfigAppSave();
@@ -322,7 +322,7 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 					else
 					{
 						const WCHAR * button_text = L"OK"; 
-						ShowMessageBoxEx(L"XuiMessageBox1",NULL,L"FBANext - Rom Error", msg, 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
+						ShowMessageBoxEx(L"XuiMessageBox1",NULL,L"FBNeo - Rom Error", msg, 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
 
 						m_RomList.SetShow(true); 
 						m_RomList.SetCurSel(nIndex);
@@ -739,7 +739,7 @@ void CRomListScene::DoMVSSlotMode(int nIndex)
 		nLastRom = m_RomList.GetCurSel();
 		nLastFilter = CurrentFilter;
 		MediaInit();
-		XuiSceneCreate( L"file://game:/media/FBANext.xzp#src\\Intf\\Skin\\", L"InGameOptions.xur", NULL, &hInGameOptionsScene );
+		XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"InGameOptions.xur", NULL, &hInGameOptionsScene );
 		this->NavigateForward(hInGameOptionsScene);									
 		RunMessageLoop(); 
 		ConfigAppSave();
@@ -751,7 +751,7 @@ void CRomListScene::DoMVSSlotMode(int nIndex)
 	else
 	{
 		const WCHAR * button_text = L"OK"; 
-		ShowMessageBoxEx(L"XuiMessageBox1",NULL,L"FBANext - Rom Error", msg, 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
+		ShowMessageBoxEx(L"XuiMessageBox1",NULL,L"FBNeo - Rom Error", msg, 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 
 
 		m_RomList.SetShow(true); 
 		m_RomList.SetCurSel(nIndex);

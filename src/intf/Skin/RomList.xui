@@ -41,7 +41,7 @@
 <Height>720.000000</Height>
 <Position>-1.000000,0.000000,0.000000</Position>
 <SizeMode>8</SizeMode>
-<ImagePath>fbanext-bg-all.png</ImagePath>
+<ImagePath>fbneo-bg-all.png</ImagePath>
 </Properties>
 </XuiImage>
 <XuiVideo>
@@ -50,7 +50,7 @@
 <Width>657.818237</Width>
 <Height>606.554932</Height>
 <Position>25.629822,89.529938,0.000000</Position>
-<Opacity>0.500000</Opacity>
+<Opacity>0.800000</Opacity>
 <SizeMode>4</SizeMode>
 <Loop>true</Loop>
 </Properties>
@@ -220,6 +220,18 @@
 <Anchor>5</Anchor>
 <Show>false</Show>
 <Visual>XuiButton</Visual>
+</Properties>
+</XuiListItem>
+<XuiListItem>
+<Properties>
+<Id>control_ListItem</Id>
+<Width>226.000000</Width>
+<Height>45.000000</Height>
+<Position>7.000000,22.000000,0.000000</Position>
+<Anchor>5</Anchor>
+<Show>false</Show>
+<Visual>XuiButton</Visual>
+<InterItemSpacing>0.000000,10.000000,0.000000</InterItemSpacing>
 </Properties>
 </XuiListItem>
 <XuiListItem>

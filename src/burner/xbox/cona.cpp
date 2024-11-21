@@ -23,7 +23,7 @@ struct VidPresetDataVer VidPresetVer[4] = {
 
 static void CreateConfigName(TCHAR* szConfig)
 {
-	_stprintf(szConfig, _T("GAME:\\config\\FBANext.ini"));
+	_stprintf(szConfig, _T("GAME:\\config\\FBNeo.ini"));
 	return;
 }
 
