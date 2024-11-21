@@ -1,5 +1,4 @@
 /Release
-/src/dep/generated
 /src/gamelist.txt
 *.sdf
 *.suo
