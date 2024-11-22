@@ -1143,56 +1143,56 @@ STDDIPINFO(Topspeed)
 static struct BurnDIPInfo FullthrlDIPList[]=
 {
 	// Default Values
-	{0x0f, 0xff, 0xff, 0xff, NULL                             },
-	{0x10, 0xff, 0xff, 0xff, NULL                             },
+	{0x0b, 0xff, 0xff, 0xff, NULL                             },
+	{0x0c, 0xff, 0xff, 0xff, NULL                             },
 
 	// Dip 1
 	{0   , 0xfe, 0   , 4   , "Cabinet"                        },
-	{0x0f, 0x01, 0x03, 0x03, "Deluxe Motorized Cabinet"       },
-	{0x0f, 0x01, 0x03, 0x02, "Upright"                        },
-	{0x0f, 0x01, 0x03, 0x01, "Upright (alt)"                  },
-	{0x0f, 0x01, 0x03, 0x00, "Standard Cockpit"               },
+	{0x0b, 0x01, 0x03, 0x03, "Deluxe Motorized Cabinet"       },
+	{0x0b, 0x01, 0x03, 0x02, "Upright"                        },
+	{0x0b, 0x01, 0x03, 0x01, "Upright (alt)"                  },
+	{0x0b, 0x01, 0x03, 0x00, "Standard Cockpit"               },
 
 	{0   , 0xfe, 0   , 2   , "Service Mode"                   },
-	{0x0f, 0x01, 0x04, 0x04, "Off"                            },
-	{0x0f, 0x01, 0x04, 0x00, "On"                             },
+	{0x0b, 0x01, 0x04, 0x04, "Off"                            },
+	{0x0b, 0x01, 0x04, 0x00, "On"                             },
 
 	{0   , 0xfe, 0   , 2   , "Demo Sounds"                    },
-	{0x0f, 0x01, 0x08, 0x00, "Off"                            },
-	{0x0f, 0x01, 0x08, 0x08, "On"                             },
+	{0x0b, 0x01, 0x08, 0x00, "Off"                            },
+	{0x0b, 0x01, 0x08, 0x08, "On"                             },
 
 	{0   , 0xfe, 0   , 4   , "Coin A"                         },
-	{0x0f, 0x01, 0x30, 0x10, "2 Coins 1 Credit"               },
-	{0x0f, 0x01, 0x30, 0x30, "1 Coin  1 Credit"               },
-	{0x0f, 0x01, 0x30, 0x00, "2 Coins 3 Credits"              },
-	{0x0f, 0x01, 0x30, 0x20, "1 Coin  2 Credits"              },
+	{0x0b, 0x01, 0x30, 0x10, "2 Coins 1 Credit"               },
+	{0x0b, 0x01, 0x30, 0x30, "1 Coin  1 Credit"               },
+	{0x0b, 0x01, 0x30, 0x00, "2 Coins 3 Credits"              },
+	{0x0b, 0x01, 0x30, 0x20, "1 Coin  2 Credits"              },
 
 	{0   , 0xfe, 0   , 4   , "Coin B"                         },
-	{0x0f, 0x01, 0xc0, 0x40, "2 Coins 1 Credit"               },
-	{0x0f, 0x01, 0xc0, 0xc0, "1 Coin  1 Credit"               },
-	{0x0f, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"              },
-	{0x0f, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"              },
+	{0x0b, 0x01, 0xc0, 0x40, "2 Coins 1 Credit"               },
+	{0x0b, 0x01, 0xc0, 0xc0, "1 Coin  1 Credit"               },
+	{0x0b, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"              },
+	{0x0b, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"              },
 
 	// Dip 2
 	{0   , 0xfe, 0   , 4   , "Initial Time"                   },
-	{0x10, 0x01, 0x0c, 0x00, "40 seconds"                     },
-	{0x10, 0x01, 0x0c, 0x04, "50 seconds"                     },
-	{0x10, 0x01, 0x0c, 0x0c, "60 seconds"                     },
-	{0x10, 0x01, 0x0c, 0x08, "70 seconds"                     },
+	{0x0c, 0x01, 0x0c, 0x00, "40 seconds"                     },
+	{0x0c, 0x01, 0x0c, 0x04, "50 seconds"                     },
+	{0x0c, 0x01, 0x0c, 0x0c, "60 seconds"                     },
+	{0x0c, 0x01, 0x0c, 0x08, "70 seconds"                     },
 
 	{0   , 0xfe, 0   , 4   , "Nitros"                         },
-	{0x10, 0x01, 0x30, 0x20, "2"                              },
-	{0x10, 0x01, 0x30, 0x30, "3"                              },
-	{0x10, 0x01, 0x30, 0x10, "4"                              },
-	{0x10, 0x01, 0x30, 0x00, "5"                              },
+	{0x0c, 0x01, 0x30, 0x20, "2"                              },
+	{0x0c, 0x01, 0x30, 0x30, "3"                              },
+	{0x0c, 0x01, 0x30, 0x10, "4"                              },
+	{0x0c, 0x01, 0x30, 0x00, "5"                              },
 
 	{0   , 0xfe, 0   , 2   , "Allow Continue"                 },
-	{0x10, 0x01, 0x40, 0x40, "Off"                            },
-	{0x10, 0x01, 0x40, 0x00, "On"                             },
+	{0x0c, 0x01, 0x40, 0x40, "Off"                            },
+	{0x0c, 0x01, 0x40, 0x00, "On"                             },
 
 	{0   , 0xfe, 0   , 2   , "Continue Price"                 },
-	{0x10, 0x01, 0x80, 0x00, "1 Coin 1 Credit"                },
-	{0x10, 0x01, 0x80, 0x80, "Same as start"                  },
+	{0x0c, 0x01, 0x80, 0x00, "1 Coin 1 Credit"                },
+	{0x0c, 0x01, 0x80, 0x80, "Same as start"                  },
 };
 
 STDDIPINFO(Fullthrl)
@@ -3860,8 +3860,17 @@ static void __fastcall OpwolfZ80Write(UINT16 a, UINT8 d)
 			return;
 		}
 
-		case 0xd000:
+		case 0xd000: {
+			MSM5205SetLeftVolume(0, (double)((double)d / 256) - 0.10);
+			MSM5205SetLeftVolume(1, (double)((double)d / 256) - 0.10);
+			BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, (double)((double)d / 256), BURN_SND_ROUTE_LEFT);
+			return;
+		}
+
 		case 0xe000: {
+			MSM5205SetRightVolume(0, (double)((double)d / 256) - 0.10);
+			MSM5205SetRightVolume(1, (double)((double)d / 256) - 0.10);
+			BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, (double)((double)d / 256), BURN_SND_ROUTE_RIGHT);
 			return;
 		}
 	}
@@ -4643,13 +4652,14 @@ static INT32 OpwolfInit()
 	BurnYM2151Init(4000000);
 	BurnYM2151SetIrqHandler(&TaitoYM2151IRQHandler);
 	BurnYM2151SetPortHandler(&RbislandBankSwitch);
-	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.75, BURN_SND_ROUTE_LEFT);
-	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.75, BURN_SND_ROUTE_RIGHT);
+	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.65, BURN_SND_ROUTE_LEFT);
+	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.65, BURN_SND_ROUTE_RIGHT);
 
 	MSM5205Init(0, TaitoSynchroniseStream, 384000, OpwolfMSM5205Vck0, MSM5205_S48_4B, 1);
 	MSM5205Init(1, TaitoSynchroniseStream, 384000, OpwolfMSM5205Vck1, MSM5205_S48_4B, 1);
-	MSM5205SetRoute(0, 0.60, BURN_SND_ROUTE_BOTH);
-	MSM5205SetRoute(1, 0.60, BURN_SND_ROUTE_BOTH);
+	MSM5205SetSeperateVolumes(0, 1);
+	MSM5205SetRoute(0, 0.35, BURN_SND_ROUTE_BOTH);
+	MSM5205SetRoute(1, 0.35, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
 
@@ -4763,13 +4773,14 @@ static INT32 OpwolfbInit()
 	BurnYM2151Init(4000000);
 	BurnYM2151SetIrqHandler(&TaitoYM2151IRQHandler);
 	BurnYM2151SetPortHandler(&RbislandBankSwitch);
-	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.75, BURN_SND_ROUTE_LEFT);
-	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.75, BURN_SND_ROUTE_RIGHT);
+	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.65, BURN_SND_ROUTE_LEFT);
+	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.65, BURN_SND_ROUTE_RIGHT);
 
 	MSM5205Init(0, TaitoSynchroniseStream, 384000, OpwolfMSM5205Vck0, MSM5205_S48_4B, 1);
 	MSM5205Init(1, TaitoSynchroniseStream, 384000, OpwolfMSM5205Vck1, MSM5205_S48_4B, 1);
-	MSM5205SetRoute(0, 0.60, BURN_SND_ROUTE_BOTH);
-	MSM5205SetRoute(1, 0.60, BURN_SND_ROUTE_BOTH);
+	MSM5205SetSeperateVolumes(0, 1);
+	MSM5205SetRoute(0, 0.35, BURN_SND_ROUTE_BOTH);
+	MSM5205SetRoute(1, 0.35, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
 

@@ -5,7 +5,7 @@
 
 #define MAX_CONFIG_LINE_SIZE 		48
 
-#define HISCORE_MAX_RANGES		20
+#define HISCORE_MAX_RANGES		64
 
 UINT32 nHiscoreNumRanges;
 
@@ -265,30 +265,30 @@ void HiscoreSearch(FILE *fp, const char *name)
 void HiscoreInit()
 {
 	Debug_HiscoreInitted = 1;
-	
+
 	if (!CheckHiscoreAllowed()) return;
-	
+
 	HiscoresInUse = 0;
-	
+
 	TCHAR szDatFilename[MAX_PATH];
 	_stprintf(szDatFilename, _T("%shiscore.dat"), szAppHiscorePath);
 
 	FILE *fp = _tfopen(szDatFilename, _T("r"));
 	if (fp) {
 		HiscoreSearch(fp, BurnDrvGetTextA(DRV_NAME));
+		if (nHiscoreNumRanges) HiscoresInUse = 1;
 
 		// no hiscore entry for this game in hiscore.dat, and the game is a clone (probably a hack)
 		// let's try using parent entry as a fallback, the success rate seems reasonably good
-		if ((BurnDrvGetFlags() & BDF_CLONE) && HiscoresInUse == 0) {
+		if ((BurnDrvGetFlags() & BDF_CLONE) && BurnDrvGetTextA(DRV_PARENT) && HiscoresInUse == 0) {
 			fseek(fp, 0, SEEK_SET);
 			HiscoreSearch(fp, BurnDrvGetTextA(DRV_PARENT));
+			if (nHiscoreNumRanges) HiscoresInUse = 1;
 		}
 
 		fclose(fp);
 	}
-	
-	if (nHiscoreNumRanges) HiscoresInUse = 1;
-	
+
 	TCHAR szFilename[MAX_PATH];
 #ifndef __LIBRETRO__
  	_stprintf(szFilename, _T("%s%s.hi"), szAppHiscorePath, BurnDrvGetText(DRV_NAME));
@@ -350,8 +350,10 @@ void HiscoreReset()
 		
 		/*if (HiscoreMemRange[i].Loaded)*/ {
 			cpu_open(HiscoreMemRange[i].nCpu);
-			cheat_subptr->write(HiscoreMemRange[i].Address, (UINT8)~HiscoreMemRange[i].StartValue);
-			if (HiscoreMemRange[i].NumBytes > 1) cheat_subptr->write(HiscoreMemRange[i].Address + HiscoreMemRange[i].NumBytes - 1, (UINT8)~HiscoreMemRange[i].EndValue);
+			// in some games, system16b (aliensyn, everything else) rom is mapped (for cheats)
+			// on reset where the hiscore should be.  Writing here is bad.
+			//cheat_subptr->write(HiscoreMemRange[i].Address, (UINT8)~HiscoreMemRange[i].StartValue);
+			//if (HiscoreMemRange[i].NumBytes > 1) cheat_subptr->write(HiscoreMemRange[i].Address + HiscoreMemRange[i].NumBytes - 1, (UINT8)~HiscoreMemRange[i].EndValue);
 			cheat_subptr->close();
 			
 #if 1 && defined FBNEO_DEBUG

@@ -14,7 +14,7 @@ static TCHAR* GameConfigName()
 {
 	static TCHAR szName[MAX_PATH];
 
-	#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)
+	#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)	
 	 	if (szSDLconfigPath == NULL) {
 			szSDLconfigPath = SDL_GetPrefPath("fbneo", "config");
 		}

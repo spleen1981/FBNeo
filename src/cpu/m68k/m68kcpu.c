@@ -679,7 +679,6 @@ void m68k_set_instr_hook_callback(void  (*callback)(unsigned int pc))
 
 #include <stdio.h>
 /* Set the CPU type. */
-
 void m68k_set_cpu_type(unsigned int cpu_type)
 {
 	switch(cpu_type)

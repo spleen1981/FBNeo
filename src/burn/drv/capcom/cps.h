@@ -43,6 +43,7 @@ INT32 CpsLoadTilesPang(UINT8 *Tile,INT32 nStart);
 INT32 CpsLoadTilesSf2ebbl(UINT8 *Tile, INT32 nStart);
 INT32 CpsLoadTilesSf2b(UINT8 *Tile, INT32 nStart);
 INT32 CpsLoadTilesSf2koryuExtra(UINT8 *Tile, INT32 nStart);
+INT32 CpsLoadTilesSf2mkotExtra(UINT8 *Tile, INT32 nStart);
 INT32 CpsLoadTilesHack160(INT32 nStart);
 INT32 CpsLoadTilesHack160Alt(INT32 nStart);
 INT32 CpsLoadTilesSf2koryu(INT32 nStart);
@@ -462,6 +463,8 @@ INT32 PsmInit();
 INT32 PsmExit();
 void PsmNewFrame();
 INT32 PsmUpdate(INT32 nEnd);
+INT32 PsmUpdateEnd();
+void PsndEndFrame();
 
 // kabuki.cpp
 void wof_decode();

@@ -684,8 +684,8 @@ static void draw_bg_layer()
 
 		sy -= 16;
 
-		INT32 code  = ram[offs] & 0xfff;
-		INT32 color = ram[offs] >> 12;
+		INT32 code  = BURN_ENDIAN_SWAP_INT16(ram[offs]) & 0xfff;
+		INT32 color = BURN_ENDIAN_SWAP_INT16(ram[offs]) >> 12;
 
 		Render16x16Tile_Clip(pTransDraw, code, sx, sy, color, 4, 0x200, DrvGfxROM1);
 	}
@@ -702,8 +702,8 @@ static void draw_tx_layer()
 
 		sy -= 16;
 
-		INT32 code  = ram[offs] & 0x3ff;
-		INT32 color = ram[offs] >> 10;
+		INT32 code  = BURN_ENDIAN_SWAP_INT16(ram[offs]) & 0x3ff;
+		INT32 color = BURN_ENDIAN_SWAP_INT16(ram[offs]) >> 10;
 
 		Render8x8Tile_Mask_Clip(pTransDraw, code, sx, sy, color, 2, 3, 0, DrvGfxROM0);
 	}
@@ -715,9 +715,9 @@ static void draw_sprites()
 
 	for (INT32 offs = 0x800/2 - 4; offs >= 0; offs -= 4)
 	{
-		INT32 data0 = ram[offs+0];
-		INT32 data1 = ram[offs+1];
-		INT32 data2 = ram[offs+2];
+		INT32 data0 = BURN_ENDIAN_SWAP_INT16(ram[offs+0]);
+		INT32 data1 = BURN_ENDIAN_SWAP_INT16(ram[offs+1]);
+		INT32 data2 = BURN_ENDIAN_SWAP_INT16(ram[offs+2]);
 
 		if (data0 & 0x0100)
 		{
@@ -937,6 +937,9 @@ static struct BurnRomInfo cabalRomDesc[] = {
 	{ "2-1s",			0x10000, 0x850406b4, 6 | BRF_SND },           // 23 ADPCM #0 Code
 
 	{ "1-1u",			0x10000, 0x8b3e0789, 7 | BRF_SND },           // 24 ADPCM #1 Code
+	
+	{ "prom05.8e",		0x00100, 0xa94b18c2, 8 | BRF_OPT },           // 25 Proms
+	{ "prom10.4j",		0x00100, 0x261c93bc, 8 | BRF_OPT },           // 26
 };
 
 STD_ROM_PICK(cabal)
@@ -975,11 +978,14 @@ static struct BurnRomInfo cabalaRomDesc[] = {
 
 	{ "tad-2.7s",		0x80000, 0x13ca7ae1, 4 | BRF_GRA },           //  7 Background Tiles
 	
-	{ "tad-1.5e",		0x80000, 0x8324a7fe, 5 | BRF_GRA },           // 15 Sprites
+	{ "tad-1.5e",		0x80000, 0x8324a7fe, 5 | BRF_GRA },           //  8 Sprites
 	
-	{ "epr-a-2.1s",		0x10000, 0x850406b4, 6 | BRF_SND },           // 23 ADPCM #0 Code
+	{ "epr-a-2.1s",		0x10000, 0x850406b4, 6 | BRF_SND },           //  9 ADPCM #0 Code
 
-	{ "epr-a-1.1u",		0x10000, 0x8b3e0789, 7 | BRF_SND },           // 24 ADPCM #1 Code
+	{ "epr-a-1.1u",		0x10000, 0x8b3e0789, 7 | BRF_SND },           // 10 ADPCM #1 Code
+	
+	{ "prom05.8e",		0x00100, 0xa94b18c2, 8 | BRF_OPT },           // 11 Proms
+	{ "prom10.4j",		0x00100, 0x261c93bc, 8 | BRF_OPT },           // 12
 };
 
 STD_ROM_PICK(cabala)
@@ -1018,11 +1024,14 @@ static struct BurnRomInfo cabalukRomDesc[] = {
 
 	{ "tad-2.7s",		0x80000, 0x13ca7ae1, 4 | BRF_GRA },           //  7 Background Tiles
 	
-	{ "tad-1.5e",		0x80000, 0x8324a7fe, 5 | BRF_GRA },           // 15 Sprites
+	{ "tad-1.5e",		0x80000, 0x8324a7fe, 5 | BRF_GRA },           //  8 Sprites
 	
-	{ "2-1s",			0x10000, 0x850406b4, 6 | BRF_SND },           // 23 ADPCM #0 Code
+	{ "2-1s",			0x10000, 0x850406b4, 6 | BRF_SND },           //  9 ADPCM #0 Code
 
-	{ "1-1u",			0x10000, 0x8b3e0789, 7 | BRF_SND },           // 24 ADPCM #1 Code
+	{ "1-1u",			0x10000, 0x8b3e0789, 7 | BRF_SND },           // 10 ADPCM #1 Code
+	
+	{ "prom05.8e",		0x00100, 0xa94b18c2, 8 | BRF_OPT },           // 11 Proms
+	{ "prom10.4j",		0x00100, 0x261c93bc, 8 | BRF_OPT },           // 12
 };
 
 STD_ROM_PICK(cabaluk)
@@ -1078,6 +1087,9 @@ static struct BurnRomInfo cabalukjRomDesc[] = {
 	{ "2-1s",			0x10000, 0x850406b4, 6 | BRF_SND },           // 23 ADPCM #0 Code
 
 	{ "1-1u",			0x10000, 0x8b3e0789, 7 | BRF_SND },           // 24 ADPCM #1 Code
+	
+	{ "prom05.8e",		0x00100, 0xa94b18c2, 8 | BRF_OPT },           // 25 Proms
+	{ "prom10.4j",		0x00100, 0x261c93bc, 8 | BRF_OPT },           // 26
 };
 
 STD_ROM_PICK(cabalukj)
@@ -1116,14 +1128,14 @@ static struct BurnRomInfo cabalusRomDesc[] = {
 
 	{ "tad-2.7s",		0x80000, 0x13ca7ae1, 4 | BRF_GRA },           //  7 Background Tiles
 	
-	{ "tad-1.5e",		0x80000, 0x8324a7fe, 5 | BRF_GRA },           // 15 Sprites
+	{ "tad-1.5e",		0x80000, 0x8324a7fe, 5 | BRF_GRA },           //  8 Sprites
 	
-	{ "2-1s",			0x10000, 0x850406b4, 6 | BRF_SND },           // 23 ADPCM #0 Code
+	{ "2-1s",			0x10000, 0x850406b4, 6 | BRF_SND },           //  9 ADPCM #0 Code
 
-	{ "1-1u",			0x10000, 0x8b3e0789, 7 | BRF_SND },           // 24 ADPCM #1 Code
+	{ "1-1u",			0x10000, 0x8b3e0789, 7 | BRF_SND },           // 10 ADPCM #1 Code
 	
-	{ "prom05.8e",		0x00100, 0xa94b18c2, 8 | BRF_OPT },           // 25 Proms
-	{ "prom10.4j",		0x00100, 0x261c93bc, 8 | BRF_OPT },           // 26 
+	{ "prom05.8e",		0x00100, 0xa94b18c2, 8 | BRF_OPT },           // 11 Proms
+	{ "prom10.4j",		0x00100, 0x261c93bc, 8 | BRF_OPT },           // 12 
 };
 
 STD_ROM_PICK(cabalus)
@@ -1160,14 +1172,14 @@ static struct BurnRomInfo cabalus2RomDesc[] = {
 
 	{ "tad-2.7s",		0x80000, 0x13ca7ae1, 4 | BRF_GRA },           //  7 Background Tiles
 	
-	{ "tad-1.5e",		0x80000, 0x8324a7fe, 5 | BRF_GRA },           // 15 Sprites
+	{ "tad-1.5e",		0x80000, 0x8324a7fe, 5 | BRF_GRA },           //  8 Sprites
 	
-	{ "2-1s",			0x10000, 0x850406b4, 6 | BRF_SND },           // 23 ADPCM #0 Code
+	{ "2-1s",			0x10000, 0x850406b4, 6 | BRF_SND },           //  9 ADPCM #0 Code
 
-	{ "1-1u",			0x10000, 0x8b3e0789, 7 | BRF_SND },           // 24 ADPCM #1 Code
+	{ "1-1u",			0x10000, 0x8b3e0789, 7 | BRF_SND },           // 10 ADPCM #1 Code
 	
-	{ "prom05.8e",		0x00100, 0xa94b18c2, 8 | BRF_OPT },           // 25 Proms
-	{ "prom10.4j",		0x00100, 0x261c93bc, 8 | BRF_OPT },           // 26 
+	{ "prom05.8e",		0x00100, 0xa94b18c2, 8 | BRF_OPT },           // 11 Proms
+	{ "prom10.4j",		0x00100, 0x261c93bc, 8 | BRF_OPT },           // 12 
 };
 
 STD_ROM_PICK(cabalus2)

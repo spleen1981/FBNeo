@@ -2154,28 +2154,29 @@ static INT32 MetamrphInit()
 	EEPROMInit(&mystwarr_eeprom_interface);
 
 	K054539Init(0, 48000, DrvSndROM, 0x400000);
-	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
-	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
-	K054539_set_gain(0, 0, 0.80);
-	K054539_set_gain(0, 1, 0.80);
-	K054539_set_gain(0, 2, 0.80);
-	K054539_set_gain(0, 3, 0.80);
+	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 1.70, BURN_SND_ROUTE_LEFT);
+	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 1.70, BURN_SND_ROUTE_RIGHT);
+	K054539SetFlags(0, K054539_REVERSE_STEREO | K054539_UPDATE_AT_KEYON);
+	K054539_set_gain(0, 0, 0.98);
+	K054539_set_gain(0, 1, 0.98);
+	K054539_set_gain(0, 2, 0.98);
+	K054539_set_gain(0, 3, 0.98);  // drums, choir
 	K054539_set_gain(0, 4, 1.80);
 	K054539_set_gain(0, 5, 1.80);
 	K054539_set_gain(0, 6, 1.80);
-	K054539_set_gain(0, 7, 1.80);
+	K054539_set_gain(0, 7, 1.80); // voice horns flute
 
 	K054539Init(1, 48000, DrvSndROM, 0x400000);
-	K054539SetRoute(1, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
-	K054539SetRoute(1, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
-	K054539_set_gain(1, 0, 0.80);
-	K054539_set_gain(1, 1, 0.80);
-	K054539_set_gain(1, 2, 0.80);
-	K054539_set_gain(1, 3, 0.80);
-	K054539_set_gain(1, 4, 0.80);
-	K054539_set_gain(1, 5, 0.80);
-	K054539_set_gain(1, 6, 0.80);
-	K054539_set_gain(1, 7, 0.80);
+	K054539SetRoute(1, BURN_SND_K054539_ROUTE_1, 1.70, BURN_SND_ROUTE_LEFT);
+	K054539SetRoute(1, BURN_SND_K054539_ROUTE_2, 1.70, BURN_SND_ROUTE_RIGHT);
+	K054539_set_gain(1, 0, 0.60); // horns, choir
+	K054539_set_gain(1, 1, 0.60);
+	K054539_set_gain(1, 2, 0.60);
+	K054539_set_gain(1, 3, 0.60);
+	K054539_set_gain(1, 4, 0.70);
+	K054539_set_gain(1, 5, 0.70);
+	K054539_set_gain(1, 6, 0.70);
+	K054539_set_gain(1, 7, 0.70);
 
 	DrvDoReset();
 
@@ -3054,7 +3055,7 @@ struct BurnDriver BurnDrvMystwarr = {
 	"mystwarr", NULL, NULL, NULL, "1993",
 	"Mystic Warriors (ver EAA)\0", NULL, "Konami", "GX128",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, mystwarrRomInfo, mystwarrRomName, NULL, NULL, NULL, NULL, MystwarrInputInfo, MystwarrDIPInfo,
 	MystwarrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3
@@ -3095,7 +3096,7 @@ struct BurnDriver BurnDrvMystwarru = {
 	"mystwarru", "mystwarr", NULL, NULL, "1993",
 	"Mystic Warriors (ver UAA)\0", NULL, "Konami", "GX128",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, mystwarruRomInfo, mystwarruRomName, NULL, NULL, NULL, NULL, MystwarrInputInfo, MystwarrDIPInfo,
 	MystwarrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3
@@ -3136,7 +3137,7 @@ struct BurnDriver BurnDrvMystwarrj = {
 	"mystwarrj", "mystwarr", NULL, NULL, "1993",
 	"Mystic Warriors (ver JAA)\0", NULL, "Konami", "GX128",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, mystwarrjRomInfo, mystwarrjRomName, NULL, NULL, NULL, NULL, MystwarrInputInfo, MystwarrDIPInfo,
 	MystwarrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3
@@ -3177,7 +3178,7 @@ struct BurnDriver BurnDrvMystwarra = {
 	"mystwarra", "mystwarr", NULL, NULL, "1993",
 	"Mystic Warriors (ver AAB)\0", NULL, "Konami", "GX128",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, mystwarraRomInfo, mystwarraRomName, NULL, NULL, NULL, NULL, MystwarrInputInfo, MystwarrDIPInfo,
 	MystwarrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3
@@ -3218,7 +3219,7 @@ struct BurnDriver BurnDrvMystwarraa = {
 	"mystwarraa", "mystwarr", NULL, NULL, "1993",
 	"Mystic Warriors (ver AAA)\0", NULL, "Konami", "GX128",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, mystwarraaRomInfo, mystwarraaRomName, NULL, NULL, NULL, NULL, MystwarrInputInfo, MystwarrDIPInfo,
 	MystwarrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3
@@ -3254,7 +3255,7 @@ struct BurnDriver BurnDrvViostorm = {
 	"viostorm", NULL, NULL, NULL, "1993",
 	"Violent Storm (ver EAC)\0", NULL, "Konami", "GX224",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 3, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, viostormRomInfo, viostormRomName, NULL, NULL, NULL, NULL, ViostormInputInfo, ViostormDIPInfo,
 	ViostormInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -3290,7 +3291,7 @@ struct BurnDriver BurnDrvViostormeb = {
 	"viostormeb", "viostorm", NULL, NULL, "1993",
 	"Violent Storm (ver EAB)\0", NULL, "Konami", "GX168",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 3, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, viostormebRomInfo, viostormebRomName, NULL, NULL, NULL, NULL, ViostormInputInfo, ViostormDIPInfo,
 	ViostormInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -3326,7 +3327,7 @@ struct BurnDriver BurnDrvViostormu = {
 	"viostormu", "viostorm", NULL, NULL, "1993",
 	"Violent Storm (ver UAC)\0", NULL, "Konami", "GX168",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 3, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, viostormuRomInfo, viostormuRomName, NULL, NULL, NULL, NULL, ViostormInputInfo, ViostormDIPInfo,
 	ViostormInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -3362,7 +3363,7 @@ struct BurnDriver BurnDrvViostormub = {
 	"viostormub", "viostorm", NULL, NULL, "1993",
 	"Violent Storm (ver UAB)\0", NULL, "Konami", "GX168",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 3, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, viostormubRomInfo, viostormubRomName, NULL, NULL, NULL, NULL, ViostormInputInfo, ViostormDIPInfo,
 	ViostormInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -3398,7 +3399,7 @@ struct BurnDriver BurnDrvViostorma = {
 	"viostorma", "viostorm", NULL, NULL, "1993",
 	"Violent Storm (ver AAC)\0", NULL, "Konami", "GX168",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 3, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, viostormaRomInfo, viostormaRomName, NULL, NULL, NULL, NULL, ViostormInputInfo, ViostormDIPInfo,
 	ViostormInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -3434,7 +3435,7 @@ struct BurnDriver BurnDrvViostormab = {
 	"viostormab", "viostorm", NULL, NULL, "1993",
 	"Violent Storm (ver AAB)\0", NULL, "Konami", "GX168",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 3, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, viostormabRomInfo, viostormabRomName, NULL, NULL, NULL, NULL, ViostormInputInfo, ViostormDIPInfo,
 	ViostormInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -3470,7 +3471,7 @@ struct BurnDriver BurnDrvViostormj = {
 	"viostormj", "viostorm", NULL, NULL, "1993",
 	"Violent Storm (ver JAC)\0", NULL, "Konami", "GX168",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 3, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, viostormjRomInfo, viostormjRomName, NULL, NULL, NULL, NULL, ViostormInputInfo, ViostormDIPInfo,
 	ViostormInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -3510,7 +3511,7 @@ struct BurnDriver BurnDrvMetamrph = {
 	"metamrph", NULL, NULL, NULL, "1993",
 	"Metamorphic Force (ver EAA)\0", NULL, "Konami", "GX224",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, metamrphRomInfo, metamrphRomName, NULL, NULL, NULL, NULL, MetamrphInputInfo, MetamrphDIPInfo,
 	MetamrphInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3
@@ -3551,7 +3552,7 @@ struct BurnDriver BurnDrvMetamrphe = {
 	"metamrphe", "metamrph", NULL, NULL, "1993",
 	"Metamorphic Force (ver EAA - alternate)\0", NULL, "Konami", "GX224",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, metamrpheRomInfo, metamrpheRomName, NULL, NULL, NULL, NULL, MetamrphInputInfo, MetamrphDIPInfo,
 	MetamrphInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3
@@ -3592,7 +3593,7 @@ struct BurnDriver BurnDrvMetamrpha = {
 	"metamrpha", "metamrph", NULL, NULL, "1993",
 	"Metamorphic Force (ver AAA)\0", NULL, "Konami", "GX224",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, metamrphaRomInfo, metamrphaRomName, NULL, NULL, NULL, NULL, MetamrphInputInfo, MetamrphDIPInfo,
 	MetamrphInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3
@@ -3632,7 +3633,7 @@ struct BurnDriver BurnDrvMetamrphu = {
 	"metamrphu", "metamrph", NULL, NULL, "1993",
 	"Metamorphic Force (ver UAA)\0", NULL, "Konami", "GX224",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, metamrphuRomInfo, metamrphuRomName, NULL, NULL, NULL, NULL, MetamrphInputInfo, MetamrphDIPInfo,
 	MetamrphInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3
@@ -3672,7 +3673,7 @@ struct BurnDriver BurnDrvMetamrphj = {
 	"metamrphj", "metamrph", NULL, NULL, "1993",
 	"Metamorphic Force (ver JAA)\0", NULL, "Konami", "GX224",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, metamrphjRomInfo, metamrphjRomName, NULL, NULL, NULL, NULL, MetamrphInputInfo, MetamrphDIPInfo,
 	MetamrphInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3

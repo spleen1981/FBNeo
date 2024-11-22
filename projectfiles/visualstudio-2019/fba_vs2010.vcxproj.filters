@@ -850,9 +850,6 @@
     <ClInclude Include="..\..\src\cpu\tlcs90_intf.h">
       <Filter>cpus</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\cpu\tms34010_intf.h">
-      <Filter>cpus</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\cpu\upd7810_intf.h">
       <Filter>cpus</Filter>
     </ClInclude>
@@ -1029,6 +1026,57 @@
     </ClInclude>
     <ClInclude Include="..\..\src\burn\devices\poly.h">
       <Filter>Burn\devices</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\cpu\tms34_intf.h">
+      <Filter>cpus</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\burn\devices\tlc34076.h">
+      <Filter>Burn\devices</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\burn\drv\midway\narc_sound.h">
+      <Filter>Burn\drv\midway</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\burn\drv\midway\williams_adpcm.h">
+      <Filter>Burn\drv\midway</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\burn\drv\midway\williams_cvsd.h">
+      <Filter>Burn\drv\midway</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\burn\drv\midway\yawdim_sound.h">
+      <Filter>Burn\drv\midway</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\burn\snd\biquad.h">
+      <Filter>Burn\snd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\burn\snd\burn_ymf271.h">
+      <Filter>Burn\snd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\burn\snd\downsample.h">
+      <Filter>Burn\snd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\burn\snd\multipcm.h">
+      <Filter>Burn\snd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\burn\snd\ymf271.h">
+      <Filter>Burn\snd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\cpu\m377\m37710.h">
+      <Filter>cpus\m377</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\burn\devices\ds2404.h">
+      <Filter>Burn\devices</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\burn\devices\intelfsh.h">
+      <Filter>Burn\devices</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\burn\snd\c352.h">
+      <Filter>Burn\snd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\cpu\f8\f8.h">
+      <Filter>cpus</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\burn\drv\konami\k007452.h">
+      <Filter>Burn\drv\konami</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -3816,9 +3864,6 @@
     <ClCompile Include="..\..\src\cpu\adsp2100\adsp2100.cpp">
       <Filter>cpus\adsp2100</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\cpu\i8x41\i8x41.cpp">
-      <Filter>cpus\i8x41</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\cpu\i8051\mcs51.cpp">
       <Filter>cpus\i8051</Filter>
     </ClCompile>
@@ -3839,9 +3884,6 @@
     </ClCompile>
     <ClCompile Include="..\..\src\cpu\tms32010\tms32010.cpp">
       <Filter>cpus\tms32010</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\cpu\tms34010\tms34010.cpp">
-      <Filter>cpus\tms34010</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\cpu\upd7725\upd7725.cpp">
       <Filter>cpus\upd7725</Filter>
@@ -3874,9 +3916,6 @@
       <Filter>cpus</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\cpu\tlcs90_intf.cpp">
-      <Filter>cpus</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\cpu\tms34010_intf.cpp">
       <Filter>cpus</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\cpu\z180_intf.cpp">
@@ -4025,9 +4064,6 @@
     </ClCompile>
     <ClCompile Include="..\..\src\burner\win32\placeholder.cpp">
       <Filter>burner\win32</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\cpu\tms34010\tms34010_optable.cpp">
-      <Filter>cpus\tms34010</Filter>
     </ClCompile>
     <ClCompile Include="generated\m68kops.c">
       <Filter>generated</Filter>
@@ -4240,6 +4276,99 @@
     </ClCompile>
     <ClCompile Include="..\..\src\burn\drv\megadrive\d_mdarcbl.cpp">
       <Filter>Burn\drv\megadrive</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cpu\i8x41\mcs48.cpp">
+      <Filter>cpus\i8x41</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\taito\d_gladiatr.cpp">
+      <Filter>Burn\drv\taito</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\taito\d_lsasquad.cpp">
+      <Filter>Burn\drv\taito</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cpu\tms34\tms34010.cpp">
+      <Filter>cpus\tms34010</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cpu\tms34_intf.cpp">
+      <Filter>cpus</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\devices\tlc34076.cpp">
+      <Filter>Burn\devices</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\pst90s\d_artmagic.cpp">
+      <Filter>Burn\drv\pst90s</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\pst90s\d_btoads.cpp">
+      <Filter>Burn\drv\pst90s</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\pre90s\d_exterm.cpp">
+      <Filter>Burn\drv\pre90s</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\midway\d_yunit.cpp">
+      <Filter>Burn\drv\midway</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\midway\narc_sound.cpp">
+      <Filter>Burn\drv\midway</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\midway\williams_adpcm.cpp">
+      <Filter>Burn\drv\midway</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\midway\williams_cvsd.cpp">
+      <Filter>Burn\drv\midway</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\midway\yawdim_sound.cpp">
+      <Filter>Burn\drv\midway</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\midway\d_xunit.cpp">
+      <Filter>Burn\drv\midway</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\snd\burn_ymf271.cpp">
+      <Filter>Burn\snd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\snd\multipcm.cpp">
+      <Filter>Burn\snd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\snd\ymf271.cpp">
+      <Filter>Burn\snd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\sega\d_segas32.cpp">
+      <Filter>Burn\drv\sega</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\pst90s\d_ms32.cpp">
+      <Filter>Burn\drv\pst90s</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\pst90s\d_namcona1.cpp">
+      <Filter>Burn\drv\pst90s</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cpu\m377\m37710.cpp">
+      <Filter>cpus\m377</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\devices\ds2404.cpp">
+      <Filter>Burn\devices</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\devices\intelfsh.cpp">
+      <Filter>Burn\devices</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\pst90s\d_seibuspi.cpp">
+      <Filter>Burn\drv\pst90s</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cpu\i386\i386.cpp">
+      <Filter>cpus\i386</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\pst90s\d_namconb1.cpp">
+      <Filter>Burn\drv\pst90s</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\snd\c352.cpp">
+      <Filter>Burn\snd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\channelf\d_channelf.cpp">
+      <Filter>Burn\drv\chanf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cpu\f8\f8.cpp">
+      <Filter>cpus</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\burn\drv\konami\k007452.cpp">
+      <Filter>Burn\drv\konami</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -4482,6 +4611,15 @@
     </Filter>
     <Filter Include="cpus\tlcs900">
       <UniqueIdentifier>{f99a460c-59bd-4aa3-9fcd-4dabb2165835}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cpus\m377">
+      <UniqueIdentifier>{3ca2d32a-c268-4ec6-8dfc-ae6c73bcbc80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cpus\i386">
+      <UniqueIdentifier>{008dfd61-894d-4efe-b43d-a6d7db1d9bb6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Burn\drv\chanf">
+      <UniqueIdentifier>{7b328658-4b49-4476-845a-5f20346da25f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

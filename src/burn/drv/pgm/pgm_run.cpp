@@ -228,6 +228,13 @@ static INT32 pgmGetRoms(bool bLoad)
 				BurnLoadRom(PGMProtROM, i, 1);
 			}
 		}
+
+		if ((ri.nType & BRF_PRG) && (ri.nType & 0x0f) == 0xa)
+		{ // nvram
+			if (bLoad) {
+				BurnLoadRom(PGM68KRAM, i, 1);
+			}
+		}
 	}
 
 	if (!bLoad) {
@@ -747,6 +754,14 @@ INT32 pgmInit()
 	BurnTimerAttachZet(Z80_FREQ);
 
 	pBurnDrvPalette = (UINT32*)PGMPalRAM;
+    
+    if (strncmp(BurnDrvGetTextA(DRV_NAME), "pgm3in1", 7) == 0) {//load pgm3in1 mask rom and sound rom before pgm3in1's decrypt
+        UINT8 *maskROM = (UINT8 *)malloc(0x200000);
+        BurnLoadRom(maskROM,9,1);
+        memcpy((void *)(PGMSPRMaskROM + 0xf00000),maskROM,0x100000);
+        free(maskROM);
+        BurnLoadRom(ICSSNDROM + 0x800000,0x0b,1);
+    }
 
 	if (pPgmInitCallback) {
 		pPgmInitCallback();
@@ -880,6 +895,7 @@ INT32 pgmFrame()
 		// region hacks
 		if (strncmp(BurnDrvGetTextA(DRV_NAME), "dmnfrnt", 7) == 0) {
 			PGMARMShareRAM[0x158] = PgmInput[7];
+			PGMARMShareRAM2[0x158] = PgmInput[7];
 
 			// dmnfrntpcb - requires this - set internal rom version
 			PGMARMShareRAM[0x164] = '1'; // S101KR (101 Korea) - $69be8 in ROM

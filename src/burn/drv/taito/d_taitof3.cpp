@@ -44,7 +44,6 @@ static INT32 sound_cpu_in_reset = 0;
 static INT32 watchdog;
 
 INT32 f3_game = 0;
-static INT32 supercupkludge = 0;
 
 static struct BurnInputInfo F3InputList[] = {
 	{"P1 Coin",			BIT_DIGITAL,	DrvJoy5 + 4,	"p1 coin"	},
@@ -505,13 +504,13 @@ static void DrvPivotExpand(UINT16 offset)
 static void __fastcall f3_VRAM_write_long(UINT32 a, UINT32 d)
 {
 	if ((a & 0xffe000) == 0x61c000) {
-		*((UINT32*)(TaitoVideoRam + (a & 0x1fff))) = BURN_ENDIAN_SWAP_INT32((d << 16) | (d >> 16));
+		*((UINT32*)(TaitoVideoRam + (a & 0x1ffc))) = BURN_ENDIAN_SWAP_INT32((d << 16) | (d >> 16));
 		dirty_tile_count[9] = 1;
 		return;
 	}
 
 	if ((a & 0xffe000) == 0x61e000) {
-		*((UINT32*)(DrvVRAMRAM + (a & 0x1fff))) = BURN_ENDIAN_SWAP_INT32((d << 16) | (d >> 16));
+		*((UINT32*)(DrvVRAMRAM + (a & 0x1ffc))) = BURN_ENDIAN_SWAP_INT32((d << 16) | (d >> 16));
 		DrvVRAMExpand(a);
 		return;
 	}
@@ -520,13 +519,13 @@ static void __fastcall f3_VRAM_write_long(UINT32 a, UINT32 d)
 static void __fastcall f3_VRAM_write_word(UINT32 a, UINT16 d)
 {
 	if ((a & 0xffe000) == 0x61c000) {
-		*((UINT16*)(TaitoVideoRam + (a & 0x1fff))) = BURN_ENDIAN_SWAP_INT16(d);
+		*((UINT16*)(TaitoVideoRam + (a & 0x1ffe))) = BURN_ENDIAN_SWAP_INT16(d);
 		dirty_tile_count[9] = 1;
 		return;
 	}
 
 	if ((a & 0xffe000) == 0x61e000) {
-		*((UINT16*)(DrvVRAMRAM + (a & 0x1fff))) = BURN_ENDIAN_SWAP_INT16(d);
+		*((UINT16*)(DrvVRAMRAM + (a & 0x1ffe))) = BURN_ENDIAN_SWAP_INT16(d);
 		DrvVRAMExpand(a);
 		return;
 	}
@@ -697,7 +696,7 @@ static INT32 DrvDoReset(INT32 full_reset)
 	EEPROMReset();
 
 	if (EEPROMAvailable() == 0) {
-		if (TaitoDefaultEEProm[0] != 0 && f3_game != SCFINALS) {
+		if (TaitoDefaultEEProm[0] != 0) {
 			EEPROMFill((const UINT8*)TaitoDefaultEEProm, 0, 128);
 		} else if (f3_game == RECALH || f3_game == GSEEKER ) {
 			static const UINT8 recalh_eeprom[128] =	{
@@ -762,6 +761,16 @@ static INT32 DrvDoReset(INT32 full_reset)
 				0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 				0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
 			};
+			static const UINT8 puchicaru_eeprom[128] = {
+				0x54,0x41,0x49,0x54,0x4f,0x02,0x00,0x07,0xa1,0xf2,0xe0,0x01,0x11,0x11,0x30,0x00,
+				0x00,0x00,0x02,0x04,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x4d,0x5a,
+				0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+				0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+				0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+				0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+				0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+				0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
+			};
 			static const UINT8 puchicarj_eeprom[128] = {
 				0x54,0x41,0x49,0x54,0x4f,0x01,0x00,0x07,0xa1,0xf2,0xe0,0x01,0x11,0x11,0x30,0x00,
 				0x00,0x00,0x02,0x02,0x01,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x4d,0x5c,
@@ -772,36 +781,12 @@ static INT32 DrvDoReset(INT32 full_reset)
 				0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 				0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
 			};
-			if (strstr(BurnDrvGetTextA(DRV_NAME), "puchicarj")) {
+			if (strstr(BurnDrvGetTextA(DRV_NAME), "puchicaru")) {
+				EEPROMFill(puchicaru_eeprom, 0, 128);
+			} else if (strstr(BurnDrvGetTextA(DRV_NAME), "puchicarj")) {
 				EEPROMFill(puchicarj_eeprom, 0, 128);
 			} else {
 				EEPROMFill(puchicar_eeprom, 0, 128);
-			}
-		} else if (f3_game == SCFINALS) {
-			static const UINT8 scfinals_eeprom[128] = {
-				0x54,0x41,0x49,0x54,0x4f,0x03,0x50,0x01,0xe0,0x30,0xe0,0x01,0x11,0x12,0x30,0x00,
-				0x00,0x00,0xff,0x00,0x00,0x32,0x00,0x00,0xff,0x00,0x00,0x00,0x00,0x00,0xc3,0xf2,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff
-			};
-			static const UINT8 scfinalso_eeprom[128] = {
-				0x54,0x41,0x49,0x54,0x4f,0x03,0x50,0x01,0xe0,0x30,0xe0,0x01,0x11,0x12,0x30,0x00,
-				0x00,0x00,0xff,0x00,0x00,0x31,0x00,0x00,0xff,0x00,0x00,0x00,0x00,0x00,0xc3,0xf3,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff
-			};
-			if (strstr(BurnDrvGetTextA(DRV_NAME), "scfinalso")) {
-				EEPROMFill(scfinalso_eeprom, 0, 128);
-			} else {
-				EEPROMFill(scfinals_eeprom, 0, 128);
 			}
 		}
 	}
@@ -1368,7 +1353,6 @@ static INT32 DrvExit()
 	BurnTrackballExit();
 
 	pPaletteUpdateCallback = NULL;
-	supercupkludge = 0;
 
 	return 0;
 }
@@ -1493,13 +1477,9 @@ static INT32 DrvFrame()
 
 		INT32 cur_coin = ((DrvJoy5[4] & 1) << 4) | ((DrvJoy5[5] & 1) << 5) | ((DrvJoy5[6] & 1) << 6) | ((DrvJoy5[7] & 1) << 7);
 
-		if (supercupkludge) {
-			if (cur_coin) DrvInputs[0] = 0xffff & ~0x200;
-		} else {
-			for (INT32 i = 0x10; i < 0x100; i <<= 1) {
-				if ((cur_coin & i) == i && (previous_coin & i) == 0) {
-					DrvInputs[4] &= ~i;
-				}
+		for (INT32 i = 0x10; i < 0x100; i <<= 1) {
+			if ((cur_coin & i) == i && (previous_coin & i) == 0) {
+				DrvInputs[4] &= ~i;
 			}
 		}
 
@@ -2714,7 +2694,8 @@ struct BurnDriver BurnDrvRayforcej = {
 };
 
 
-// Super Cup Finals (Ver 2.2O 1994/01/13)
+// Super Cup Finals (Ver 2.2O 1994/01/13, single PCB)
+/* This is the single PCB version */
 
 static struct BurnRomInfo scfinalsRomDesc[] = {
 	{ "d68-09.ic40",	0x040000, 0x28193b3f, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
@@ -2753,8 +2734,6 @@ static INT32 scfinalsCallback()
 	ROM[0x5af0/4] = BURN_ENDIAN_SWAP_INT32(0x4e754e71);
 	ROM[0xdd0/4] = BURN_ENDIAN_SWAP_INT32(0x4e714e75);
 
-	supercupkludge = 1;
-
 	return 0;
 }
 
@@ -2765,7 +2744,7 @@ static INT32 scfinalsInit()
 
 struct BurnDriver BurnDrvScfinals = {
 	"scfinals", NULL, NULL, NULL, "1993",
-	"Super Cup Finals (Ver 2.2O 1994/01/13)\0", "Use service coin! (game has issues)", "Taito Corporation Japan", "Taito F3 System",
+	"Super Cup Finals (Ver 2.2O 1994/01/13, single PCB)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
 	NULL, scfinalsRomInfo, scfinalsRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
@@ -2774,9 +2753,53 @@ struct BurnDriver BurnDrvScfinals = {
 };
 
 
-// Super Cup Finals (Ver 2.1O 1993/11/19)
+// Super Cup Finals (Ver 2.1O 1993/11/19, single PCB)
+/* This is the single PCB version of v2.1O */
 
 static struct BurnRomInfo scfinalsoRomDesc[] = {
+	{ "s-final_rom_24_071293.ic24",		0x020000, 0x466700c8, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
+	{ "s-final_rom_26_071293.ic26",		0x020000, 0x824092de, TAITO_68KROM1_BYTESWAP32 }, //  1
+	{ "s-final_rom_37_071293.ic37",		0x020000, 0x9aa0cca4, TAITO_68KROM1_BYTESWAP32 }, //  2
+	{ "s-final_rom_35_071293.ic35",		0x020000, 0xe7a298fa, TAITO_68KROM1_BYTESWAP32 }, //  3
+
+	{ "d49-01.12",		0x200000, 0x1dc89f1c, TAITO_SPRITESA_BYTESWAP },  				  //  4 Sprites
+	{ "d49-02.8",		0x200000, 0x1e4c374f, TAITO_SPRITESA_BYTESWAP },  				  //  5
+	{ "d49-06.11",		0x100000, 0x71ef4ee1, TAITO_SPRITESA_BYTESWAP },  				  //  6
+	{ "d49-07.7",		0x100000, 0xe5655b8f, TAITO_SPRITESA_BYTESWAP },  				  //  7
+	{ "d49-03.4",		0x200000, 0xcf9a8727, TAITO_SPRITESA },           				  //  8
+	{ "d49-08.3",		0x100000, 0x7d3c6536, TAITO_SPRITESA },           				  //  9
+
+	{ "d49-09.47",		0x080000, 0x257ede01, TAITO_CHARS_BYTESWAP },     				  // 10 Layer Tiles
+	{ "d49-10.45",		0x080000, 0xf587b787, TAITO_CHARS_BYTESWAP },     				  // 11
+	{ "d49-11.43",		0x080000, 0x11318b26, TAITO_CHARS },              				  // 12
+
+	{ "d49-17.32",		0x020000, 0xf2058eba, TAITO_68KROM2_BYTESWAP },   				  // 13 68k Code
+	{ "d49-18.33",		0x020000, 0xa0fdd270, TAITO_68KROM2_BYTESWAP },   				  // 14
+
+	{ "d49-04.38",		0x200000, 0x44b365a9, TAITO_ES5505_BYTESWAP },    				  // 15 Ensoniq Samples
+	{ "d49-05.41",		0x100000, 0xed894fe1, TAITO_ES5505_BYTESWAP },    				  // 16
+
+	{ "scfinalso.nv",	0x000080, 0x1319752e, TAITO_DEFAULT_EEPROM },     				  // 17 eeprom
+};
+
+STD_ROM_PICK(scfinalso)
+STD_ROM_FN(scfinalso)
+
+struct BurnDriver BurnDrvScfinalso = {
+	"scfinalso", "scfinals", NULL, NULL, "1993",
+	"Super Cup Finals (Ver 2.1O 1993/11/19, single PCB)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
+	NULL, scfinalsoRomInfo, scfinalsoRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
+	scfinalsInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
+	320, 224, 4, 3
+};
+
+
+// Super Cup Finals (Ver 2.1O 1993/11/19, F3 Cartridge)
+/* This is the Cart version of v2.1O */
+
+static struct BurnRomInfo scfinalsocRomDesc[] = {
 	{ "d68-01.20",		0x040000, 0xcb951856, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
 	{ "d68-02.19",		0x040000, 0x4f94413a, TAITO_68KROM1_BYTESWAP32 }, //  1
 	{ "d68-04.18",		0x040000, 0x4a4e4972, TAITO_68KROM1_BYTESWAP32 }, //  2
@@ -2802,15 +2825,15 @@ static struct BurnRomInfo scfinalsoRomDesc[] = {
 	{ "scfinalso.nv",	0x000080, 0x1319752e, TAITO_DEFAULT_EEPROM },     // 17 eeprom
 };
 
-STD_ROM_PICK(scfinalso)
-STD_ROM_FN(scfinalso)
+STD_ROM_PICK(scfinalsoc)
+STD_ROM_FN(scfinalsoc)
 
-struct BurnDriver BurnDrvScfinalso = {
-	"scfinalso", "scfinals", NULL, NULL, "1993",
-	"Super Cup Finals (Ver 2.1O 1993/11/19)\0", "Use service coin! (game has issues)", "Taito Corporation Japan", "Taito F3 System",
+struct BurnDriver BurnDrvScfinalsoc = {
+	"scfinalsoc", "scfinals", NULL, NULL, "1993",
+	"Super Cup Finals (Ver 2.1O 1993/11/19, F3 Cartridge)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
-	NULL, scfinalsoRomInfo, scfinalsoRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
+	NULL, scfinalsocRomInfo, scfinalsocRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	scfinalsInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
 };
@@ -5505,34 +5528,34 @@ struct BurnDriver BurnDrvKirameki = {
 // Puchi Carat (Ver 2.02O 1997/10/29)
 
 static struct BurnRomInfo puchicarRomDesc[] = {
-	{ "e46-16",		0x080000, 0xcf2accdf, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
-	{ "e46-15",		0x080000, 0xc32c6ed8, TAITO_68KROM1_BYTESWAP32 }, //  1
-	{ "e46-14",		0x080000, 0xa154c300, TAITO_68KROM1_BYTESWAP32 }, //  2
-	{ "e46-18",		0x080000, 0x396e3122, TAITO_68KROM1_BYTESWAP32 }, //  3
+	{ "e46-16.ic20",		0x080000, 0xcf2accdf, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
+	{ "e46-15.ic19",		0x080000, 0xc32c6ed8, TAITO_68KROM1_BYTESWAP32 }, //  1
+	{ "e46-14.ic18",		0x080000, 0xa154c300, TAITO_68KROM1_BYTESWAP32 }, //  2
+	{ "e46-18.ic17",		0x080000, 0x396e3122, TAITO_68KROM1_BYTESWAP32 }, //  3
 
-	{ "e46-06",		0x200000, 0xb74336f2, TAITO_SPRITESA_BYTESWAP },  //  4 Sprites
-	{ "e46-04",		0x200000, 0x463ecc4c, TAITO_SPRITESA_BYTESWAP },  //  5
-	{ "e46-05",		0x200000, 0x83a32eee, TAITO_SPRITESA_BYTESWAP },  //  6
-	{ "e46-03",		0x200000, 0xeb768193, TAITO_SPRITESA_BYTESWAP },  //  7
-	{ "e46-02",		0x200000, 0xfb046018, TAITO_SPRITESA },           //  8
-	{ "e46-01",		0x200000, 0x34fc2103, TAITO_SPRITESA },           //  9
+	{ "e46-06.ic12",		0x200000, 0xb74336f2, TAITO_SPRITESA_BYTESWAP },  //  4 Sprites
+	{ "e46-04.ic8",			0x200000, 0x463ecc4c, TAITO_SPRITESA_BYTESWAP },  //  5
+	{ "e46-05.ic11",		0x200000, 0x83a32eee, TAITO_SPRITESA_BYTESWAP },  //  6
+	{ "e46-03.ic7",			0x200000, 0xeb768193, TAITO_SPRITESA_BYTESWAP },  //  7
+	{ "e46-02.ic4",			0x200000, 0xfb046018, TAITO_SPRITESA },           //  8
+	{ "e46-01.ic3",			0x200000, 0x34fc2103, TAITO_SPRITESA },           //  9
 
-	{ "e46-12",		0x100000, 0x1f3a9851, TAITO_CHARS_BYTESWAP },     // 10 Layer Tiles
-	{ "e46-11",		0x100000, 0xe9f10bf1, TAITO_CHARS_BYTESWAP },     // 11
-	{ "e46-10",		0x100000, 0x1999b76a, TAITO_CHARS },              // 12
+	{ "e46-12.ic47",		0x100000, 0x1f3a9851, TAITO_CHARS_BYTESWAP },     // 10 Layer Tiles
+	{ "e46-11.ic45",		0x100000, 0xe9f10bf1, TAITO_CHARS_BYTESWAP },     // 11
+	{ "e46-10.ic43",		0x100000, 0x1999b76a, TAITO_CHARS },              // 12
 
-	{ "e46-21",		0x040000, 0xb466cff6, TAITO_68KROM2_BYTESWAP },   // 13 68k Code
-	{ "e46-22",		0x040000, 0xc67b767e, TAITO_68KROM2_BYTESWAP },   // 14
+	{ "e46-21.ic32",		0x040000, 0xb466cff6, TAITO_68KROM2_BYTESWAP },   // 13 68k Code
+	{ "e46-22.ic33",		0x040000, 0xc67b767e, TAITO_68KROM2_BYTESWAP },   // 14
 
-	{ "e46-07",		0x200000, 0xf20af91e, TAITO_ES5505_BYTESWAP },    // 15 Ensoniq Samples
-	{ "e46-08",		0x200000, 0xf7f96e1d, TAITO_ES5505_BYTESWAP },    // 16
-	{ "e46-09",		0x200000, 0x824135f8, TAITO_ES5505_BYTESWAP },    // 17
+	{ "e46-07.ic38",		0x200000, 0xf20af91e, TAITO_ES5505_BYTESWAP },    // 15 Ensoniq Samples
+	{ "e46-08.ic39",		0x200000, 0xf7f96e1d, TAITO_ES5505_BYTESWAP },    // 16
+	{ "e46-09.ic40",		0x200000, 0x824135f8, TAITO_ES5505_BYTESWAP },    // 17
 
-	{ "pal16l8a-d77-09a.bin",	0x104, 0xb371532b, BRF_OPT },             // 14 plds
-	{ "pal16l8a-d77-10a.bin",	0x104, 0x42f59227, BRF_OPT },             // 15
-	{ "palce16v8q-d77-11a.bin",	0x117, 0xeacc294e, BRF_OPT },             // 16
-	{ "palce16v8q-d77-12a.bin",	0x117, 0xe9920cfe, BRF_OPT },             // 17
-	{ "palce16v8q-d77-15a.bin",	0x117, 0x0edf820a, BRF_OPT },// 18
+	{ "pal16l8a-d77-09a.bin",	0x104, 0xb371532b, BRF_OPT },             	  // 14 plds
+	{ "pal16l8a-d77-10a.bin",	0x104, 0x42f59227, BRF_OPT },                 // 15
+	{ "palce16v8q-d77-11a.bin",	0x117, 0xeacc294e, BRF_OPT },                 // 16
+	{ "palce16v8q-d77-12a.bin",	0x117, 0xe9920cfe, BRF_OPT },                 // 17
+	{ "palce16v8q-d77-15a.bin",	0x117, 0x0edf820a, BRF_OPT },			      // 18
 };
 
 STD_ROM_PICK(puchicar)
@@ -5557,34 +5580,34 @@ struct BurnDriver BurnDrvPuchicar = {
 // Puchi Carat (Ver 2.02J 1997/10/29)
 
 static struct BurnRomInfo puchicarjRomDesc[] = {
-	{ "e46-16",		0x080000, 0xcf2accdf, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
-	{ "e46-15",		0x080000, 0xc32c6ed8, TAITO_68KROM1_BYTESWAP32 }, //  1
-	{ "e46-14",		0x080000, 0xa154c300, TAITO_68KROM1_BYTESWAP32 }, //  2
-	{ "e46.13",		0x080000, 0x59fbdf3a, TAITO_68KROM1_BYTESWAP32 }, //  3
+	{ "e46-16.ic20",		0x080000, 0xcf2accdf, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
+	{ "e46-15.ic19",		0x080000, 0xc32c6ed8, TAITO_68KROM1_BYTESWAP32 }, //  1
+	{ "e46-14.ic18",		0x080000, 0xa154c300, TAITO_68KROM1_BYTESWAP32 }, //  2
+	{ "e46-13.ic17",		0x080000, 0x59fbdf3a, TAITO_68KROM1_BYTESWAP32 }, //  3
 
-	{ "e46-06",		0x200000, 0xb74336f2, TAITO_SPRITESA_BYTESWAP },  //  4 Sprites
-	{ "e46-04",		0x200000, 0x463ecc4c, TAITO_SPRITESA_BYTESWAP },  //  5
-	{ "e46-05",		0x200000, 0x83a32eee, TAITO_SPRITESA_BYTESWAP },  //  6
-	{ "e46-03",		0x200000, 0xeb768193, TAITO_SPRITESA_BYTESWAP },  //  7
-	{ "e46-02",		0x200000, 0xfb046018, TAITO_SPRITESA },           //  8
-	{ "e46-01",		0x200000, 0x34fc2103, TAITO_SPRITESA },           //  9
+	{ "e46-06.ic12",		0x200000, 0xb74336f2, TAITO_SPRITESA_BYTESWAP },  //  4 Sprites
+	{ "e46-04.ic8",			0x200000, 0x463ecc4c, TAITO_SPRITESA_BYTESWAP },  //  5
+	{ "e46-05.ic11",		0x200000, 0x83a32eee, TAITO_SPRITESA_BYTESWAP },  //  6
+	{ "e46-03.ic7",			0x200000, 0xeb768193, TAITO_SPRITESA_BYTESWAP },  //  7
+	{ "e46-02.ic4",			0x200000, 0xfb046018, TAITO_SPRITESA },           //  8
+	{ "e46-01.ic3",			0x200000, 0x34fc2103, TAITO_SPRITESA },           //  9
 
-	{ "e46-12",		0x100000, 0x1f3a9851, TAITO_CHARS_BYTESWAP },     // 10 Layer Tiles
-	{ "e46-11",		0x100000, 0xe9f10bf1, TAITO_CHARS_BYTESWAP },     // 11
-	{ "e46-10",		0x100000, 0x1999b76a, TAITO_CHARS },              // 12
+	{ "e46-12.ic47",		0x100000, 0x1f3a9851, TAITO_CHARS_BYTESWAP },     // 10 Layer Tiles
+	{ "e46-11.ic45",		0x100000, 0xe9f10bf1, TAITO_CHARS_BYTESWAP },     // 11
+	{ "e46-10.ic43",		0x100000, 0x1999b76a, TAITO_CHARS },              // 12
 
-	{ "e46-19",		0x040000, 0x2624eba0, TAITO_68KROM2_BYTESWAP },   // 13 68k Code
-	{ "e46-20",		0x040000, 0x065e934f, TAITO_68KROM2_BYTESWAP },   // 14
+	{ "e46-19.ic32",		0x040000, 0x2624eba0, TAITO_68KROM2_BYTESWAP },   // 13 68k Code
+	{ "e46-20.ic33",		0x040000, 0x065e934f, TAITO_68KROM2_BYTESWAP },   // 14
 
-	{ "e46-07",		0x200000, 0xf20af91e, TAITO_ES5505_BYTESWAP },    // 15 Ensoniq Samples
-	{ "e46-08",		0x200000, 0xf7f96e1d, TAITO_ES5505_BYTESWAP },    // 16
-	{ "e46-09",		0x200000, 0x824135f8, TAITO_ES5505_BYTESWAP },    // 17
+	{ "e46-07.ic38",		0x200000, 0xf20af91e, TAITO_ES5505_BYTESWAP },    // 15 Ensoniq Samples
+	{ "e46-08.ic39",		0x200000, 0xf7f96e1d, TAITO_ES5505_BYTESWAP },    // 16
+	{ "e46-09.ic40",		0x200000, 0x824135f8, TAITO_ES5505_BYTESWAP },    // 17
 
-	{ "pal16l8a-d77-09a.bin",	0x104, 0xb371532b, BRF_OPT },             // 14 plds
-	{ "pal16l8a-d77-10a.bin",	0x104, 0x42f59227, BRF_OPT },             // 15
-	{ "palce16v8q-d77-11a.bin",	0x117, 0xeacc294e, BRF_OPT },             // 16
-	{ "palce16v8q-d77-12a.bin",	0x117, 0xe9920cfe, BRF_OPT },             // 17
-	{ "palce16v8q-d77-15a.bin",	0x117, 0x0edf820a, BRF_OPT },// 18
+	{ "pal16l8a-d77-09a.bin",	0x104, 0xb371532b, BRF_OPT },                 // 14 plds
+	{ "pal16l8a-d77-10a.bin",	0x104, 0x42f59227, BRF_OPT },                 // 15
+	{ "palce16v8q-d77-11a.bin",	0x117, 0xeacc294e, BRF_OPT },                 // 16
+	{ "palce16v8q-d77-12a.bin",	0x117, 0xe9920cfe, BRF_OPT },                 // 17
+	{ "palce16v8q-d77-15a.bin",	0x117, 0x0edf820a, BRF_OPT },				  // 18
 };
 
 STD_ROM_PICK(puchicarj)
@@ -5596,6 +5619,53 @@ struct BurnDriver BurnDrvPuchicarj = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, puchicarjRomInfo, puchicarjRomName, NULL, NULL, NULL, NULL, F3AnalogInputInfo, F3AnalogDIPInfo,
+	puchicarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
+	320, 232, 4, 3
+};
+
+
+// Puchi Carat (Ver 2.04A 1997/11/08)
+
+static struct BurnRomInfo puchicaruRomDesc[] = {
+	{ "e46-29.ic20",		0x080000, 0x6df39fc3, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
+	{ "e46-28.ic19",		0x080000, 0x06a29747, TAITO_68KROM1_BYTESWAP32 }, //  1
+	{ "e46-27.ic18",		0x080000, 0x9441cc7c, TAITO_68KROM1_BYTESWAP32 }, //  2
+	{ "e46-17.ic17",		0x080000, 0xa0ff0e8c, TAITO_68KROM1_BYTESWAP32 }, //  3
+
+	{ "e46-06.ic12",		0x200000, 0xb74336f2, TAITO_SPRITESA_BYTESWAP },  //  4 Sprites
+	{ "e46-04.ic8",			0x200000, 0x463ecc4c, TAITO_SPRITESA_BYTESWAP },  //  5
+	{ "e46-05.ic11",		0x200000, 0x83a32eee, TAITO_SPRITESA_BYTESWAP },  //  6
+	{ "e46-03.ic7",			0x200000, 0xeb768193, TAITO_SPRITESA_BYTESWAP },  //  7
+	{ "e46-02.ic4",			0x200000, 0xfb046018, TAITO_SPRITESA },           //  8
+	{ "e46-01.ic3",			0x200000, 0x34fc2103, TAITO_SPRITESA },           //  9
+
+	{ "e46-12.ic47",		0x100000, 0x1f3a9851, TAITO_CHARS_BYTESWAP },     // 10 Layer Tiles
+	{ "e46-11.ic45",		0x100000, 0xe9f10bf1, TAITO_CHARS_BYTESWAP },     // 11
+	{ "e46-10.ic43",		0x100000, 0x1999b76a, TAITO_CHARS },              // 12
+
+	{ "e46-21.ic32",		0x040000, 0xb466cff6, TAITO_68KROM2_BYTESWAP },   // 13 68k Code
+	{ "e46-22.ic33",		0x040000, 0xc67b767e, TAITO_68KROM2_BYTESWAP },   // 14
+
+	{ "e46-07.ic38",		0x200000, 0xf20af91e, TAITO_ES5505_BYTESWAP },    // 15 Ensoniq Samples
+	{ "e46-08.ic39",		0x200000, 0xf7f96e1d, TAITO_ES5505_BYTESWAP },    // 16
+	{ "e46-09.ic40",		0x200000, 0x824135f8, TAITO_ES5505_BYTESWAP },    // 17
+
+	{ "pal16l8a-d77-09a.bin",	0x104, 0xb371532b, BRF_OPT },                 // 14 plds
+	{ "pal16l8a-d77-10a.bin",	0x104, 0x42f59227, BRF_OPT },                 // 15
+	{ "palce16v8q-d77-11a.bin",	0x117, 0xeacc294e, BRF_OPT },                 // 16
+	{ "palce16v8q-d77-12a.bin",	0x117, 0xe9920cfe, BRF_OPT },                 // 17
+	{ "palce16v8q-d77-15a.bin",	0x117, 0x0edf820a, BRF_OPT },				  // 18
+};
+
+STD_ROM_PICK(puchicaru)
+STD_ROM_FN(puchicaru)
+
+struct BurnDriver BurnDrvPuchicaru = {
+	"puchicaru", "puchicar", NULL, NULL, "1997",
+	"Puchi Carat (Ver 2.04A 1997/11/08)\0", NULL, "Taito America Corporation", "Taito F3 System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	NULL, puchicaruRomInfo, puchicaruRomName, NULL, NULL, NULL, NULL, F3AnalogInputInfo, F3AnalogDIPInfo,
 	puchicarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
 };

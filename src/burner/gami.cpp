@@ -21,6 +21,7 @@ bool bLeftAltkeyMapped = false;
 // These are mappable global macros for mapping Pause/FFWD etc to controls in the input mapping dialogue. -dink
 UINT8 macroSystemPause = 0;
 UINT8 macroSystemFFWD = 0;
+UINT8 macroSystemFrame = 0;
 UINT8 macroSystemSaveState = 0;
 UINT8 macroSystemLoadState = 0;
 UINT8 macroSystemUNDOState = 0;
@@ -291,6 +292,16 @@ static void GameInpInitMacros()
 			pgi->Macro.nSysMacro = 1;
 			sprintf(pgi->Macro.szName, "System FFWD");
 			pgi->Macro.pVal[0] = &macroSystemFFWD;
+			pgi->Macro.nVal[0] = 1;
+			nMacroCount++;
+			pgi++;
+
+			pgi->nInput = GIT_MACRO_AUTO;
+			pgi->nType = BIT_DIGITAL;
+			pgi->Macro.nMode = 0;
+			pgi->Macro.nSysMacro = 1;
+			sprintf(pgi->Macro.szName, "System Frame");
+			pgi->Macro.pVal[0] = &macroSystemFrame;
 			pgi->Macro.nVal[0] = 1;
 			nMacroCount++;
 			pgi++;
@@ -936,7 +947,6 @@ static void GameInpInitMacros()
 				pgi->Macro.pVal[j] = bii.pVal;
 				pgi->Macro.nVal[j] = 1;
 			}
-
 			nMacroCount++;
 			pgi++;
 
@@ -947,11 +957,10 @@ static void GameInpInitMacros()
 
 				sprintf(pgi->Macro.szName, "P%i Buttons XYZ", nPlayer + 1);
 				for (INT32 j = 0; j < 3; j++) {
-					BurnDrvGetInputInfo(&bii, nPgmButtons[nPlayer][j]);
+					BurnDrvGetInputInfo(&bii, nPgmButtons[nPlayer][j+3]);
 					pgi->Macro.pVal[j] = bii.pVal;
 					pgi->Macro.nVal[j] = 1;
 				}
-
 				nMacroCount++;
 				pgi++;
 			}
@@ -1999,6 +2008,7 @@ INT32 GameInputAutoIni(INT32 nPlayer, TCHAR* lpszFile, bool bOverWrite)
 	return 0;
 }
 
+// Hardware description, preset file, {hardware, codes}, history.dat token
 tIniStruct gamehw_cfg[] = {
 	{_T("CPS-1/CPS-2/CPS-3 hardware"),	_T("GAME:\\config\\presets\\cps.ini"),		{ HARDWARE_CAPCOM_CPS1, HARDWARE_CAPCOM_CPS1_QSOUND, HARDWARE_CAPCOM_CPS1_GENERIC, HARDWARE_CAPCOM_CPSCHANGER, HARDWARE_CAPCOM_CPS2, HARDWARE_CAPCOM_CPS3, 0 } },
 	{_T("Neo-Geo hardware"),			_T("GAME:\\config\\presets\\neogeo.ini"),	{ HARDWARE_SNK_NEOGEO, HARDWARE_SNK_NEOCD, 0 } },
@@ -2016,6 +2026,25 @@ tIniStruct gamehw_cfg[] = {
 	{_T("Sinclair Spectrum hardware"),	_T("GAME:\\config\\presets\\spectrum.ini"),	{ HARDWARE_SPECTRUM, 0 } },
 	{_T("\0"), _T("\0"), { 0 } } // END of list
 };
+
+void GetHistoryDatHardwareToken(char *to_string)
+{
+	INT32 nHardwareFlag = (BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK);
+
+	// See if nHardwareFlag belongs to any systems in gamehw_config
+	for (INT32 i = 0; gamehw_cfg[i].ini[0] != '\0'; i++) {
+		for (INT32 hw = 0; gamehw_cfg[i].hw[hw] != 0; hw++) {
+			if (gamehw_cfg[i].hw[hw] == nHardwareFlag)
+			{
+				strcpy(to_string, gamehw_cfg[i].gameinfotoken);
+				return;
+			}
+		}
+	}
+
+	// HW not found, default to "$info=" (arcade game)
+	strcpy(to_string, "$info=");
+}
 
 INT32 ConfigGameLoadHardwareDefaults()
 {
