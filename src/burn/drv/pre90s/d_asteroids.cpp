@@ -770,15 +770,15 @@ static INT32 res_check()
 		BurnDrvGetVisibleSize(&Width, &Height);
 
 		if (Height != 1080) {
-			vector_rescale((1080*600/500), 1080);
+			vector_rescale((1080*640/480), 1080);
 			return 1;
 		}
 	} else {
 		INT32 Width, Height;
 		BurnDrvGetVisibleSize(&Width, &Height);
 
-		if (Height != 500) {
-			vector_rescale(600, 500);
+		if (Height != 480) {
+			vector_rescale(640, 480);
 			return 1;
 		}
 	}
@@ -807,6 +807,8 @@ static INT32 DrvDoReset(INT32 clear_mem)
 	avgOK = 0;
 
 	res_check();
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -928,7 +930,7 @@ static INT32 AstdeluxInit()
 
 	earom_init();
 
-	PokeyInit(12096000/8, 1, 2.40, 1);
+	PokeyInit(12096000/8, 1, 1.40, 1);
 	PokeySetTotalCyclesCB(M6502TotalCycles);
 	PokeyAllPotCallback(0, allpot_read);
 
@@ -1190,10 +1192,10 @@ struct BurnDriver BurnDrvAsteroid = {
 	"asteroid", NULL, NULL, NULL, "1979",
 	"Asteroids (rev 4)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, asteroidRomInfo, asteroidRomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AsteroidDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 // Asteroids (rev 2)
@@ -1215,10 +1217,10 @@ struct BurnDriver BurnDrvAsteroid2 = {
 	"asteroid2", "asteroid", NULL, NULL, "1979",
 	"Asteroids (rev 2)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, asteroid2RomInfo, asteroid2RomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AsteroidDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1241,16 +1243,16 @@ struct BurnDriver BurnDrvAsteroid1 = {
 	"asteroid1", "asteroid", NULL, NULL, "1979",
 	"Asteroids (rev 1)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, asteroid1RomInfo, asteroid1RomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AsteroidDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 
-// Asteroids (bootleg on Lunar Lander hardware)
+// Asteroids (bootleg on Lunar Lander hardware, set 1)
 
-static struct BurnRomInfo asteroidbRomDesc[] = {
+static struct BurnRomInfo asteroidb1RomDesc[] = {
 	{ "035145ll.de1",		0x0800, 0x605fc0f2, 1 | BRF_PRG | BRF_ESS }, //  0 M6502 Code
 	{ "035144ll.c1",		0x0800, 0xe106de77, 1 | BRF_PRG | BRF_ESS }, //  1
 	{ "035143ll.b1",		0x0800, 0x6b1d8594, 1 | BRF_PRG | BRF_ESS }, //  2
@@ -1260,8 +1262,8 @@ static struct BurnRomInfo asteroidbRomDesc[] = {
 	{ "034602-01.c8",		0x0100, 0x97953db8, 3 | BRF_GRA },           //  4 DVG PROM
 };
 
-STD_ROM_PICK(asteroidb)
-STD_ROM_FN(asteroidb)
+STD_ROM_PICK(asteroidb1)
+STD_ROM_FN(asteroidb1)
 
 static INT32 AsteroidbInit()
 {
@@ -1277,14 +1279,41 @@ static INT32 AsteroidbInit()
 	return nRet;
 }
 
-struct BurnDriver BurnDrvAsteroidb = {
-	"asteroidb", "asteroid", NULL, NULL, "1979",
-	"Asteroids (bootleg on Lunar Lander hardware)\0", NULL, "bootleg", "Miscellaneous",
+struct BurnDriver BurnDrvAsteroidb1 = {
+	"asteroidb1", "asteroid", NULL, NULL, "1979",
+	"Asteroids (bootleg on Lunar Lander hardware, set 1)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
-	NULL, asteroidbRomInfo, asteroidbRomName, NULL, NULL, NULL, NULL, AsteroidbInputInfo, AsteroidbDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	NULL, asteroidb1RomInfo, asteroidb1RomName, NULL, NULL, NULL, NULL, AsteroidbInputInfo, AsteroidbDIPInfo,
 	AsteroidbInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
+};
+
+
+// Asteroids (bootleg on Lunar Lander hardware, set 2)
+// Based on 'asteroid1', the only difference is that the Atari copyright is removed by zeroing the ROM area
+
+static struct BurnRomInfo asteroidb2RomDesc[] = {
+	{ "p88.bin",			0x0800, 0xe9bfda64, 1 | BRF_PRG | BRF_ESS }, //  0 M6502 Code
+	{ "p37.bin",			0x0800, 0xe53c28a9, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "p86.bin",			0x0800, 0x7d4e3d05, 1 | BRF_PRG | BRF_ESS }, //  2
+
+	{ "p35.bin",			0x0800, 0x7b0260df, 2 | BRF_PRG | BRF_ESS }, //  3 Vector ROM
+
+	{ "034602-01.c8",		0x0100, 0x97953db8, 3 | BRF_GRA },           //  4 DVG PROM
+};
+
+STD_ROM_PICK(asteroidb2)
+STD_ROM_FN(asteroidb2)
+
+struct BurnDriver BurnDrvAsteroidb2 = {
+	"asteroidb2", "asteroid", NULL, NULL, "1979",
+	"Asteroids (bootleg on Lunar Lander hardware, set 2)\0", NULL, "bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	NULL, asteroidb2RomInfo, asteroidb2RomName, NULL, NULL, NULL, NULL, AsteroidbInputInfo, AsteroidbDIPInfo,
+	AsteroidbInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
+	640, 480, 4, 3
 };
 
 
@@ -1307,10 +1336,10 @@ struct BurnDriver BurnDrvSpcrocks = {
 	"spcrocks", "asteroid", NULL, NULL, "1981",
 	"Space Rocks (Spanish clone of Asteroids)\0", NULL, "Atari (J.Estevez license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, spcrocksRomInfo, spcrocksRomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AerolitosDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1333,10 +1362,10 @@ struct BurnDriver BurnDrvAerolitos = {
 	"aerolitos", "asteroid", NULL, NULL, "1980",
 	"Aerolitos (Spanish bootleg of Asteroids)\0", NULL, "bootleg (Rodmar Elec.)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, aerolitosRomInfo, aerolitosRomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AerolitosDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1377,10 +1406,10 @@ struct BurnDriver BurnDrvAsterock = {
 	"asterock", "asteroid", NULL, NULL, "1979",
 	"Asterock (Sidam bootleg of Asteroids)\0", NULL, "bootleg (Sidam)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, asterockRomInfo, asterockRomName, NULL, NULL, NULL, NULL, AsterockInputInfo, AsterockDIPInfo,
 	AsterockInt, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1407,10 +1436,10 @@ struct BurnDriver BurnDrvAsterockv = {
 	"asterockv", "asteroid", NULL, NULL, "1979",
 	"Asterock (Videotron bootleg of Asteroids)\0", NULL, "bootleg (Videotron)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, asterockvRomInfo, asterockvRomName, NULL, NULL, NULL, NULL, AsterockInputInfo, AsterockDIPInfo,
 	AsterockInt, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1437,10 +1466,10 @@ struct BurnDriver BurnDrvMeteorite = {
 	"meteorite", "asteroid", NULL, NULL, "1979",
 	"Meteorite (Proel bootleg of Asteroids)\0", NULL, "bootleg (Proel)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, meteoriteRomInfo, meteoriteRomName, NULL, NULL, NULL, NULL, AsterockInputInfo, AsterockDIPInfo,
 	AsterockInt, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1463,10 +1492,10 @@ struct BurnDriver BurnDrvMeteorts = {
 	"meteorts", "asteroid", NULL, NULL, "1979",
 	"Meteorites (VGG bootleg of Asteroids)\0", NULL, "bootleg (VGG)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, meteortsRomInfo, meteortsRomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AsteroidDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1493,10 +1522,10 @@ struct BurnDriver BurnDrvMeteorho = {
 	"meteorho", "asteroid", NULL, NULL, "1979",
 	"Meteor (Hoei bootleg of Asteroids)\0", NULL, "bootleg (Hoei)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, meteorhoRomInfo, meteorhoRomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AsteroidDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 // Meteor (bootleg of Asteroids)
@@ -1522,10 +1551,10 @@ struct BurnDriver BurnDrvMeteorbl = {
 	"meteorbl", "asteroid", NULL, NULL, "1979",
 	"Meteor (bootleg of Asteroids)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, meteorblRomInfo, meteorblRomName, NULL, NULL, NULL, NULL, AsterockInputInfo, AsterockDIPInfo,
 	AsterockInt, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1548,10 +1577,10 @@ struct BurnDriver BurnDrvHyperspc = {
 	"hyperspc", "asteroid", NULL, NULL, "1979",
 	"Hyperspace (bootleg of Asteroids)\0", NULL, "bootleg (Rumiano)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, hyperspcRomInfo, hyperspcRomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AsteroidDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1579,7 +1608,7 @@ struct BurnDriver BurnDrvAstdelux = {
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, astdeluxRomInfo, astdeluxRomName, NULL, NULL, NULL, NULL, AstdeluxInputInfo, AstdeluxDIPInfo,
 	AstdeluxInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 // Asteroids Deluxe (rev 2)
@@ -1606,7 +1635,7 @@ struct BurnDriver BurnDrvAstdelux2 = {
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, astdelux2RomInfo, astdelux2RomName, NULL, NULL, NULL, NULL, AstdeluxInputInfo, AstdeluxDIPInfo,
 	AstdeluxInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1634,7 +1663,7 @@ struct BurnDriver BurnDrvAstdelux1 = {
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, astdelux1RomInfo, astdelux1RomName, NULL, NULL, NULL, NULL, AstdeluxInputInfo, AstdeluxDIPInfo,
 	AstdeluxInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1660,10 +1689,10 @@ struct BurnDriver BurnDrvLlander = {
 	"llander", NULL, NULL, NULL, "1979",
 	"Lunar Lander (rev 2)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, llanderRomInfo, llanderRomName, NULL, NULL, NULL, NULL, LlanderInputInfo, LlanderDIPInfo,
 	LlanderInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1689,10 +1718,10 @@ struct BurnDriver BurnDrvLlander1 = {
 	"llander1", "llander", NULL, NULL, "1979",
 	"Lunar Lander (rev 1)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, llander1RomInfo, llander1RomName, NULL, NULL, NULL, NULL, LlanderInputInfo, Llander1DIPInfo,
 	LlanderInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1717,8 +1746,8 @@ struct BurnDriverD BurnDrvLlandert = {
 	"llandert", "llander", NULL, NULL, "1979",
 	"Lunar Lander (screen test)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, llandertRomInfo, llandertRomName, NULL, NULL, NULL, NULL, LlandertInputInfo, LlandertDIPInfo,
 	LlanderInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
-	600, 500, 4, 3
+	640, 480, 4, 3
 };

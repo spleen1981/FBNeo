@@ -13,6 +13,9 @@ const UINT32 gmask = 0x00ff0000;
 const UINT32 bmask = 0xff000000;
 #endif
 
+
+static Uint32 starting_stick;
+
 static SDL_Renderer* sdlRenderer = NULL;
 static SDL_Surface* screenshot = NULL;
 static SDL_Texture* screenshotTexture = NULL;
@@ -38,10 +41,16 @@ struct MenuItem
 #define LOADSTATE 4
 #define SCREENSHOT 5
 #define RESET 6
+#define CHEATMENU 7
 
 // menu item tracking
 static UINT16 current_menu = MAINMENU;
 static UINT16 current_selected_item = 0;
+
+static INT32 cheatcount = 0;
+
+struct MenuItem cheatMenu[255];
+
 
 int QuickSave()
 {
@@ -59,6 +68,32 @@ int MainMenuSelected()
 {
   current_selected_item = 0;
   current_menu = MAINMENU;
+  return 0;
+}
+
+int CheatMenuSelected()
+{
+  current_selected_item = 0;
+  current_menu = CHEATMENU;
+	cheatcount = 0;
+	int i = 0;
+	CheatInfo* pCurrentCheat = pCheatInfo;
+
+	while (pCurrentCheat) {
+		pCurrentCheat = pCurrentCheat->pNext;
+		i++;
+	}
+	int c = 0;
+	pCurrentCheat = pCheatInfo;
+	while (pCurrentCheat)
+	{
+		cheatMenu[c] = {pCurrentCheat->szCheatName, MainMenuSelected, NULL};
+		pCurrentCheat = pCurrentCheat->pNext;
+		c++;
+	}
+	i++;
+	cheatMenu[i] = {"BACK \0", MainMenuSelected, NULL};
+	cheatcount = i;
   return 0;
 }
 
@@ -83,15 +118,16 @@ int BackToGameSelected()
 	return 1;
 }
 
-#define MAINMENU_COUNT 6
+#define MAINMENU_COUNT 7
 
 struct MenuItem mainMenu[MAINMENU_COUNT] =
 {
  {"DIP Switches\0", DIPMenuSelected, NULL},
  {"Controller Options\0", ControllerMenuSelected, NULL},
+ {"Cheats\0", CheatMenuSelected, NULL},
  {"Save State\0", QuickSave, NULL},
  {"Load State\0", QuickLoad, NULL},
- {"Save Screenshot\0", NULL, NULL},
+ {"Save Screenshot\0", MakeScreenShot, NULL},
  {"Back to Game!\0", BackToGameSelected, NULL},
 };
 
@@ -116,6 +152,7 @@ static UINT16 current_item_count = MAINMENU_COUNT;
 void ingame_gui_init()
 {
   AudSoundStop();
+	cheatcount = 0;
 }
 
 void ingame_gui_exit()
@@ -140,14 +177,18 @@ void ingame_gui_render()
         current_item_count = MAINMENU_COUNT;
         current_menu_items = mainMenu;
         break;
-	  case DIPMENU:
-	  	current_item_count = DIPMENU_COUNT;
-	  	current_menu_items = dipMenu;
-	  	break;
-	  case CONTROLLERMENU:
-	 	current_item_count = CONTROLLERMENU_COUNT;
-	 	current_menu_items = controllerMenu;
-	 	break;
+		  case DIPMENU:
+		  	current_item_count = DIPMENU_COUNT;
+		  	current_menu_items = dipMenu;
+		  	break;
+		  case CONTROLLERMENU:
+			 	current_item_count = CONTROLLERMENU_COUNT;
+			 	current_menu_items = controllerMenu;
+			 	break;
+			case CHEATMENU:
+				current_item_count = cheatcount;
+				current_menu_items = cheatMenu;
+				break;
   }
 
   for(int i=0; i < current_item_count; i ++)
@@ -229,15 +270,22 @@ void ingame_gui_start(SDL_Renderer* renderer)
 
 	dest_title_texture_rect.x = 150; //the x coordinate
 	dest_title_texture_rect.y = 0; // the y coordinate
-	dest_title_texture_rect.w = 50; //the width of the texture
-	dest_title_texture_rect.h = 50; //the height of the texture
+	dest_title_texture_rect.w = 100; //the width of the texture
+	dest_title_texture_rect.h = 100; //the height of the texture
 
   ingame_gui_init();
 
   while (!finished)
   {
+		starting_stick = SDL_GetTicks();
+
     finished = ingame_gui_process();
     ingame_gui_render();
+	// limit 5 FPS (free CPU usage)
+		if ( ( 1000 / 5 ) > SDL_GetTicks() - starting_stick)
+		{
+			SDL_Delay( 1000 / 5 - ( SDL_GetTicks() - starting_stick ) );
+		}
   }
 
   ingame_gui_exit();

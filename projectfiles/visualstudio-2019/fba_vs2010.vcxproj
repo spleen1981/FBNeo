@@ -53,10 +53,12 @@
     <ClInclude Include="..\..\src\burn\devices\bsmt2000.h" />
     <ClInclude Include="..\..\src\burn\devices\c169.h" />
     <ClInclude Include="..\..\src\burn\devices\decobsmt.h" />
+    <ClInclude Include="..\..\src\burn\devices\ds2404.h" />
     <ClInclude Include="..\..\src\burn\devices\earom.h" />
     <ClInclude Include="..\..\src\burn\devices\eeprom.h" />
     <ClInclude Include="..\..\src\burn\devices\gaelco_crypt.h" />
     <ClInclude Include="..\..\src\burn\devices\i4x00.h" />
+    <ClInclude Include="..\..\src\burn\devices\intelfsh.h" />
     <ClInclude Include="..\..\src\burn\devices\joyprocess.h" />
     <ClInclude Include="..\..\src\burn\devices\k1ge.h" />
     <ClInclude Include="..\..\src\burn\devices\kaneko_tmap.h" />
@@ -85,6 +87,7 @@
     <ClInclude Include="..\..\src\burn\devices\st0020.h" />
     <ClInclude Include="..\..\src\burn\devices\t5182.h" />
     <ClInclude Include="..\..\src\burn\devices\timekpr.h" />
+    <ClInclude Include="..\..\src\burn\devices\tlc34076.h" />
     <ClInclude Include="..\..\src\burn\devices\tms34061.h" />
     <ClInclude Include="..\..\src\burn\devices\tms9928a.h" />
     <ClInclude Include="..\..\src\burn\devices\v3021.h" />
@@ -108,6 +111,7 @@
     <ClInclude Include="..\..\src\burn\drv\irem\irem_sound.h" />
     <ClInclude Include="..\..\src\burn\drv\konami\k007121.h" />
     <ClInclude Include="..\..\src\burn\drv\konami\k007342_k007420.h" />
+    <ClInclude Include="..\..\src\burn\drv\konami\k007452.h" />
     <ClInclude Include="..\..\src\burn\drv\konami\konamiic.h" />
     <ClInclude Include="..\..\src\burn\drv\konami\timeplt_snd.h" />
     <ClInclude Include="..\..\src\burn\drv\megadrive\mdeeprom.h" />
@@ -118,6 +122,10 @@
     <ClInclude Include="..\..\src\burn\drv\midway\midtunit_dma.h" />
     <ClInclude Include="..\..\src\burn\drv\midway\midwayic.h" />
     <ClInclude Include="..\..\src\burn\drv\midway\midwunit.h" />
+    <ClInclude Include="..\..\src\burn\drv\midway\narc_sound.h" />
+    <ClInclude Include="..\..\src\burn\drv\midway\williams_adpcm.h" />
+    <ClInclude Include="..\..\src\burn\drv\midway\williams_cvsd.h" />
+    <ClInclude Include="..\..\src\burn\drv\midway\yawdim_sound.h" />
     <ClInclude Include="..\..\src\burn\drv\neogeo\neogeo.h" />
     <ClInclude Include="..\..\src\burn\drv\neogeo\neo_sprite_render.h" />
     <ClInclude Include="..\..\src\burn\drv\neogeo\neo_text_render.h" />
@@ -158,6 +166,7 @@
     <ClInclude Include="..\..\src\burn\hiscore.h" />
     <ClInclude Include="..\..\src\burn\snd\asteroids.h" />
     <ClInclude Include="..\..\src\burn\snd\ay8910.h" />
+    <ClInclude Include="..\..\src\burn\snd\biquad.h" />
     <ClInclude Include="..\..\src\burn\snd\burn_md2612.h" />
     <ClInclude Include="..\..\src\burn\snd\burn_y8950.h" />
     <ClInclude Include="..\..\src\burn\snd\burn_ym2151.h" />
@@ -169,11 +178,14 @@
     <ClInclude Include="..\..\src\burn\snd\burn_ym3526.h" />
     <ClInclude Include="..\..\src\burn\snd\burn_ym3812.h" />
     <ClInclude Include="..\..\src\burn\snd\burn_ymf262.h" />
+    <ClInclude Include="..\..\src\burn\snd\burn_ymf271.h" />
     <ClInclude Include="..\..\src\burn\snd\burn_ymf278b.h" />
     <ClInclude Include="..\..\src\burn\snd\bzone.h" />
     <ClInclude Include="..\..\src\burn\snd\c140.h" />
+    <ClInclude Include="..\..\src\burn\snd\c352.h" />
     <ClInclude Include="..\..\src\burn\snd\c6280.h" />
     <ClInclude Include="..\..\src\burn\snd\dac.h" />
+    <ClInclude Include="..\..\src\burn\snd\downsample.h" />
     <ClInclude Include="..\..\src\burn\snd\es5506.h" />
     <ClInclude Include="..\..\src\burn\snd\es8712.h" />
     <ClInclude Include="..\..\src\burn\snd\flower.h" />
@@ -194,6 +206,7 @@
     <ClInclude Include="..\..\src\burn\snd\msm5205.h" />
     <ClInclude Include="..\..\src\burn\snd\msm5232.h" />
     <ClInclude Include="..\..\src\burn\snd\msm6295.h" />
+    <ClInclude Include="..\..\src\burn\snd\multipcm.h" />
     <ClInclude Include="..\..\src\burn\snd\namco_snd.h" />
     <ClInclude Include="..\..\src\burn\snd\nes_apu.h" />
     <ClInclude Include="..\..\src\burn\snd\nes_defs.h" />
@@ -227,6 +240,7 @@
     <ClInclude Include="..\..\src\burn\snd\ym2612.h" />
     <ClInclude Include="..\..\src\burn\snd\ymdeltat.h" />
     <ClInclude Include="..\..\src\burn\snd\ymf262.h" />
+    <ClInclude Include="..\..\src\burn\snd\ymf271.h" />
     <ClInclude Include="..\..\src\burn\snd\ymf278b.h" />
     <ClInclude Include="..\..\src\burn\snd\ymz280b.h" />
     <ClInclude Include="..\..\src\burn\state.h" />
@@ -242,6 +256,7 @@
     <ClInclude Include="..\..\src\cpu\arm_intf.h" />
     <ClInclude Include="..\..\src\cpu\e132xs\e132xs.h" />
     <ClInclude Include="..\..\src\cpu\e132xs_intf.h" />
+    <ClInclude Include="..\..\src\cpu\f8\f8.h" />
     <ClInclude Include="..\..\src\cpu\h6280\h6280.h" />
     <ClInclude Include="..\..\src\cpu\h6280\h6280ops.h" />
     <ClInclude Include="..\..\src\cpu\h6280_intf.h" />
@@ -250,6 +265,7 @@
     <ClInclude Include="..\..\src\cpu\i8039\i8039.h" />
     <ClInclude Include="..\..\src\cpu\konami\konami.h" />
     <ClInclude Include="..\..\src\cpu\konami_intf.h" />
+    <ClInclude Include="..\..\src\cpu\m377\m37710.h" />
     <ClInclude Include="..\..\src\cpu\m6502\ill02.h" />
     <ClInclude Include="..\..\src\cpu\m6502\m6502.h" />
     <ClInclude Include="..\..\src\cpu\m6502\ops02.h" />
@@ -280,7 +296,7 @@
     <ClInclude Include="..\..\src\cpu\sh2_intf.h" />
     <ClInclude Include="..\..\src\cpu\tlcs900\tlcs900.h" />
     <ClInclude Include="..\..\src\cpu\tlcs90_intf.h" />
-    <ClInclude Include="..\..\src\cpu\tms34010_intf.h" />
+    <ClInclude Include="..\..\src\cpu\tms34_intf.h" />
     <ClInclude Include="..\..\src\cpu\upd7810_intf.h" />
     <ClInclude Include="..\..\src\cpu\v60_intf.h" />
     <ClInclude Include="..\..\src\cpu\z180_intf.h" />
@@ -446,10 +462,12 @@
     <ClCompile Include="..\..\src\burn\devices\bsmt2000.cpp" />
     <ClCompile Include="..\..\src\burn\devices\c169.cpp" />
     <ClCompile Include="..\..\src\burn\devices\decobsmt.cpp" />
+    <ClCompile Include="..\..\src\burn\devices\ds2404.cpp" />
     <ClCompile Include="..\..\src\burn\devices\earom.cpp" />
     <ClCompile Include="..\..\src\burn\devices\eeprom.cpp" />
     <ClCompile Include="..\..\src\burn\devices\gaelco_crypt.cpp" />
     <ClCompile Include="..\..\src\burn\devices\i4x00.cpp" />
+    <ClCompile Include="..\..\src\burn\devices\intelfsh.cpp" />
     <ClCompile Include="..\..\src\burn\devices\joyprocess.cpp" />
     <ClCompile Include="..\..\src\burn\devices\k1ge.cpp" />
     <ClCompile Include="..\..\src\burn\devices\kaneko_tmap.cpp" />
@@ -478,6 +496,7 @@
     <ClCompile Include="..\..\src\burn\devices\st0020.cpp" />
     <ClCompile Include="..\..\src\burn\devices\t5182.cpp" />
     <ClCompile Include="..\..\src\burn\devices\timekpr.cpp" />
+    <ClCompile Include="..\..\src\burn\devices\tlc34076.cpp" />
     <ClCompile Include="..\..\src\burn\devices\tms34061.cpp" />
     <ClCompile Include="..\..\src\burn\devices\tms9928a.cpp" />
     <ClCompile Include="..\..\src\burn\devices\v3021.cpp" />
@@ -516,14 +535,23 @@
     <ClCompile Include="..\..\src\burn\drv\capcom\cps_rw.cpp" />
     <ClCompile Include="..\..\src\burn\drv\capcom\cps_scr.cpp" />
     <ClCompile Include="..\..\src\burn\drv\capcom\ctv.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\channelf\d_channelf.cpp" />
     <ClCompile Include="..\..\src\burn\drv\dataeast\d_liberate.cpp" />
     <ClCompile Include="..\..\src\burn\drv\dataeast\d_sshangha.cpp" />
     <ClCompile Include="..\..\src\burn\drv\konami\d_wecleman.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\konami\k007452.cpp" />
     <ClCompile Include="..\..\src\burn\drv\megadrive\d_mdarcbl.cpp" />
     <ClCompile Include="..\..\src\burn\drv\megadrive\mdeeprom.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\midway\d_xunit.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\midway\d_yunit.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\midway\narc_sound.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\midway\williams_adpcm.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\midway\williams_cvsd.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\midway\yawdim_sound.cpp" />
     <ClCompile Include="..\..\src\burn\drv\nes\d_nes.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pre90s\d_berzerk.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pre90s\d_deadang.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\pre90s\d_exterm.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pre90s\d_iqblock.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pre90s\d_kingofbox.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pre90s\d_magmax.cpp" />
@@ -534,6 +562,8 @@
     <ClCompile Include="..\..\src\burn\drv\pre90s\d_spdodgeb.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pre90s\d_stuntair.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pre90s\d_tubep.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\pst90s\d_artmagic.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\pst90s\d_btoads.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pst90s\d_cischeat.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pst90s\d_eolith.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pst90s\d_eolith16.cpp" />
@@ -547,34 +577,51 @@
     <ClCompile Include="..\..\src\burn\drv\pst90s\d_kickgoal.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pst90s\d_legionna.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pst90s\d_limenko.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\pst90s\d_ms32.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\pst90s\d_namcona1.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\pst90s\d_namconb1.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pst90s\d_ngp.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pst90s\d_pasha2.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pst90s\d_rabbit.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\pst90s\d_seibuspi.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pst90s\d_shangha3.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pst90s\d_vamphalf.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pst90s\d_vegaeo.cpp" />
     <ClCompile Include="..\..\src\burn\drv\pst90s\d_x2222.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\sega\d_segas32.cpp" />
     <ClCompile Include="..\..\src\burn\drv\sega\d_sys24.cpp" />
     <ClCompile Include="..\..\src\burn\drv\sega\fd1094_intf.cpp" />
     <ClCompile Include="..\..\src\burn\drv\taito\d_buggychl.cpp" />
     <ClCompile Include="..\..\src\burn\drv\taito\d_galastrm.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\taito\d_gladiatr.cpp" />
     <ClCompile Include="..\..\src\burn\drv\taito\d_groundfx.cpp" />
     <ClCompile Include="..\..\src\burn\drv\taito\d_gunbuster.cpp" />
+    <ClCompile Include="..\..\src\burn\drv\taito\d_lsasquad.cpp" />
     <ClCompile Include="..\..\src\burn\drv\taito\d_mexico86.cpp" />
     <ClCompile Include="..\..\src\burn\drv\taito\d_qix.cpp" />
     <ClCompile Include="..\..\src\burn\drv\taito\d_undrfire.cpp" />
     <ClCompile Include="..\..\src\burn\snd\burn_ymf262.cpp" />
+    <ClCompile Include="..\..\src\burn\snd\burn_ymf271.cpp" />
+    <ClCompile Include="..\..\src\burn\snd\c352.cpp" />
     <ClCompile Include="..\..\src\burn\snd\i5000.cpp" />
+    <ClCompile Include="..\..\src\burn\snd\multipcm.cpp" />
     <ClCompile Include="..\..\src\burn\snd\s14001a.cpp" />
     <ClCompile Include="..\..\src\burn\snd\t6w28.cpp" />
     <ClCompile Include="..\..\src\burn\snd\ymf262.cpp" />
+    <ClCompile Include="..\..\src\burn\snd\ymf271.cpp" />
     <ClCompile Include="..\..\src\cpu\e132xs\e132xs.cpp" />
+    <ClCompile Include="..\..\src\cpu\f8\f8.cpp" />
+    <ClCompile Include="..\..\src\cpu\i386\i386.cpp" />
+    <ClCompile Include="..\..\src\cpu\i8x41\mcs48.cpp" />
+    <ClCompile Include="..\..\src\cpu\m377\m37710.cpp" />
     <ClCompile Include="..\..\src\cpu\mips3\x64\mips3_x64.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\src\cpu\tlcs900\tlcs900.cpp" />
+    <ClCompile Include="..\..\src\cpu\tms34\tms34010.cpp" />
+    <ClCompile Include="..\..\src\cpu\tms34_intf.cpp" />
     <ClCompile Include="..\..\src\cpu\z80\z80ctc.cpp" />
     <ClCompile Include="..\..\src\cpu\z80\z80pio.cpp" />
     <ClCompile Include="..\..\src\intf\cd\win32\cd_img.cpp" />
@@ -1353,7 +1400,6 @@ del %(Filename).exe</Command>
     <ClCompile Include="..\..\src\cpu\hd6309_intf.cpp" />
     <ClCompile Include="..\..\src\cpu\i8039\i8039.cpp" />
     <ClCompile Include="..\..\src\cpu\i8051\mcs51.cpp" />
-    <ClCompile Include="..\..\src\cpu\i8x41\i8x41.cpp" />
     <ClCompile Include="..\..\src\cpu\konami\konami.cpp" />
     <ClCompile Include="..\..\src\cpu\konami_intf.cpp" />
     <ClCompile Include="..\..\src\cpu\m6502\m6502.cpp" />
@@ -1423,9 +1469,6 @@ del %(Filename).exe
     <ClCompile Include="..\..\src\cpu\tlcs90\tlcs90.cpp" />
     <ClCompile Include="..\..\src\cpu\tlcs90_intf.cpp" />
     <ClCompile Include="..\..\src\cpu\tms32010\tms32010.cpp" />
-    <ClCompile Include="..\..\src\cpu\tms34010\tms34010.cpp" />
-    <ClCompile Include="..\..\src\cpu\tms34010\tms34010_optable.cpp" />
-    <ClCompile Include="..\..\src\cpu\tms34010_intf.cpp" />
     <ClCompile Include="..\..\src\cpu\upd7725\upd7725.cpp" />
     <ClCompile Include="..\..\src\cpu\upd7810\upd7810.cpp" />
     <ClCompile Include="..\..\src\cpu\v60\v60.cpp" />
@@ -1703,9 +1746,10 @@ del build_details.exe
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <TargetName>fbneod_vs</TargetName>
+    <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>..\..\src\dep\mingw\include\directx9;..\..\src\dep\vc\include;..\..\src\dep\vc\include\xaudio2;$(IncludePath)</IncludePath>
@@ -1720,6 +1764,7 @@ del build_details.exe
     <RunCodeAnalysis>false</RunCodeAnalysis>
     <TargetName>fbneo_vs</TargetName>
     <LibraryPath>$(LibraryPath)</LibraryPath>
+    <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>..\..\src\dep\mingw\include\directx9;..\..\src\dep\vc\include;..\..\src\dep\vc\include\xaudio2;$(IncludePath)</IncludePath>
@@ -1731,7 +1776,7 @@ del build_details.exe
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\src\dep\libs\lib7z;..\..\src\burner\win32\resource;..\..\src\burn\drv\taito;..\..\src\burn\drv\misc_post90s;..\..\src\burn\devices;generated;..\..\src\intf\audio\win32;..\..\src\intf\audio;..\..\src\intf\;..\..\src\intf\video\scalers;..\..\src\intf\video\win32;..\..\src\intf\video;..\..\src\intf\perfcount\win32;..\..\src\intf\perfcount;..\..\src\intf\input\win32;..\..\src\intf\input;..\..\src\intf\cd\win32;..\..\src\intf\cd;..\..\src\intf;..\..\src\burner\win32;..\..\src\dep\libs\zlib;..\..\src\dep\libs\libpng;..\..\src\dep\libs;..\..\src\dep\kaillera\client;..\..\src\dep\kaillera;..\..\src\burn\snd;..\..\src\cpu;..\..\src\burner;..\..\src\burn;..\..\src\cpu\z80;..\..\src\cpu\sh2;..\..\src\cpu\s2650;..\..\src\cpu\nec;..\..\src\cpu\m6809;..\..\src\cpu\m6805;..\..\src\cpu\m6800;..\..\src\cpu\m6502;..\..\src\cpu\m68k;..\..\src\cpu\i8039;..\..\src\cpu\konami;..\..\src\cpu\hd6309;..\..\src\cpu\h6280;..\..\src\cpu\arm7;..\..\src\cpu\arm;..\..\src\cpu\g65816;..\..\src\cpu\spc700;..\..\src\cpu\i8051;..\..\src\cpu\tms32010;..\..\src\cpu\tms34010;..\..\src\cpu\i8x41;..\..\src\burn\drv\sega;..\..\src\burn\drv\dataeast;..\..\src\burn\drv\konami;..\..\src\cpu\z180;..\..\src\burn\drv\irem;..\..\src\cpu\upd7810;..\..\src\cpu\v60;..\..\src\cpu\upd7725;..\..\src\cpu\tlcs900;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src\cpu\f8;..\..\src\dep\libs\lib7z;..\..\src\burner\win32\resource;..\..\src\burn\drv\taito;..\..\src\burn\drv\misc_post90s;..\..\src\burn\devices;generated;..\..\src\intf\audio\win32;..\..\src\intf\audio;..\..\src\intf\;..\..\src\intf\video\scalers;..\..\src\intf\video\win32;..\..\src\intf\video;..\..\src\intf\perfcount\win32;..\..\src\intf\perfcount;..\..\src\intf\input\win32;..\..\src\intf\input;..\..\src\intf\cd\win32;..\..\src\intf\cd;..\..\src\intf;..\..\src\burner\win32;..\..\src\dep\libs\zlib;..\..\src\dep\libs\libpng;..\..\src\dep\libs;..\..\src\dep\kaillera\client;..\..\src\dep\kaillera;..\..\src\burn\snd;..\..\src\cpu;..\..\src\burner;..\..\src\burn;..\..\src\cpu\z80;..\..\src\cpu\sh2;..\..\src\cpu\s2650;..\..\src\cpu\nec;..\..\src\cpu\m6809;..\..\src\cpu\m6805;..\..\src\cpu\m6800;..\..\src\cpu\m6502;..\..\src\cpu\m68k;..\..\src\cpu\i8039;..\..\src\cpu\konami;..\..\src\cpu\hd6309;..\..\src\cpu\h6280;..\..\src\cpu\arm7;..\..\src\cpu\arm;..\..\src\cpu\g65816;..\..\src\cpu\spc700;..\..\src\cpu\i8051;..\..\src\cpu\tms32010;..\..\src\cpu\tms34;..\..\src\cpu\i8x41;..\..\src\burn\drv\sega;..\..\src\burn\drv\dataeast;..\..\src\burn\drv\konami;..\..\src\cpu\z180;..\..\src\burn\drv\irem;..\..\src\cpu\upd7810;..\..\src\cpu\v60;..\..\src\cpu\upd7725;..\..\src\cpu\tlcs900;..\..\src\cpu\m377;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAs>Default</CompileAs>
       <PreprocessorDefinitions>BUILD_WIN32;FASTCALL;_DEBUG;FBNEO_DEBUG;LSB_FIRST;INLINE=__inline static;INCLUDE_LIB_PNGH;C_INLINE=__inline;MAME_INLINE=__inline static;_CRT_SECURE_NO_WARNINGS;WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP;INCLUDE_7Z_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnablePREfast>true</EnablePREfast>
@@ -1758,7 +1803,7 @@ del build_details.exe
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\src\dep\libs\lib7z;..\..\src\burner\win32\resource;..\..\src\burn\drv\taito;..\..\src\burn\drv\misc_post90s;..\..\src\burn\devices;generated;..\..\src\intf\audio\win32;..\..\src\intf\audio;..\..\src\intf\;..\..\src\intf\video\scalers;..\..\src\intf\video\win32;..\..\src\intf\video;..\..\src\intf\perfcount\win32;..\..\src\intf\perfcount;..\..\src\intf\input\win32;..\..\src\intf\input;..\..\src\intf\cd\win32;..\..\src\intf\cd;..\..\src\intf;..\..\src\burner\win32;..\..\src\dep\libs\zlib;..\..\src\dep\libs\libpng;..\..\src\dep\libs;..\..\src\dep\kaillera\client;..\..\src\dep\kaillera;..\..\src\burn\snd;..\..\src\cpu;..\..\src\burner;..\..\src\burn;..\..\src\cpu\z80;..\..\src\cpu\sh2;..\..\src\cpu\s2650;..\..\src\cpu\nec;..\..\src\cpu\m6809;..\..\src\cpu\m6805;..\..\src\cpu\m6800;..\..\src\cpu\m6502;..\..\src\cpu\m68k;..\..\src\cpu\i8039;..\..\src\cpu\konami;..\..\src\cpu\hd6309;..\..\src\cpu\h6280;..\..\src\cpu\arm7;..\..\src\cpu\arm;..\..\src\cpu\g65816;..\..\src\cpu\spc700;..\..\src\cpu\i8051;..\..\src\cpu\tms32010;..\..\src\cpu\tms34010;..\..\src\cpu\i8x41;..\..\src\burn\drv\sega;..\..\src\burn\drv\dataeast;..\..\src\burn\drv\konami;..\..\src\cpu\z180;..\..\src\burn\drv\irem;..\..\src\cpu\upd7810;..\..\src\cpu\v60;..\..\src\cpu\upd7725;..\..\src\cpu\tlcs900;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src\cpu\f8;..\..\src\dep\libs\lib7z;..\..\src\burner\win32\resource;..\..\src\burn\drv\taito;..\..\src\burn\drv\misc_post90s;..\..\src\burn\devices;generated;..\..\src\intf\audio\win32;..\..\src\intf\audio;..\..\src\intf\;..\..\src\intf\video\scalers;..\..\src\intf\video\win32;..\..\src\intf\video;..\..\src\intf\perfcount\win32;..\..\src\intf\perfcount;..\..\src\intf\input\win32;..\..\src\intf\input;..\..\src\intf\cd\win32;..\..\src\intf\cd;..\..\src\intf;..\..\src\burner\win32;..\..\src\dep\libs\zlib;..\..\src\dep\libs\libpng;..\..\src\dep\libs;..\..\src\dep\kaillera\client;..\..\src\dep\kaillera;..\..\src\burn\snd;..\..\src\cpu;..\..\src\burner;..\..\src\burn;..\..\src\cpu\z80;..\..\src\cpu\sh2;..\..\src\cpu\s2650;..\..\src\cpu\nec;..\..\src\cpu\m6809;..\..\src\cpu\m6805;..\..\src\cpu\m6800;..\..\src\cpu\m6502;..\..\src\cpu\m68k;..\..\src\cpu\i8039;..\..\src\cpu\konami;..\..\src\cpu\hd6309;..\..\src\cpu\h6280;..\..\src\cpu\arm7;..\..\src\cpu\arm;..\..\src\cpu\g65816;..\..\src\cpu\spc700;..\..\src\cpu\i8051;..\..\src\cpu\tms32010;..\..\src\cpu\tms34;..\..\src\cpu\i8x41;..\..\src\burn\drv\sega;..\..\src\burn\drv\dataeast;..\..\src\burn\drv\konami;..\..\src\cpu\z180;..\..\src\burn\drv\irem;..\..\src\cpu\upd7810;..\..\src\cpu\v60;..\..\src\cpu\upd7725;..\..\src\cpu\tlcs900;..\..\src\cpu\m377;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAs>Default</CompileAs>
       <PreprocessorDefinitions>FBNEO_DEBUG;BUILD_WIN32;FASTCALL;_MBCS;LSB_FIRST;INLINE=__inline static;INCLUDE_LIB_PNGH;C_INLINE=__inline;MAME_INLINE=__inline static;_CRT_SECURE_NO_WARNINGS;WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP;BUILD_X64_EXE;XBYAK_NO_OP_NAMES;MIPS3_X64_DRC;INCLUDE_7Z_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -1786,7 +1831,7 @@ del build_details.exe
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\..\src\dep\libs\lib7z;..\..\src\burner\win32\resource;..\..\src\burn\drv\taito;..\..\src\burn\drv\misc_post90s;..\..\src\burn\devices;generated;..\..\src\intf\audio\win32;..\..\src\intf\audio;..\..\src\intf\;..\..\src\intf\video\scalers;..\..\src\intf\video\win32;..\..\src\intf\video;..\..\src\intf\perfcount\win32;..\..\src\intf\perfcount;..\..\src\intf\input\win32;..\..\src\intf\input;..\..\src\intf\cd\win32;..\..\src\intf\cd;..\..\src\intf;..\..\src\burner\win32;..\..\src\dep\libs\zlib;..\..\src\dep\libs\libpng;..\..\src\dep\libs;..\..\src\dep\kaillera\client;..\..\src\dep\kaillera;..\..\src\burn\snd;..\..\src\cpu;..\..\src\burner;..\..\src\burn;..\..\src\cpu\z80;..\..\src\cpu\sh2;..\..\src\cpu\s2650;..\..\src\cpu\nec;..\..\src\cpu\m6809;..\..\src\cpu\m6805;..\..\src\cpu\m6800;..\..\src\cpu\m6502;..\..\src\cpu\m68k;..\..\src\cpu\i8039;..\..\src\cpu\konami;..\..\src\cpu\hd6309;..\..\src\cpu\h6280;..\..\src\cpu\arm7;..\..\src\cpu\arm;..\..\src\cpu\g65816;..\..\src\cpu\spc700;..\..\src\cpu\i8051;..\..\src\cpu\tms32010;..\..\src\cpu\tms34010;..\..\src\cpu\i8x41;..\..\src\burn\drv\sega;..\..\src\burn\drv\dataeast;..\..\src\burn\drv\konami;..\..\src\cpu\z180;..\..\src\burn\drv\irem;..\..\src\cpu\upd7810;..\..\src\cpu\v60;..\..\src\cpu\upd7725;..\..\src\cpu\tlcs900;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src\dep\libs\lib7z;..\..\src\burner\win32\resource;..\..\src\burn\drv\taito;..\..\src\burn\drv\misc_post90s;..\..\src\burn\devices;generated;..\..\src\intf\audio\win32;..\..\src\intf\audio;..\..\src\intf\;..\..\src\intf\video\scalers;..\..\src\intf\video\win32;..\..\src\intf\video;..\..\src\intf\perfcount\win32;..\..\src\intf\perfcount;..\..\src\intf\input\win32;..\..\src\intf\input;..\..\src\intf\cd\win32;..\..\src\intf\cd;..\..\src\intf;..\..\src\burner\win32;..\..\src\dep\libs\zlib;..\..\src\dep\libs\libpng;..\..\src\dep\libs;..\..\src\dep\kaillera\client;..\..\src\dep\kaillera;..\..\src\burn\snd;..\..\src\cpu;..\..\src\burner;..\..\src\burn;..\..\src\cpu\z80;..\..\src\cpu\sh2;..\..\src\cpu\s2650;..\..\src\cpu\f8;..\..\src\cpu\nec;..\..\src\cpu\m6809;..\..\src\cpu\m6805;..\..\src\cpu\m6800;..\..\src\cpu\m6502;..\..\src\cpu\m377;..\..\src\cpu\m68k;..\..\src\cpu\i8039;..\..\src\cpu\konami;..\..\src\cpu\hd6309;..\..\src\cpu\h6280;..\..\src\cpu\arm7;..\..\src\cpu\arm;..\..\src\cpu\g65816;..\..\src\cpu\spc700;..\..\src\cpu\i8051;..\..\src\cpu\tms32010;..\..\src\cpu\tms34;..\..\src\cpu\i8x41;..\..\src\burn\drv\sega;..\..\src\burn\drv\dataeast;..\..\src\burn\drv\konami;..\..\src\cpu\z180;..\..\src\burn\drv\irem;..\..\src\cpu\upd7810;..\..\src\cpu\v60;..\..\src\cpu\upd7725;..\..\src\cpu\tlcs900;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>BUILD_WIN32;FASTCALL;LSB_FIRST;INLINE=__inline static;INCLUDE_LIB_PNGH;INCLUDE_7Z_SUPPORT;C_INLINE=__inline;MAME_INLINE=__inline static;_CRT_SECURE_NO_WARNINGS;WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -1813,7 +1858,7 @@ del build_details.exe
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\..\src\dep\libs\lib7z;..\..\src\burner\win32\resource;..\..\src\burn\drv\taito;..\..\src\burn\drv\misc_post90s;..\..\src\burn\devices;generated;..\..\src\intf\audio\win32;..\..\src\intf\audio;..\..\src\intf\;..\..\src\intf\video\scalers;..\..\src\intf\video\win32;..\..\src\intf\video;..\..\src\intf\perfcount\win32;..\..\src\intf\perfcount;..\..\src\intf\input\win32;..\..\src\intf\input;..\..\src\intf\cd\win32;..\..\src\intf\cd;..\..\src\intf;..\..\src\burner\win32;..\..\src\dep\libs\zlib;..\..\src\dep\libs\libpng;..\..\src\dep\libs;..\..\src\dep\kaillera\client;..\..\src\dep\kaillera;..\..\src\burn\snd;..\..\src\cpu;..\..\src\burner;..\..\src\burn;..\..\src\cpu\z80;..\..\src\cpu\sh2;..\..\src\cpu\s2650;..\..\src\cpu\nec;..\..\src\cpu\m6809;..\..\src\cpu\m6805;..\..\src\cpu\m6800;..\..\src\cpu\m6502;..\..\src\cpu\m68k;..\..\src\cpu\i8039;..\..\src\cpu\konami;..\..\src\cpu\hd6309;..\..\src\cpu\h6280;..\..\src\cpu\arm7;..\..\src\cpu\arm;..\..\src\cpu\g65816;..\..\src\cpu\spc700;..\..\src\cpu\i8051;..\..\src\cpu\tms32010;..\..\src\cpu\tms34010;..\..\src\cpu\i8x41;..\..\src\burn\drv\sega;..\..\src\burn\drv\dataeast;..\..\src\burn\drv\konami;..\..\src\cpu\z180;..\..\src\burn\drv\irem;..\..\src\cpu\upd7810;..\..\src\cpu\v60;..\..\src\cpu\upd7725;..\..\src\cpu\tlcs900;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src\cpu\f8;..\..\src\dep\libs\lib7z;..\..\src\burner\win32\resource;..\..\src\burn\drv\taito;..\..\src\burn\drv\misc_post90s;..\..\src\burn\devices;generated;..\..\src\intf\audio\win32;..\..\src\intf\audio;..\..\src\intf\;..\..\src\intf\video\scalers;..\..\src\intf\video\win32;..\..\src\intf\video;..\..\src\intf\perfcount\win32;..\..\src\intf\perfcount;..\..\src\intf\input\win32;..\..\src\intf\input;..\..\src\intf\cd\win32;..\..\src\intf\cd;..\..\src\intf;..\..\src\burner\win32;..\..\src\dep\libs\zlib;..\..\src\dep\libs\libpng;..\..\src\dep\libs;..\..\src\dep\kaillera\client;..\..\src\dep\kaillera;..\..\src\burn\snd;..\..\src\cpu;..\..\src\burner;..\..\src\burn;..\..\src\cpu\z80;..\..\src\cpu\sh2;..\..\src\cpu\s2650;..\..\src\cpu\nec;..\..\src\cpu\m6809;..\..\src\cpu\m6805;..\..\src\cpu\m6800;..\..\src\cpu\m6502;..\..\src\cpu\m68k;..\..\src\cpu\i8039;..\..\src\cpu\konami;..\..\src\cpu\hd6309;..\..\src\cpu\h6280;..\..\src\cpu\arm7;..\..\src\cpu\arm;..\..\src\cpu\g65816;..\..\src\cpu\spc700;..\..\src\cpu\i8051;..\..\src\cpu\tms32010;..\..\src\cpu\tms34;..\..\src\cpu\i8x41;..\..\src\burn\drv\sega;..\..\src\burn\drv\dataeast;..\..\src\burn\drv\konami;..\..\src\cpu\z180;..\..\src\burn\drv\irem;..\..\src\cpu\upd7810;..\..\src\cpu\v60;..\..\src\cpu\upd7725;..\..\src\cpu\tlcs900;..\..\src\cpu\m377;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>BUILD_WIN32;FASTCALL;_MBCS;LSB_FIRST;INLINE=__inline static;INCLUDE_LIB_PNGH;C_INLINE=__inline;MAME_INLINE=__inline static;_CRT_SECURE_NO_WARNINGS;WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP;BUILD_X64_EXE;XBYAK_NO_OP_NAMES;MIPS3_X64_DRC;INCLUDE_7Z_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <EnablePREfast>false</EnablePREfast>

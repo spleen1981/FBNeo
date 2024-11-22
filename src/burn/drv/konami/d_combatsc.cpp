@@ -8,6 +8,7 @@
 #include "upd7759.h"
 #include "konamiic.h"
 #include "k007121.h"
+#include "k007452.h"
 #include "watchdog.h"
 
 static UINT8 *AllMem;
@@ -31,7 +32,6 @@ static UINT8 *color_table;
 static UINT32 *DrvPalette;
 //static UINT8 DrvRecalc;
 
-static UINT8 multiply_data[2];
 static UINT8 soundlatch;
 static UINT8 video_reg;
 static UINT8 bank_data;
@@ -202,11 +202,13 @@ static void combatsc_main_write(UINT16 address, UINT8 data)
 	{
 		case 0x0200:
 		case 0x0201:
-			multiply_data[address & 1] = data;
-		return;
-
+		case 0x0202:
+		case 0x0203:
+		case 0x0204:
+		case 0x0205:
 		case 0x0206:
-			// protection clock (unemulated)
+		case 0x0207:
+			K007452Write(address & 7, data);
 		return;
 
 		case 0x0408:
@@ -248,10 +250,14 @@ static UINT8 combatsc_main_read(UINT16 address)
 			return 0; // unk??
 
 		case 0x0200:
-			return (multiply_data[0] * multiply_data[1]);
-
 		case 0x0201:
-			return (multiply_data[0] * multiply_data[1]) >> 8;
+		case 0x0202:
+		case 0x0203:
+		case 0x0204:
+		case 0x0205:
+		case 0x0206:
+		case 0x0207:
+			return K007452Read(address & 7);
 
 		case 0x0400:
 			return DrvInputs[0];
@@ -379,9 +385,9 @@ static INT32 DrvDoReset(INT32 clear_mem)
 
 	k007121_reset();
 
+	K007452Reset();
+
 	soundlatch = 0;
-	multiply_data[0] = 0;
-	multiply_data[1] = 0;
 	video_reg = 0;
 
 	nExtraCycles = 0;
@@ -550,6 +556,7 @@ static INT32 DrvInit()
 
 	UPD7759Init(0, UPD7759_STANDARD_CLOCK, DrvSndROM);
 	UPD7759SetRoute(0, 0.70, BURN_SND_ROUTE_BOTH);
+	UPD7759SetSyncCallback(0, ZetTotalCycles, 3579545);
 
 	GenericTilemapInit(0, TILEMAP_SCAN_ROWS, bg0_map_callback, 8, 8, 32, 32);
 	GenericTilemapInit(1, TILEMAP_SCAN_ROWS, bg1_map_callback, 8, 8, 32, 32);
@@ -723,7 +730,7 @@ static INT32 DrvFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += HD6309Run((nCyclesTotal[0] * (i + 1) / nInterleave) - nCyclesDone[0]);
+		CPU_RUN(0, HD6309);
 
 		if (i == 240) {
 			HD6309SetIRQLine(HD6309_IRQ_LINE, CPU_IRQSTATUS_HOLD);
@@ -740,7 +747,7 @@ static INT32 DrvFrame()
 
 	if (pBurnSoundOut) {
 		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
-		UPD7759Update(0, pBurnSoundOut, nBurnSoundLen);
+		UPD7759Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	HD6309Close();
@@ -775,10 +782,11 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		k007121_scan(nAction);
 
+		K007452Scan(nAction);
+
 		BurnYM2203Scan(nAction, pnMin);
 		UPD7759Scan(nAction, pnMin);
 
-		SCAN_VAR(multiply_data);
 		SCAN_VAR(soundlatch);
 		SCAN_VAR(video_reg);
 		SCAN_VAR(bank_data);

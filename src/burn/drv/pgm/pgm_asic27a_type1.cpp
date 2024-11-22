@@ -691,129 +691,134 @@ static const UINT8 B0TABLE[8] = { 2, 0, 1, 4, 3 }; // Maps char portraits to tab
 
 static const UINT8 BATABLE[0x40] = {
 	0x00,0x29,0x2c,0x35,0x3a,0x41,0x4a,0x4e,0x57,0x5e,0x77,0x79,0x7a,0x7b,0x7c,0x7d,
-	0x7e,0x7f,0x80,0x81,0x82,0x85,0x86,0x87,0x88,0x89,0x8a,0x8b,0x8c,0x8d,0x8e,0x90,
+	0x7e,0x7f,0x82,0x81,0x84,0x85,0x86,0x87,0x88,0x89,0x8a,0x8b,0x8c,0x8d,0x8e,0x90,
 	0x95,0x96,0x97,0x98,0x99,0x9a,0x9b,0x9c,0x9e,0xa3,0xd4,0xa9,0xaf,0xb5,0xbb,0xc1
 };
 
 static void kov_asic27a_sim_command(UINT8 command)
 {
-	switch (command)
-	{
-		case 0x67: // unknown or status check?
-		case 0x8e:
-		case 0xa3:
-		case 0x33: // kovsgqyz (a3)
-		case 0x3a: // kovplus
-		case 0xc5: // kovplus
-			asic27a_sim_response = 0x880000;
-		break;
+    switch (command)
+    {
+        case 0x67: // unknown or status check?
+        case 0x8e:
+        case 0xa3:
+        case 0x33: // kovsgqyz (a3)
+        case 0x3a: // kovplus
+            asic27a_sim_response = 0x880000;
+            break;
+            
+        case 0xc5: // kovplus
+            asic27a_sim_response = 0x880000;
+            asic27a_sim_slots[asic27a_sim_value & 0xf] = asic27a_sim_slots[asic27a_sim_value & 0xf] - 1;
+        break;
+            
+        case 0x99: // Reset
+            asic27a_sim_key = 0;
+            asic27a_sim_response = 0x880000 | (PgmInput[7] << 8);
+        break;
+        
+        case 0x9d: // Sprite palette offset
+            asic27a_sim_response = 0xa00000 + ((asic27a_sim_value & 0x1f) * 0x40);
+        break;
+            
+        case 0xb0: // Read from data table
+            asic27a_sim_response = B0TABLE[asic27a_sim_value & 0x0f];
+        break;
+            
+        case 0xb4: // Copy slot 'a' to slot 'b'
+        case 0xb7: // kovsgqyz (b4)
+        {
+            asic27a_sim_response = 0x880000;
+            
+//            if (asic27a_sim_value == 0x0102) asic27a_sim_value = 0x0100; // why?
+            
+            asic27a_sim_slots[(asic27a_sim_value >> 8) & 0x0f] = asic27a_sim_slots[(asic27a_sim_value >> 4) & 0x0f] + asic27a_sim_slots[(asic27a_sim_value >> 0) & 0x0f];
+        }
+        break;
+            
+        case 0xba: // Read from data table
+            asic27a_sim_response = BATABLE[asic27a_sim_value & 0x3f];
+        break;
+            
+        case 0xc0: // Text layer 'x' select
+            asic27a_sim_response = 0x880000;
+        break;
+            
+        case 0xc3: // Text layer offset
+            asic27a_sim_response = 0x904000 + ((asic27a_sim_regs[0xc0] + (asic27a_sim_value * 0x40)) * 4);
+        break;
+            
+        case 0xcb: // Background layer 'x' select
+            asic27a_sim_response = 0x880000;
+        break;
+            
+        case 0xcc: // Background layer offset
+        {
+            INT32 y = asic27a_sim_value;
+            if (0xf < y) y = y & 0xf;
+            if (y & 0x400) y = -(0x400 - (y & 0x3ff));
+            asic27a_sim_response = 0x900000 + (((asic27a_sim_regs[0xcb] + y * 64) * 4));
+        }
+        break;
+            
+        case 0xd0: // Text palette offset
+        case 0xcd: // kovsgqyz (d0)
+            asic27a_sim_response = 0xa01000 + (asic27a_sim_value * 0x20);
+        break;
+            
+        case 0xd6: // Copy slot to slot 0
+            asic27a_sim_response = 0x880000;
+            asic27a_sim_slots[asic27a_sim_value & 0xf] = asic27a_sim_slots[asic27a_sim_value & 0xf] + 1;
+        break;
+            
+        case 0xdc: // Background palette offset
+        case 0x11: // kovsgqyz (dc)
+            asic27a_sim_response = 0xa00800 + (asic27a_sim_value * 0x40);
+        break;
+            
+        case 0xe0: // Sprite palette offset
+        case 0x9e: // kovsgqyz (e0)
+            asic27a_sim_response = 0xa00000 + ((asic27a_sim_value & 0x1f) * 0x40);
+        break;
+            
+        case 0xe5: // Write slot (low)
+        {
+            asic27a_sim_response = 0x880000;
 
-		case 0x99: // Reset
-			asic27a_sim_key = 0;
-			asic27a_sim_response = 0x880000 | (PgmInput[7] << 8);
-		break;
+            asic27a_sim_slots[asic27a_sim_internal_slot] = (asic27a_sim_slots[asic27a_sim_internal_slot] & 0x00ff0000) | ((asic27a_sim_value & 0xffff) <<  0);
+        }
+        break;
+            
+        case 0xe7: // Write slot (and slot select) (high)
+        {
+            asic27a_sim_response = 0x880000;
+            asic27a_sim_internal_slot = (asic27a_sim_value >> 12) & 0x0f;
 
-		case 0x9d: // Sprite palette offset
-			asic27a_sim_response = 0xa00000 + ((asic27a_sim_value & 0x1f) * 0x40);
-		break;
+            asic27a_sim_slots[asic27a_sim_internal_slot] = (asic27a_sim_slots[asic27a_sim_internal_slot] & 0x0000ffff) | ((asic27a_sim_value & 0x00ff) << 16);
+        }
+        break;
+            
+        case 0xf0: // Some sort of status read?
+            asic27a_sim_response = 0x00c000;
+        break;
+            
+        case 0xf8: // Read slot
+        case 0xab: // kovsgqyz (f8)
+            asic27a_sim_response = asic27a_sim_slots[asic27a_sim_value & 0x0f] & 0x00ffffff;
+        break;
 
-		case 0xb0: // Read from data table
-			asic27a_sim_response = B0TABLE[asic27a_sim_value & 0x07];
-		break;
+        case 0xfc: // Adjust damage level to char experience level
+            asic27a_sim_response = (asic27a_sim_value * asic27a_sim_regs[0xfe]) >> 6;
+        break;
+            
+        case 0xfe: // Damage level adjust
+            asic27a_sim_response = 0x880000;
+        break;
 
-		case 0xb4: // Copy slot 'a' to slot 'b'
-		case 0xb7: // kovsgqyz (b4)
-		{
-			asic27a_sim_response = 0x880000;
-
-			if (asic27a_sim_value == 0x0102) asic27a_sim_value = 0x0100; // why?
-
-			asic27a_sim_slots[(asic27a_sim_value >> 8) & 0x0f] = asic27a_sim_slots[(asic27a_sim_value >> 0) & 0x0f];
-		}
-		break;
-
-		case 0xba: // Read from data table
-			asic27a_sim_response = BATABLE[asic27a_sim_value & 0x3f];
-		break;
-
-		case 0xc0: // Text layer 'x' select
-			asic27a_sim_response = 0x880000;
-		break;
-
-		case 0xc3: // Text layer offset
-			asic27a_sim_response = 0x904000 + ((asic27a_sim_regs[0xc0] + (asic27a_sim_value * 0x40)) * 4);
-		break;
-
-		case 0xcb: // Background layer 'x' select
-			asic27a_sim_response = 0x880000;
-		break;
-
-		case 0xcc: // Background layer offset
-		{
-	   	 	INT32 y = asic27a_sim_value;
-	    		if (y & 0x400) y = -(0x400 - (y & 0x3ff));
-	    		asic27a_sim_response = 0x900000 + (((asic27a_sim_regs[0xcb] + y * 64) * 4));
-   		}
-		break;
-
-		case 0xd0: // Text palette offset
-		case 0xcd: // kovsgqyz (d0)
-			asic27a_sim_response = 0xa01000 + (asic27a_sim_value * 0x20);
-		break;
-
-		case 0xd6: // Copy slot to slot 0
-			asic27a_sim_response = 0x880000;
-			asic27a_sim_slots[0] = asic27a_sim_slots[asic27a_sim_value & 0x0f];
-		break;
-
-		case 0xdc: // Background palette offset
-		case 0x11: // kovsgqyz (dc)
-			asic27a_sim_response = 0xa00800 + (asic27a_sim_value * 0x40);
-		break;
-
-		case 0xe0: // Sprite palette offset
-		case 0x9e: // kovsgqyz (e0)
-			asic27a_sim_response = 0xa00000 + ((asic27a_sim_value & 0x1f) * 0x40);
-		break;
-
-		case 0xe5: // Write slot (low)
-		{
-			asic27a_sim_response = 0x880000;
-
-			asic27a_sim_slots[asic27a_sim_internal_slot] = (asic27a_sim_slots[asic27a_sim_internal_slot] & 0x00ff0000) | ((asic27a_sim_value & 0xffff) <<  0);
-		}
-		break;
-
-		case 0xe7: // Write slot (and slot select) (high)
-		{
-			asic27a_sim_response = 0x880000;
-			asic27a_sim_internal_slot = (asic27a_sim_value >> 12) & 0x0f;
-
-			asic27a_sim_slots[asic27a_sim_internal_slot] = (asic27a_sim_slots[asic27a_sim_internal_slot] & 0x0000ffff) | ((asic27a_sim_value & 0x00ff) << 16);
-		}
-		break;
-
-		case 0xf0: // Some sort of status read?
-			asic27a_sim_response = 0x00c000;
-		break;
-
-		case 0xf8: // Read slot
-		case 0xab: // kovsgqyz (f8)
-			asic27a_sim_response = asic27a_sim_slots[asic27a_sim_value & 0x0f] & 0x00ffffff;
-		break;
-
-		case 0xfc: // Adjust damage level to char experience level
-			asic27a_sim_response = (asic27a_sim_value * asic27a_sim_regs[0xfe]) >> 6;
-		break;
-
-		case 0xfe: // Damage level adjust
-			asic27a_sim_response = 0x880000;
-		break;
-
-		default:
-			asic27a_sim_response = 0x880000;
-		break;
-	}
+        default:
+            asic27a_sim_response = 0x880000;
+        break;
+    }
 }
 
 void install_protection_asic27_kov()
@@ -1167,7 +1172,8 @@ void install_protection_asic27a_puzzli2()
 
 static UINT16 py2k2_sprite_pos = 0;
 static UINT16 py2k2_sprite_base = 0;
-static UINT16 py2k2_prev_ba = 0;
+static INT16 py2k2_sprite_value = 0;        //must INT16 type
+static INT16 py2k2_sprite_ba_value = 0;     //must INT16 type
 
 static UINT32 py2k2_sprite_offset(UINT16 base, UINT16 pos)
 {
@@ -1212,72 +1218,288 @@ static UINT32 py2k2_sprite_offset(UINT16 base, UINT16 pos)
 
 static const UINT16 py2k2_40_table[8] = { 0x00e0, 0x00a8, 0x0080, 0x0080, 0x0100, 0x0080, 0x0180, 0x0080 };
 
+static const UINT16 py2k2_4d_table[16] = {
+    0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009, 0x000a, 0x000b, 0x000c, 0x0000,
+    0x0001, 0x000d, 0x000e, 0x0000
+};
+
+static const UINT16 py2k2_50_table[16] = {
+    0x006c, 0x00a8, 0x0000, 0x0000, 0x0154, 0x0044, 0x0000, 0x0000, 0x006c, 0x0044, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000
+};
+
+static const UINT16 py2k2_5e_table[16] = {
+    0x0000, 0x0000, 0x0000, 0x0000, 0x01a0, 0x0064, 0x0000, 0x0008, 0x0020, 0x0064, 0x0000, 0x0008,
+    0x0000, 0x0000, 0x0000, 0x0000
+};
+
+static const UINT16 py2k2_60_table[16] = {
+    0x0064, 0x00c0, 0x0000, 0x0000, 0x01a0, 0x003c, 0x0000, 0x0000, 0x2000, 0x3c00, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000
+};
+
+static const UINT16 py2k2_6a_table[16] = {
+    0x00e0, 0x008d, 0x0012, 0x0000, 0x0160, 0x0069, 0x0000, 0x000a, 0x005c, 0x0069, 0x0000, 0x000a,
+    0x0000, 0x0000, 0x0000, 0x0000
+};
+
+static const UINT16 py2k2_70_table[16] = {
+    0x00e0, 0x009c, 0x004a, 0x0000, 0x014a, 0x0069, 0x0000, 0x0020, 0x0076, 0x0069, 0x0000, 0x0020,
+    0x0000, 0x0000, 0x0000, 0x0000
+};
+
+static const UINT16 py2k2_7b_table[16] = {
+    0x00e3, 0x00b6, 0x0012, 0x0000, 0x01a0, 0x0064, 0x0000, 0x0006, 0x0020, 0x0064, 0x0000, 0x0006,
+    0x0000, 0x0000, 0x0000, 0x0000
+};
+
+static const UINT16 py2k2_80_table[16] = {
+    0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009, 0x000a, 0x000b, 0x000c, 0x0000,
+    0x0001, 0x000d, 0x000e, 0x0000
+};
+
+static const UINT16 py2k2_8c_table[16] = {
+    0x0000, 0x0000, 0x0000, 0x0000, 0x019a, 0x0079, 0x0000, 0x000a, 0x00e2, 0x003c, 0x0016, 0x0000,
+    0x002b, 0x0079, 0x0000, 0x000a
+};
+
+static const UINT16 py2k2_9d_table[4] = {
+    0x00e0, 0x00a0, 0x0000 ,0x0000
+};
+
+static const UINT16 py2k2_a0_table[16] = {
+    0x0020, 0x00C5, 0x000C, 0x0000, 0x01AC, 0x00C5, 0xFFF4, 0x0000, 0x01AC, 0x0046, 0xFFF4, 0x0000,
+    0x0020, 0x0046, 0x000C, 0x0000
+};
+
+static const UINT16 py2k2_ae_table[16] = {
+    0x00e2, 0x008e, 0x0010, 0x0000, 0x014d, 0x0079, 0x0010, 0x0000, 0x00e2, 0x0065, 0x0010, 0x0000,
+    0x0078, 0x0079, 0x0010, 0x0000
+};
+
+static const UINT16 py2k2_b0_table[16] = {
+    0x00e2, 0x00b6, 0x0016, 0x0000, 0x019a, 0x0079, 0x0000, 0x0006, 0x00e2, 0x003c, 0x0016, 0x0000,
+    0x002b, 0x0079, 0x0000, 0x0006
+};
+
+static const UINT16 py2k2_ba_table[64] = {
+    0x2a, 0x28, 0x26, 0x24, 0x22, 0x1e, 0x1c, 0x1a, 0x16, 0x26, 0x24, 0x22, 0x20, 0x1e, 0x1a, 0x18,
+    0x16, 0x14, 0x22, 0x21, 0x20, 0x1e, 0x1c, 0x1a, 0x16, 0x14, 0x14, 0x1e, 0x1e, 0x1e, 0x1c, 0x1a,
+    0x18, 0x16, 0x14, 0x14, 0x1e, 0x1e, 0x1c, 0x1a, 0x18, 0x16, 0x14, 0x14, 0x14, 0x00, 0x0a, 0x14,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
 static void py2k2_asic27a_sim_command(UINT8 command)
 {
 	switch (command)
 	{
 		case 0x30: // pgm3in1
-			asic27a_sim_response = py2k2_sprite_offset(py2k2_sprite_base, py2k2_sprite_pos++);
+            asic27a_sim_response = py2k2_sprite_offset(py2k2_sprite_base, py2k2_sprite_pos++);
 		break;
 
 		case 0x32:
-			py2k2_sprite_base = asic27a_sim_value;
-			py2k2_sprite_pos = 0;
-			asic27a_sim_response = py2k2_sprite_offset(py2k2_sprite_base, py2k2_sprite_pos++);
+            py2k2_sprite_base = asic27a_sim_value;
+            py2k2_sprite_pos = 0;
+            asic27a_sim_response = py2k2_sprite_offset(py2k2_sprite_base, py2k2_sprite_pos++);
 		break;
+        
+        case 0x3a:
+            asic27a_sim_response = 0x880000;
+            asic27a_sim_slots[asic27a_sim_value & 0xf] = 0;
+        break;
 
-		case 0x40:
+		case 0x40:  // Read from data table
 			asic27a_sim_response = py2k2_40_table[asic27a_sim_value & 7];
 		break;
+            
+        case 0x4d:// Read from data table
+            asic27a_sim_response = py2k2_4d_table[asic27a_sim_value & 0xf];
+        break;
+            
+        case 0x50:// Read from data table
+            asic27a_sim_response = py2k2_50_table[asic27a_sim_value & 0xf];
+        break;
+            
+        case 0x5e:// Read from data table
+            asic27a_sim_response = py2k2_5e_table[asic27a_sim_value & 0xf];
+        break;
+            
+        case 0x60:// Read from data table
+            asic27a_sim_response = py2k2_60_table[asic27a_sim_value & 0xf];
+        break;
+            
+        case 0x6a:// Read from data table
+            asic27a_sim_response = py2k2_6a_table[asic27a_sim_value & 0xf];
+        break;
+            
+        case 0x70:// Read from data table
+            asic27a_sim_response = py2k2_70_table[asic27a_sim_value & 0xf];
+        break;
+            
+        case 0x7b:// Read from data table
+            asic27a_sim_response = py2k2_7b_table[asic27a_sim_value & 0xf];
+        break;
+            
+        case 0x80:// Read from data table
+            asic27a_sim_response = py2k2_80_table[asic27a_sim_value & 0xf];
+        break;
+            
+        case 0x8c:// Read from data table
+            asic27a_sim_response = py2k2_8c_table[asic27a_sim_value & 0xf];
+        break;
 
 		case 0x99: // Reset?
-			py2k2_prev_ba = asic27a_sim_value;
-			asic27a_sim_key = 0x100;
-			py2k2_sprite_pos = 0;
-			py2k2_sprite_base = 0;
-			asic27a_sim_response = 0x880000 | (PgmInput[7] << 8);
+            asic27a_sim_key = 0;
+            asic27a_sim_response = 0x880000 | (PgmInput[7] << 8);
 		break;
+            
+        case 0x9d:// Read from data table
+            asic27a_sim_response = py2k2_9d_table[asic27a_sim_value & 0x1];
+        break;
+            
+        case 0xa0:// Read from data table
+            asic27a_sim_response = py2k2_a0_table[asic27a_sim_value & 0xf];
+        break;
+            
+        case 0xae:// Read from data table
+            asic27a_sim_response = py2k2_ae_table[asic27a_sim_value & 0xf];
+        break;
+            
+        case 0xb0:// Read from data table
+            asic27a_sim_response = py2k2_b0_table[asic27a_sim_value & 0xf];
+        break;
 
-		case 0xba:
-			asic27a_sim_response = py2k2_prev_ba;
-			py2k2_prev_ba = asic27a_sim_value;
-		break;
+        case 0xba:// Read from data table
+            asic27a_sim_response = py2k2_ba_table[asic27a_sim_value & 0x3f];
+        break;
+            
+        case 0xc1:  //this command implement game choose
+        {
+            UINT16 x = asic27a_sim_value;
+            UINT16 y = 0;
+            if ((py2k2_sprite_ba_value & 0xf000) == 0xf000)
+            {
+                y = -asic27a_sim_value;
+                if (-asic27a_sim_value < py2k2_sprite_ba_value)
+                {
+                    y = py2k2_sprite_ba_value;
+                }
+            }
+            else
+            {
+                if (py2k2_sprite_ba_value == 0)
+                {
+                    y = 0;
+                }
+                else
+                {
+                    y = asic27a_sim_value;
+                    if (py2k2_sprite_ba_value < asic27a_sim_value)
+                    {
+                        y = py2k2_sprite_ba_value;
+                    }
+                }
+            }
+            if ((py2k2_sprite_value & 0xf000) == 0xf000)
+            {
+                x = -asic27a_sim_value;
+                if (-asic27a_sim_value < py2k2_sprite_value)
+                {
+                    x = py2k2_sprite_value;
+                }
+            }
+            else
+            {
+                if (py2k2_sprite_value == 0)
+                {
+                    x = 0;
+                }
+                else
+                {
+                    x = asic27a_sim_value;
+                    if (py2k2_sprite_value < asic27a_sim_value)
+                    {
+                        x = py2k2_sprite_value;
+                    }
+                }
+            }
+            asic27a_sim_response = x | (y << 8);
+        }
+        break;
 
-		case 0xc3:
-			asic27a_sim_response = 0x904000 + ((asic27a_sim_regs[0xc0] + (asic27a_sim_value * 0x40)) * 4);
-		break;
+        case 0xc3:
+            asic27a_sim_response = 0x904000 + ((asic27a_sim_regs[0xc0] + (asic27a_sim_value * 0x40)) * 4);
+        break;
+            
+        case 0xc5:
+            asic27a_sim_response = 0x880000;
+            asic27a_sim_slots[asic27a_sim_value & 0xf] = asic27a_sim_slots[asic27a_sim_value & 0xf] - 1;
+        break;
+            
+        case 0xc7:
+            py2k2_sprite_value = asic27a_sim_value;
+            asic27a_sim_response = 0x880000;
+        break;
+            
+        case 0xcc: // Background layer offset (pgm3in1, same as kov)
+        {
+            INT32 y = asic27a_sim_value;
+            if (0xf < y) y = y & 0xf;
+            if (y & 0x400) y = -(0x400 - (y & 0x3ff));
+            asic27a_sim_response = 0x900000 + ((asic27a_sim_regs[0xcb] + (y * 0x40)) * 4);
+        }
+        break;
+            
+        case 0xcf:
+            py2k2_sprite_ba_value = asic27a_sim_value;
+            asic27a_sim_response = 0x880000;
+        break;
 
-		case 0xd0:
-			asic27a_sim_response = 0xa01000 + (asic27a_sim_value * 0x20);
-		break;
+        case 0xd0:
+            asic27a_sim_response = 0xa01000 + (asic27a_sim_value * 0x20);
+        break;
+            
+        case 0xd6:
+            asic27a_sim_response = 0x880000;
+            asic27a_sim_slots[asic27a_sim_value & 0xf] = asic27a_sim_slots[asic27a_sim_value & 0xf] + 1;
+        break;
 
-		case 0xdc:
-			asic27a_sim_response = 0xa00800 + (asic27a_sim_value * 0x40);
-		break;
+        case 0xdc:
+            asic27a_sim_response = 0xa00800 + (asic27a_sim_value * 0x40);
+        break;
 
-		case 0xe0:
-			asic27a_sim_response = 0xa00000 + ((asic27a_sim_value & 0x1f) * 0x40);
-		break;
-
-		case 0xcc: // Background layer offset (pgm3in1, same as kov)
-		{
-			INT32 y = asic27a_sim_value;
-			if (y & 0x400) y = -(0x400 - (y & 0x3ff));
-			asic27a_sim_response = 0x900000 + ((asic27a_sim_regs[0xcb] + (y * 0x40)) * 4);
-		}
-		break;
-
-		case 0x33:
-		case 0x34:
-		case 0x35:
-		case 0x37:
-		case 0x38:
-		case 0xc0:
-		case 0xcb:
+        case 0xe0:
+            asic27a_sim_response = 0xa00000 + ((asic27a_sim_value & 0x1f) * 0x40);
+        break;
+            
+        case 0xe5:
+            asic27a_sim_response = 0x880000;
+            asic27a_sim_slots[asic27a_sim_internal_slot] = (asic27a_sim_slots[asic27a_sim_internal_slot] & 0x00ff0000) | ((asic27a_sim_value & 0xffff) <<  0);
+        break;
+            
+        case 0xe7:
+            asic27a_sim_response = 0x880000;
+            asic27a_sim_internal_slot = (asic27a_sim_value >> 12) & 0x0f;
+            asic27a_sim_slots[asic27a_sim_internal_slot] = (asic27a_sim_slots[asic27a_sim_internal_slot] & 0x0000ffff) | ((asic27a_sim_value & 0x00ff) << 16);
+        break;
+            
+        case 0xf8:
+            asic27a_sim_response = asic27a_sim_slots[asic27a_sim_value & 0x0f] & 0x00ffffff;
+        break;
+            
 		default:
 			asic27a_sim_response = 0x880000;
 		break;
 	}
+}
+
+static void py2k2_sim_reset()
+{
+    py2k2_sprite_pos = 0;
+    py2k2_sprite_base = 0;
+    py2k2_sprite_value = 0;
+    py2k2_sprite_ba_value = 0;
+    asic27a_sim_reset();
 }
 
 static INT32 py2k2_sim_scan(INT32 nAction, INT32 *pnMin)
@@ -1287,7 +1509,8 @@ static INT32 py2k2_sim_scan(INT32 nAction, INT32 *pnMin)
 	if (nAction & ACB_DRIVER_DATA) {
 		SCAN_VAR(py2k2_sprite_pos);
 		SCAN_VAR(py2k2_sprite_base);
-		SCAN_VAR(py2k2_prev_ba);
+        SCAN_VAR(py2k2_sprite_value);
+        SCAN_VAR(py2k2_sprite_ba_value);
 	}
 
 	return 0;
@@ -1295,7 +1518,7 @@ static INT32 py2k2_sim_scan(INT32 nAction, INT32 *pnMin)
 
 void install_protection_asic27a_py2k2()
 {
-	pPgmResetCallback = 	asic27a_sim_reset;
+	pPgmResetCallback = 	py2k2_sim_reset;
 	pPgmScanCallback = 		py2k2_sim_scan;
 	asic27a_sim_command =	py2k2_asic27a_sim_command;
 

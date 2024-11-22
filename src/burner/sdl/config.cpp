@@ -9,7 +9,7 @@ static char* szSDLconfigPath = NULL;
 
 static void CreateConfigName(char* szConfig)
 {
-#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)	
+#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)
 	char cfgdir[MAX_PATH] = { 0 };
 
 	if (szSDLconfigPath == NULL)
@@ -19,7 +19,7 @@ static void CreateConfigName(char* szConfig)
 
 	snprintf(cfgdir, MAX_PATH, "%sfbneo.ini", szSDLconfigPath);
 	memcpy(szConfig, cfgdir, sizeof(cfgdir));
-#else 
+#else
 	_stprintf(szConfig, _T("fbneo.ini"));
 
 #endif
@@ -64,7 +64,12 @@ int ConfigAppLoad()
 		VAR(nVidSelect);                           // video mode select
 		VAR(bVidFullStretch);
 		VAR(nAutoFireRate);
-		VAR(bAlwaysMenu);		
+		VAR(bAlwaysMenu);
+		VAR(nGameSelect);
+		VAR(nFilterSelect);
+		VAR(bShowAvailableOnly);
+		VAR(bShowClones);
+		VAR(gameSelectedFromFilter);
 #endif
 		VAR(bVidScanlines);
 		VAR(bDoGamma);
@@ -120,7 +125,7 @@ int ConfigAppLoad()
 		STR(szAppListsPath);
 		STR(szAppDatListsPath);
 		STR(szAppArchivesPath);
-	
+
 #undef STR
 #undef FLT
 #undef VAR
@@ -161,7 +166,16 @@ int ConfigAppSave()
 	VAR(nAutoFireRate);
 	fprintf(f, "\n// Automatically go to the menu\n");
 	VAR(bAlwaysMenu);
-	
+	fprintf(f, "\n// Last game selection\n");
+	VAR(nGameSelect);
+	fprintf(f, "\n// Last filter selection\n");
+	VAR(nFilterSelect);
+	fprintf(f, "\n// show available game only filter\n");
+	VAR(bShowAvailableOnly);
+	fprintf(f, "\n// show clones game filter\n");
+	VAR(bShowClones);
+	fprintf(f, "\n// Last game selected from filter\n");
+	VAR(gameSelectedFromFilter);
 #endif
 	fprintf(f, "\n// If non-zero, enable scanlines\n");
 	VAR(bVidScanlines);
@@ -169,6 +183,7 @@ int ConfigAppSave()
 	VAR(bDoGamma);
 	_ftprintf(f, _T("\n// Gamma to correct with\n"));
 	FLT(nGamma);
+	fprintf(f, "\n// Audio sample rate\n");
 	VAR(nAudSampleRate[0]);
 	fprintf(f, "\n// If non-zero, enable DSP filter\n");
 	VAR(nAudDSPModule[0]);
@@ -204,7 +219,7 @@ int ConfigAppSave()
 	STR(szAppPreviewsPath);
 	fprintf(f, "\n// Path to titlescreen images for use on the menu (include trailing slash)\n");
 	STR(szAppTitlesPath);
-	fprintf(f, "\n// UNUSED CURRENTLY (include trailing slash)\n");
+	fprintf(f, "\n// Cheat files path (include trailing slash)\n");
 	STR(szAppCheatsPath);
 	fprintf(f, "\n// Hiscore save path (include trailing slash)\n");
 	STR(szAppHiscorePath);

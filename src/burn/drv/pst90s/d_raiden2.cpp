@@ -398,6 +398,63 @@ static struct BurnDIPInfo RaidendxDIPList[]=
 
 STDDIPINFO(Raidendx)
 
+static struct BurnDIPInfo RaidendxuDIPList[]=
+{
+	{0x14, 0xff, 0xff, 0xff, NULL			},
+	{0x15, 0xff, 0xff, 0xff, NULL			},
+	{0x16, 0xff, 0xff, 0xff, NULL			},
+
+	{0   , 0xfe, 0   ,    8, "Coin A"		},
+	{0x14, 0x01, 0x07, 0x01, "4 Coins 1 Credits"	},
+	{0x14, 0x01, 0x07, 0x02, "3 Coins 1 Credits"	},
+	{0x14, 0x01, 0x07, 0x04, "2 Coins 1 Credits"	},
+	{0x14, 0x01, 0x07, 0x07, "1 Coin  1 Credits"	},
+	{0x14, 0x01, 0x07, 0x06, "1 Coin  2 Credits"	},
+	{0x14, 0x01, 0x07, 0x05, "1 Coin  3 Credits"	},
+	{0x14, 0x01, 0x07, 0x03, "1 Coin  4 Credits"	},
+	{0x14, 0x01, 0x07, 0x00, "Free Play"		},
+
+	{0   , 0xfe, 0   ,    8, "Coin B"		},
+	{0x14, 0x01, 0x38, 0x08, "4 Coins 1 Credits"	},
+	{0x14, 0x01, 0x38, 0x10, "3 Coins 1 Credits"	},
+	{0x14, 0x01, 0x38, 0x20, "2 Coins 1 Credits"	},
+	{0x14, 0x01, 0x38, 0x38, "1 Coin  1 Credits"	},
+	{0x14, 0x01, 0x38, 0x30, "1 Coin  2 Credits"	},
+	{0x14, 0x01, 0x38, 0x28, "1 Coin  3 Credits"	},
+	{0x14, 0x01, 0x38, 0x18, "1 Coin  4 Credits"	},
+	{0x14, 0x01, 0x38, 0x00, "Free Play"		},
+
+	{0   , 0xfe, 0   ,    2, "Starting Coin"	},
+	{0x14, 0x01, 0x40, 0x40, "Normal"		},
+	{0x14, 0x01, 0x40, 0x00, "X 2"			},
+
+	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
+	{0x14, 0x01, 0x80, 0x80, "Off"			},
+	{0x14, 0x01, 0x80, 0x00, "On"			},
+
+	{0   , 0xfe, 0   ,    4, "Difficulty"		},
+	{0x15, 0x01, 0x03, 0x03, "Normal"		},
+	{0x15, 0x01, 0x03, 0x01, "Easy"			},
+	{0x15, 0x01, 0x03, 0x02, "Hard"			},
+	{0x15, 0x01, 0x03, 0x00, "Very Hard"		},
+
+	{0   , 0xfe, 0   ,    4, "Lives"		},
+	{0x15, 0x01, 0x0c, 0x00, "1"			},
+	{0x15, 0x01, 0x0c, 0x04, "4"			},
+	{0x15, 0x01, 0x0c, 0x08, "2"			},
+	{0x15, 0x01, 0x0c, 0x0c, "3"			},
+
+	{0   , 0xfe, 0   ,    2, "Demo Sound"		},
+	{0x15, 0x01, 0x40, 0x00, "Off"			},
+	{0x15, 0x01, 0x40, 0x40, "On"			},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"		},
+	{0x15, 0x01, 0x80, 0x80, "Off"			},
+	{0x15, 0x01, 0x80, 0x00, "On"			},
+};
+
+STDDIPINFO(Raidendxu)
+
 static struct BurnDIPInfo XsedaeDIPList[]=
 {
 	{0x12, 0xff, 0xff, 0xff, NULL			},
@@ -549,9 +606,9 @@ static struct BurnDIPInfo NzeroteaDIPList[]=
 	{0x15, 0x01, 0x0c, 0x00, "1"			},
 
 	{0   , 0xfe, 0   ,    4, "Bonus Life"		},
-	{0x15, 0x01, 0x30, 0x30, "1000000"		},
-	{0x15, 0x01, 0x30, 0x20, "2000000"		},
-	{0x15, 0x01, 0x30, 0x10, "Every 1000000"	},
+	{0x15, 0x01, 0x30, 0x30, "2000000"		},
+	{0x15, 0x01, 0x30, 0x20, "1000000"		},
+	{0x15, 0x01, 0x30, 0x10, "3000000"		},
 	{0x15, 0x01, 0x30, 0x00, "No Extend"		},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sound"		},
@@ -4303,6 +4360,48 @@ struct BurnDriver BurnDrvRaiden2eup = {
 };
 
 
+// Raiden II (easier, US set 3)
+
+static struct BurnRomInfo raiden2eubRomDesc[] = {
+	{ "r2_prg_0.u0211",				0x080000, 0x2abc848c, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "r2_prg_1.u0212",				0x080000, 0x56511ca8, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "copx-d2.u0313",				0x040000, 0xa6732ff9, 2 | BRF_PRG | BRF_OPT }, //  2 COPX MCU data
+
+	{ "r2_snd.u1110",				0x010000, 0x6d362472, 3 | BRF_PRG | BRF_ESS }, //  3 Z80 Code
+
+	{ "r2.7.u0724",					0x020000, 0xc7aa4d00, 4 | BRF_GRA },           //  4 Characters
+
+	{ "raiden_2_seibu_bg-1.u0714",	0x200000, 0xe61ad38e, 5 | BRF_GRA },           //  5 Tiles
+	{ "raiden_2_seibu_bg-2.u075",	0x200000, 0xa694a4bb, 5 | BRF_GRA },           //  6
+
+	{ "raiden_2_seibu_obj-1.u0811",	0x200000, 0xff08ef0b, 6 | BRF_GRA },           //  7 Sprites (Encrypted)
+	{ "raiden_2_seibu_obj-2.u082",	0x200000, 0x638eb771, 6 | BRF_GRA },           //  8
+	{ "raiden_2_seibu_obj-3.u0837",	0x200000, 0x897a0322, 6 | BRF_GRA },           //  9
+	{ "raiden_2_seibu_obj-4.u0836",	0x200000, 0xb676e188, 6 | BRF_GRA },           // 10
+
+	{ "r2.6.u1017",					0x040000, 0xfab9f8e4, 7 | BRF_SND },           // 11 OKI #0 Samples
+
+	{ "raiden_2_pcm.u1018",			0x040000, 0x8cf0d17e, 8 | BRF_SND },           // 12 OKI #1 Samples
+
+	{ "jj4b02__ami18cv8-15.u0342", 		0x000155, 0x057a9cdc, 0 | BRF_OPT },	   // 13 Pals
+	{ "jj4b01__mmipal16l8bcn.u0341",	0x000117, 0x20931f21, 0 | BRF_OPT },	   // 14
+};
+
+STD_ROM_PICK(raiden2eub)
+STD_ROM_FN(raiden2eub)
+
+struct BurnDriver BurnDrvRaiden2eub = {
+	"raiden2eub", "raiden2", NULL, NULL, "1993",
+	"Raiden II (easier, US set 3)\0", NULL, "Seibu Kaihatsu (Fabtek license)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE  | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	NULL, raiden2eubRomInfo, raiden2eubRomName, NULL, NULL, NULL, NULL, Raiden2InputInfo, Raiden2DIPInfo,
+	Raiden2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
+	240, 320, 3, 4
+};
+
+
 // Raiden II (harder, Raiden DX Hardware)
 // this set is very weird, it's Raiden II on a Raiden DX board, I'm assuming for now that it uses Raiden DX graphics, but could be wrong.
 
@@ -4588,7 +4687,7 @@ struct BurnDriver BurnDrvRaidendxk = {
 	"Raiden DX (Korea)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, raidendxkRomInfo, raidendxkRomName, NULL, NULL, NULL, NULL, RaidendxInputInfo, RaidendxDIPInfo,
+	NULL, raidendxkRomInfo, raidendxkRomName, NULL, NULL, NULL, NULL, RaidendxInputInfo, RaidendxuDIPInfo,
 	RaidendxInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	240, 320, 3, 4
 };
@@ -4629,7 +4728,7 @@ struct BurnDriver BurnDrvRaidendxu = {
 	"Raiden DX (US)\0", NULL, "Seibu Kaihatsu (Fabtek license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, raidendxuRomInfo, raidendxuRomName, NULL, NULL, NULL, NULL, RaidendxInputInfo, RaidendxDIPInfo,
+	NULL, raidendxuRomInfo, raidendxuRomName, NULL, NULL, NULL, NULL, RaidendxInputInfo, RaidendxuDIPInfo,
 	RaidendxInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	240, 320, 3, 4
 };
@@ -4794,7 +4893,7 @@ struct BurnDriver BurnDrvRaidendxch = {
 	"Raiden DX (China)\0", NULL, "Seibu Kaihatsu (Ideal International Development Corp license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
-	NULL, raidendxchRomInfo, raidendxchRomName, NULL, NULL, NULL, NULL, RaidendxInputInfo, RaidendxDIPInfo,
+	NULL, raidendxchRomInfo, raidendxchRomName, NULL, NULL, NULL, NULL, RaidendxInputInfo, RaidendxuDIPInfo,
 	RaidendxInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	240, 320, 3, 4
 };

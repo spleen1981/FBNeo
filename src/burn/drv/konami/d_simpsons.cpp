@@ -373,6 +373,8 @@ static INT32 DrvDoReset()
 	K053246Irq = 0;
 	fa00_timer = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -489,7 +491,7 @@ static INT32 DrvInit()
 	K053247Init(DrvGfxROM1, DrvGfxROMExp1, 0x3fffff, DrvK053247Callback, 0x03 /* shadows & highlights */);
 	K053247SetSpriteOffset(-59, -39);
 
-	BurnYM2151Init(3579545, 1);
+	BurnYM2151InitBuffered(3579545, 1, NULL, 0);
 	BurnTimerAttachZet(3579545*2); // *2 = better sync maggie & sax
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 1.00, BURN_SND_ROUTE_BOTH);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.00, BURN_SND_ROUTE_BOTH); // not connected
@@ -614,7 +616,6 @@ static INT32 DrvFrame()
 	}
 
 	INT32 nInterleave = 256;
-	INT32 nSoundBufferPos = 0;
 	INT32 nCyclesTotal[2] = { (INT32)(3000000 / 59.18), (INT32)((3579545*2) / 59.18) };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
@@ -630,33 +631,21 @@ static INT32 DrvFrame()
 
 		K053246Irq = K053246_is_IRQ_enabled();
 
-		BurnTimerUpdate((i + 1) * nCyclesTotal[1] / nInterleave);
+		CPU_RUN_TIMER(1);
 
 		if (fa00_timer) {
 			BurnTimerUpdate(ZetTotalCycles() + 89);
 			ZetNmi();
 			fa00_timer = 0;
 		}
-
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			K053260Update(0, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
 	}
-	BurnTimerEndFrame(nCyclesTotal[1]);
+
 	if (K053246Irq) simpsons_objdma();
 	if (K052109_irq_enabled) konamiSetIrqLine(KONAMI_IRQ_LINE, CPU_IRQSTATUS_AUTO);
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		if (nSegmentLength) {
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			K053260Update(0, pSoundBuf, nSegmentLength);
-		}
+		BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
+		K053260Update(0, pBurnSoundOut, nBurnSoundLen);
 	}
 
 	konamiClose();
@@ -747,7 +736,7 @@ struct BurnDriver BurnDrvSimpsons = {
 	"simpsons", NULL, NULL, NULL, "1991",
 	"The Simpsons (4 Players World, set 1)\0", NULL, "Konami", "GX072",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, simpsonsRomInfo, simpsonsRomName, NULL, NULL, NULL, NULL, SimpsonsInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
@@ -785,7 +774,7 @@ struct BurnDriver BurnDrvSimpsons4pe = {
 	"simpsons4pe", "simpsons", NULL, NULL, "1991",
 	"The Simpsons (4 Players World, set 2)\0", NULL, "Konami", "GX072",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, simpsons4peRomInfo, simpsons4peRomName, NULL, NULL, NULL, NULL, SimpsonsInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
@@ -823,7 +812,7 @@ struct BurnDriver BurnDrvSimpsons4pa = {
 	"simpsons4pa", "simpsons", NULL, NULL, "1991",
 	"The Simpsons (4 Players Asia)\0", NULL, "Konami", "GX072",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, simpsons4paRomInfo, simpsons4paRomName, NULL, NULL, NULL, NULL, SimpsonsInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
@@ -861,7 +850,7 @@ struct BurnDriver BurnDrvSimpsons2p = {
 	"simpsons2p", "simpsons", NULL, NULL, "1991",
 	"The Simpsons (2 Players World, set 1)\0", NULL, "Konami", "GX072",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, simpsons2pRomInfo, simpsons2pRomName, NULL, NULL, NULL, NULL, Simpsons2pInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
@@ -899,7 +888,7 @@ struct BurnDriver BurnDrvSimpsons2p2 = {
 	"simpsons2p2", "simpsons", NULL, NULL, "1991",
 	"The Simpsons (2 Players World, set 2)\0", NULL, "Konami", "GX072",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, simpsons2p2RomInfo, simpsons2p2RomName, NULL, NULL, NULL, NULL, SimpsonsInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
@@ -937,7 +926,7 @@ struct BurnDriver BurnDrvSimpsons2p3 = {
 	"simpsons2p3", "simpsons", NULL, NULL, "1991",
 	"The Simpsons (2 Players World, set 3)\0", NULL, "Konami", "GX072",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, simpsons2p3RomInfo, simpsons2p3RomName, NULL, NULL, NULL, NULL, SimpsonsInputInfo, NULL,
  	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
@@ -975,7 +964,7 @@ struct BurnDriver BurnDrvSimpsons2pa = {
 	"simpsons2pa", "simpsons", NULL, NULL, "1991",
 	"The Simpsons (2 Players Asia)\0", NULL, "Konami", "GX072",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, simpsons2paRomInfo, simpsons2paRomName, NULL, NULL, NULL, NULL, Simpsons2pInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
@@ -1013,7 +1002,7 @@ struct BurnDriver BurnDrvSimpsons2pj = {
 	"simpsons2pj", "simpsons", NULL, NULL, "1991",
 	"The Simpsons (2 Players Japan)\0", NULL, "Konami", "GX072",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, simpsons2pjRomInfo, simpsons2pjRomName, NULL, NULL, NULL, NULL, Simpsons2pInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
