@@ -924,11 +924,16 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		//swprintf_s(HardwareBGImage,L"%S",m_HardwareFilterBackGroundMap[CurrentFilter].c_str());			 		 
 		//XuiImageElementSetImagePath(m_SkinImage.m_hObj, HardwareBGImage);
  
+		m_RomList.SetCurSelVisible(0);				
 		m_RomList.SetFocus();	
+		m_RomList.SetCurSel(1);	
+		m_RomList.SetCurSel(0);	
+
+		/*m_RomList.SetFocus();	
 		m_RomList.SetShow(true);
 		m_RomList.SetCurSel(nLastRom);
 		m_RomList.SetCurSelVisible(nLastRom);
-			
+		*/	
 
 		m_MVSMultiSlotScene.SetShow(false);
  
