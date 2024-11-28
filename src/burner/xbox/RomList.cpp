@@ -1531,8 +1531,6 @@ HRESULT CRomList::OnNotify( XUINotify *hObj, BOOL& bHandled )
 
 						strcpy(szRequestedVideo,GetVideoImage(nBurnDrv[nIndex].nBurnDrvNo,szVideoPreviewPath));				 
 						strcpy(VideoFName, GetVideoImage(nBurnDrv[nIndex].nBurnDrvNo,szVideoPreviewPath));
-						strcpy(szRequestedVideo,GetVideoImage(nBurnDrv[nIndex].nBurnDrvNo,szVideoPreviewPath));				 
-						strcpy(VideoFName, GetVideoImage(nBurnDrv[nIndex].nBurnDrvNo,szVideoPreviewPath));
 
 						if (BurnDrvGetTextA(DRV_PARENT)) {
 							_stprintf(szItemText + _tcslen(szItemText), IDS_ROMS_FROM_2, bBracket ? _T(", ") : _T(" ("), BurnDrvGetText(DRV_PARENT));
