@@ -50,13 +50,22 @@ void createNeedDir()
 	CreateDirectory("game:\\titles", NULL);
 	CreateDirectory("game:\\flyers", NULL);
 	CreateDirectory("game:\\scores", NULL);
-	CreateDirectory("game:\\selects", NULL);
-	CreateDirectory("game:\\gameovers", NULL);
+	CreateDirectory("game:\\select", NULL);
+	CreateDirectory("game:\\gameover", NULL);
 	CreateDirectory("game:\\bosses", NULL);
 	CreateDirectory("game:\\icons", NULL);
 	CreateDirectory("game:\\videos", NULL);
 	CreateDirectory("game:\\samples", NULL);
 	CreateDirectory("game:\\shaders", NULL);
+	CreateDirectory("game:\\blend", NULL);
+	CreateDirectory("game:\\hdd", NULL);
+	CreateDirectory("game:\\versus", NULL);
+	CreateDirectory("game:\\howto", NULL);
+	CreateDirectory("game:\\marquees", NULL);
+	CreateDirectory("game:\\cpanels", NULL);
+	CreateDirectory("game:\\pcbs", NULL);
+	CreateDirectory("game:\\history", NULL);
+
 	
  
 }
