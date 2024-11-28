@@ -224,12 +224,12 @@ static void finalizr_main_write(UINT16 address, UINT8 data)
 	}
 }
 
-static UINT8 __fastcall finalizr_sound_read(UINT32 address)
+static UINT8 finalizr_sound_read(UINT32 address)
 {
 	return DrvI8039ROM[address & 0x0fff];
 }
 
-static void __fastcall finalizr_sound_write_port(UINT32 port, UINT8 data)
+static void finalizr_sound_write_port(UINT32 port, UINT8 data)
 {
 	port &= 0x1ff;
 
@@ -249,7 +249,7 @@ static void __fastcall finalizr_sound_write_port(UINT32 port, UINT8 data)
 	}
 }
 
-static UINT8 __fastcall finalizr_sound_read_port(UINT32 port)
+static UINT8 finalizr_sound_read_port(UINT32 port)
 {
 	port &= 0x1ff;
 

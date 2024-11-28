@@ -104,10 +104,10 @@ void sms_mapper8kvirt_w(INT32 address, UINT8 data);
 
 /* port-map Function prototypes */
 UINT8 z80_read_unmapped(void);
-void __fastcall gg_port_w(UINT16 port, UINT8 data);
-UINT8 __fastcall gg_port_r(UINT16 port);
-void __fastcall ggms_port_w(UINT16 port, UINT8 data);
-UINT8 __fastcall ggms_port_r(UINT16 port);
-void __fastcall sms_port_w(UINT16 port, UINT8 data);
-UINT8 __fastcall sms_port_r(UINT16 port);
+void gg_port_w(UINT16 port, UINT8 data);
+UINT8 gg_port_r(UINT16 port);
+void ggms_port_w(UINT16 port, UINT8 data);
+UINT8 ggms_port_r(UINT16 port);
+void sms_port_w(UINT16 port, UINT8 data);
+UINT8 sms_port_r(UINT16 port);
 #endif /* _SMS_H_ */
