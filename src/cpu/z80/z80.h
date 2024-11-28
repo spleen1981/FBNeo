@@ -94,13 +94,14 @@ typedef void (__fastcall *Z80WriteProgHandler)(unsigned int a, unsigned char v);
 typedef unsigned char (__fastcall *Z80ReadOpHandler)(unsigned int a);
 typedef unsigned char (__fastcall *Z80ReadOpArgHandler)(unsigned int a);
 
+extern "C" {
 void Z80SetIOReadHandler(Z80ReadIoHandler handler);
 void Z80SetIOWriteHandler(Z80WriteIoHandler handler);
 void Z80SetProgramReadHandler(Z80ReadProgHandler handler);
 void Z80SetProgramWriteHandler(Z80WriteProgHandler handler);
 void Z80SetCPUOpReadHandler(Z80ReadOpHandler handler);
 void Z80SetCPUOpArgReadHandler(Z80ReadOpArgHandler handler);
-
+}
 void ActiveZ80SetPC(int pc);
 int ActiveZ80GetPC();
 int ActiveZ80GetAF();
