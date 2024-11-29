@@ -1683,7 +1683,7 @@ HRESULT CRomList::OnNotify( XUINotify *hObj, BOOL& bHandled )
 					{
 						strcpy(szCurrentVideo,szRequestedVideo);
 						XuiElementSetShow(hPreviewVideo, true);
-						PlayLoopingMovie(VideoFName); 
+						PlayMovie(VideoFName, hPreviewVideo, true);
 					}
 
 			}
@@ -1695,7 +1695,7 @@ HRESULT CRomList::OnNotify( XUINotify *hObj, BOOL& bHandled )
 
 }
 
-HRESULT CRomList::PlayLoopingMovie(LPCSTR szFileName)
+HRESULT PlayMovie(LPCSTR szFileName, HXUIOBJ videoXUI, bool loop)
 {
   HRESULT hr;
 
@@ -1726,7 +1726,8 @@ HRESULT CRomList::PlayLoopingMovie(LPCSTR szFileName)
     parameters.createFromFile.szFileName = szFileName;
 
     // Specify that this should be a looping movie.
-    parameters.dwFlags = XMEDIA_CREATE_FOR_LOOP;
+	if (loop)
+		parameters.dwFlags = XMEDIA_CREATE_FOR_LOOP;
     
     // Create the player using the XMEDIA_XMV_CREATE_PARAMETERS struct.
     if( FAILED (hr = XMedia2CreateXmvPlayer(pDevice, pXAudio2, &parameters, &xmvPlayer)))
@@ -1736,8 +1737,8 @@ HRESULT CRomList::PlayLoopingMovie(LPCSTR szFileName)
 
  
 #ifndef _DEBUG
-	XuiVideoSetPlayer(hPreviewVideo,xmvPlayer);
-	XuiVideoSetVolume(hPreviewVideo,-20.0);
+	XuiVideoSetPlayer(videoXUI,xmvPlayer);
+	XuiVideoSetVolume(videoXUI,-20.0);
 #endif
 
     // Movie playback changes various D3D states, so you should reset the

@@ -28,6 +28,7 @@ InRescanRomsStruct;
 
 int BurnerLoadDriver(TCHAR *szDriverName);
 void InRescanRomsFirstFunc(XUIMessage *pMsg, InRescanRomsStruct* pData, char *szPath);
+HRESULT PlayMovie(LPCSTR szFileName, HXUIOBJ videoXUI, bool loop = false);
 
 // Define the message map macro
 #define XUI_ON_XM_MESSAGE_ON_RESCAN_ROMS(MemberFunc)\
@@ -70,8 +71,6 @@ public:
 	HRESULT OnGetItemCountAll(XUIMessageGetItemCount *pGetItemCountData, BOOL& bHandled);
 	HRESULT OnRescanRoms ( char *szPath, BOOL& bHandled );
 
-	HRESULT PlayLoopingMovie(LPCSTR szFileName);
-	 
 };
  
 //--------------------------------------------------------------------------------------
