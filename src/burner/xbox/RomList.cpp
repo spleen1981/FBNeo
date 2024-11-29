@@ -72,33 +72,48 @@ wchar_t szRomsAvailableInfo[128];
 
 std::string ReplaceCharInString(const std::string & source, char charToReplace, const std::string replaceString);
 
-#define ALL 0
-#define CPS1 1
-#define CPS2 2
-#define CPS3 3
-#define NEOGEO 4
-#define TAITO 5
-#define SEGA 6
-#define PGM 7
-#define PSYKIO 8
-#define KONAMI 9
-#define KANEKO 10
-#define CAVE 11
-#define TOAPLAN 12
-#define IREM 13
-#define DATAEAST 14
-#define GALAXIAN 15
-#define PACMAN 16
-#define TECHNOS 17
-#define MISCPRE90 18
-#define MISCPOST90 19
-
-#define NEOGEO_CD 20
-#define SEGAMD 21
-#define PCE 22
-#define SNES 23
-#define SETA 24
-//#define SMS 25
+enum {
+	ALL = 0,
+	CPS1,
+	CPS2,
+	CPS3,
+	NEOGEO,
+	TAITO,
+	SEGA,
+	PGM,
+	PSYKIO,
+	KONAMI,
+	KANEKO,
+	CAVE,
+	TOAPLAN,
+	IREM,
+	DATAEAST,
+	GALAXIAN,
+	PACMAN,
+	TECHNOS,
+	MISCPRE90,
+	MISCPOST90,
+	NEOGEO_CD,
+	SEGAMD,
+	PCE,
+	//SNES,
+	SETA,
+	SMS,
+	SNK,
+	CAPCOM_MISC,
+	SEGA_MASTER_SYSTEM,
+	SEGA_SG1000,
+	COLECO,
+	MIDWAY,
+	SEGA_GAME_GEAR,
+	MSX,
+	SPECTRUM,
+	NES,
+	FDS,
+	NGP,
+	CHANNELF,
+	PLATFORM_FILTER_MAX
+};
 
 static int CapcomMiscValue		= HARDWARE_PREFIX_CAPCOM_MISC >> 24;
 static int MASKCAPMISC			= 1 << CapcomMiscValue;
@@ -148,9 +163,39 @@ static int PCEngineValue		= HARDWARE_PREFIX_PCENGINE >> 24;
 static int MASKPCENGINE			= 1 << PCEngineValue;
 //static int SnesValue			= HARDWARE_PREFIX_NINTENDO_SNES >> 24;
 //static int MASKSNES				= 1 << SnesValue;
-//static int SmsValue				= HARDWARE_PREFIX_SEGA_MASTER_SYSTEM >> 24;
-//static int MASKSMS				= 1 << SmsValue;
-static int MASKALL				= MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 | MASKCPS3 | MASKDATAEAST | MASKGALAXIAN | MASKIREM | MASKKANEKO | MASKKONAMI | MASKNEOGEO | MASKPACMAN | MASKPGM | MASKPSIKYO | MASKSEGA | MASKSETA | MASKTAITO | MASKTECHNOS | MASKTOAPLAN | MASKMISCPRE90S | MASKMISCPOST90S | MASKMEGADRIVE | MASKPCENGINE /*| MASKSNES | MASKSMS*/;
+static int SmsValue				= HARDWARE_PREFIX_SEGA_MASTER_SYSTEM >> 24;
+static int MASKSMS				= 1 << SmsValue;
+
+static int SNKValue		= HARDWARE_PREFIX_SNK >> 24;
+static int CAPCOM_MISCValue		= HARDWARE_PREFIX_CAPCOM_MISC >> 24;
+static int SEGA_MASTER_SYSTEMValue		= HARDWARE_PREFIX_SEGA_MASTER_SYSTEM >> 24;
+static int SEGA_SG1000Value		= HARDWARE_PREFIX_SEGA_SG1000 >> 24;
+static int COLECOValue		= HARDWARE_PREFIX_COLECO >> 24;
+static int MIDWAYValue		= HARDWARE_PREFIX_MIDWAY >> 24;
+static int SEGA_GAME_GEARValue		= HARDWARE_PREFIX_SEGA_GAME_GEAR >> 24;
+static int MSXValue		= HARDWARE_PREFIX_MSX >> 24;
+static int SPECTRUMValue		= HARDWARE_PREFIX_SPECTRUM >> 24;
+static int NESValue		= HARDWARE_PREFIX_NES >> 24;
+static int FDSValue		= HARDWARE_PREFIX_FDS >> 24;
+static int NGPValue		= HARDWARE_PREFIX_NGP >> 24;
+static int CHANNELFValue		= HARDWARE_PREFIX_CHANNELF >> 24;
+
+static int MASKSNK				= 1 << SNKValue;
+static int MASKCAPCOM_MISC				= 1 << CAPCOM_MISCValue;
+static int MASKSEGA_MASTER_SYSTEM				= 1 << SEGA_MASTER_SYSTEMValue;
+static int MASKSEGA_SG1000				= 1 << SEGA_SG1000Value;
+static int MASKCOLECO				= 1 << COLECOValue;
+static int MASKMIDWAY				= 1 << MIDWAYValue;
+static int MASKSEGA_GAME_GEAR				= 1 << SEGA_GAME_GEARValue;
+static int MASKMSX				= 1 << MSXValue;
+static int MASKSPECTRUM				= 1 << SPECTRUMValue;
+static int MASKNES				= 1 << NESValue;
+static int MASKFDS				= 1 << FDSValue;
+static int MASKNGP				= 1 << NGPValue;
+static int MASKCHANNELF				= 1 << CHANNELFValue;
+
+
+static int MASKALL				= MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 | MASKCPS3 | MASKDATAEAST | MASKGALAXIAN | MASKIREM | MASKKANEKO | MASKKONAMI | MASKNEOGEO | MASKPACMAN | MASKPGM | MASKPSIKYO | MASKSEGA | MASKSETA | MASKTAITO | MASKTECHNOS | MASKTOAPLAN | MASKMISCPRE90S | MASKMISCPOST90S | MASKMEGADRIVE | MASKPCENGINE /*| MASKSNES */| MASKSMS | SNK | CAPCOM_MISC | SEGA_MASTER_SYSTEM | SEGA_SG1000 | COLECO | MIDWAY | SEGA_GAME_GEAR | MSX | SPECTRUM | NES | FDS | NGP | CHANNELF;
 
 
 #define AVAILONLY				(1 << 28)
@@ -630,7 +675,7 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 
 				if (CurrentFilter < 0)
 				{
-					CurrentFilter = 24;
+					CurrentFilter = PLATFORM_FILTER_MAX;
 				}
 			
 				nLoadMenuShowX = m_HardwareFilterMap[CurrentFilter];
@@ -679,7 +724,7 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 			{
 				CurrentFilter++;
 
-				if (CurrentFilter > 24)
+				if (CurrentFilter > PLATFORM_FILTER_MAX)
 				{
 					CurrentFilter = 0;
 				}
@@ -868,8 +913,22 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		m_HardwareFilterMap[MISCPOST90] = MASKMISCPOST90S;
 		m_HardwareFilterMap[PCE] = MASKPCENGINE;
 //		m_HardwareFilterMap[SNES] = MASKSNES;
-		//m_HardwareFilterMap[SMS] = MASKSMS;
+		m_HardwareFilterMap[SMS] = MASKSMS;
 		m_HardwareFilterMap[SETA] = MASKSETA;
+		m_HardwareFilterMap[SNK] = MASKSNK;
+		m_HardwareFilterMap[CAPCOM_MISC] = MASKCAPCOM_MISC;
+		m_HardwareFilterMap[SEGA_MASTER_SYSTEM] = MASKSEGA_MASTER_SYSTEM;
+		m_HardwareFilterMap[SEGA_SG1000] = MASKSEGA_SG1000;
+		m_HardwareFilterMap[COLECO] = MASKCOLECO;
+		m_HardwareFilterMap[MIDWAY] = MASKMIDWAY;
+		m_HardwareFilterMap[SEGA_GAME_GEAR] = MASKSEGA_GAME_GEAR;
+		m_HardwareFilterMap[MSX] = MASKMSX;
+		m_HardwareFilterMap[SPECTRUM] = MASKSPECTRUM;
+		m_HardwareFilterMap[NES] = MASKNES;
+		m_HardwareFilterMap[FDS] = MASKFDS;
+		m_HardwareFilterMap[NGP] = MASKNGP;
+		m_HardwareFilterMap[CHANNELF] = MASKCHANNELF;
+
 
 		m_HardwareFilterDesc[ALL] = "All Hardware";
 		m_HardwareFilterDesc[CPS1] = "Capcom CPS1";
@@ -894,9 +953,22 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		m_HardwareFilterDesc[MISCPRE90] = "Pre 90's";
 		m_HardwareFilterDesc[MISCPOST90] = "Post 90's";
 		m_HardwareFilterDesc[PCE] = "PC Engine";
-		m_HardwareFilterDesc[SNES] = "SNES";
-		//m_HardwareFilterDesc[SNES] = "SMS";
+		//m_HardwareFilterDesc[SNES] = "SNES";
+		m_HardwareFilterDesc[SMS] = "SMS";
 		m_HardwareFilterDesc[SETA] = "Seta";
+		m_HardwareFilterDesc[SNK] = "SNK";
+		m_HardwareFilterDesc[CAPCOM_MISC] = "Capcom misc";
+		m_HardwareFilterDesc[SEGA_MASTER_SYSTEM] = "Sega Master System";
+		m_HardwareFilterDesc[SEGA_SG1000] = "Sega SG1000";
+		m_HardwareFilterDesc[COLECO] = "Coleco";
+		m_HardwareFilterDesc[MIDWAY] = "Midway";
+		m_HardwareFilterDesc[SEGA_GAME_GEAR] = "Sega Game Gear";
+		m_HardwareFilterDesc[MSX] = "MSX";
+		m_HardwareFilterDesc[SPECTRUM] = "Spectrum";
+		m_HardwareFilterDesc[NES] = "NES";
+		m_HardwareFilterDesc[FDS] = "FDS";
+		m_HardwareFilterDesc[NGP] = "NGP";
+		m_HardwareFilterDesc[CHANNELF] = "Channelf";
  
 
 		swprintf(VersionText,L"%S",szAppBurnVer);
