@@ -1463,7 +1463,7 @@ unsigned int __stdcall worker_thread_func(void *ArgList)
 	}
 	else
 	{		
-		XuiImageElementSetImagePath(hTitleImage, L"20866139.jpg");
+		XuiImageElementSetImagePath(hTitleImage, L"no_title2.png");
 	}
 
 	if (GetFileAttributes(PreviewFName) != -1)
@@ -1481,7 +1481,7 @@ unsigned int __stdcall worker_thread_func(void *ArgList)
 	}
 	else
 	{		
-		XuiImageElementSetImagePath(hPreviewImage, L"20866139.jpg");
+		XuiImageElementSetImagePath(hPreviewImage, L"no_title2.png");
 	}
  
 
