@@ -12,7 +12,6 @@
 
 #include <xfilecache.h>
 
- 
 int nXOffset = 0;
 int nYOffset = 0;
 int nXScale = 0;
@@ -478,38 +477,38 @@ int WINAPI main()
 	}
 
     // Load the skin file used for the scene.
-	app.LoadSkin( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\skin.xur" );     	
+	app.LoadSkin( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\skin.xur" );
 
 	// Simply get the state of the controller from XInput.
-	
+
     dwResultP1 = XInputGetState( 0, &stateJoy1 );
 
 	// if B is held down during boot up. Fire up MVS Slot loader
-	if (stateJoy1.Gamepad.wButtons & XINPUT_GAMEPAD_B)
-	{		
+	/*if (stateJoy1.Gamepad.wButtons & XINPUT_GAMEPAD_B)
+	{
 		 MVSLoadCreate();
 		 bStartInMVSSlotMode = 1;
-	}	 
+	}
 	if (stateJoy1.Gamepad.wButtons & XINPUT_GAMEPAD_X)
-	{		
+	{
 		 CreateDatfileWindows(0);
-	}	
+	}*/
 
-	XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"RomList.xur", NULL, &hMainScene );	
+	XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"RomList.xur", NULL, &hMainScene );
 
-	if (bStartInMVSSlotMode)
-	{		
+	/*if (bStartInMVSSlotMode)
+	{
 		if (BurnerLoadDriver(_T("neogeo")) == 0)
-		{ 
+		{
 			MediaInit();
 			XuiSceneNavigateForward(hMVSplashScene,FALSE, hMainScene, XUSER_INDEX_FOCUS);
 			XuiSceneCreate( L"file://game:/media/FBNeo.xzp#src\\Intf\\Skin\\", L"InGameOptions.xur", NULL, &hInGameOptionsScene );
-			XuiSceneNavigateForward(hMainScene,FALSE,hInGameOptionsScene,XUSER_INDEX_FOCUS);									
-			RunMessageLoop(); 
-			ConfigAppSave();	
+			XuiSceneNavigateForward(hMainScene,FALSE,hInGameOptionsScene,XUSER_INDEX_FOCUS);
+			RunMessageLoop();
+			ConfigAppSave();
 		}
 	}
-	else
+	else*/
 	{
 		XuiSceneNavigateFirst( app.GetRootObj(), hMainScene, XUSER_INDEX_FOCUS ); 
 	}
