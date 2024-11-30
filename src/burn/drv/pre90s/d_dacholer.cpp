@@ -214,7 +214,7 @@ static struct BurnDIPInfo ItatenDIPList[]=
 	{0x10, 0x01, 0x0c, 0x0c, "1 Coin  3 Credits"		},
 	{0x10, 0x01, 0x0c, 0x08, "1 Coin  6 Credits"		},
 
-	{0   , 0xfe, 0   ,    0, "Difficulty"			},
+	{0   , 0xfe, 0   ,    4, "Difficulty"			},
 	{0x11, 0x01, 0x03, 0x03, "Easy"				},
 	{0x11, 0x01, 0x03, 0x02, "Medium"			},
 	{0x11, 0x01, 0x03, 0x01, "Hard"				},
@@ -232,7 +232,7 @@ static struct BurnDIPInfo ItatenDIPList[]=
 	{0x11, 0x01, 0x30, 0x10, "30k then every 90k"		},
 	{0x11, 0x01, 0x30, 0x00, "60k then every 90k"		},
 
-	{0   , 0xfe, 0   ,    4, "Demo Sounds"			},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"			},
 	{0x11, 0x01, 0x40, 0x40, "Off"				},
 	{0x11, 0x01, 0x40, 0x00, "On"				},
 
@@ -407,6 +407,8 @@ static INT32 DrvDoReset()
 	sound_ack = 0;
 	MSM5205ResetWrite(0, 1);
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -471,12 +473,7 @@ static INT32 DrvGfxDecode()
 
 static INT32 DrvInit(INT32 type)
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	if (type == 0)
 	{
@@ -621,7 +618,7 @@ static INT32 DrvExit()
 	AY8910Exit(2);
 	MSM5205Exit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	itaten = 0;
 	dacholer = 0;
@@ -706,20 +703,7 @@ static void draw_sprites()
 			flipy = !flipy;
 		}
 
-		if (flipy) {
-			if (flipx) {
-				Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, sx, sy - 16, 0, 4, 0, 0x10, DrvGfxROM2);
-			} else {
-				Render16x16Tile_Mask_FlipY_Clip(pTransDraw, code, sx, sy - 16, 0, 4, 0, 0x10, DrvGfxROM2);
-			}
-		} else {
-
-			if (flipx) {
-				Render16x16Tile_Mask_FlipX_Clip(pTransDraw, code, sx, sy - 16, 0, 4, 0, 0x10, DrvGfxROM2);
-			} else {
-				Render16x16Tile_Mask_Clip(pTransDraw, code, sx, sy - 16, 0, 4, 0, 0x10, DrvGfxROM2);
-			}
-		}
+		Draw16x16MaskTile(pTransDraw, code, sx, sy - 16, flipx, flipy, 0, 4, 0, 0x10, DrvGfxROM2);
 	}
 }
 
@@ -877,7 +861,7 @@ struct BurnDriver BurnDrvDacholer = {
 	"dacholer", NULL, NULL, NULL, "1983",
 	"Dacholer\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_ACTION, 0,
 	NULL, dacholerRomInfo, dacholerRomName, NULL, NULL, NULL, NULL, DacholerInputInfo, DacholerDIPInfo,
 	DacholerInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x20,
 	256, 224, 4, 3
@@ -923,7 +907,7 @@ struct BurnDriver BurnDrvKickboy = {
 	"kickboy", NULL, NULL, NULL, "1983",
 	"Kick Boy\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_ACTION, 0,
 	NULL, kickboyRomInfo, kickboyRomName, NULL, NULL, NULL, NULL, DacholerInputInfo, KickboyDIPInfo,
 	KickboyInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x20,
 	256, 224, 4, 3
@@ -972,7 +956,7 @@ struct BurnDriver BurnDrvItaten = {
 	"itaten", NULL, NULL, NULL, "1984",
 	"Itazura Tenshi (Japan)\0", NULL, "Nichibutsu / Alice", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_ACTION, 0,
 	NULL, itatenRomInfo, itatenRomName, NULL, NULL, NULL, NULL, ItatenInputInfo, ItatenDIPInfo,
 	ItatenInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x20,
 	256, 224, 4, 3

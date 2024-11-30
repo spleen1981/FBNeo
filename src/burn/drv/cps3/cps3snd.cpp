@@ -29,14 +29,14 @@ typedef struct {
 
 static cps3snd_chip * chip;
 
-UINT8 cps3SndReadByte(UINT32 addr)
+UINT8 __fastcall cps3SndReadByte(UINT32 addr)
 {
 	addr &= 0x000003ff;
 	bprintf(PRINT_NORMAL, _T("SND Attempt to read byte value of location %8x\n"), addr);
 	return 0;
 }
 
-UINT16 cps3SndReadWord(UINT32 addr)
+UINT16 __fastcall cps3SndReadWord(UINT32 addr)
 {
 	addr &= 0x000003ff;
 	
@@ -51,7 +51,7 @@ UINT16 cps3SndReadWord(UINT32 addr)
 	return 0;
 }
 
-UINT32 cps3SndReadLong(UINT32 addr)
+UINT32 __fastcall cps3SndReadLong(UINT32 addr)
 {
 	addr &= 0x000003ff;
 	
@@ -59,13 +59,13 @@ UINT32 cps3SndReadLong(UINT32 addr)
 	return 0;
 }
 
-void cps3SndWriteByte(UINT32 addr, UINT8 data)
+void __fastcall cps3SndWriteByte(UINT32 addr, UINT8 data)
 {
 	addr &= 0x000003ff;
 	bprintf(PRINT_NORMAL, _T("SND Attempt to write byte value %2x to location %8x\n"), data, addr);
 }
 
-void cps3SndWriteWord(UINT32 addr, UINT16 data)
+void __fastcall cps3SndWriteWord(UINT32 addr, UINT16 data)
 {
 	addr &= 0x000003ff;
 	
@@ -88,7 +88,7 @@ void cps3SndWriteWord(UINT32 addr, UINT16 data)
 	
 }
 
-void cps3SndWriteLong(UINT32 addr, UINT32 data)
+void __fastcall cps3SndWriteLong(UINT32 addr, UINT32 data)
 {
 	//addr &= 0x000003ff;
 	if (addr == 0x240e0210) return; // NOP (jojoba*)

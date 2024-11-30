@@ -486,6 +486,64 @@ static struct BurnDIPInfo RiskchalDIPList[]=
 
 STDDIPINFO(Riskchal)
 
+static struct BurnDIPInfo DicegameDIPList[]=
+{
+	{0x12, 0xff, 0xff, 0xbf, NULL							},
+	{0x13, 0xff, 0xff, 0xff, NULL							},
+
+	{0   , 0xfe, 0   ,    4, "Lives"						},
+	{0x12, 0x01, 0x03, 0x02, "2"							},
+	{0x12, 0x01, 0x03, 0x03, "3"							},
+	{0x12, 0x01, 0x03, 0x01, "4"							},
+	{0x12, 0x01, 0x03, 0x00, "5"							},
+
+	{0   , 0xfe, 0   ,    4, "Difficulty"					},
+	{0x12, 0x01, 0x0c, 0x08, "Easy"							},
+	{0x12, 0x01, 0x0c, 0x0c, "Medium"						},
+	{0x12, 0x01, 0x0c, 0x04, "Hard"							},
+	{0x12, 0x01, 0x0c, 0x00, "Hardest"						},
+
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"					},
+	{0x12, 0x01, 0x40, 0x40, "Off"							},
+	{0x12, 0x01, 0x40, 0x00, "On"							},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"					},
+	{0x12, 0x01, 0x80, 0x80, "Off"							},
+	{0x12, 0x01, 0x80, 0x00, "On"							},
+
+	{0   , 0xfe, 0   ,    2, "Flip Screen"					},
+	{0x13, 0x01, 0x01, 0x01, "Off"							},
+	{0x13, 0x01, 0x01, 0x00, "On"							},
+
+	{0   , 0xfe, 0   ,    2, "Coin Slots"					},
+	{0x13, 0x01, 0x04, 0x04, "Common"						},
+	{0x13, 0x01, 0x04, 0x00, "Separate"						},
+
+	{0   , 0xfe, 0   ,    2, "Coin Mode"					},
+	{0x13, 0x01, 0x08, 0x08, "1"							},
+	{0x13, 0x01, 0x08, 0x00, "2"							},
+
+	{0   , 0xfe, 0   ,    16, "Coinage"						},
+	{0x13, 0x01, 0xf0, 0xa0, "6 Coins 1 Credits"			},
+	{0x13, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"			},
+	{0x13, 0x01, 0xf0, 0xc0, "4 Coins 1 Credits"			},
+	{0x13, 0x01, 0xf0, 0xd0, "3 Coins 1 Credits"			},
+	{0x13, 0x01, 0xf0, 0xe0, "2 Coins 1 Credits"			},
+	{0x13, 0x01, 0xf0, 0x10, "2 Coins to Start/1 to Continue"	},
+	{0x13, 0x01, 0xf0, 0x30, "3 Coins 2 Credits"			},
+	{0x13, 0x01, 0xf0, 0x20, "4 Coins 3 Credits"			},
+	{0x13, 0x01, 0xf0, 0xf0, "1 Coin  1 Credits"			},
+	{0x13, 0x01, 0xf0, 0x40, "2 Coins 3 Credits"			},
+	{0x13, 0x01, 0xf0, 0x90, "1 Coin  2 Credits"			},
+	{0x13, 0x01, 0xf0, 0x80, "1 Coin  3 Credits"			},
+	{0x13, 0x01, 0xf0, 0x70, "1 Coin  4 Credits"			},
+	{0x13, 0x01, 0xf0, 0x60, "1 Coin  5 Credits"			},
+	{0x13, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"			},
+	{0x13, 0x01, 0xf0, 0x00, "Free Play"					},
+};
+
+STDDIPINFO(Dicegame)
+
 static struct BurnDIPInfo BbmanwDIPList[]=
 {
 	{0x22, 0xff, 0xff, 0xbf, NULL							},
@@ -1006,6 +1064,8 @@ static INT32 DrvDoReset()
 
 	sample_address = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -1516,7 +1576,7 @@ struct BurnDriver BurnDrvHasamu = {
 	"hasamu", NULL, NULL, NULL, "1991",
 	"Hasamu (Japan)\0", NULL, "Irem", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_IREM_M90, GBF_MAHJONG, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_MAHJONG, 0,
 	NULL, hasamuRomInfo, hasamuRomName, NULL, NULL, NULL, NULL, p2commonInputInfo, HasamuDIPInfo,
 	hasamuInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	384, 240, 4, 3
@@ -1553,7 +1613,7 @@ struct BurnDriver BurnDrvDynablst = {
 	"dynablst", NULL, NULL, NULL, "1991",
 	"Dynablaster / Bomber Man\0", NULL, "Irem (licensed from Hudson Soft)", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 4, HARDWARE_IREM_M90, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_IREM_M90, GBF_MAZE, 0,
 	NULL, dynablstRomInfo, dynablstRomName, NULL, NULL, NULL, NULL, p4commonInputInfo, DynablstDIPInfo,
 	dynablstInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1583,7 +1643,7 @@ struct BurnDriver BurnDrvBombrman = {
 	"bombrman", "dynablst", NULL, NULL, "1991",
 	"Bomber Man (Japan)\0", NULL, "Irem (licensed from Hudson Soft)", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
 	NULL, bombrmanRomInfo, bombrmanRomName, NULL, NULL, NULL, NULL, p2commonInputInfo, BombrmanDIPInfo,
 	dynablstInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1613,7 +1673,7 @@ struct BurnDriver BurnDrvAtompunk = {
 	"atompunk", "dynablst", NULL, NULL, "1991",
 	"Atomic Punk (US)\0", NULL, "Irem America (licensed from Hudson Soft)", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_IREM_M90, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_IREM_M90, GBF_MAZE, 0,
 	NULL, atompunkRomInfo, atompunkRomName, NULL, NULL, NULL, NULL, p4commonInputInfo, AtompunkDIPInfo,
 	dynablstInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1660,7 +1720,7 @@ struct BurnDriver BurnDrvBbmanw = {
 	"bbmanw", NULL, NULL, NULL, "1992",
 	"Bomber Man World / New Dyna Blaster - Global Quest\0", NULL, "Irem", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
 	NULL, bbmanwRomInfo, bbmanwRomName, NULL, NULL, NULL, NULL, p4commonInputInfo, BbmanwDIPInfo,
 	bbmanwInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1690,7 +1750,7 @@ struct BurnDriver BurnDrvBbmanwj = {
 	"bbmanwj", "bbmanw", NULL, NULL, "1992",
 	"Bomber Man World (Japan)\0", NULL, "Irem", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
 	NULL, bbmanwjRomInfo, bbmanwjRomName, NULL, NULL, NULL, NULL, p4commonInputInfo, BbmanwjDIPInfo,
 	bbmanwInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1720,7 +1780,7 @@ struct BurnDriver BurnDrvBbmanwja = {
 	"bbmanwja", "bbmanw", NULL, NULL, "1992",
 	"Bomber Man World (Japan, revised sound hardware)\0", NULL, "Irem", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
 	NULL, bbmanwjaRomInfo, bbmanwjaRomName, NULL, NULL, NULL, NULL, p4commonInputInfo, BbmanwjDIPInfo,
 	bbmanwjaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1750,7 +1810,7 @@ struct BurnDriver BurnDrvNewapunk = {
 	"newapunk", "bbmanw", NULL, NULL, "1992",
 	"New Atomic Punk - Global Quest (US)\0", NULL, "Irem America", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
 	NULL, newapunkRomInfo, newapunkRomName, NULL, NULL, NULL, NULL, p4commonInputInfo, BbmanwjDIPInfo,
 	bbmanwInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1772,8 +1832,8 @@ static struct BurnRomInfo quizf1RomDesc[] = {
 
 	{ "qf1-v0-.ic30",	0x40000, 0xb8d16e7c, 4 | BRF_SND },           //  7 Samples
 
-	{ "qf1-h1-.78",		0x80000, 0xc6c2eb2b, 5 | BRF_PRG | BRF_ESS }, //  8 V30 banked code
-	{ "qf1-l1-.80",		0x80000, 0x3132c144, 5 | BRF_PRG | BRF_ESS }, //  9
+	{ "qf1-h1-.ic78",	0x80000, 0xc6c2eb2b, 5 | BRF_PRG | BRF_ESS }, //  8 V30 banked code
+	{ "qf1-l1-.ic80",	0x80000, 0x3132c144, 5 | BRF_PRG | BRF_ESS }, //  9
 };
 
 STD_ROM_PICK(quizf1)
@@ -1828,7 +1888,7 @@ struct BurnDriver BurnDrvRiskchal = {
 	"riskchal", NULL, NULL, NULL, "1993",
 	"Risky Challenge\0", NULL, "Irem", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_IREM_M90, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_PUZZLE, 0,
 	NULL, riskchalRomInfo, riskchalRomName, NULL, NULL, NULL, NULL, p2commonInputInfo, RiskchalDIPInfo,
 	riskchalInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1858,7 +1918,7 @@ struct BurnDriver BurnDrvGussun = {
 	"gussun", "riskchal", NULL, NULL, "1993",
 	"Gussun Oyoyo (Japan)\0", NULL, "Irem", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M90, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_PUZZLE, 0,
 	NULL, gussunRomInfo, gussunRomName, NULL, NULL, NULL, NULL, p2commonInputInfo, RiskchalDIPInfo,
 	riskchalInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1925,4 +1985,41 @@ struct BurnDriver BurnDrvShisen2 = {
 	NULL, shisen2RomInfo, shisen2RomName, NULL, NULL, NULL, NULL, Matchit2InputInfo, Shisen2DIPInfo,
 	matchit2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	384, 256, 4, 3
+};
+
+// Dice - The Dice Game!
+
+static struct BurnRomInfo dicegameRomDesc[] = {
+	{ "dice-p1.ic61",	0x20000, 0x8f2257d8, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "dice-p0.ic65",	0x20000, 0x9c191d18, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "dice-sp.ic23",	0x20000, 0x73e8796e, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 Code
+
+	{ "dice-c0.ic66",	0x20000, 0xa1eda342, 3 | BRF_GRA },           //  3 Tiles and sprites
+	{ "dice-c1.ic67",	0x20000, 0x20850a15, 3 | BRF_GRA },           //  4
+	{ "dice-c2.ic68",	0x20000, 0x6c39915f, 3 | BRF_GRA },           //  5
+	{ "dice-c3.ic69",	0x20000, 0x81d58e68, 3 | BRF_GRA },           //  6
+
+	{ "dice-v0.ic20",	0x20000, 0x04dc9196, 4 | BRF_SND },           //  7 Samples
+};
+
+STD_ROM_PICK(dicegame)
+STD_ROM_FN(dicegame)
+
+static INT32 DicegameInit()
+{
+	video_offsets[0] = 80;
+	video_offsets[1] = 136;
+
+	return DrvInit(0x40000, 0x80000, 0x20000, 0, 0, NULL);
+}
+
+struct BurnDriver BurnDrvDicegame = {
+	"dicegame", NULL, NULL, NULL, "199?",
+	"Dice - The Dice Game!\0", NULL, "bootleg (Tuning)", "Irem M90",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_PUZZLE, 0,
+	NULL, dicegameRomInfo, dicegameRomName, NULL, NULL, NULL, NULL, p2commonInputInfo, DicegameDIPInfo,
+	DicegameInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
+	320, 240, 4, 3
 };

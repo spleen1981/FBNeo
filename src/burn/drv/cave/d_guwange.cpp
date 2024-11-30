@@ -334,7 +334,7 @@ static INT32 DrvFrame()
 	SekNewFrame();
 
 	nCyclesTotal[0] = (INT32)((INT64)16000000 * nBurnCPUSpeedAdjust / (0x0100 * CAVE_REFRESHRATE));
-	nCyclesDone[0] = 0;
+	nCyclesDone[0] = nCyclesExtra;
 
 	nCyclesVBlank = nCyclesTotal[0] - (INT32)((nCyclesTotal[0] * CAVE_VBLANK_LINES) / 271.5);
 	bVBlank = false;
@@ -375,8 +375,7 @@ static INT32 DrvFrame()
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-        nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment - nCyclesExtra);
-        nCyclesExtra = 0;
+        nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 
 		nCurrentCPU = -1;
 	}
@@ -392,7 +391,7 @@ static INT32 DrvFrame()
 		}
 	}
 
-    nCyclesExtra = SekTotalCycles() - nCyclesTotal[0];
+    nCyclesExtra = nCyclesDone[0] - nCyclesTotal[0];
 	SekClose();
 
     if (pBurnDraw != NULL) {
@@ -509,13 +508,9 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(nVideoIRQ);
 		SCAN_VAR(nSoundIRQ);
 		SCAN_VAR(nUnknownIRQ);
-		SCAN_VAR(bVBlank);
+		SCAN_VAR(nCyclesExtra);
 
 		CaveScanGraphics();
-	}
-
-	if (nAction & ACB_WRITE) {
-		CaveRecalcPalette = 1;
 	}
 
 	return 0;
@@ -620,8 +615,8 @@ STD_ROM_FN(guwange)
 
 struct BurnDriver BurnDrvGuwange = {
 	"guwange", NULL, NULL, NULL, "1999",
-	"Guwange (Japan, Master Ver. 99/06/24)\0", NULL, "Atlus / Cave", "Cave",
-	L"\u3050\u308F\u3093\u3052 (Japan, Master Ver. 99/06/24)\0Guwange\0", NULL, NULL, NULL,
+	"Guwange (Japan, 1999 6/24 Master Ver 16:55)\0", NULL, "Cave (Atlus license)", "Cave",
+	L"Guwange\0\u3050\u308F\u3093\u3052 (Japan, 1999 6/24 Master Ver 16:55)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY, GBF_VERSHOOT, 0,
 	NULL, guwangeRomInfo, guwangeRomName, NULL, NULL, NULL, NULL, guwangeInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
@@ -659,8 +654,8 @@ STD_ROM_FN(guwanges)
 
 struct BurnDriver BurnDrvGuwanges = {
 	"guwanges", "guwange", NULL, NULL, "1999",
-	"Guwange (Japan, Special Ver. 00/01/01)\0", NULL, "Atlus / Cave", "Cave",
-	L"\u3050\u308F\u3093\u3052 (Japan, Special Ver. 00/07/07)\0Guwange\0", NULL, NULL, NULL,
+	"Guwange (Japan, 2000 7/ 7 Special Ver 13:22)\0", NULL, "Cave (Atlus license)", "Cave",
+	L"Guwange\0\u3050\u308F\u3093\u3052 (Japan, 2000 7/ 7 Special Ver 13:22)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY, GBF_VERSHOOT, 0,
 	NULL, guwangesRomInfo, guwangesRomName, NULL, NULL, NULL, NULL, guwangeInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,

@@ -499,12 +499,12 @@ static void workram_write(UINT16 offset, UINT8 data)
 	}
 }
 
-static UINT8 sega_usb_sound_read(UINT32 address)
+static UINT8 __fastcall sega_usb_sound_read(UINT32 address)
 {
 	return usb_prgram[address & 0xfff];
 }
 
-static void sega_usb_sound_write_port(UINT32 port, UINT8 data)
+static void __fastcall sega_usb_sound_write_port(UINT32 port, UINT8 data)
 {
 	if (port < 0x100) {
 		usb_workram[work_ram_bank * 0x100 + port] = data;

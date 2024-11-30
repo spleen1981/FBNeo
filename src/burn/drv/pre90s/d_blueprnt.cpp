@@ -361,8 +361,6 @@ static INT32 DrvGfxDecode()
 
 static INT32 DrvDoReset()
 {
-	DrvReset = 0;
-
 	memset (AllRam, 0, RamEnd - AllRam);
 
 	ZetReset(0);
@@ -370,6 +368,8 @@ static INT32 DrvDoReset()
 
 	AY8910Reset(0);
 	AY8910Reset(1);
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -390,7 +390,7 @@ static INT32 MemIndex()
 
 	DrvColRAM	= Next; Next += 0x000400;
 	DrvVidRAM	= Next; Next += 0x000400;
-	DrvScrollRAM	= Next; Next += 0x000100;
+	DrvScrollRAM= Next; Next += 0x000100;
 	DrvSprRAM	= Next; Next += 0x000100;
 
 	DrvZ80RAM0	= Next; Next += 0x000800;
@@ -411,12 +411,7 @@ static INT32 MemIndex()
 
 static INT32 DrvInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		INT32 lofst = 0;
@@ -473,8 +468,9 @@ static INT32 DrvInit()
 	AY8910Init(1,  625000, 1);
 	AY8910SetPorts(0, NULL, &ay8910_0_read_port_1, &ay8910_0_write_port_0, NULL);
 	AY8910SetPorts(1, &ay8910_1_read_port_0, &ay8910_1_read_port_1, NULL, NULL);
-	AY8910SetAllRoutes(0, 0.25, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(1, 0.25, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(0, 0.15, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(1, 0.15, BURN_SND_ROUTE_BOTH);
+	AY8910SetBuffered(ZetTotalCycles, 1250000);
 
 	GenericTilesInit();
 
@@ -492,7 +488,7 @@ static INT32 DrvExit()
 	AY8910Exit(0);
 	AY8910Exit(1);
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 	Grasspin = 0;
 
 	return 0;
@@ -569,16 +565,16 @@ static INT32 DrvFrame()
 		DrvDoReset();
 	}
 
-	{
-		if (*watchdog > 180) {
-			DrvDoReset();
-		}
+	ZetNewFrame();
 
-		*watchdog = *watchdog + 1;
+	if ((*watchdog)++ > 180) {
+		bprintf(0, _T("d_blueprnt - watchdog hit!\n"));
+		DrvDoReset();
 	}
 
 	{
 		DrvInputs[0] = DrvInputs[1] = 0;
+
 		for (INT32 i = 0; i < 8; i++) {
 			DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;
 			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
@@ -594,12 +590,12 @@ static INT32 DrvFrame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		ZetOpen(0);
-		nCyclesDone[0] += ZetRun(((i + 1) * nCyclesTotal[0] / nInterleave) - nCyclesDone[0]);
+		CPU_RUN(0, Zet);
 		if (i == 255) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
 
 		ZetOpen(1);
-		nCyclesDone[1] += ZetRun(((i + 1) * nCyclesTotal[1] / nInterleave) - nCyclesDone[1]);
+		CPU_RUN(1, Zet);
 		if ((i & 0x3f) == 0x3f) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
 	}
@@ -666,7 +662,7 @@ struct BurnDriver BurnDrvBlueprnt = {
 	"blueprnt", NULL, NULL, NULL, "1982",
 	"Blue Print (Midway)\0", NULL, "[Zilec Electronics] Bally Midway", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, blueprntRomInfo, blueprntRomName, NULL, NULL, NULL, NULL, BlueprntInputInfo, BlueprntDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x208,
 	224, 256, 3, 4
@@ -700,7 +696,7 @@ struct BurnDriver BurnDrvBlueprnj = {
 	"blueprntj", "blueprnt", NULL, NULL, "1982",
 	"Blue Print (Jaleco)\0", NULL, "[Zilec Electronics] Jaleco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, blueprnjRomInfo, blueprnjRomName, NULL, NULL, NULL, NULL, BlueprntInputInfo, BlueprntDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x208,
 	224, 256, 3, 4
@@ -735,7 +731,7 @@ struct BurnDriver BurnDrvSaturnzi = {
 	"saturnzi", NULL, NULL, NULL, "1983",
 	"Saturn\0", NULL, "[Zilec Electronics] Jaleco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, saturnziRomInfo, saturnziRomName, NULL, NULL, NULL, NULL, SaturnInputInfo, SaturnDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x208,
 	224, 256, 3, 4
@@ -775,7 +771,7 @@ struct BurnDriver BurnDrvGrasspin = {
 	"grasspin", NULL, NULL, NULL, "1983",
 	"Grasspin\0", NULL, "[Zilec Electronics] Jaleco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
 	NULL, grasspinRomInfo, grasspinRomName, NULL, NULL, NULL, NULL, GrasspinInputInfo, GrasspinDIPInfo,
 	GrasspinInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4

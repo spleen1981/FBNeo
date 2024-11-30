@@ -5,16 +5,27 @@
 #include "taito_ic.h"
 
 UINT8 *PC090OJRam = NULL;
+UINT8 *PC090OJRamBuffer = NULL;
 static INT32 PC090OJNumTiles;
 static INT32 PC090OJXOffset;
 static INT32 PC090OJYOffset;
 static INT32 PC090OJUseBuffer;
 static INT32 PC090OJPaletteOffset;
+static INT32 PC090OJDisableFlip;
 INT32 PC090OJSpriteCtrl;
+
+INT32 PC090OJGetFlipped()
+{
+	UINT16 *VideoRam = (UINT16*)PC090OJRamBuffer;
+
+	INT32 PC090OJCtrl = BURN_ENDIAN_SWAP_INT16(VideoRam[0xdff]);
+
+	return (~PC090OJCtrl & 1);
+}
 
 void PC090OJDrawSprites(UINT8 *pSrc)
 {
-	UINT16 *VideoRam = (UINT16*)PC090OJRam;
+	UINT16 *VideoRam = (UINT16*)PC090OJRamBuffer;
 	
 	INT32 PC090OJCtrl = BURN_ENDIAN_SWAP_INT16(VideoRam[0xdff]);
 	
@@ -43,7 +54,7 @@ void PC090OJDrawSprites(UINT8 *pSrc)
 		if (x > 0x140) x -= 0x200;
 		if (y > 0x140) y -= 0x200;
 		
-		if (!(PC090OJCtrl & 1))	{
+		if (!(PC090OJCtrl & 1) && PC090OJDisableFlip == 0)	{
 			x = 320 - x - 16;
 			y = 256 - y - 16;
 			xFlip = !xFlip;
@@ -85,6 +96,13 @@ void PC090OJDrawSprites(UINT8 *pSrc)
 	}
 }
 
+void PC090OJBufferSprites()
+{
+	if (PC090OJUseBuffer) {
+		memcpy(PC090OJRamBuffer, PC090OJRam, 0x4000);
+	}
+}
+
 void PC090OJReset()
 {
 	PC090OJSpriteCtrl = 0;
@@ -92,17 +110,27 @@ void PC090OJReset()
 
 void PC090OJInit(INT32 nNumTiles, INT32 xOffset, INT32 yOffset, INT32 UseBuffer)
 {
-	PC090OJRam = (UINT8*)BurnMalloc(0x4000);
+	PC090OJRam = PC090OJRamBuffer = (UINT8*)BurnMalloc(0x4000);
 	memset(PC090OJRam, 0, 0x4000);
-	
+
+	if (UseBuffer) {
+		PC090OJRamBuffer = (UINT8*)BurnMalloc(0x4000);
+	}
+
 	PC090OJNumTiles = nNumTiles;
 	
 	PC090OJXOffset = xOffset;
 	PC090OJYOffset = yOffset;
 	PC090OJUseBuffer = UseBuffer;
 	PC090OJPaletteOffset = 0;
-	
+	PC090OJDisableFlip = 0;
+
 	TaitoIC_PC090OJInUse = 1;
+}
+
+void PC090OJSetDisableFlipping(INT32 val)
+{
+	PC090OJDisableFlip = val;
 }
 
 void PC090OJSetPaletteOffset(INT32 Offset)
@@ -119,7 +147,8 @@ void PC090OJExit()
 	PC090OJYOffset = 0;
 	PC090OJUseBuffer = 0;
 	PC090OJPaletteOffset = 0;
-	
+	PC090OJDisableFlip = 0;
+
 	PC090OJSpriteCtrl = 0;
 }
 
@@ -134,7 +163,7 @@ void PC090OJScan(INT32 nAction)
 		ba.szName = "PC090OJ Ram";
 		BurnAcb(&ba);
 	}
-	
+
 	if (nAction & ACB_DRIVER_DATA) {
 		SCAN_VAR(PC090OJSpriteCtrl);
 	}

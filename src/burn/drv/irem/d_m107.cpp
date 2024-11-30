@@ -60,7 +60,6 @@ typedef struct _m107_layer m107_layer;
 struct _m107_layer
 {
 	INT32 enable;
-	INT32 wide;
 	INT32 enable_rowscroll;
 
 	UINT16 scrollx;
@@ -95,7 +94,7 @@ static struct BurnInputInfo FirebarrInputList[] = {
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 3"	},
 
-	{"Reset",			BIT_DIGITAL,	&DrvReset,	"reset"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Service",			BIT_DIGITAL,	DrvButton + 4,	"service"	},
 	{"Dip A",			BIT_DIPSWITCH,	DrvInput + 5,	"dip"		},
 	{"Dip B",			BIT_DIPSWITCH,	DrvInput + 6,	"dip"		},
@@ -143,7 +142,7 @@ static struct BurnInputInfo Dsoccr94InputList[] = {
 	{"P4 Button 1",		BIT_DIGITAL,	DrvJoy4 + 5,	"p4 fire 1"	},
 	{"P4 Button 2",		BIT_DIGITAL,	DrvJoy4 + 6,	"p4 fire 2"	},
 
-	{"Reset",			BIT_DIGITAL,	&DrvReset,	"reset"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Service",			BIT_DIGITAL,	DrvButton + 4,	"service"	},
 	{"Dip A",			BIT_DIPSWITCH,	DrvInput + 5,	"dip"		},
 	{"Dip B",			BIT_DIPSWITCH,	DrvInput + 6,	"dip"		},
@@ -155,8 +154,8 @@ STDINPUTINFO(Dsoccr94)
 static struct BurnDIPInfo FirebarrDIPList[]=
 {
 	{0x14, 0xff, 0xff, 0xfb, NULL							},
-	{0x15, 0xff, 0xff, 0xa3, NULL							},
-	{0x16, 0xff, 0xff, 0xf5, NULL							},
+	{0x15, 0xff, 0xff, 0xbf, NULL							},
+	{0x16, 0xff, 0xff, 0xff, NULL							},
 
 	{0   , 0xfe, 0   ,    4, "Rapid Fire"					},
 	{0x14, 0x01, 0x0c, 0x00, "Button 1 Normal, Button 3 Rapid Fire"			},
@@ -300,7 +299,6 @@ static void m107YM2151IRQHandler(INT32 nStatus)
 	if (VezGetActive() == -1) return;
 
 	VezSetIRQLineAndVector(NEC_INPUT_LINE_INTP0, 0xff/*default*/, nStatus ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
-	VezRun(100);
 }
 
 static UINT8 __fastcall m107ReadByte(UINT32 address)
@@ -337,10 +335,13 @@ static UINT8 __fastcall m107ReadPort(UINT32 port)
 	{
 		case 0x00: return  DrvInput[0];
 		case 0x01: return  DrvInput[1];
+
 		case 0x02: return (DrvInput[4] & 0x7f) | vblank;
-		case 0x03: return  DrvInput[7];
+		case 0x03: return  DrvInput[5];
+
 		case 0x04: return  DrvInput[6];
-		case 0x05: return  DrvInput[5];
+		case 0x05: return  DrvInput[7];
+
 		case 0x06: return  DrvInput[2];
 		case 0x07: return  DrvInput[3];
 
@@ -369,8 +370,8 @@ static void set_pf_info(INT32 layer)
 
 	INT32 data = (pf_control[layer][5] << 8) + pf_control[layer][4];
 
-	ptr->enable		= (~data >> 7) & 1;
-	ptr->vram		= (UINT16*)(DrvVidRAM + (((data >> 8) & 0x0f) * 0x1000));
+	ptr->enable				= (~data >> 7) & 1;
+	ptr->vram				= (UINT16*)(DrvVidRAM + (((data >> 8) & 0x0f) * 0x1000));
 	ptr->enable_rowscroll	= data & 0x03;
 }
 
@@ -546,53 +547,54 @@ static INT32 DrvDoReset()
 	raster_irq_position = -1;
 	sound_cpu_reset = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
 static INT32 MemIndex(INT32 gfxlen1, INT32 gfxlen2)
 {
 	UINT8 *Next; Next = Mem;
-	DrvV33ROM 	= Next; Next += 0x100000;
-	DrvV30ROM	= Next; Next += 0x020000;
-	DrvGfxROM0	= Next; Next += gfxlen1 * 2;
-	DrvGfxROM1	= Next; Next += gfxlen2 * 2;
+	DrvV33ROM 		= Next; Next += 0x100000;
+	DrvV30ROM		= Next; Next += 0x020000;
+	DrvGfxROM0		= Next; Next += gfxlen1 * 2;
+	DrvGfxROM1		= Next; Next += gfxlen2 * 2;
 
 	if (spritesystem == 1) {
 		DrvSprTable	= Next; Next += 0x040000;
 	}
 
-	DrvSndROM	= Next; Next += 0x100000;
+	DrvSndROM		= Next; Next += 0x100000;
 
 	RamPrioBitmap	= Next; Next += 320 * 240;
 
-	RamStart	= Next;
+	RamStart		= Next;
 
-	DrvSprRAM	= Next; Next += 0x001000;
-	DrvSprBuf	= Next; Next += 0x001000;
-	DrvVidRAM	= Next; Next += 0x010000;
-	DrvV33RAM	= Next; Next += 0x010000;
-	DrvV30RAM	= Next; Next += 0x004000;
-	DrvPalRAM	= Next; Next += 0x001000;
+	DrvSprRAM		= Next; Next += 0x001000;
+	DrvSprBuf		= Next; Next += 0x001000;
+	DrvVidRAM		= Next; Next += 0x010000;
+	DrvV33RAM		= Next; Next += 0x010000;
+	DrvV30RAM		= Next; Next += 0x004000;
+	DrvPalRAM		= Next; Next += 0x001000;
 
-	sound_status= Next; Next += 0x000004; // 2
-	sound_latch	= Next; Next += 0x000004; // 1
+	sound_status	= Next; Next += 0x000004; // 2
+	sound_latch		= Next; Next += 0x000004; // 1
 
 	pf_control[0]	= Next; Next += 0x000008;
 	pf_control[1]	= Next; Next += 0x000008;
 	pf_control[2]	= Next; Next += 0x000008;
 	pf_control[3]	= Next; Next += 0x000008;
 
-	RamEnd		= Next;
+	RamEnd			= Next;
 
-	// scanned separately from ram due to pointers in structs
 	m107_layers[0]	= (struct _m107_layer*)Next; Next += sizeof(struct _m107_layer);
 	m107_layers[1]	= (struct _m107_layer*)Next; Next += sizeof(struct _m107_layer);
 	m107_layers[2]	= (struct _m107_layer*)Next; Next += sizeof(struct _m107_layer);
 	m107_layers[3]	= (struct _m107_layer*)Next; Next += sizeof(struct _m107_layer);
 
-	DrvPalette	= (UINT32 *) Next; Next += 0x0800 * sizeof(UINT32);
+	DrvPalette		= (UINT32 *) Next; Next += 0x0800 * sizeof(UINT32);
 
-	MemEnd		= Next;
+	MemEnd			= Next;
 	return 0;
 }
 
@@ -685,9 +687,10 @@ static INT32 DrvInit(INT32 (*pRomLoadCallback)(), const UINT8 *sound_decrypt_tab
 
 	irq_vectorbase = vectorbase;
 
-	BurnYM2151Init(3579545);
+	BurnYM2151InitBuffered(3579545, 1, NULL, 0);
 	YM2151SetIrqHandler(0, &m107YM2151IRQHandler);
-	BurnYM2151SetAllRoutes(0.40, BURN_SND_ROUTE_BOTH);
+	BurnYM2151SetAllRoutes(0.25, BURN_SND_ROUTE_BOTH);
+	BurnTimerAttachVez(7159090);
 
 	iremga20_init(0, DrvSndROM, 0x100000, 3579545);
 	itemga20_set_route(0, 1.00, BURN_SND_ROUTE_BOTH);
@@ -709,7 +712,7 @@ static INT32 DrvExit()
 	VezExit();
 
 	BurnFree(Mem);
-	
+
 	nPrevScreenPos = 0;
 	has_bankswitch = 0;
 
@@ -1011,68 +1014,35 @@ static INT32 DrvFrame()
 		}
 	}
 
-	INT32 nInterleave = 256; // scanlines
+	INT32 nInterleave = 256 * 8; // * 8 for tight sync
 	INT32 nCyclesTotal[2] = { 0, 0 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
-	INT32 nSoundBufferPos = 0;
 	nCyclesTotal[0] = (INT32)((INT64)(config_cpu_speed / 60) * nBurnCPUSpeedAdjust / 0x0100);
 	nCyclesTotal[1] = (INT32)((INT64)(7159090 / 60) * nBurnCPUSpeedAdjust / 0x0100);
-
-	if (pBurnSoundOut) {
-		BurnSoundClear();
-	}
-
-	nInterleave = 256 * 8; // * 8 for tight sync
 
 	vblank = 0;
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		VezOpen(0);
-		INT32 segment = nCyclesTotal[0] / nInterleave;
-		nCyclesDone[0] += VezRun(segment);
+		CPU_RUN(0, Vez);
 		if ((i&7)==7) scanline_interrupts(i/8); // update at hblank?
-
-		segment = (VezTotalCycles() * 7159) / (config_cpu_speed / 1000);
-
 		VezClose();
 
 		VezOpen(1);
-
-		{
-			if (sound_cpu_reset) {
-				VezIdle(segment - VezTotalCycles());
-			} else {
-				nCyclesDone[1] += VezRun(segment - VezTotalCycles());
-			}
+		if (sound_cpu_reset) {
+			VezIdle(nCyclesTotal[1] / nInterleave);
+		} else {
+			CPU_RUN_TIMER(1);
 		}
-
-		if (pBurnSoundOut && (i&7)==7) {
-			INT32 nSegmentLength = nBurnSoundLen / (nInterleave / 8);
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			iremga20_update(0, pSoundBuf, nSegmentLength);
-			
-			nSoundBufferPos += nSegmentLength;
-		}
-
 		VezClose();
 	}
 
-	VezOpen(1);
-
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		if (nSegmentLength) {
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			iremga20_update(0, pSoundBuf, nSegmentLength);
-		}
+		BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
+		iremga20_update(0, pBurnSoundOut, nBurnSoundLen);
 	}
-	
-	VezClose();
 
 	return 0;
 }
@@ -1087,17 +1057,12 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 	struct BurnArea ba;
 
 	if (nAction & ACB_MEMORY_RAM)
-	{	
+	{
 		memset(&ba, 0, sizeof(ba));
-		ba.Data	  = RamStart;
-		ba.nLen	  = RamEnd-RamStart;
-		ba.szName = "All Ram";
+		ba.Data		= RamStart;
+		ba.nLen		= RamEnd-RamStart;
+		ba.szName	= "All Ram";
 		BurnAcb(&ba);
-
-		ScanVar(m107_layers[0], STRUCT_SIZE_HELPER(_m107_layer, scrolly), "m107 pf0");
-		ScanVar(m107_layers[1], STRUCT_SIZE_HELPER(_m107_layer, scrolly), "m107 pf1");
-		ScanVar(m107_layers[2], STRUCT_SIZE_HELPER(_m107_layer, scrolly), "m107 pf2");
-		ScanVar(m107_layers[3], STRUCT_SIZE_HELPER(_m107_layer, scrolly), "m107 pf3");
 	}
 
 	if (nAction & ACB_DRIVER_DATA)
@@ -1125,10 +1090,6 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 			m107Bankswitch(nBankswitchData);
 			VezClose();
 		}
-
-		VezOpen(1);
-		m107YM2151IRQHandler(0);
-		VezClose();
 	}
 
 	return 0;
@@ -1201,7 +1162,7 @@ struct BurnDriver BurnDrvAirass = {
 	"airass", NULL, NULL, NULL, "1993",
 	"Air Assault (World)\0", NULL, "Irem", "Irem M107",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_IREM_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_VERSHOOT, 0,
 	NULL, airassRomInfo, airassRomName, NULL, NULL, NULL, NULL, FirebarrInputInfo, FirebarrDIPInfo,
 	airassInit, DrvExit, DrvFrame, DrvReDraw, DrvScan, &bRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -1285,7 +1246,7 @@ struct BurnDriver BurnDrvFirebarr = {
 	"firebarr", "airass", NULL, NULL, "1993",
 	"Fire Barrel (Japan)\0", NULL, "Irem", "Irem M107",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_IREM_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_VERSHOOT, 0,
 	NULL, firebarrRomInfo, firebarrRomName, NULL, NULL, NULL, NULL, FirebarrInputInfo, FirebarrDIPInfo,
 	firebarrInit, DrvExit, DrvFrame, DrvReDraw, DrvScan, &bRecalcPalette, 0x800,
 	240, 320, 3, 4
@@ -1356,7 +1317,7 @@ struct BurnDriver BurnDrvDsoccr94 = {
 	"dsoccr94", NULL, NULL, NULL, "1994",
 	"Dream Soccer '94 (World, M107 hardware)\0", NULL, "Irem (Data East Corporation license)", "Irem M107",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 4, HARDWARE_IREM_MISC, GBF_SPORTSFOOTBALL, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_IREM_MISC, GBF_SPORTSFOOTBALL, 0,
 	NULL, dsoccr94RomInfo, dsoccr94RomName, NULL, NULL, NULL, NULL, Dsoccr94InputInfo, Dsoccr94DIPInfo,
 	dsoccr94Init, DrvExit, DrvFrame, DrvReDraw, DrvScan, &bRecalcPalette, 0x800,
 	320, 240, 4, 3
@@ -1395,7 +1356,7 @@ struct BurnDriver BurnDrvDsoccr94k = {
 	"dsoccr94k", "dsoccr94", NULL, NULL, "1994",
 	"Dream Soccer '94 (Korea, M107 hardware)\0", NULL, "Irem (Data East Corporation license)", "Irem M107",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_IREM_MISC, GBF_SPORTSFOOTBALL, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_IREM_MISC, GBF_SPORTSFOOTBALL, 0,
 	NULL, dsoccr94kRomInfo, dsoccr94kRomName, NULL, NULL, NULL, NULL, Dsoccr94InputInfo, Dsoccr94DIPInfo,
 	dsoccr94Init, DrvExit, DrvFrame, DrvReDraw, DrvScan, &bRecalcPalette, 0x800,
 	320, 240, 4, 3

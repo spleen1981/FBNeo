@@ -44,139 +44,141 @@ static UINT8 DrvDips[2];
 static UINT8 DrvInputs[3];
 static UINT8 DrvReset;
 
+static INT32 nExtraCycles;
+
 static INT32 numSN = 0; // number of sn76477
 static INT32 bHasSamples = 0;
 
 static class LowPass2 *LP1 = NULL, *LP2 = NULL;
 
 static struct BurnInputInfo SasukeInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 1"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 7,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 };
 
 STDINPUTINFO(Sasuke)
 
 static struct BurnInputInfo SatansatInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 2"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 7,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 };
 
 STDINPUTINFO(Satansat)
 
 static struct BurnInputInfo VanguardInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 4,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 fire 3"	},
 	{"P1 Button 4",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 4"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 4,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 fire 3"	},
 	{"P2 Button 4",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 4"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 };
 
 STDINPUTINFO(Vanguard)
 
 static struct BurnInputInfo FantasyInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 4,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 right"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 4,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 right"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 };
 
 STDINPUTINFO(Fantasy)
 
 static struct BurnInputInfo NibblerInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 4,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 right"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 4,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 right"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"	},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 };
 
 STDINPUTINFO(Nibbler)
 
 static struct BurnInputInfo PballoonInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 4,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 4,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 };
 
 STDINPUTINFO(Pballoon)
@@ -839,8 +841,6 @@ static INT32 DrvDoReset()
 	for (INT32 i = 0; i < numSN; i++)
 		SN76477_set_enable(i, 1); // active low enable
 
-	HiscoreReset();
-
 	DrvInputs[2] = 0;
 	backcolor = 0;
 	charbank = 0;
@@ -849,6 +849,10 @@ static INT32 DrvDoReset()
 	scrollx = 0;
 	scrolly = 0;
 	sasuke_counter = 0;
+
+	nExtraCycles = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -1063,8 +1067,7 @@ static void DrvSoundInit(INT32 type)
 
 static void DrvSoundExit()
 {
-	for (INT32 i = 0; i < numSN; i++)
-		SN76477_exit(i);
+	SN76477_exit();
 
 	BurnSampleExit();
 
@@ -1076,12 +1079,7 @@ static void DrvSoundExit()
 
 static INT32 SatansatInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvM6502ROM + 0x4000,  0, 1)) return 1;
@@ -1136,12 +1134,7 @@ static INT32 SatansatInit()
 
 static INT32 SatansatindInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvM6502ROM + 0x4000,  0, 1)) return 1;
@@ -1197,12 +1190,7 @@ static INT32 SatansatindInit()
 
 static INT32 SasukeInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvM6502ROM + 0x4000,  0, 1)) return 1;
@@ -1256,12 +1244,7 @@ static INT32 SasukeInit()
 
 static INT32 VanguardInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvM6502ROM + 0x4000,  0, 1)) return 1;
@@ -1318,12 +1301,7 @@ static INT32 VanguardInit()
 
 static INT32 FantasyuInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvM6502ROM + 0x3000,  0, 1)) return 1;
@@ -1382,12 +1360,7 @@ static INT32 FantasyuInit()
 
 static INT32 NibblerInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvM6502ROM + 0x3000,  0, 1)) return 1;
@@ -1455,12 +1428,7 @@ static INT32 NibblerpInit()
 
 static INT32 PballoonInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvM6502ROM + 0x3000,  0, 1)) return 1;
@@ -1522,7 +1490,7 @@ static INT32 DrvExit()
 
 	bHasSamples = 0;
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -1663,16 +1631,18 @@ static INT32 DrvFrame()
 		if (nCurrentFrame & 1) sasuke_counter += 0x10;
 	}
 
-	INT32 nCyclesTotal = 705562 / 60;
-	INT32 nCyclesDone = 0;
 	INT32 nInterleave = 262;
+	INT32 nCyclesTotal[1] = { 705562 / 60 };
+	INT32 nCyclesDone[1] = { nExtraCycles };
 
 	M6502Open(0);
 	for (INT32 i = 0; i < nInterleave; i++) {
-		nCyclesDone += M6502Run(((i + 1) * nCyclesTotal / nInterleave) - nCyclesDone);
+		CPU_RUN(0, M6502);
 		if (i == (nInterleave-1) && irqmask) M6502SetIRQLine(0, CPU_IRQSTATUS_HOLD);
 	}
 	M6502Close();
+
+	nExtraCycles = nCyclesDone[0] - nCyclesTotal[0];
 
 #if 0
 	if (pBurnSoundOut) {
@@ -1686,8 +1656,7 @@ static INT32 DrvFrame()
 	if (pBurnSoundOut) {
 		snk_sound_update(pBurnSoundOut, nBurnSoundLen);
 		memset(FilterBUF, 0, 0x2000);
-		for (INT32 i = 0; i < numSN; i++)
-			SN76477_sound_update(i, FilterBUF, nBurnSoundLen);
+		SN76477_sound_update(FilterBUF, nBurnSoundLen);
 		if (LP1 && LP2) {
 			LP1->Filter(FilterBUF, nBurnSoundLen);  // Left
 			LP2->Filter(FilterBUF+1, nBurnSoundLen); // Right
@@ -1727,6 +1696,9 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		M6502Scan(nAction);
 
+		snk6502_sound_savestate(nAction, pnMin);
+		SN76477_scan(nAction, pnMin);
+
 		SCAN_VAR(backcolor);
 		SCAN_VAR(charbank);
 		SCAN_VAR(flipscreen);
@@ -1736,7 +1708,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		SCAN_VAR(sasuke_counter);
 
-		snk6502_sound_savestate();
+		SCAN_VAR(nExtraCycles);
 	}
 
 	if (nAction & ACB_WRITE) {
@@ -1932,7 +1904,7 @@ struct BurnDriver BurnDrvSatansatind = {
 	"satansatind", "satansat", NULL, "vanguard", "1981",
 	"Satan of Saturn (Inder S.A., bootleg)\0", NULL, "bootleg (Inder S.A.)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, satansatindRomInfo, satansatindRomName, NULL, NULL, vanguardSampleInfo, vanguardSampleName, SatansatInputInfo, SatansatDIPInfo,
 	SatansatindInit, DrvExit, DrvFrame, SatansatDraw, DrvScan, &DrvRecalc, 0x40,
 	224, 256, 3, 4
@@ -2295,7 +2267,7 @@ STD_ROM_FN(nibbler)
 
 struct BurnDriver BurnDrvNibbler = {
 	"nibbler", NULL, NULL, NULL, "1982",
-	"Nibbler (rev 9)\0", NULL, "Rock-Ola", "Miscellaneous",
+	"Nibbler (rev 9, set 1)\0", NULL, "Rock-Ola", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
 	NULL, nibblerRomInfo, nibblerRomName, NULL, NULL, NULL, NULL, NibblerInputInfo, NibblerDIPInfo,
@@ -2443,7 +2415,7 @@ STD_ROM_FN(nibblera)
 
 struct BurnDriver BurnDrvNibblera = {
 	"nibblera", "nibbler", NULL, NULL, "1982",
-	"Nibbler (rev 9, alternate set)\0", NULL, "Rock-Ola", "Miscellaneous",
+	"Nibbler (rev 9, set 2)\0", NULL, "Rock-Ola", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
 	NULL, nibbleraRomInfo, nibbleraRomName, NULL, NULL, NULL, NULL, NibblerInputInfo, NibblerDIPInfo,
@@ -2481,7 +2453,7 @@ STD_ROM_FN(nibblerp)
 
 struct BurnDriver BurnDrvNibblerp = {
 	"nibblerp", "nibbler", NULL, NULL, "1982",
-	"Nibbler (Pioneer Balloon conversion - rev 6)\0", NULL, "Rock-Ola", "Miscellaneous",
+	"Nibbler (rev 6, Pioneer Balloon conversion)\0", NULL, "Rock-Ola", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
 	NULL, nibblerpRomInfo, nibblerpRomName, NULL, NULL, NULL, NULL, NibblerInputInfo, Nibbler6DIPInfo,
@@ -2518,7 +2490,7 @@ STD_ROM_FN(nibblero)
 
 struct BurnDriver BurnDrvNibblero = {
 	"nibblero", "nibbler", NULL, NULL, "1983",
-	"Nibbler (Olympia - rev 8)\0", NULL, "Rock-Ola (Olympia license)", "Miscellaneous",
+	"Nibbler (rev 8, Olympia)\0", NULL, "Rock-Ola (Olympia license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
 	NULL, nibbleroRomInfo, nibbleroRomName, NULL, NULL, NULL, NULL, NibblerInputInfo, Nibbler8DIPInfo,

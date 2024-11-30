@@ -540,6 +540,9 @@ static INT32 DrvDoReset(INT32 clear_mem)
 	PokeyReset();
 	tms5220_reset();
 
+	HiscoreReset();
+
+
 	alpha_xmtd = 0;
 	alpha_data = 0;
 	alpha_rcvd = 0;
@@ -646,8 +649,7 @@ static INT32 MhavocInit()
 	PokeySetTotalCyclesCB(M6502TotalCycles);
 	PokeyAllPotCallback(0, port0_read);
 
-	tms5220_init(); // mhavocrv
-	tms5220_set_frequency(555555);
+	tms5220_init(555555); // mhavocrv
 
 	avgdvg_init(USE_AVG_MHAVOC, DrvVectorRAM, 0x4000, M6502TotalCycles, 300, 260);
 
@@ -697,8 +699,7 @@ static INT32 AlphaoneInit()
 	PokeyInit(1250000, 2, 0.50, 0);
 	PokeySetTotalCyclesCB(M6502TotalCycles);
 
-	tms5220_init(); // not in this set
-	tms5220_set_frequency(555555);
+	tms5220_init(555555); // not in this set
 
 	avgdvg_init(USE_AVG_MHAVOC, DrvVectorRAM, 0x4000, M6502TotalCycles, 580, 500);
 
@@ -926,7 +927,7 @@ static struct BurnRomInfo mhavocRomDesc[] = {
 
 	{ "136025.108",		0x4000, 0x93faf210, 2 | BRF_PRG | BRF_ESS }, //  7 M6502 #1 Code
 
-	{ "036408-01.b1",	0x0100, 0x5903af03, 3 | BRF_GRA },           //  8 AVG PROM
+	{ "136002-125.6c",	0x0100, 0x5903af03, 3 | BRF_GRA },           //  8 AVG PROM
 };
 
 STD_ROM_PICK(mhavoc)
@@ -936,7 +937,7 @@ struct BurnDriver BurnDrvMhavoc = {
 	"mhavoc", NULL, NULL, NULL, "1983",
 	"Major Havoc (rev 3)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_VECTOR, 0,
 	NULL, mhavocRomInfo, mhavocRomName, NULL, NULL, NULL, NULL, MhavocInputInfo, MhavocDIPInfo,
 	MhavocInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	800, 600, 4, 3
@@ -966,7 +967,7 @@ struct BurnDriver BurnDrvMhavoc2 = {
 	"mhavoc2", "mhavoc", NULL, NULL, "1983",
 	"Major Havoc (rev 2)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_VECTOR, 0,
 	NULL, mhavoc2RomInfo, mhavoc2RomName, NULL, NULL, NULL, NULL, MhavocInputInfo, MhavocDIPInfo,
 	MhavocInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	800, 600, 4, 3
@@ -996,7 +997,7 @@ struct BurnDriver BurnDrvMhavocrv = {
 	"mhavocrv", "mhavoc", NULL, NULL, "2006",
 	"Major Havoc - Return to Vax\0", NULL, "hack (JMA)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM | GBF_VECTOR, 0,
 	NULL, mhavocrvRomInfo, mhavocrvRomName, NULL, NULL, NULL, NULL, MhavocInputInfo, MhavocDIPInfo,
 	MhavocInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	800, 600, 4, 3
@@ -1026,7 +1027,7 @@ struct BurnDriver BurnDrvMhavocp = {
 	"mhavocp", "mhavoc", NULL, NULL, "1983",
 	"Major Havoc (prototype)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_VECTOR, 0,
 	NULL, mhavocpRomInfo, mhavocpRomName, NULL, NULL, NULL, NULL, MhavocInputInfo, MhavocpDIPInfo,
 	MhavocInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	800, 600, 4, 3
@@ -1056,7 +1057,7 @@ struct BurnDriver BurnDrvAlphaone = {
 	"alphaone", "mhavoc", NULL, NULL, "1983",
 	"Alpha One (prototype, 3 lives)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_VECTOR, 0,
 	NULL, alphaoneRomInfo, alphaoneRomName, NULL, NULL, NULL, NULL, AlphaoneInputInfo, AlphaoneDIPInfo,
 	AlphaoneInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	800, 600, 4, 3
@@ -1085,7 +1086,7 @@ struct BurnDriver BurnDrvAlphaonea = {
 	"alphaonea", "mhavoc", NULL, NULL, "1983",
 	"Alpha One (prototype, 5 lives)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_VECTOR, 0,
 	NULL, alphaoneaRomInfo, alphaoneaRomName, NULL, NULL, NULL, NULL, AlphaoneInputInfo, AlphaoneDIPInfo,
 	AlphaoneInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	800, 600, 4, 3

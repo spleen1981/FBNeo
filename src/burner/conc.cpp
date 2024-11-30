@@ -76,7 +76,7 @@ static INT32 ConfigParseFile(TCHAR* pszFilename)
 	}
 
 	while (1) {
-		if (_fgetts(szLine, sizeof(szLine), h) == NULL) {
+		if (_fgetts(szLine, 8192, h) == NULL) {
 			break;
 		}
 
@@ -392,7 +392,7 @@ static INT32 ConfigParseNebulaFile(TCHAR* pszFilename)
 		while (i < nLen)
 		{
 			if (szLine[i] == '=' && i < 4) j = i+1;
-			if (szLine[i] == ',' || szLine[i] == '\n')
+			if (szLine[i] == ',' || szLine[i] == '\r' || szLine[i] == '\n')
 			{
 				if (pCurrentCheat->pOption[n] == NULL) {
 					pCurrentCheat->pOption[n] = (CheatOption*)malloc(sizeof(CheatOption));
@@ -413,7 +413,7 @@ static INT32 ConfigParseNebulaFile(TCHAR* pszFilename)
 		{
 			if (i == nLen) break;
 
-			if (szLine[i] == ',' || szLine[i] == '\n')
+			if (szLine[i] == ',' || szLine[i] == '\r' || szLine[i] == '\n')
 			{
 				_tcsncpy (tmp, szLine + j, i-j);
 				tmp[i-j] = '\0';
@@ -451,22 +451,27 @@ static INT32 ConfigParseNebulaFile(TCHAR* pszFilename)
 	return 0;
 }
 
+#define IS_MIDWAY ((BurnDrvGetHardwareCode() & HARDWARE_PREFIX_MIDWAY) == HARDWARE_PREFIX_MIDWAY)
 
-//TODO: make cross platform
-static INT32 ConfigParseMAMEFile()
+static INT32 ConfigParseMAMEFile_internal(FILE *fz, const TCHAR *name)
 {
 #define AddressInfo()	\
 	INT32 k = (flags >> 20) & 3;	\
+	INT32 cpu = (flags >> 24) & 0x1f; \
+	if (cpu > 3) cpu = 0; \
 	for (INT32 i = 0; i < k+1; i++) {	\
-		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nCPU = 0;	\
+		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nCPU = cpu;	\
 		if ((flags & 0xf0000000) == 0x80000000) { \
 			pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].bRelAddress = 1; \
 			pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nRelAddressOffset = nAttrib; \
 			pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nRelAddressBits = (flags & 0x3000000) >> 24; \
 		} \
 		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nAddress = (pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].bRelAddress) ? nAddress : nAddress + i;	\
+		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nExtended = nAttrib; \
 		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nValue = (nValue >> ((k*8)-(i*8))) & 0xff;	\
+		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nMask = (nAttrib >> ((k*8)-(i*8))) & 0xff;	\
 		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nMultiByte = i;	\
+		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nTotalByte = k+1;	\
 		nCurrentAddress++;	\
 	}	\
 
@@ -480,14 +485,6 @@ static INT32 ConfigParseMAMEFile()
 #define tmpcpy(a)	\
 	_tcsncpy (tmp, szLine + c0[a] + 1, c0[a+1] - (c0[a]+1));	\
 	tmp[c0[a+1] - (c0[a]+1)] = '\0';				\
-
-	TCHAR szFileName[MAX_PATH] = _T("");
-	_stprintf(szFileName, _T("%scheat.dat"), szAppCheatsPath);
-
-	FILE *fz = _tfopen(szFileName, _T("rt"));
-	if (fz == NULL) {
-		return 1;
-	}
 
 	TCHAR tmp[256];
 	TCHAR tmp2[256];
@@ -505,7 +502,7 @@ static INT32 ConfigParseMAMEFile()
 	UINT32 nAttrib = 0;
 
 	CheatInfo* pCurrentCheat = NULL;
-	_stprintf(gName, _T(":%s:"), BurnDrvGetText(DRV_NAME));
+	_stprintf(gName, _T(":%s:"), name);
 
 	while (1)
 	{
@@ -538,11 +535,16 @@ static INT32 ConfigParseMAMEFile()
 			else continue;
 		}
 
+		if (_tcsstr(szLine, _T("----:REASON"))) {
+			// reason to leave!
+			break;
+		}
+
 		nFound = 1;
 
 		INT32 c0[16], c1 = 0;					// find colons / break
 		for (INT32 i = 0; i < nLen; i++)
-			if (szLine[i] == ':' || szLine[i] == '\n')
+			if (szLine[i] == ':' || szLine[i] == '\r' || szLine[i] == '\n')
 				c0[c1++] = i;
 
 		tmpcpy(1);						// control flags
@@ -578,6 +580,10 @@ static INT32 ConfigParseMAMEFile()
 		// & 0x4000 = don't add to list
 		// & 0x0800 = BCD
 		if (flags & 0x00004800) continue;			// skip various cheats (unhandled methods at this time)
+
+		if ((flags & 0xff000000) == 0x39000000 && IS_MIDWAY) {
+			nAddress |= 0xff800000 >> 3; // 0x39 = address is relative to system's ROM block, only midway uses this kinda cheats
+		}
 
 		if ( flags & 0x00008000 || (flags & 0x00010000 && !menu)) { // Linked cheat "(2/2) etc.."
 			if (nCurrentAddress < CHEAT_MAX_ADDRESS) {
@@ -626,14 +632,23 @@ static INT32 ConfigParseMAMEFile()
 			OptionName(_T("Disabled"));
 
 			if (nAddress) {
+				if ((flags & 0x80018) == 0 && nAttrib != 0xffffffff) {
+					pCurrentCheat->bWriteWithMask = 1; // nAttrib field is the mask
+				}
 				if (flags & 0x1) {
 					pCurrentCheat->bOneShot = 1; // apply once and stop
 				}
 				if (flags & 0x2) {
 					pCurrentCheat->bWaitForModification = 1; // wait for modification before changing
 				}
+				if (flags & 0x80000) {
+					pCurrentCheat->bWaitForModification = 2; // check address against extended field before changing
+				}
 				if (flags & 0x800000) {
 					pCurrentCheat->bRestoreOnDisable = 1; // restore previous value on disable
+				}
+				if (flags & 0x3000) {
+					pCurrentCheat->nPrefillMode = (flags & 0x3000) >> 12;
 				}
 				if ((flags & 0x6) == 0x6) {
 					pCurrentCheat->bWatchMode = 1; // display value @ address
@@ -672,14 +687,23 @@ static INT32 ConfigParseMAMEFile()
 			n++;
 			nCurrentAddress = 0;
 
+			if ((flags & 0x80018) == 0 && nAttrib != 0xffffffff) {
+				pCurrentCheat->bWriteWithMask = 1; // nAttrib field is the mask
+			}
 			if (flags & 0x1) {
 				pCurrentCheat->bOneShot = 1; // apply once and stop
 			}
 			if (flags & 0x2) {
 				pCurrentCheat->bWaitForModification = 1; // wait for modification before changing
 			}
+			if (flags & 0x80000) {
+				pCurrentCheat->bWaitForModification = 2; // check address against extended field before changing
+			}
 			if (flags & 0x800000) {
 				pCurrentCheat->bRestoreOnDisable = 1; // restore previous value on disable
+			}
+			if (flags & 0x3000) {
+				pCurrentCheat->nPrefillMode = (flags & 0x3000) >> 12;
 			}
 			if ((flags & 0x6) == 0x6) {
 				pCurrentCheat->bWatchMode = 1; // display value @ address
@@ -692,9 +716,33 @@ static INT32 ConfigParseMAMEFile()
 		}
 	}
 
-	fclose (fz);
+	// if no cheat was found, don't return success code
+	if (pCurrentCheat == NULL) return 1;
 
 	return 0;
+}
+
+static INT32 ConfigParseMAMEFile()
+{
+	TCHAR szFileName[MAX_PATH] = _T("");
+	_stprintf(szFileName, _T("%scheat.dat"), szAppCheatsPath);
+
+	FILE *fz = _tfopen(szFileName, _T("rt"));
+
+	INT32 ret = 1;
+
+	if (fz) {
+		ret = ConfigParseMAMEFile_internal(fz, BurnDrvGetText(DRV_NAME));
+		// let's try using parent entry as a fallback if no cheat was found for this romset
+		if (ret && (BurnDrvGetFlags() & BDF_CLONE) && BurnDrvGetText(DRV_PARENT)) {
+			fseek(fz, 0, SEEK_SET);
+			ret = ConfigParseMAMEFile_internal(fz, BurnDrvGetText(DRV_PARENT));
+		}
+
+		fclose(fz);
+	}
+
+	return ret;
 }
 
 
@@ -702,11 +750,11 @@ INT32 ConfigCheatLoad()
 {
 	TCHAR szFilename[MAX_PATH] = _T("");
 
-	_stprintf(szFilename, _T("%s%s.ini"), szAppCheatsPath, BurnDrvGetText(DRV_NAME));
-	if (ConfigParseFile(szFilename)) {
-		_stprintf(szFilename, _T("%s%s.dat"), szAppCheatsPath, BurnDrvGetText(DRV_NAME));
-		if (ConfigParseNebulaFile(szFilename)) {
-			if (ConfigParseMAMEFile()) {
+	if (ConfigParseMAMEFile()) {
+		_stprintf(szFilename, _T("%s%s.ini"), szAppCheatsPath, BurnDrvGetText(DRV_NAME));
+		if (ConfigParseFile(szFilename)) {
+			_stprintf(szFilename, _T("%s%s.dat"), szAppCheatsPath, BurnDrvGetText(DRV_NAME));
+			if (ConfigParseNebulaFile(szFilename)) {
 				return 1;
 			}
 		}

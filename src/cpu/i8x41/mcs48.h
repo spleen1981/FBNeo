@@ -12,6 +12,8 @@
 #ifndef _MCS48_H
 #define _MCS48_H
 
+extern bool cflyball_hack;
+
 /***************************************************************************
     CONSTANTS
 ***************************************************************************/
@@ -49,14 +51,14 @@ void mcs48Open(INT32 nCpu);
 void mcs48Close();
 void mcs48Scan(INT32 nAction);
 INT32 mcs48GetActive();
-extern "C"  {
+
 INT32 mcs48Run(INT32 cycles);
 void mcs48RunEnd();
 INT32 mcs48TotalCycles();
 void mcs48NewFrame();
 INT32 mcs48Idle(INT32 cycles);
 void mcs48SetIRQLine(INT32 inputnum, INT32 state);
-}
+
 void mcs48_master_w(INT32 offset, UINT8 data);
 UINT8 mcs48_master_r(INT32 offset);
 

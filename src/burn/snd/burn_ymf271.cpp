@@ -35,7 +35,7 @@ static void YMF271Render(INT32 nSegmentLength)
 	if (!DebugSnd_YMF271Initted) bprintf(PRINT_ERROR, _T("YMF271Render called without init\n"));
 #endif
 
-	if (nYMF271Position >= nSegmentLength) {
+	if (nYMF271Position >= nSegmentLength || !pBurnSoundOut) {
 		return;
 	}
 
@@ -228,7 +228,7 @@ INT32 BurnYMF271Init(INT32 nClockFrequency, UINT8 *rom, INT32 romsize, void (*IR
 
 	nBurnYMF271SoundRate = nClockFrequency / 384; // hw rate based on input clock
 
-	nSampleSize = (UINT32)nBurnYMF271SoundRate * (1 << 16) / nBurnSoundRate;
+	if (nBurnSoundRate) nSampleSize = (UINT32)nBurnYMF271SoundRate * (1 << 16) / nBurnSoundRate;
 	bYMF271AddSignal = nAdd;
 
 	BurnTimerInit(&ymf271_timerover, NULL);
@@ -274,7 +274,7 @@ void BurnYMF271Scan(INT32 nAction, INT32* pnMin)
 	BurnTimerScan(nAction, pnMin);
 	ymf271_scan(nAction);
 
-	if (nAction & ACB_WRITE) {
+	if (nAction & ACB_WRITE && ~nAction & ACB_RUNAHEAD) {
 		nYMF271Position = 0;
 		nFractionalPosition = 0;
 		memset(pBuffer, 0, 4096 * 2 * sizeof(INT16));

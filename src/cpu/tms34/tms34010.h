@@ -86,7 +86,6 @@ struct _tms34010_config
 
 
 /* PUBLIC FUNCTIONS - 34010 */
-extern "C" {
 void tms34010_get_display_params(tms34010_display_params *params);
 void tms34010_io_register_w(INT32 address, UINT32 data);
 void tms34020_io_register_w(INT32 address, UINT32 data);
@@ -121,7 +120,7 @@ void tms34010_set_context(void *set);
 
 void tms34010_timer_set_cb(void (*t_cb)());
 void tms34010_timer_arm(int cycle);
-}
+
 /* Host control interface */
 #define TMS34010_HOST_ADDRESS_L		0
 #define TMS34010_HOST_ADDRESS_H		1

@@ -15,94 +15,25 @@
 #include "burn.h"
 #include "burn_sound.h"
 #include "joyprocess.h"
+#include "burn_endian.h"
 
-#ifdef LSB_FIRST
-typedef union
-{
-	struct { UINT8 l,h,h2,h3; } b;
-	struct { UINT16 l,h; } w;
-	UINT32 d;
-} PAIR;
-
-#define BURN_ENDIAN_SWAP_INT8(x)				x
-#define BURN_ENDIAN_SWAP_INT16(x)				x
-#define BURN_ENDIAN_SWAP_INT32(x)				x
-#define BURN_ENDIAN_SWAP_INT64(x)				x
-#else
-
-// Xbox 360 has byteswap 64-bit intrinsic
-#ifndef _XBOX
-#define NO_64BIT_BYTESWAP
-#endif
-
-// psl1ght uses those intrinsics too
-#if defined(__PSL1GHT__) && !defined(__CELLOS_LV2__)
-#define __CELLOS_LV2__
-#endif
-
-typedef union {
-  struct { UINT8 h3,h2,h,l; } b;
-  struct { UINT16 h,l; } w;
-  UINT32 d;
-} PAIR;
-
-#ifdef NO_64BIT_BYTESWAP
-typedef union {
-   UINT64 ll;
-   struct { UINT32 l, h; } l;
-} BYTESWAP_INT64;
-#endif
-
-// Libogc doesn't have intrinsics or ASM macros defined for this
-#if defined(HW_RVL) || defined(GEKKO)
-#define __sthbrx(base,index,value)      \
-        __asm__ volatile ("sthbrx       %0,%1,%2" : : "r"(value), "b%"(index), "r"(base) : "memory")
-
-#define __stwbrx(base,index,value)      \
-        __asm__ volatile ("stwbrx       %0,%1,%2" : : "r"(value), "b%"(index), "r"(base) : "memory")
-#endif
-
-// Xbox 360
-#if defined(_XBOX)
-#define BURN_ENDIAN_SWAP_INT8(x)				(x^1)
-#define BURN_ENDIAN_SWAP_INT16(x)				(_byteswap_ushort(x))
-#define BURN_ENDIAN_SWAP_INT32(x)				(_byteswap_ulong(x))
-#define BURN_ENDIAN_SWAP_INT64(x)				(_byteswap_uint64(x))
-// PS3
-#elif defined(__CELLOS_LV2__)
-#include <ppu_intrinsics.h>
-#include <math.h>
-#define BURN_ENDIAN_SWAP_INT8(x)				(x^1)
-#define BURN_ENDIAN_SWAP_INT16(x)				({uint16_t tt; __sthbrx(&tt, x); tt;})
-#define BURN_ENDIAN_SWAP_INT32(x)				({uint32_t tt; __stwbrx(&tt, x); tt;})
-// GC/Wii/WiiU
-#elif defined(HW_RVL)
-#define BURN_ENDIAN_SWAP_INT8(x)				(x^1)
-#define BURN_ENDIAN_SWAP_INT16(x)				({uint16_t tt; __sthbrx(&tt, 0, x); tt;})
-#define BURN_ENDIAN_SWAP_INT32(x)				({uint32_t tt; __stwbrx(&tt, 0, x); tt;})
-// gcc/clang
-#elif defined(__GNUC__)
-#define BURN_ENDIAN_SWAP_INT8(x)				(x^1)
-#define BURN_ENDIAN_SWAP_INT16(x)				(__builtin_bswap16(x))
-#define BURN_ENDIAN_SWAP_INT32(x)				(__builtin_bswap32(x))
-// Anything else (swap16 & swap32 are kinda broken though)
-#else
-#define BURN_ENDIAN_SWAP_INT8(x)				(x^1)
-#define BURN_ENDIAN_SWAP_INT16(x)				((((x) << 8) & 0xff00) | (((x) >> 8) & 0x00ff))
-#define BURN_ENDIAN_SWAP_INT32(x)				((((x) << 24) & 0xff000000) | (((x) << 8) & 0x00ff0000) | (((x) >> 8) & 0x0000ff00) | (((x) >> 24) & 0x000000ff))
-#endif
-
-#ifdef NO_64BIT_BYTESWAP
-static inline UINT64 BURN_ENDIAN_SWAP_INT64(UINT64 x)
-{
-	BYTESWAP_INT64 r = {0};
-	r.l.l = BURN_ENDIAN_SWAP_INT32(x);
-	r.l.h = BURN_ENDIAN_SWAP_INT32(x >> 32);
-	return r.ll;
-}
-#endif
-
-#endif
+// macros to prevent misaligned address access
+#define BURN_UNALIGNED_READ16(x) (\
+	(UINT16) ((UINT8 *) (x))[1] << 8 | \
+	(UINT16) ((UINT8 *) (x))[0])
+#define BURN_UNALIGNED_READ32(x) (\
+	(UINT32) ((UINT8 *) (x))[3] << 24 | \
+	(UINT32) ((UINT8 *) (x))[2] << 16 | \
+	(UINT32) ((UINT8 *) (x))[1] << 8 | \
+	(UINT32) ((UINT8 *) (x))[0])
+#define BURN_UNALIGNED_WRITE16(x, y) ( \
+	((UINT8 *) (x))[0] = (UINT8) (y), \
+	((UINT8 *) (x))[1] = (UINT8) ((y) >> 8))
+#define BURN_UNALIGNED_WRITE32(x, y) ( \
+	((UINT8 *) (x))[0] = (UINT8) (y), \
+	((UINT8 *) (x))[1] = (UINT8) ((y) >> 8), \
+	((UINT8 *) (x))[2] = (UINT8) ((y) >> 16), \
+	((UINT8 *) (x))[3] = (UINT8) ((y) >> 24))
 
 // ---------------------------------------------------------------------------
 // Driver information
@@ -148,10 +79,13 @@ struct BurnDriver {
 
 // burn.cpp
 INT32 BurnSetRefreshRate(double dRefreshRate);
+void BurnSetMouseDivider(INT32 nDivider);
 INT32 BurnByteswap(UINT8* pMem, INT32 nLen);
 void BurnNibbleExpand(UINT8 *source, UINT8 *dst, INT32 length, INT32 swap, UINT8 nxor);
 INT32 BurnClearScreen();
 
+// from intf/input/inp_interface.cpp
+extern INT32 nInputIntfMouseDivider;
 
 // recording / netgame helper
 #ifndef __LIBRETRO__
@@ -212,27 +146,42 @@ inline static void PutPix(UINT8* pPix, UINT32 c)
 
 struct cpu_core_config {
 	char cpu_name[32];
-	void (*open)(INT32);		// cpu open
+	void (*open)(INT32);	// cpu open
 	void (*close)();		// cpu close
 
-	UINT8 (*read)(UINT32);		// read
+	UINT8 (*read)(UINT32);	// read
 	void (*write)(UINT32, UINT8);	// write
 	INT32 (*active)();		// active cpu
-	INT32 (*totalcycles)();		// total cycles
+	INT32 (*totalcycles)();	// total cycles
 	void (*newframe)();		// new frame'
 	INT32 (*idle)(INT32);	// idle cycles
 
-	void (*irq)(INT32, INT32, INT32);	// set irq, cpu, line, status
+	void (*irq)(INT32, INT32, INT32);	// set irq ( cpu, line, status )
 
-	INT32 (*run)(INT32);		// execute cycles
+	INT32 (*run)(INT32);	// execute cycles
 	void (*runend)();		// end run
 	void (*reset)();		// reset cpu
+	INT32 (*scan)(INT32);	// state handleing
+	void (*exit)();			// exit core
 
 	UINT64 nMemorySize;		// how large is our memory range?
-	UINT32 nAddressXor;		// fix endianness for some cpus
+	UINT32 nAddressFlags;	// fix endianness for some cpus
 };
 
+struct cheat_core {
+	cpu_core_config *cpuconfig;
+
+	INT32 nCPU;			// which cpu
+};
+
+// cpu_core_config -> nAddressFlags
+#define MB_CHEAT_ENDI_SWAP 0x8000 // multibyte cheat needs swap on cheat-write
+// when MB_CHEAT_ENDI_SWAP is set, lsb can contain data bit-width of processor
+
 void CpuCheatRegister(INT32 type, cpu_core_config *config);
+
+cheat_core *GetCpuCheatRegister(INT32 nCPU);
+cpu_core_config *GetCpuCoreConfig(INT32 nCPU);
 
 // burn_memory.cpp
 void BurnInitMemoryManager();
@@ -241,12 +190,10 @@ UINT8 *BurnRealloc(void *ptr, INT32 size);
 void _BurnFree(void *ptr); // internal use only :)
 #define BurnFree(x) do {_BurnFree(x); x = NULL; } while (0)
 #define BurnMalloc(x) _BurnMalloc(x, __FILE__, __LINE__)
+void BurnSwapMemBlock(UINT8 *src, UINT8 *dst, INT32 size); // swap contents of src with dst
 void BurnExitMemoryManager();
 
 // ---------------------------------------------------------------------------
-// Sound clipping macro
-#define BURN_SND_CLIP(A) ((A) < -0x8000 ? -0x8000 : (A) > 0x7fff ? 0x7fff : (A))
-
 // sound routes
 #define BURN_SND_ROUTE_LEFT			1
 #define BURN_SND_ROUTE_RIGHT		2

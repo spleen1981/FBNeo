@@ -22,6 +22,7 @@
 #include "msm5205.h"
 #include "math.h"
 #include "compat_funct.h"
+#include "biquad.h"
 
 #define MAX_MSM5205	2
 
@@ -45,6 +46,13 @@ struct _MSM5205_state
 	double left_volume;
 	double right_volume;
 
+	INT32 lpfilter;
+	INT32 dcblock;
+	INT16 lastin_r;
+	INT16 lastout_r;
+	INT16 lastin_l;
+	INT16 lastout_l;
+
 	INT32 clock;		  /* clock rate */
 
 	void (*vclk_callback)();  /* VCLK callback              */
@@ -65,6 +73,8 @@ static void MSM5205_playmode(INT32 chip, INT32 select);
 static const INT32 index_shift[8] = { -1, -1, -1, -1, 2, 4, 6, 8 };
 
 static UINT8 *scanline_table = NULL;
+
+static BIQ biquad;
 
 static void ComputeTables(INT32 chip)
 {
@@ -116,11 +126,13 @@ static void MSM5205_playmode(INT32 , INT32 select)
 	// check MSM5205 every 4000000 / 8000 -> 500 cycles
 }
 
-static void MSM5205StreamUpdate(INT32 chip)
+static void MSM5205StreamUpdate(INT32 chip, INT32 end)
 {
 	voice = &chips[chip];
 
-	UINT32 len = voice->stream_sync((nBurnSoundLen * nBurnFPS) / 100);
+	if (!pBurnSoundOut) return;
+
+	UINT32 len = (end) ? nBurnSoundLen : voice->stream_sync((nBurnSoundLen * nBurnFPS) / 100);
 	if (len > (UINT32)nBurnSoundLen) len = nBurnSoundLen;
 	UINT32 pos = voice->streampos;
 
@@ -180,9 +192,43 @@ static void MSM5205_vclk_callback(INT32 chip)
 	/* update when signal changed */
 	if( voice->signal != new_signal)
 	{
-		MSM5205StreamUpdate(chip);
+		MSM5205StreamUpdate(chip, 0);
 		voice->signal = new_signal;
 	}
+}
+
+void MSM5205LPFilter(INT32 chip, INT32 enable)
+{
+	voice = &chips[chip];
+
+    voice->lpfilter = enable;
+}
+
+void MSM5205DCBlock(INT32 chip, INT32 enable)
+{
+	voice = &chips[chip];
+
+    voice->dcblock = enable;
+}
+
+static inline INT16 dc_blockR(INT16 sam)
+{
+    if (!voice->dcblock) return sam;
+    INT16 outr = sam - voice->lastin_r + 0.998 * voice->lastout_r;
+    voice->lastin_r = sam;
+    voice->lastout_r = outr;
+
+    return outr;
+}
+
+static inline INT16 dc_blockL(INT16 sam)
+{
+    if (!voice->dcblock) return sam;
+    INT16 outl = sam - voice->lastin_l + 0.998 * voice->lastout_l;
+    voice->lastin_l = sam;
+    voice->lastout_l = outl;
+
+    return outl;
 }
 
 void MSM5205Render(INT32 chip, INT16 *buffer, INT32 len)
@@ -195,22 +241,23 @@ void MSM5205Render(INT32 chip, INT16 *buffer, INT32 len)
 	voice = &chips[chip];
 	INT16 *source = stream[chip];
 
-	MSM5205StreamUpdate(chip);
+	MSM5205StreamUpdate(chip, 1);
 
 	voice->streampos = 0;
 	
 	for (INT32 i = 0; i < len; i++) {
 		INT32 nLeftSample = 0, nRightSample = 0;
-		
+		INT32 source_sample = (voice->lpfilter) ? biquad.filter(source[i]) : source[i];
+
 		if (voice->use_seperate_vols) {
-			nLeftSample += (INT32)(source[i] * voice->left_volume);
-			nRightSample += (INT32)(source[i] * voice->right_volume);
+			nLeftSample += (INT32)(source_sample * voice->left_volume);
+			nRightSample += (INT32)(source_sample * voice->right_volume);
 		} else {
 			if ((voice->output_dir & BURN_SND_ROUTE_LEFT) == BURN_SND_ROUTE_LEFT) {
-				nLeftSample += source[i];
+				nLeftSample += source_sample;
 			}
 			if ((voice->output_dir & BURN_SND_ROUTE_RIGHT) == BURN_SND_ROUTE_RIGHT) {
-				nRightSample += source[i];
+				nRightSample += source_sample;
 			}
 		}
 
@@ -218,6 +265,9 @@ void MSM5205Render(INT32 chip, INT16 *buffer, INT32 len)
 
 		nLeftSample = BURN_SND_CLIP(nLeftSample);
 		nRightSample = BURN_SND_CLIP(nRightSample);
+
+		nLeftSample = dc_blockL(nLeftSample);
+		nRightSample = dc_blockR(nRightSample);
 
 		if (voice->bAdd) {
 			buffer[0] = BURN_SND_CLIP(buffer[0] + nLeftSample);
@@ -250,6 +300,8 @@ void MSM5205Reset()
 
 		MSM5205_playmode(chip,voice->select);
 		voice->streampos = 0;
+
+		if (chip == 0) biquad.reset();
 	}
 }
 
@@ -283,6 +335,8 @@ void MSM5205Init(INT32 chip, INT32 (*stream_sync)(INT32), INT32 clock, void (*vc
 	ComputeTables (chip);
 	
 	nNumChips = chip;
+
+	biquad.init(FILT_LOWPASS, nBurnSoundRate, 2000.00, 0.929, 0);
 }
 
 void MSM5205SetRoute(INT32 chip, double nVolume, INT32 nRouteDir)
@@ -347,6 +401,8 @@ void MSM5205Exit()
 		memset (voice, 0, sizeof(_MSM5205_state));
 
 		BurnFree (stream[chip]);
+
+		if (chip == 0) biquad.exit();
 	}
 
 	BurnFree(scanline_table);
@@ -459,7 +515,7 @@ void MSM5205Update()
 			MSM5205_vclk_callback(chip);
 		} else {
 			if (stream[chip]) {
-				MSM5205StreamUpdate(chip);
+				MSM5205StreamUpdate(chip, 0);
 			}
 		}
 	}
@@ -509,9 +565,15 @@ void MSM5205Scan(INT32 nAction, INT32 *pnMin)
 			SCAN_VAR(voice->signal);
 			SCAN_VAR(voice->step);
 			SCAN_VAR(voice->volume);
+			SCAN_VAR(voice->left_volume);
+			SCAN_VAR(voice->right_volume);
 			SCAN_VAR(voice->clock);
 			SCAN_VAR(voice->select);
 			SCAN_VAR(voice->streampos);
+			SCAN_VAR(voice->lastin_r);
+			SCAN_VAR(voice->lastout_r);
+			SCAN_VAR(voice->lastin_l);
+			SCAN_VAR(voice->lastout_l);
 		}
 	}
 }

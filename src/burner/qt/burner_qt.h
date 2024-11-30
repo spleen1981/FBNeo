@@ -15,7 +15,8 @@ extern int nAppVirtualFps;
 // main.cpp
 extern bool AppProcessKeyboardInput();
 extern void InpDIPSWResetDIPs (void);
-extern void IpsApplyPatches(UINT8 *, char *);
+extern void IpsApplyPatches(UINT8 *, char *, bool);
+extern void GetIpsDrvDefine()
 extern void Reinitialise(void);
 extern TCHAR *GetIsoPath();
 extern int VidRecalcPal();

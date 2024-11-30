@@ -1,8 +1,5 @@
 // FB Alpha XX Mission driver module
 // Based on MAME driver by Uki
-// Todo:
-//   Figure out why the scrolling "hiccups" when something blows up running @
-//   3mhz.  Tried every variation of timing I could think of. grr! -dink feb. 3 2016
 
 #include "tiles_generic.h"
 #include "z80_intf.h"
@@ -27,6 +24,8 @@ static UINT8 *DrvShareRAM1;
 static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
+static INT32 nExtraCycles[2];
+
 static UINT8 scrollx;
 static UINT8 scrollx_shifted;
 static UINT8 scrolly;
@@ -43,80 +42,81 @@ static UINT8 DrvReset;
 static UINT8 DrvInputs[2];
 
 static struct BurnInputInfo XxmissioInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy2 + 7,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy2 + 7,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Xxmissio)
 
 static struct BurnDIPInfo XxmissioDIPList[]=
 {
-	{0x10, 0xff, 0xff, 0xd7, NULL			},
-	{0x11, 0xff, 0xff, 0xef, NULL			},
+	DIP_OFFSET(0x10)
+	{0x00, 0xff, 0xff, 0xd7, NULL			},
+	{0x01, 0xff, 0xff, 0xef, NULL			},
 
 	{0   , 0xfe, 0   ,    4, "Coinage"		},
-	{0x10, 0x01, 0x03, 0x00, "3 Coins 1 Credits"	},
-	{0x10, 0x01, 0x03, 0x02, "2 Coins 1 Credits"	},
-	{0x10, 0x01, 0x03, 0x03, "1 Coin  1 Credits"	},
-	{0x10, 0x01, 0x03, 0x01, "1 Coin  2 Credits"	},
+	{0x00, 0x01, 0x03, 0x00, "3 Coins 1 Credits"	},
+	{0x00, 0x01, 0x03, 0x02, "2 Coins 1 Credits"	},
+	{0x00, 0x01, 0x03, 0x03, "1 Coin  1 Credits"	},
+	{0x00, 0x01, 0x03, 0x01, "1 Coin  2 Credits"	},
 
 //	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
-//	{0x10, 0x01, 0x04, 0x04, "Off"			},
-//	{0x10, 0x01, 0x04, 0x00, "On"			},
+//	{0x00, 0x01, 0x04, 0x04, "Off"			},
+//	{0x00, 0x01, 0x04, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x10, 0x01, 0x08, 0x08, "Off"			},
-	{0x10, 0x01, 0x08, 0x00, "On"			},
+	{0x00, 0x01, 0x08, 0x08, "Off"			},
+	{0x00, 0x01, 0x08, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Difficulty"		},
-	{0x10, 0x01, 0x10, 0x10, "Normal"		},
-	{0x10, 0x01, 0x10, 0x00, "Hard"			},
+	{0x00, 0x01, 0x10, 0x10, "Normal"		},
+	{0x00, 0x01, 0x10, 0x00, "Hard"			},
 
 	{0   , 0xfe, 0   ,    2, "Cabinet"		},
-	{0x10, 0x01, 0x20, 0x00, "Upright"		},
-	{0x10, 0x01, 0x20, 0x20, "Cocktail"		},
+	{0x00, 0x01, 0x20, 0x00, "Upright"		},
+	{0x00, 0x01, 0x20, 0x20, "Cocktail"		},
 
 	{0   , 0xfe, 0   ,    2, "Endless Game (Cheat)"	},
-	{0x10, 0x01, 0x40, 0x40, "Off"			},
-	{0x10, 0x01, 0x40, 0x00, "On"			},
+	{0x00, 0x01, 0x40, 0x40, "Off"			},
+	{0x00, 0x01, 0x40, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"		},
-	{0x10, 0x01, 0x80, 0x80, "Off"			},
-	{0x10, 0x01, 0x80, 0x00, "On"			},
+	{0x00, 0x01, 0x80, 0x80, "Off"			},
+	{0x00, 0x01, 0x80, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
-	{0x11, 0x01, 0x03, 0x01, "2"			},
-	{0x11, 0x01, 0x03, 0x03, "3"			},
-	{0x11, 0x01, 0x03, 0x02, "4"			},
-	{0x11, 0x01, 0x03, 0x00, "5"			},
+	{0x01, 0x01, 0x03, 0x01, "2"			},
+	{0x01, 0x01, 0x03, 0x03, "3"			},
+	{0x01, 0x01, 0x03, 0x02, "4"			},
+	{0x01, 0x01, 0x03, 0x00, "5"			},
 
 	{0   , 0xfe, 0   ,    2, "First Bonus"		},
-	{0x11, 0x01, 0x04, 0x04, "30000"		},
-	{0x11, 0x01, 0x04, 0x00, "40000"		},
+	{0x01, 0x01, 0x04, 0x04, "30000"		},
+	{0x01, 0x01, 0x04, 0x00, "40000"		},
 
 	{0   , 0xfe, 0   ,    4, "Bonus Every"		},
-	{0x11, 0x01, 0x18, 0x18, "50000"		},
-	{0x11, 0x01, 0x18, 0x08, "70000"		},
-	{0x11, 0x01, 0x18, 0x10, "90000"		},
-	{0x11, 0x01, 0x18, 0x00, "None"			},
+	{0x01, 0x01, 0x18, 0x18, "50000"		},
+	{0x01, 0x01, 0x18, 0x08, "70000"		},
+	{0x01, 0x01, 0x18, 0x10, "90000"		},
+	{0x01, 0x01, 0x18, 0x00, "None"			},
 };
 
 STDDIPINFO(Xxmissio)
@@ -133,6 +133,21 @@ static void palette_update(INT32 entry)
 	b |= b << 4;
 
 	DrvPalette[entry] = BurnHighCol(r,g,b,0);
+}
+
+static void sync_sub()
+{
+	ZetCPUPush(1);
+	BurnTimerUpdate(ZetTotalCycles(0));
+	ZetCPUPop();
+}
+
+static void sync_main()
+{
+	INT32 cyc = ZetTotalCycles(1) - ZetTotalCycles(0);
+	if (cyc > 0) {
+		ZetRun(0, cyc);
+	}
 }
 
 static void __fastcall xxmission_main_write(UINT16 address, UINT8 data)
@@ -159,6 +174,7 @@ static void __fastcall xxmission_main_write(UINT16 address, UINT8 data)
 
 		case 0xa002:
 		{
+			sync_sub();
 			switch (data)
 			{
 				case 0x00: cpu_status |= 0x20; break;
@@ -215,6 +231,7 @@ static void __fastcall xxmission_sub_write(UINT16 address, UINT8 data)
 
 		case 0xa002:
 		{
+			sync_main();
 			switch (data)
 			{
 				case 0x00: cpu_status |= 0x10; break;
@@ -255,6 +272,7 @@ static UINT8 __fastcall xxmission_read(UINT16 address)
 			return DrvInputs[address & 1];
 
 		case 0xa002:
+			if (ZetGetActive() == 0) sync_sub(); else sync_main();
 			return (cpu_status & 0xfd) | ((vblank) ? 0x00 : 0x02); // status!
 	}
 
@@ -302,6 +320,8 @@ static INT32 DrvDoReset()
 	cpu_status = 0;
 	flipscreen = 0;
 
+	nExtraCycles[0] = nExtraCycles[1] = 0;
+
 	HiscoreReset();
 
 	return 0;
@@ -326,8 +346,8 @@ static INT32 MemIndex()
 	DrvFgRAM		= Next; Next += 0x000800;
 	DrvSprRAM		= Next; Next += 0x001000;
 	DrvPalRAM		= Next; Next += 0x000300;
-	DrvShareRAM0		= Next; Next += 0x001000;
-	DrvShareRAM1		= Next; Next += 0x001000;
+	DrvShareRAM0	= Next; Next += 0x001000;
+	DrvShareRAM1	= Next; Next += 0x001000;
 
 	RamEnd			= Next;
 
@@ -361,12 +381,7 @@ static void DrvGfxDecode()
 
 static INT32 DrvInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
@@ -441,7 +456,7 @@ static INT32 DrvExit()
 
 	BurnYM2203Exit();
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -476,7 +491,7 @@ static void draw_fg_layer()
 		INT32 sy = ((offs / 0x20) * 8) - 32;
 
 		INT32 code  = DrvFgRAM[offs];
-		INT32 color = DrvFgRAM[0x400 + offs] & 0x07;	
+		INT32 color = DrvFgRAM[0x400 + offs] & 0x07;
 
 		RenderCustomTile_Mask_Clip(pTransDraw, 16, 8, code, sx, sy, color, 4, 0, 0x100, DrvGfxROM0);
 	}
@@ -484,19 +499,7 @@ static void draw_fg_layer()
 
 static inline void draw_single_sprite(INT32 code, INT32 color, INT32 sx, INT32 sy, INT32 flipx, INT32 flipy)
 {
-	if (flipy) {
-		if (flipx) {
-			RenderCustomTile_Mask_FlipXY_Clip(pTransDraw, 32, 16, code, sx, sy, color, 4, 0, 0, DrvGfxROM1);
-		} else {
-			RenderCustomTile_Mask_FlipY_Clip(pTransDraw, 32, 16, code, sx, sy, color, 4, 0, 0, DrvGfxROM1);
-		}
-	} else {
-		if (flipx) {
-			RenderCustomTile_Mask_FlipX_Clip(pTransDraw, 32, 16, code, sx, sy, color, 4, 0, 0, DrvGfxROM1);
-		} else {
-			RenderCustomTile_Mask_Clip(pTransDraw, 32, 16, code, sx, sy, color, 4, 0, 0, DrvGfxROM1);
-		}
-	}
+	DrawCustomMaskTile(pTransDraw, 32, 16, code, sx, sy, flipx, flipy, color, 4, 0, 0, DrvGfxROM1);
 }
 
 static void draw_sprites()
@@ -556,48 +559,43 @@ static INT32 DrvFrame()
 		}
 	}
 
-	INT32 nInterleave = 256;
-	INT32 nCyclesTotal[2] = { 4000000 / 60, 4000000 / 60 };
+	INT32 nInterleave = 100;
+	INT32 nCyclesTotal[2] = { 3000000 / 60, 3000000 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
-	vblank = 0;
+	ZetIdle(0, nExtraCycles[0]); // syncint
+	ZetIdle(1, nExtraCycles[1]); // timer
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		INT32 nSegment = (nCyclesTotal[0] / nInterleave);
-
 		ZetOpen(0);
-		nSegment = (nCyclesTotal[0] - nCyclesDone[0]) / (nInterleave - i);
-		nCyclesDone[0] += ZetRun(nSegment);
-
-		if (i == 235) { // not smoothe-scrolling in fs unless 235? -dink
+		if (i == 0) {
 			vblank = 1;
 			cpu_status &= ~0x20;
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		}
+		if (i == 14) { vblank = 0; }
+		CPU_RUN_SYNCINT(0, Zet);
 		ZetClose();
 
 		ZetOpen(1);
-		BurnTimerUpdate((i + 1) * nCyclesTotal[1] / nInterleave);
-		if (i == ((nInterleave / 2) - 2) || i == (nInterleave - 2)) { // 120hz
+		if (i == 0 || i == 49) { // 120hz
 			cpu_status &= ~0x10;
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		}
+		CPU_RUN_TIMER(1);
 		ZetClose();
+
+		if (i == 48 && pBurnDraw) {
+			DrvDraw();
+		}
 	}
 
-	ZetOpen(1);
-
-	BurnTimerEndFrame(nCyclesTotal[1]);
+	nExtraCycles[0] = ZetTotalCycles(0) - nCyclesTotal[0];
+	nExtraCycles[1] = ZetTotalCycles(1) - nCyclesTotal[1];
 
 	if (pBurnSoundOut) {
 		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
-	}
-
-	ZetClose();
-
-	if (pBurnDraw) {
-		DrvDraw();
 	}
 
 	return 0;

@@ -1,6 +1,11 @@
 // FB Alpha Chelnov / Karnov / Wonder Planet driver module
 // Based on MAME driver by Bryan McPhail
 
+// Karnov: Game has a bug (weird!) - dink
+// Explanation: Karnov level #3(?) - a snakey-thing that snakes through
+// the air; if you die while this thing is still alive, the sound
+// will never stop.  Even after game over.
+
 #include "tiles_generic.h"
 #include "m68000_intf.h"
 #include "m6502_intf.h"
@@ -36,18 +41,9 @@ static UINT8 *soundlatch;
 static UINT8 *flipscreen;
 
 // i8751 MCU emulation (karnov, chelnov)
-static INT32 realMCU = 0;
 static UINT16 i8751RetVal;
 static UINT16 i8751Command;
 static UINT8 i8751PortData[4] = { 0, 0, 0, 0 };
-
-// mcu sim (wndrplnt)
-static UINT16 i8751_return;
-static UINT16 i8751_needs_ack;
-static UINT16 i8751_coin_pending;
-static UINT16 i8751_command_queue;
-static INT32 i8751_level;
-static INT32 i8751_reset;
 
 static UINT8 DrvJoy1[16];
 static UINT8 DrvJoy2[16];
@@ -60,10 +56,12 @@ static UINT8 DrvReset;
 static bool bUseAsm68KCoreOldValue = false;
 #endif
 
-enum { KARNOV=0, CHELNOV, WNDRPLNT };
-static INT32 microcontroller_id;
-static INT32 coin_mask;
 static INT32 vblank;
+
+enum { KARNOV = 0, CHELNOV, WNDRPLNT };
+static INT32 is_game;
+
+static INT32 nCyclesExtra[3];
 
 static struct BurnInputInfo KarnovInputList[] = {
 	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 5,	"p1 coin"	},
@@ -93,35 +91,6 @@ static struct BurnInputInfo KarnovInputList[] = {
 };
 
 STDINPUTINFO(Karnov)
-
-static struct BurnInputInfo WndrplntInputList[] = {
-	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 start"	},
-	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
-	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
-
-	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 start"	},
-	{"P2 Up",			BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
-	{"P2 Down",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
-	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 right"	},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
-	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy1 + 14,	"p2 fire 3"	},
-
-	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
-	{"Service",			BIT_DIGITAL,	DrvJoy3 + 0,	"service"	},
-	{"Dip A",			BIT_DIPSWITCH,	DrvDip + 0,		"dip"		},
-	{"Dip B",			BIT_DIPSWITCH,	DrvDip + 1,		"dip"		},
-};
-
-STDINPUTINFO(Wndrplnt)
 
 static struct BurnDIPInfo KarnovDIPList[]=
 {
@@ -400,7 +369,6 @@ static void DrvMCUInit()
 
 static void DrvMCUExit() {
 	mcs51_exit();
-	realMCU = 0;
 }
 
 static INT32 DrvMCURun(INT32 cycles)
@@ -444,89 +412,12 @@ static void DrvMCUReset()
 	mcs51_reset();
 }
 
-//------------------------------------------------------------------------------------------------
-// wndrplnt_i8751_w() from MAME.
-
-static void wndrplnt_i8751_w(INT32 data)
-{
-	if (i8751_needs_ack)
-	{
-		i8751_command_queue=data;
-		return;
-	}
-
-	i8751_return=0;
-	if (data==0x100) i8751_return=0x67a;
-	if (data==0x200) i8751_return=0x214;
-	if (data==0x300) i8751_return=0x17; /* Copyright text on title screen */
-// 	if (data==0x300) i8751_return=0x1; /* (USA) Copyright text on title screen */
-
-	if ((data&0x600)==0x600)
-	{
-		switch (data&0x18)
-		{
-			case 0x00: 	i8751_return=0x4d53; break;
-			case 0x08:	i8751_return=0x4b54; break;
-			case 0x10: 	i8751_return=0x5453; break;
-			case 0x18:	i8751_return=0x5341; break;
-		}
-	}
-
-	if (data==0x400) i8751_return=0x594;
-	if (data==0x401) i8751_return=0x5ea;
-	if (data==0x402) i8751_return=0x628;
-	if (data==0x403) i8751_return=0x66c;
-	if (data==0x404) i8751_return=0x6a4;
-	if (data==0x405) i8751_return=0x6a4;
-	if (data==0x406) i8751_return=0x6a4;
-
-	if (data==0x50c) i8751_return=0x13fc;
-	if (data==0x50b) i8751_return=0x00ff;
-	if (data==0x50a) i8751_return=0x0006;
-	if (data==0x509) i8751_return=0x0000;
-	if (data==0x508) i8751_return=0x4a39;
-	if (data==0x507) i8751_return=0x0006;
-	if (data==0x506) i8751_return=0x0000;
-	if (data==0x505) i8751_return=0x66f8;
-	if (data==0x504) i8751_return=0x4a39;
-	if (data==0x503) i8751_return=0x000c;
-	if (data==0x502) i8751_return=0x0003;
-	if (data==0x501) i8751_return=0x6bf8;
-	if (data==0x500) i8751_return=0x4e75;
-
-	SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
-	i8751_needs_ack=1;
-}
-
 static void karnov_control_w(INT32 offset, INT32 data)
 {
 	switch (offset<<1)
 	{
 		case 0:
 			SekSetIRQLine(6, CPU_IRQSTATUS_NONE);
-
-			if (microcontroller_id==WNDRPLNT)
-			{
-				if (i8751_needs_ack)
-				{
-					if (i8751_coin_pending)
-					{
-						i8751_return=i8751_coin_pending;
-						SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
-						i8751_coin_pending=0;
-					}
-					else if (i8751_command_queue)
-					{
-						i8751_needs_ack=0;
-						karnov_control_w(3,i8751_command_queue);
-						i8751_command_queue=0;
-					}
-					else
-					{
-						i8751_needs_ack=0;
-					}
-				}
-			}
 			return;
 
 		case 2:
@@ -539,11 +430,7 @@ static void karnov_control_w(INT32 offset, INT32 data)
 			break;
 
 		case 6:
-			if (microcontroller_id==WNDRPLNT) {
-				wndrplnt_i8751_w(data);
-			} else {
-				DrvMCUWrite(data);
-			}
+			DrvMCUWrite(data);
 			break;
 
 		case 8:
@@ -555,11 +442,7 @@ static void karnov_control_w(INT32 offset, INT32 data)
 			DrvScroll[1] = data;
 			break;
 
-		case 0xc: // for wndrplnt
-			i8751_needs_ack=0;
-			i8751_coin_pending=0;
-			i8751_command_queue=0;
-			i8751_return=0;
+		case 0xc: // ??
 			break;
 
 		case 0xe:
@@ -578,14 +461,9 @@ static UINT16 karnov_control_r(INT32 offset)
 			return DrvInput[1] ^ vblank;
 		case 4:
 			return (DrvDip[1] << 8) | DrvDip[0];
-		case 6: {
-			if (microcontroller_id==WNDRPLNT) {
-				return i8751_return;
-			} else {
-				DrvMCUSync();
-				return i8751RetVal;
-			}
-		}
+		case 6:
+			DrvMCUSync();
+			return i8751RetVal;
 	}
 
 	return ~0;
@@ -661,7 +539,7 @@ static void karnov_sound_write(UINT16 address, UINT8 data)
 	}
 }
 
-UINT8 karnov_sound_read(UINT16 address)
+static UINT8 karnov_sound_read(UINT16 address)
 {
 	switch (address)
 	{
@@ -679,8 +557,6 @@ static void DrvYM3526FMIRQHandler(INT32, INT32 nStatus)
 
 static INT32 DrvDoReset()
 {
-	DrvReset = 0;
-
 	memset (AllRam, 0, RamEnd - AllRam);
 
 	SekOpen(0);
@@ -689,9 +565,7 @@ static INT32 DrvDoReset()
 	SekReset();
 	M6502Reset();
 
-	if (realMCU) {
-		DrvMCUReset();
-	}
+	DrvMCUReset();
 
 	BurnYM3526Reset();
 	BurnYM2203Reset();
@@ -699,14 +573,9 @@ static INT32 DrvDoReset()
 	M6502Close();
 	SekClose();
 
-	HiscoreReset();
+	memset(nCyclesExtra, 0, sizeof(nCyclesExtra));
 
-	i8751_return = 0;
-	i8751_needs_ack = 0;
-	i8751_coin_pending = 0;
-	i8751_command_queue = 0;
-	i8751_level = 0;
-	i8751_reset = 0;
+	HiscoreReset();
 
 	return 0;
 }
@@ -806,14 +675,11 @@ static INT32 DrvGfxDecode()
 	return 0;
 }
 
-static INT32 DrvInit()
+static INT32 DrvInit(INT32 mcuid)
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
+
+	is_game = mcuid;
 
 	{
 		if (BurnLoadRom(Drv68KROM + 0x000001,  0, 2)) return 1;
@@ -832,7 +698,7 @@ static INT32 DrvInit()
 		if (BurnLoadRom(DrvGfxROM1 + 0x40000, 10, 1)) return 1;
 		if (BurnLoadRom(DrvGfxROM1 + 0x60000, 11, 1)) return 1;
 
-		if (microcontroller_id == CHELNOV) {
+		if (is_game == CHELNOV) {
 			if (BurnLoadRom(DrvGfxROM2 + 0x00000, 12, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM2 + 0x20000, 13, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM2 + 0x40000, 14, 1)) return 1;
@@ -842,8 +708,6 @@ static INT32 DrvInit()
 			if (BurnLoadRom(DrvColPROM + 0x00400, 17, 1)) return 1;
 
 			if (BurnLoadRom(DrvMCUROM  + 0x00000, 18, 1)) return 1;
-
-			realMCU = 1;
 		} else { // karnov, wndrplnt
 			if (BurnLoadRom(DrvGfxROM2 + 0x00000, 12, 1)) return 1;
 			if (BurnLoadRom(DrvGfxROM2 + 0x10000, 13, 1)) return 1;
@@ -857,11 +721,7 @@ static INT32 DrvInit()
 			if (BurnLoadRom(DrvColPROM + 0x00000, 20, 1)) return 1;
 			if (BurnLoadRom(DrvColPROM + 0x00400, 21, 1)) return 1;
 
-			if (microcontroller_id != WNDRPLNT) { // WNDRPLNT still mcusim (no dump yet)
-				if (BurnLoadRom(DrvMCUROM  + 0x00000, 22, 1)) return 1;
-
-				realMCU = 1;
-			}
+			if (BurnLoadRom(DrvMCUROM  + 0x00000, 22, 1)) return 1;
 		}
 
 		DrvPaletteInit();
@@ -899,16 +759,13 @@ static INT32 DrvInit()
 	M6502SetWriteHandler(karnov_sound_write);
 	M6502Close();
 
-	if (realMCU) {
-		DrvMCUInit();
-	}
+	DrvMCUInit();
 
 	BurnYM3526Init(3000000, &DrvYM3526FMIRQHandler, 0);
-	BurnTimerAttachYM3526(&M6502Config, 1500000);
+	BurnTimerAttach(&M6502Config, 1500000);
 	BurnYM3526SetRoute(BURN_SND_YM3526_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	BurnYM2203Init(1, 1500000, NULL, 1);
-	BurnTimerAttachSek(10000000);
 	BurnYM2203SetAllRoutes(0, 0.25, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
@@ -925,14 +782,12 @@ static INT32 DrvExit()
 	SekExit();
 	M6502Exit();
 
-	if (realMCU) {
-		DrvMCUExit();
-	}
+	DrvMCUExit();
 
 	BurnYM3526Exit();
 	BurnYM2203Exit();
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 #ifdef BUILD_A68K
 	if (bUseAsm68KCoreOldValue) {
@@ -943,7 +798,7 @@ static INT32 DrvExit()
 	return 0;
 }
 
-static void draw_txt_layer(INT32 swap)
+static void draw_txt_layer()
 {
 	UINT16 *vram = (UINT16*)DrvVidRAM;
 	for (INT32 offs = 0x20; offs < 0x3e0; offs++)
@@ -951,7 +806,7 @@ static void draw_txt_layer(INT32 swap)
 		INT32 sx = (offs & 0x1f) << 3;
 		INT32 sy = (offs >> 5) << 3;
 
-		if (swap) {
+		if (is_game == WNDRPLNT) {
 			INT32 t = sx;
 			sx = sy;
 			sy = t;
@@ -962,7 +817,7 @@ static void draw_txt_layer(INT32 swap)
 			sx ^= 0xf8;
 		}
 
-		if (microcontroller_id == WNDRPLNT) {
+		if (is_game == WNDRPLNT) {
 			sy -= 8;
 		}
 
@@ -1060,13 +915,10 @@ static void draw_sprites()
 static INT32 DrvDraw()
 {
 	if (DrvRecalc) {
-		UINT8 r,g,b;
 		for (INT32 i = 0; i < 0x300; i++) {
-			INT32 d = Palette[i];
-
-			r = d >> 16;
-			g = d >> 8;
-			b = d >> 0;
+			UINT8 r = Palette[i] >> 16;
+			UINT8 g = Palette[i] >> 8;
+			UINT8 b = Palette[i] >> 0;
 
 			DrvPalette[i] = BurnHighCol(r, g, b, 0);
 		}
@@ -1075,38 +927,11 @@ static INT32 DrvDraw()
 
 	draw_bg_layer();
 	draw_sprites();
-	draw_txt_layer(microcontroller_id == WNDRPLNT);
+	draw_txt_layer();
 
 	BurnTransferCopy(DrvPalette);
 
 	return 0;
-}
-
-static void DrvInterrupt()
-{
-	if (microcontroller_id == WNDRPLNT)
-	{
-		static INT32 latch = 0;
-
-		if (DrvInput[2] == coin_mask) latch=1;
-		if (DrvInput[2] != coin_mask && latch)
-		{
-			if (i8751_needs_ack)
-			{
-				i8751_coin_pending = DrvInput[2] | 0x8000;
-			}
-			else
-			{
-				i8751_return = DrvInput[2] | 0x8000;
-				SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
-				SekRun(100);
-				i8751_needs_ack=1;
-			}
-			latch=0;
-		}
-	}
-
-	SekSetIRQLine(7, CPU_IRQSTATUS_AUTO);
 }
 
 static INT32 DrvFrame()
@@ -1122,24 +947,22 @@ static INT32 DrvFrame()
 	{
 		UINT16 prev_coin = DrvInput[2];
 		memset (DrvInput, 0xff, sizeof(DrvInput));
-		DrvInput[2] = coin_mask;
+
 		for (INT32 i = 0; i < 16; i++) {
 			DrvInput[0] ^= (DrvJoy1[i] & 1) << i;
 			DrvInput[1] ^= (DrvJoy2[i] & 1) << i;
 			DrvInput[2] ^= (DrvJoy3[i] & 1) << i;
 		}
 
-		if (realMCU) {
-			if ((DrvInput[2] ^ prev_coin) & 0xe0 && DrvInput[2] != coin_mask) {
-				// signal coin -> mcu
-				mcs51_set_irq_line(MCS51_INT0_LINE, CPU_IRQSTATUS_ACK);
-			}
+		if ((DrvInput[2] ^ prev_coin) & 0xe0 && DrvInput[2] != 0xff) {
+			// signal coin -> mcu
+			mcs51_set_irq_line(MCS51_INT0_LINE, CPU_IRQSTATUS_ACK);
 		}
 	}
 
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[3] = { 10000000 / 60, 1500000 / 60, 8000000 / 60 / 12 };
-	INT32 nCyclesDone[3] = { 0, 0, 0 };
+	INT32 nCyclesDone[3] = { nCyclesExtra[0], 0, nCyclesExtra[2] };
 
 	M6502Open(0);
 	SekOpen(0);
@@ -1150,31 +973,29 @@ static INT32 DrvFrame()
 	{
 		if (i == 240) {
 			vblank = 0x00;
-			DrvInterrupt();
+			SekSetIRQLine(7, CPU_IRQSTATUS_AUTO);
+
+			if (pBurnDraw) {
+				DrvDraw();
+			}
 		}
 
-		BurnTimerUpdate((i + 1) * (nCyclesTotal[0] / nInterleave));
+		CPU_RUN(0, Sek);
 
-		BurnTimerUpdateYM3526((i + 1) * (nCyclesTotal[1] / nInterleave));
+		CPU_RUN_TIMER(1);
 
-		if (realMCU) {
-			CPU_RUN(2, DrvMCU);
-		}
-	}
-
-	BurnTimerEndFrame(nCyclesTotal[0]);
-	BurnTimerEndFrameYM3526(nCyclesTotal[1]);
-
-	if (pBurnSoundOut) {
-		BurnYM3526Update(pBurnSoundOut, nBurnSoundLen);
-		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
+		CPU_RUN(2, DrvMCU);
 	}
 
 	SekClose();
 	M6502Close();
 
-	if (pBurnDraw) {
-		DrvDraw();
+	nCyclesExtra[0] = nCyclesDone[0] - nCyclesTotal[0];
+	nCyclesExtra[2] = nCyclesDone[2] - nCyclesTotal[2];
+
+	if (pBurnSoundOut) {
+		BurnYM3526Update(pBurnSoundOut, nBurnSoundLen);
+		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	return 0;
@@ -1200,34 +1021,12 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SekScan(nAction);
 		M6502Scan(nAction);
 
-		if (realMCU) {
-			DrvMCUScan(nAction);
-		}
+		DrvMCUScan(nAction);
 
-		SekOpen(0);
-		M6502Open(0);
 		BurnYM3526Scan(nAction, pnMin);
 		BurnYM2203Scan(nAction, pnMin);
-		M6502Close();
-		SekClose();
 
-#if 0
-		// This problem no longer happens w/ Prot. MCU
-		if (nAction & ACB_WRITE) {
-			// Prevent hung sounds on savestate load (weird!) - dink
-			// Explanation: Karnov level #3(?) - a snakey-thing that snakes through
-			// the air; if you die while this thing is still alive, the sound
-			// will never stop.  Even after game over.
-			BurnYM2203Reset();
-		}
-#endif
-
-		SCAN_VAR(i8751_return);
-		SCAN_VAR(i8751_needs_ack);
-		SCAN_VAR(i8751_coin_pending);
-		SCAN_VAR(i8751_command_queue);
-		SCAN_VAR(i8751_level);
-		SCAN_VAR(i8751_reset);
+		SCAN_VAR(nCyclesExtra);
 	}
 
 	return 0;
@@ -1274,10 +1073,7 @@ STD_ROM_FN(karnov)
 
 static INT32 KarnovInit()
 {
-	microcontroller_id = KARNOV;
-	coin_mask = 0xff;
-
-	return DrvInit();
+	return DrvInit(KARNOV);
 }
 
 struct BurnDriver BurnDrvKarnov = {
@@ -1378,21 +1174,13 @@ static struct BurnRomInfo karnovjRomDesc[] = {
 STD_ROM_PICK(karnovj)
 STD_ROM_FN(karnovj)
 
-static INT32 KarnovjInit()
-{
-	microcontroller_id = KARNOV;
-	coin_mask = 0xff;
-
-	return DrvInit();
-}
-
 struct BurnDriver BurnDrvKarnovj = {
 	"karnovj", "karnov", NULL, NULL, "1987",
 	"Karnov (Japan)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_RUNGUN, 0,
 	NULL, karnovjRomInfo, karnovjRomName, NULL, NULL, NULL, NULL, KarnovInputInfo, KarnovDIPInfo,
-	KarnovjInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
+	KarnovInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x300, 256, 248, 4, 3
 };
 
@@ -1428,7 +1216,7 @@ static struct BurnRomInfo wndrplntRomDesc[] = {
 	{ "ea-21.k8",		0x00400, 0xc8beab49, 6 | BRF_GRA },           // 20 Color Proms
 	{ "ea-20.l6",		0x00400, 0x619f9d1e, 6 | BRF_GRA },           // 21
 
-	{ "wndrplnt_i8751.k14",  0x01000, 0x00000000, BRF_OPT | BRF_NODUMP }, // 22 i8751 microcontroller
+	{ "ea.k14",  		0x01000, 0xb481f6a9, 7 | BRF_PRG | BRF_ESS }, // 22 i8751 microcontroller
 };
 
 STD_ROM_PICK(wndrplnt)
@@ -1436,10 +1224,7 @@ STD_ROM_FN(wndrplnt)
 
 static INT32 WndrplntInit()
 {
-	microcontroller_id = WNDRPLNT;
-	coin_mask = 0;
-
-	return DrvInit();
+	return DrvInit(WNDRPLNT);
 }
 
 struct BurnDriver BurnDrvWndrplnt = {
@@ -1447,7 +1232,7 @@ struct BurnDriver BurnDrvWndrplnt = {
 	"Wonder Planet (Japan)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
-	NULL, wndrplntRomInfo, wndrplntRomName, NULL, NULL, NULL, NULL, WndrplntInputInfo, WndrplntDIPInfo,
+	NULL, wndrplntRomInfo, wndrplntRomName, NULL, NULL, NULL, NULL, KarnovInputInfo, WndrplntDIPInfo,
 	WndrplntInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x300, 248, 256, 3, 4
 };
@@ -1489,10 +1274,7 @@ STD_ROM_FN(chelnov)
 
 static INT32 ChelnovInit()
 {
-	microcontroller_id = CHELNOV;
-	coin_mask = 0xff;
-
-	return DrvInit();
+	return DrvInit(CHELNOV);
 }
 
 struct BurnDriver BurnDrvChelnov = {
@@ -1540,21 +1322,13 @@ static struct BurnRomInfo chelnovuRomDesc[] = {
 STD_ROM_PICK(chelnovu)
 STD_ROM_FN(chelnovu)
 
-static INT32 ChelnovuInit()
-{
-	microcontroller_id = CHELNOV;
-	coin_mask = 0xff;
-
-	return DrvInit();
-}
-
 struct BurnDriver BurnDrvChelnovu = {
 	"chelnovu", "chelnov", NULL, NULL, "1988",
 	"Chelnov - Atomic Runner (US)\0", NULL, "Data East USA", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_RUNGUN, 0,
 	NULL, chelnovuRomInfo, chelnovuRomName, NULL, NULL, NULL, NULL, KarnovInputInfo, ChelnovuDIPInfo,
-	ChelnovuInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
+	ChelnovInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x300, 256, 248, 4, 3
 };
 
@@ -1593,20 +1367,12 @@ static struct BurnRomInfo chelnovjRomDesc[] = {
 STD_ROM_PICK(chelnovj)
 STD_ROM_FN(chelnovj)
 
-static INT32 ChelnovjInit()
-{
-	microcontroller_id = CHELNOV;
-	coin_mask = 0xff;
-
-	return DrvInit();
-}
-
 struct BurnDriver BurnDrvChelnovj = {
 	"chelnovj", "chelnov", NULL, NULL, "1988",
 	"Chelnov - Atomic Runner (Japan)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_RUNGUN, 0,
 	NULL, chelnovjRomInfo, chelnovjRomName, NULL, NULL, NULL, NULL, KarnovInputInfo, ChelnovuDIPInfo,
-	ChelnovjInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
+	ChelnovInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x300, 256, 248, 4, 3
 };

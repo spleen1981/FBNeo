@@ -24,19 +24,6 @@ static double YM2608Volumes[3];
 static INT32 YM2608RouteDirs[3];
 
 // ----------------------------------------------------------------------------
-// Dummy functions
-
-static void YM2608UpdateDummy(INT16*, INT32)
-{
-	return;
-}
-
-static INT32 YM2608StreamCallbackDummy(INT32)
-{
-	return 0;
-}
-
-// ----------------------------------------------------------------------------
 // Execute YM2608 for part of a frame
 
 static void AY8910Render(INT32 nSegmentLength)
@@ -45,7 +32,7 @@ static void AY8910Render(INT32 nSegmentLength)
 	if (!DebugSnd_YM2608Initted) bprintf(PRINT_ERROR, _T("BurnYM2608 AY8910Render called without init\n"));
 #endif
 
-	if (nAY8910Position >= nSegmentLength) {
+	if (nAY8910Position >= nSegmentLength || !pBurnSoundOut) {
 		return;
 	}
 
@@ -66,7 +53,7 @@ static void YM2608Render(INT32 nSegmentLength)
 	if (!DebugSnd_YM2608Initted) bprintf(PRINT_ERROR, _T("YM2608Render called without init\n"));
 #endif
 
-	if (nYM2608Position >= nSegmentLength) {
+	if (nYM2608Position >= nSegmentLength || !pBurnSoundOut) {
 		return;
 	}
 
@@ -88,6 +75,8 @@ static void YM2608UpdateResample(INT16* pSoundBuf, INT32 nSegmentEnd)
 #if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2608Initted) bprintf(PRINT_ERROR, _T("YM2608UpdateResample called without init\n"));
 #endif
+
+	if (!pBurnSoundOut) return;
 
 	INT32 nSegmentLength = nSegmentEnd;
 	INT32 nSamplesNeeded = nSegmentEnd * nBurnYM2608SoundRate / nBurnSoundRate + 1;
@@ -202,6 +191,8 @@ static void YM2608UpdateNormal(INT16* pSoundBuf, INT32 nSegmentEnd)
 #if defined FBNEO_DEBUG
 	if (!DebugSnd_YM2608Initted) bprintf(PRINT_ERROR, _T("YM2608UpdateNormal called without init\n"));
 #endif
+
+	if (!pBurnSoundOut) return;
 
 	INT32 nSegmentLength = nSegmentEnd;
 
@@ -352,17 +343,7 @@ INT32 BurnYM2608Init(INT32 nClockFrequency, UINT8* YM2608ADPCMROM, INT32* nYM260
 {
 	DebugSnd_YM2608Initted = 1;
 	
-	BurnTimerInit(&YM2608TimerOver, GetTimeCallback);
-
-	if (nBurnSoundRate <= 0) {
-		BurnYM2608StreamCallback = YM2608StreamCallbackDummy;
-
-		BurnYM2608Update = YM2608UpdateDummy;
-
-		AY8910InitYM(0, nClockFrequency, 11025, NULL, NULL, NULL, NULL, BurnAY8910UpdateRequest);
-		YM2608Init(1, nClockFrequency, 11025, (void**)(&YM2608ADPCMROM), nYM2608ADPCMSize, YM2608IROM, &BurnOPNTimerCallback, IRQCallback);
-		return 0;
-	}
+	INT32 timer_chipbase = BurnTimerInit(&YM2608TimerOver, GetTimeCallback);
 
 	BurnYM2608StreamCallback = StreamCallback;
 
@@ -376,7 +357,7 @@ INT32 BurnYM2608Init(INT32 nClockFrequency, UINT8* YM2608ADPCMROM, INT32* nYM260
 
 		BurnYM2608Update = YM2608UpdateResample;
 
-		nSampleSize = (UINT32)nBurnYM2608SoundRate * (1 << 16) / nBurnSoundRate;
+		if (nBurnSoundRate) nSampleSize = (UINT32)nBurnYM2608SoundRate * (1 << 16) / nBurnSoundRate;
 		nFractionalPosition = 0;
 	} else {
 		nBurnYM2608SoundRate = nBurnSoundRate;
@@ -384,8 +365,10 @@ INT32 BurnYM2608Init(INT32 nClockFrequency, UINT8* YM2608ADPCMROM, INT32* nYM260
 		BurnYM2608Update = YM2608UpdateNormal;
 	}
 
+	if (!nBurnYM2608SoundRate) nBurnYM2608SoundRate = 44100;
+
 	AY8910InitYM(0, nClockFrequency, nBurnYM2608SoundRate, NULL, NULL, NULL, NULL, BurnAY8910UpdateRequest);
-	YM2608Init(1, nClockFrequency, nBurnYM2608SoundRate, (void**)(&YM2608ADPCMROM), nYM2608ADPCMSize, YM2608IROM, &BurnOPNTimerCallback, IRQCallback);
+	YM2608Init(1, timer_chipbase, nClockFrequency, nBurnYM2608SoundRate, (void**)(&YM2608ADPCMROM), nYM2608ADPCMSize, YM2608IROM, &BurnOPNTimerCallback, IRQCallback);
 
 	pBuffer = (INT16*)BurnMalloc(4096 * 6 * sizeof(INT16));
 	memset(pBuffer, 0, 4096 * 6 * sizeof(INT16));

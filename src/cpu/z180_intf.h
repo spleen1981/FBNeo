@@ -1,12 +1,12 @@
 #include "z180.h"
-extern "C" {
+
 void Z180SetWriteHandler(void (__fastcall *write)(UINT32, UINT8));
 void Z180SetReadHandler(UINT8 (__fastcall *read)(UINT32));
 void Z180SetFetchOpHandler(UINT8 (__fastcall *fetch)(UINT32));
 void Z180SetFetchArgHandler(UINT8 (__fastcall *fetch)(UINT32));
 void Z180SetWritePortHandler(void (__fastcall *write)(UINT32, UINT8));
 void Z180SetReadPortHandler(UINT8 (__fastcall *read)(UINT32));
-}
+
 // pass NULL for ptr to unmap memory
 void Z180MapMemory(UINT8 *ptr, UINT32 start, UINT32 end, UINT32 flags);
 
@@ -18,7 +18,7 @@ INT32 Z180Idle(INT32 cycles);
 void Z180BurnCycles(INT32 cycles);
 void Z180SetIRQLine(INT32 irqline, INT32 state);
 void Z180Nmi();
-void Z180Scan(INT32 nAction);
+INT32 Z180Scan(INT32 nAction);
 
 INT32 Z180GetActive();
 void Z180Open(INT32);

@@ -1,4 +1,4 @@
-// FB Alpha 1942 driver module
+// FB Alpha asteroids driver module
 // Based on MAME driver by Brad Oliver, Bernd Wiebelt, Allard van der Bas
 
 #include "tiles_generic.h"
@@ -51,6 +51,8 @@ static struct BurnInputInfo AsteroidInputList[] = {
 	{"P1 Thrust",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 	{"P1 Hyperspace",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 3"	},
 
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 start"	},
+
 	{"Reset",			BIT_DIGITAL,	&DrvReset,	    "reset"		},
 	{"Diag Step",		BIT_DIGITAL,	DrvJoy1 + 5,	"service2"	},
 	{"Tilt",			BIT_DIGITAL,	DrvJoy1 + 6,	"tilt"		},
@@ -67,9 +69,11 @@ static struct BurnInputInfo AsteroidbInputList[] = {
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 start"	},
 	{"P1 Left",		    BIT_DIGITAL,	DrvJoy2 + 7,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 6,	"p1 right"	},
-	{"P1 Fire",		    BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 1"	},
+	{"P1 Fire",		    BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 1"	},
 	{"P1 Thrust",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 fire 2"	},
 	{"P1 Hyperspace",	BIT_DIGITAL,	DrvJoy3 + 7,	"p1 fire 3"	},
+
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 start"	},
 
 	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Tilt",			BIT_DIGITAL,	DrvJoy1 + 2,	"tilt"		},
@@ -90,6 +94,8 @@ static struct BurnInputInfo AsterockInputList[] = {
 	{"P1 Thrust",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 	{"P1 Hyperspace",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 3"	},
 
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 start"	},
+
 	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Service",			BIT_DIGITAL,	DrvJoy1 + 5,	"service"	},
 	{"Tilt",			BIT_DIGITAL,	DrvJoy1 + 6,	"tilt"		},
@@ -109,6 +115,8 @@ static struct BurnInputInfo AstdeluxInputList[] = {
 	{"P1 Fire",		    BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Thrust",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 	{"P1 Shield",	    BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 3"	},
+
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 start"	},
 
 	{"Reset",			BIT_DIGITAL,	&DrvReset,	    "reset"		},
 	{"Diag Step",		BIT_DIGITAL,	DrvJoy1 + 5,	"service2"	},
@@ -152,341 +160,356 @@ static struct BurnInputInfo LlandertInputList[] = {
 
 STDINPUTINFO(Llandert)
 
-#define DO 0xa    // getting tired of re-basing the dips. :P
+#define DO 0xb    // getting tired of re-basing the dips. :P
 
 static struct BurnDIPInfo AsteroidDIPList[]=
 {
-	{DO+0, 0xff, 0xff, 0x84, NULL					},
-	{DO+1, 0xff, 0xff, 0x00, NULL					},
-	{DO+2, 0xff, 0xff, 0x00, NULL					},
+	DIP_OFFSET(0xb)
+	{0x00, 0xff, 0xff, 0x84, NULL					},
+	{0x01, 0xff, 0xff, 0x00, NULL					},
+	{0x02, 0xff, 0xff, 0x00, NULL					},
+	{0x03, 0xff, 0xff, 0x00, NULL					},
 
 	{0   , 0xfe, 0   ,    4, "Language"				},
-	{DO+0, 0x01, 0x03, 0x00, "English"				},
-	{DO+0, 0x01, 0x03, 0x01, "German"				},
-	{DO+0, 0x01, 0x03, 0x02, "French"				},
-	{DO+0, 0x01, 0x03, 0x03, "Spanish"				},
+	{0x00, 0x01, 0x03, 0x00, "English"				},
+	{0x00, 0x01, 0x03, 0x01, "German"				},
+	{0x00, 0x01, 0x03, 0x02, "French"				},
+	{0x00, 0x01, 0x03, 0x03, "Spanish"				},
 
 	{0   , 0xfe, 0   ,    2, "Lives"				},
-	{DO+0, 0x01, 0x04, 0x04, "3"					},
-	{DO+0, 0x01, 0x04, 0x00, "4"					},
+	{0x00, 0x01, 0x04, 0x04, "3"					},
+	{0x00, 0x01, 0x04, 0x00, "4"					},
 
 #if 0
 	{0   , 0xfe, 0   ,    2, "Center Mech"			},
-	{DO+0, 0x01, 0x08, 0x00, "X 1"					},
-	{DO+0, 0x01, 0x08, 0x08, "X 2"					},
+	{0x00, 0x01, 0x08, 0x00, "X 1"					},
+	{0x00, 0x01, 0x08, 0x08, "X 2"					},
 
 	{0   , 0xfe, 0   ,    4, "Right Mech"			},
-	{DO+0, 0x01, 0x30, 0x00, "X 1"					},
-	{DO+0, 0x01, 0x30, 0x10, "X 4"					},
-	{DO+0, 0x01, 0x30, 0x20, "X 5"					},
-	{DO+0, 0x01, 0x30, 0x30, "X 6"					},
+	{0x00, 0x01, 0x30, 0x00, "X 1"					},
+	{0x00, 0x01, 0x30, 0x10, "X 4"					},
+	{0x00, 0x01, 0x30, 0x20, "X 5"					},
+	{0x00, 0x01, 0x30, 0x30, "X 6"					},
 #endif
 
 	{0   , 0xfe, 0   ,    4, "Coinage"				},
-	{DO+0, 0x01, 0xc0, 0xc0, "2 Coins 1 Credits"	},
-	{DO+0, 0x01, 0xc0, 0x80, "1 Coin  1 Credits"	},
-	{DO+0, 0x01, 0xc0, 0x40, "1 Coin  2 Credits"	},
-	{DO+0, 0x01, 0xc0, 0x00, "Free Play"			},
+	{0x00, 0x01, 0xc0, 0xc0, "2 Coins 1 Credits"	},
+	{0x00, 0x01, 0xc0, 0x80, "1 Coin  1 Credits"	},
+	{0x00, 0x01, 0xc0, 0x40, "1 Coin  2 Credits"	},
+	{0x00, 0x01, 0xc0, 0x00, "Free Play"			},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"			},
-	{DO+2, 0x01, 0x80, 0x00, "Off"					},
-	{DO+2, 0x01, 0x80, 0x80, "On"					},
+	{0x02, 0x01, 0x80, 0x00, "Off"					},
+	{0x02, 0x01, 0x80, 0x80, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Hires Mode"			},
-	{DO+3, 0x01, 0x01, 0x00, "No"					},
-	{DO+3, 0x01, 0x01, 0x01, "Yes"					},
+	{0x03, 0x01, 0x01, 0x00, "No"					},
+	{0x03, 0x01, 0x01, 0x01, "Yes"					},
 };
 
 STDDIPINFO(Asteroid)
 
 static struct BurnDIPInfo AerolitosDIPList[]=
 {
-	{DO+0, 0xff, 0xff, 0x87, NULL					},
-	{DO+1, 0xff, 0xff, 0x00, NULL					},
-	{DO+2, 0xff, 0xff, 0x00, NULL					},
+	DIP_OFFSET(0xb)
+	{0x00, 0xff, 0xff, 0x87, NULL					},
+	{0x01, 0xff, 0xff, 0x00, NULL					},
+	{0x02, 0xff, 0xff, 0x00, NULL					},
+	{0x03, 0xff, 0xff, 0x00, NULL					},
 
 	{0   , 0xfe, 0   ,    4, "Language"				},
-	{DO+0, 0x01, 0x03, 0x00, "English"				},
-	{DO+0, 0x01, 0x03, 0x01, "German"				},
-	{DO+0, 0x01, 0x03, 0x02, "French"				},
-	{DO+0, 0x01, 0x03, 0x03, "Spanish"				},
+	{0x00, 0x01, 0x03, 0x00, "English"				},
+	{0x00, 0x01, 0x03, 0x01, "German"				},
+	{0x00, 0x01, 0x03, 0x02, "French"				},
+	{0x00, 0x01, 0x03, 0x03, "Spanish"				},
 
 	{0   , 0xfe, 0   ,    2, "Lives"				},
-	{DO+0, 0x01, 0x04, 0x04, "3"					},
-	{DO+0, 0x01, 0x04, 0x00, "4"					},
+	{0x00, 0x01, 0x04, 0x04, "3"					},
+	{0x00, 0x01, 0x04, 0x00, "4"					},
 
 #if 0
 	{0   , 0xfe, 0   ,    2, "Center Mech"			},
-	{DO+0, 0x01, 0x08, 0x00, "X 1"					},
-	{DO+0, 0x01, 0x08, 0x08, "X 2"					},
+	{0x00, 0x01, 0x08, 0x00, "X 1"					},
+	{0x00, 0x01, 0x08, 0x08, "X 2"					},
 
 	{0   , 0xfe, 0   ,    4, "Right Mech"			},
-	{DO+0, 0x01, 0x30, 0x00, "X 1"					},
-	{DO+0, 0x01, 0x30, 0x10, "X 4"					},
-	{DO+0, 0x01, 0x30, 0x20, "X 5"					},
-	{DO+0, 0x01, 0x30, 0x30, "X 6"					},
+	{0x00, 0x01, 0x30, 0x00, "X 1"					},
+	{0x00, 0x01, 0x30, 0x10, "X 4"					},
+	{0x00, 0x01, 0x30, 0x20, "X 5"					},
+	{0x00, 0x01, 0x30, 0x30, "X 6"					},
 #endif
 
 	{0   , 0xfe, 0   ,    4, "Coinage"				},
-	{DO+0, 0x01, 0xc0, 0xc0, "2 Coins 1 Credits"	},
-	{DO+0, 0x01, 0xc0, 0x80, "1 Coin  1 Credits"	},
-	{DO+0, 0x01, 0xc0, 0x40, "1 Coin  2 Credits"	},
-	{DO+0, 0x01, 0xc0, 0x00, "Free Play"			},
+	{0x00, 0x01, 0xc0, 0xc0, "2 Coins 1 Credits"	},
+	{0x00, 0x01, 0xc0, 0x80, "1 Coin  1 Credits"	},
+	{0x00, 0x01, 0xc0, 0x40, "1 Coin  2 Credits"	},
+	{0x00, 0x01, 0xc0, 0x00, "Free Play"			},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"			},
-	{DO+2, 0x01, 0x80, 0x00, "Off"					},
-	{DO+2, 0x01, 0x80, 0x80, "On"					},
+	{0x02, 0x01, 0x80, 0x00, "Off"					},
+	{0x02, 0x01, 0x80, 0x80, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Hires Mode"			},
-	{DO+3, 0x01, 0x01, 0x00, "No"					},
-	{DO+3, 0x01, 0x01, 0x01, "Yes"					},
+	{0x03, 0x01, 0x01, 0x00, "No"					},
+	{0x03, 0x01, 0x01, 0x01, "Yes"					},
 };
 
 STDDIPINFO(Aerolitos)
 
 static struct BurnDIPInfo AsteroidbDIPList[]=
 {
-	{0x09, 0xff, 0xff, 0x84, NULL					},
-	{0x0a, 0xff, 0xff, 0x00, NULL					},
-	{0x0b, 0xff, 0xff, 0x00, NULL					},
+	DIP_OFFSET(0xa)
+	{0x00, 0xff, 0xff, 0x84, NULL					},
+	{0x01, 0xff, 0xff, 0x00, NULL					},
+	{0x02, 0xff, 0xff, 0x00, NULL					},
+	{0x03, 0xff, 0xff, 0x00, NULL					},
 
 	{0   , 0xfe, 0   ,    4, "Language"				},
-	{0x09, 0x01, 0x03, 0x00, "English"				},
-	{0x09, 0x01, 0x03, 0x01, "German"				},
-	{0x09, 0x01, 0x03, 0x02, "French"				},
-	{0x09, 0x01, 0x03, 0x03, "Spanish"				},
+	{0x00, 0x01, 0x03, 0x00, "English"				},
+	{0x00, 0x01, 0x03, 0x01, "German"				},
+	{0x00, 0x01, 0x03, 0x02, "French"				},
+	{0x00, 0x01, 0x03, 0x03, "Spanish"				},
 
 	{0   , 0xfe, 0   ,    2, "Lives"				},
-	{0x09, 0x01, 0x04, 0x04, "3"					},
-	{0x09, 0x01, 0x04, 0x00, "4"					},
+	{0x00, 0x01, 0x04, 0x04, "3"					},
+	{0x00, 0x01, 0x04, 0x00, "4"					},
 
 	{0   , 0xfe, 0   ,    4, "Coinage"				},
-	{0x09, 0x01, 0xc0, 0xc0, "2 Coins 1 Credits"	},
-	{0x09, 0x01, 0xc0, 0x80, "1 Coin  1 Credits"	},
-	{0x09, 0x01, 0xc0, 0x40, "1 Coin  2 Credits"	},
-	{0x09, 0x01, 0xc0, 0x00, "Free Play"			},
+	{0x00, 0x01, 0xc0, 0xc0, "2 Coins 1 Credits"	},
+	{0x00, 0x01, 0xc0, 0x80, "1 Coin  1 Credits"	},
+	{0x00, 0x01, 0xc0, 0x40, "1 Coin  2 Credits"	},
+	{0x00, 0x01, 0xc0, 0x00, "Free Play"			},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"			},
-	{0x0b, 0x01, 0x80, 0x00, "Off"					},
-	{0x0b, 0x01, 0x80, 0x80, "On"					},
+	{0x02, 0x01, 0x80, 0x00, "Off"					},
+	{0x02, 0x01, 0x80, 0x80, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Hires Mode"			},
-	{0x0c, 0x01, 0x01, 0x00, "No"					},
-	{0x0c, 0x01, 0x01, 0x01, "Yes"					},
+	{0x03, 0x01, 0x01, 0x00, "No"					},
+	{0x03, 0x01, 0x01, 0x01, "Yes"					},
 };
 
 STDDIPINFO(Asteroidb)
 
 static struct BurnDIPInfo AsterockDIPList[]=
 {
-	{0x0a, 0xff, 0xff, 0x87, NULL					},
-	{0x0b, 0xff, 0xff, 0x00, NULL					},
-	{0x0c, 0xff, 0xff, 0x00, NULL					},
+	DIP_OFFSET(0xb)
+	{0x00, 0xff, 0xff, 0x87, NULL					},
+	{0x01, 0xff, 0xff, 0x00, NULL					},
+	{0x02, 0xff, 0xff, 0x00, NULL					},
+	{0x03, 0xff, 0xff, 0x00, NULL					},
 
 	{0   , 0xfe, 0   ,    4, "Language"				},
-	{0x0a, 0x01, 0x03, 0x00, "English"				},
-	{0x0a, 0x01, 0x03, 0x01, "French"				},
-	{0x0a, 0x01, 0x03, 0x02, "German"				},
-	{0x0a, 0x01, 0x03, 0x03, "Italian"				},
+	{0x00, 0x01, 0x03, 0x00, "English"				},
+	{0x00, 0x01, 0x03, 0x01, "French"				},
+	{0x00, 0x01, 0x03, 0x02, "German"				},
+	{0x00, 0x01, 0x03, 0x03, "Italian"				},
 
 	{0   , 0xfe, 0   ,    4, "Lives"				},
-	{0x0a, 0x01, 0x0c, 0x00, "2"					},
-	{0x0a, 0x01, 0x0c, 0x04, "3"					},
-	{0x0a, 0x01, 0x0c, 0x08, "4"					},
-	{0x0a, 0x01, 0x0c, 0x0c, "5"					},
+	{0x00, 0x01, 0x0c, 0x00, "2"					},
+	{0x00, 0x01, 0x0c, 0x04, "3"					},
+	{0x00, 0x01, 0x0c, 0x08, "4"					},
+	{0x00, 0x01, 0x0c, 0x0c, "5"					},
 
 	{0   , 0xfe, 0   ,    2, "Records Table"		},
-	{0x0a, 0x01, 0x10, 0x00, "Normal"				},
-	{0x0a, 0x01, 0x10, 0x10, "Special"				},
+	{0x00, 0x01, 0x10, 0x00, "Normal"				},
+	{0x00, 0x01, 0x10, 0x10, "Special"				},
 
 	{0   , 0xfe, 0   ,    2, "Coin Mode"			},
-	{0x0a, 0x01, 0x20, 0x00, "Normal"				},
-	{0x0a, 0x01, 0x20, 0x20, "Special"				},
+	{0x00, 0x01, 0x20, 0x00, "Normal"				},
+	{0x00, 0x01, 0x20, 0x20, "Special"				},
 
 	{0   , 0xfe, 0   ,    6, "Coinage"				},
-	{0x0a, 0x01, 0xc0, 0xc0, "2 Coins 1 Credits"	},
-	{0x0a, 0x01, 0xc0, 0x80, "1 Coin  1 Credits"	},
-	{0x0a, 0x01, 0xc0, 0x40, "1 Coin  2 Credits"	},
-	{0x0a, 0x01, 0xc0, 0xc0, "Coin A 2/1 Coin B 2/1 Coin C 1/1"	},
-	{0x0a, 0x01, 0xc0, 0x80, "Coin A 1/1 Coin B 1/1 Coin C 1/2"	},
-	{0x0a, 0x01, 0xc0, 0x40, "Coin A 1/2 Coin B 1/2 Coin C 1/4"	},
+	{0x00, 0x01, 0xc0, 0xc0, "2 Coins 1 Credits"	},
+	{0x00, 0x01, 0xc0, 0x80, "1 Coin  1 Credits"	},
+	{0x00, 0x01, 0xc0, 0x40, "1 Coin  2 Credits"	},
+	{0x00, 0x01, 0xc0, 0xc0, "Coin A 2/1 Coin B 2/1 Coin C 1/1"	},
+	{0x00, 0x01, 0xc0, 0x80, "Coin A 1/1 Coin B 1/1 Coin C 1/2"	},
+	{0x00, 0x01, 0xc0, 0x40, "Coin A 1/2 Coin B 1/2 Coin C 1/4"	},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"			},
-	{0x0c, 0x01, 0x80, 0x00, "Off"					},
-	{0x0c, 0x01, 0x80, 0x80, "On"					},
+	{0x02, 0x01, 0x80, 0x00, "Off"					},
+	{0x02, 0x01, 0x80, 0x80, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Hires Mode"			},
-	{0x0d, 0x01, 0x01, 0x00, "No"					},
-	{0x0d, 0x01, 0x01, 0x01, "Yes"					},
+	{0x03, 0x01, 0x01, 0x00, "No"					},
+	{0x03, 0x01, 0x01, 0x01, "Yes"					},
 };
 
 STDDIPINFO(Asterock)
 
 static struct BurnDIPInfo AstdeluxDIPList[]=
 {
-	{DO+0, 0xff, 0xff, 0x80, NULL					},
-	{DO+1, 0xff, 0xff, 0xfd, NULL					},
-	{DO+2, 0xff, 0xff, 0x00, NULL					},
+	DIP_OFFSET(0xb)
+	{0x00, 0xff, 0xff, 0x80, NULL					},
+	{0x01, 0xff, 0xff, 0xfd, NULL					},
+	{0x02, 0xff, 0xff, 0x00, NULL					},
+	{0x03, 0xff, 0xff, 0x00, NULL					},
 
 	{0   , 0xfe, 0   ,    4, "Language"				},
-	{DO+0, 0x01, 0x03, 0x00, "English"				},
-	{DO+0, 0x01, 0x03, 0x01, "German"				},
-	{DO+0, 0x01, 0x03, 0x02, "French"				},
-	{DO+0, 0x01, 0x03, 0x03, "Spanish"				},
+	{0x00, 0x01, 0x03, 0x00, "English"				},
+	{0x00, 0x01, 0x03, 0x01, "German"				},
+	{0x00, 0x01, 0x03, 0x02, "French"				},
+	{0x00, 0x01, 0x03, 0x03, "Spanish"				},
 
 	{0   , 0xfe, 0   ,    4, "Lives"				},
-	{DO+0, 0x01, 0x0c, 0x00, "2-4"					},
-	{DO+0, 0x01, 0x0c, 0x04, "3-5"					},
-	{DO+0, 0x01, 0x0c, 0x08, "4-6"					},
-	{DO+0, 0x01, 0x0c, 0x0c, "5-7"					},
+	{0x00, 0x01, 0x0c, 0x00, "2-4"					},
+	{0x00, 0x01, 0x0c, 0x04, "3-5"					},
+	{0x00, 0x01, 0x0c, 0x08, "4-6"					},
+	{0x00, 0x01, 0x0c, 0x0c, "5-7"					},
 
 	{0   , 0xfe, 0   ,    2, "Minimum Plays"		},
-	{DO+0, 0x01, 0x10, 0x00, "1"					},
-	{DO+0, 0x01, 0x10, 0x10, "2"					},
+	{0x00, 0x01, 0x10, 0x00, "1"					},
+	{0x00, 0x01, 0x10, 0x10, "2"					},
 
 	{0   , 0xfe, 0   ,    2, "Difficulty"			},
-	{DO+0, 0x01, 0x20, 0x00, "Hard"					},
-	{DO+0, 0x01, 0x20, 0x20, "Easy"					},
+	{0x00, 0x01, 0x20, 0x00, "Hard"					},
+	{0x00, 0x01, 0x20, 0x20, "Easy"					},
 
 	{0   , 0xfe, 0   ,    4, "Bonus Life"			},
-	{DO+0, 0x01, 0xc0, 0x00, "10000"				},
-	{DO+0, 0x01, 0xc0, 0x40, "12000"				},
-	{DO+0, 0x01, 0xc0, 0x80, "15000"				},
-	{DO+0, 0x01, 0xc0, 0xc0, "None"					},
+	{0x00, 0x01, 0xc0, 0x00, "10000"				},
+	{0x00, 0x01, 0xc0, 0x40, "12000"				},
+	{0x00, 0x01, 0xc0, 0x80, "15000"				},
+	{0x00, 0x01, 0xc0, 0xc0, "None"					},
 
 	{0   , 0xfe, 0   ,    4, "Coinage"				},
-	{DO+1, 0x01, 0x03, 0x00, "2 Coins 1 Credits"	},
-	{DO+1, 0x01, 0x03, 0x01, "1 Coin  1 Credits"	},
-	{DO+1, 0x01, 0x03, 0x02, "1 Coin  2 Credits"	},
-	{DO+1, 0x01, 0x03, 0x03, "Free Play"			},
+	{0x01, 0x01, 0x03, 0x00, "2 Coins 1 Credits"	},
+	{0x01, 0x01, 0x03, 0x01, "1 Coin  1 Credits"	},
+	{0x01, 0x01, 0x03, 0x02, "1 Coin  2 Credits"	},
+	{0x01, 0x01, 0x03, 0x03, "Free Play"			},
 
 	{0   , 0xfe, 0   ,    4, "Right Coin"			},
-	{DO+1, 0x01, 0x0c, 0x00, "X 6"					},
-	{DO+1, 0x01, 0x0c, 0x04, "X 5"					},
-	{DO+1, 0x01, 0x0c, 0x08, "X 4"					},
-	{DO+1, 0x01, 0x0c, 0x0c, "X 1"					},
+	{0x01, 0x01, 0x0c, 0x00, "X 6"					},
+	{0x01, 0x01, 0x0c, 0x04, "X 5"					},
+	{0x01, 0x01, 0x0c, 0x08, "X 4"					},
+	{0x01, 0x01, 0x0c, 0x0c, "X 1"					},
 
 	{0   , 0xfe, 0   ,    2, "Center Coin"			},
-	{DO+1, 0x01, 0x10, 0x00, "X 2"					},
-	{DO+1, 0x01, 0x10, 0x10, "X 1"					},
+	{0x01, 0x01, 0x10, 0x00, "X 2"					},
+	{0x01, 0x01, 0x10, 0x10, "X 1"					},
 
 	{0   , 0xfe, 0   ,    5, "Bonus Coins"			},
-	{DO+1, 0x01, 0xe0, 0x60, "1 Coin Each 5 Coins"	},
-	{DO+1, 0x01, 0xe0, 0x80, "2 Coins Each 4 Coins"	},
-	{DO+1, 0x01, 0xe0, 0xa0, "1 Coin Each 4 Coins"	},
-	{DO+1, 0x01, 0xe0, 0xc0, "1 Coin Each 2 Coins"	},
-	{DO+1, 0x01, 0xe0, 0xe0, "None"					},
+	{0x01, 0x01, 0xe0, 0x60, "1 Coin Each 5 Coins"	},
+	{0x01, 0x01, 0xe0, 0x80, "2 Coins Each 4 Coins"	},
+	{0x01, 0x01, 0xe0, 0xa0, "1 Coin Each 4 Coins"	},
+	{0x01, 0x01, 0xe0, 0xc0, "1 Coin Each 2 Coins"	},
+	{0x01, 0x01, 0xe0, 0xe0, "None"					},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"			},
-	{DO+2, 0x01, 0x80, 0x00, "Off"					},
-	{DO+2, 0x01, 0x80, 0x80, "On"					},
+	{0x02, 0x01, 0x80, 0x00, "Off"					},
+	{0x02, 0x01, 0x80, 0x80, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Hires Mode"			},
-	{DO+3, 0x01, 0x01, 0x00, "No"					},
-	{DO+3, 0x01, 0x01, 0x01, "Yes"					},
+	{0x03, 0x01, 0x01, 0x00, "No"					},
+	{0x03, 0x01, 0x01, 0x01, "Yes"					},
 };
 
 STDDIPINFO(Astdelux)
 
 static struct BurnDIPInfo LlanderDIPList[]=
 {
-	{0x0a, 0xff, 0xff, 0x80, NULL					},
-	{0x0b, 0xff, 0xff, 0x02, NULL					},
+	DIP_OFFSET(0xa)
+	{0x00, 0xff, 0xff, 0x80, NULL					},
+	{0x01, 0xff, 0xff, 0x02, NULL					},
+	{0x03, 0xff, 0xff, 0x00, NULL					},
 
 	{0   , 0xfe, 0   ,    4, "Right Coin"			},
-	{0x0a, 0x01, 0x03, 0x00, "X 1"					},
-	{0x0a, 0x01, 0x03, 0x01, "X 4"					},
-	{0x0a, 0x01, 0x03, 0x02, "X 5"					},
-	{0x0a, 0x01, 0x03, 0x03, "X 6"					},
+	{0x00, 0x01, 0x03, 0x00, "X 1"					},
+	{0x00, 0x01, 0x03, 0x01, "X 4"					},
+	{0x00, 0x01, 0x03, 0x02, "X 5"					},
+	{0x00, 0x01, 0x03, 0x03, "X 6"					},
 
 	{0   , 0xfe, 0   ,    4, "Language"				},
-	{0x0a, 0x01, 0x0c, 0x00, "English"				},
-	{0x0a, 0x01, 0x0c, 0x04, "French"				},
-	{0x0a, 0x01, 0x0c, 0x08, "Spanish"				},
-	{0x0a, 0x01, 0x0c, 0x0c, "German"				},
+	{0x00, 0x01, 0x0c, 0x00, "English"				},
+	{0x00, 0x01, 0x0c, 0x04, "French"				},
+	{0x00, 0x01, 0x0c, 0x08, "Spanish"				},
+	{0x00, 0x01, 0x0c, 0x0c, "German"				},
 
 	{0   , 0xfe, 0   ,    2, "Coinage"				},
-	{0x0a, 0x01, 0x20, 0x00, "Normal"				},
-	{0x0a, 0x01, 0x20, 0x20, "Free Play"			},
+	{0x00, 0x01, 0x20, 0x00, "Normal"				},
+	{0x00, 0x01, 0x20, 0x20, "Free Play"			},
 
 	{0   , 0xfe, 0   ,    8, "Fuel Units Per Coin"	},
-	{0x0a, 0x01, 0xd0, 0x00, "450"					},
-	{0x0a, 0x01, 0xd0, 0x40, "600"					},
-	{0x0a, 0x01, 0xd0, 0x80, "750"					},
-	{0x0a, 0x01, 0xd0, 0xc0, "900"					},
-	{0x0a, 0x01, 0xd0, 0x10, "1100"					},
-	{0x0a, 0x01, 0xd0, 0x50, "1300"					},
-	{0x0a, 0x01, 0xd0, 0x90, "1550"					},
-	{0x0a, 0x01, 0xd0, 0xd0, "1800"					},
+	{0x00, 0x01, 0xd0, 0x00, "450"					},
+	{0x00, 0x01, 0xd0, 0x40, "600"					},
+	{0x00, 0x01, 0xd0, 0x80, "750"					},
+	{0x00, 0x01, 0xd0, 0xc0, "900"					},
+	{0x00, 0x01, 0xd0, 0x10, "1100"					},
+	{0x00, 0x01, 0xd0, 0x50, "1300"					},
+	{0x00, 0x01, 0xd0, 0x90, "1550"					},
+	{0x00, 0x01, 0xd0, 0xd0, "1800"					},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"			},
-	{0x0b, 0x01, 0x02, 0x02, "Off"					},
-	{0x0b, 0x01, 0x02, 0x00, "On"					},
+	{0x01, 0x01, 0x02, 0x02, "Off"					},
+	{0x01, 0x01, 0x02, 0x00, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Hires Mode"			},
-	{0x0d, 0x01, 0x01, 0x00, "No"					},
-	{0x0d, 0x01, 0x01, 0x01, "Yes"					},
+	{0x03, 0x01, 0x01, 0x00, "No"					},
+	{0x03, 0x01, 0x01, 0x01, "Yes"					},
 };
 
 STDDIPINFO(Llander)
 
 static struct BurnDIPInfo Llander1DIPList[]=
 {
-	{0x0a, 0xff, 0xff, 0xa0, NULL					},
-	{0x0b, 0xff, 0xff, 0x02, NULL					},
+	DIP_OFFSET(0xa)
+	{0x00, 0xff, 0xff, 0xa0, NULL					},
+	{0x01, 0xff, 0xff, 0x02, NULL					},
+	{0x03, 0xff, 0xff, 0x00, NULL					},
 
 	{0   , 0xfe, 0   ,    4, "Right Coin"			},
-	{0x0a, 0x01, 0x03, 0x00, "X 1"					},
-	{0x0a, 0x01, 0x03, 0x01, "X 4"					},
-	{0x0a, 0x01, 0x03, 0x02, "X 5"					},
-	{0x0a, 0x01, 0x03, 0x03, "X 6"					},
+	{0x00, 0x01, 0x03, 0x00, "X 1"					},
+	{0x00, 0x01, 0x03, 0x01, "X 4"					},
+	{0x00, 0x01, 0x03, 0x02, "X 5"					},
+	{0x00, 0x01, 0x03, 0x03, "X 6"					},
 
 	{0   , 0xfe, 0   ,    4, "Language"				},
-	{0x0a, 0x01, 0x0c, 0x00, "English"				},
-	{0x0a, 0x01, 0x0c, 0x04, "French"				},
-	{0x0a, 0x01, 0x0c, 0x08, "Spanish"				},
-	{0x0a, 0x01, 0x0c, 0x0c, "German"				},
+	{0x00, 0x01, 0x0c, 0x00, "English"				},
+	{0x00, 0x01, 0x0c, 0x04, "French"				},
+	{0x00, 0x01, 0x0c, 0x08, "Spanish"				},
+	{0x00, 0x01, 0x0c, 0x0c, "German"				},
 
 	{0   , 0xfe, 0   ,    2, "Coinage"				},
-	{0x0a, 0x01, 0x10, 0x00, "Normal"				},
-	{0x0a, 0x01, 0x10, 0x10, "Free Play"			},
+	{0x00, 0x01, 0x10, 0x00, "Normal"				},
+	{0x00, 0x01, 0x10, 0x10, "Free Play"			},
 
 	{0   , 0xfe, 0   ,    4, "Fuel units"			},
-	{0x0a, 0x01, 0xc0, 0x00, "450"					},
-	{0x0a, 0x01, 0xc0, 0x40, "600"					},
-	{0x0a, 0x01, 0xc0, 0x80, "750"					},
-	{0x0a, 0x01, 0xc0, 0xc0, "900"					},
+	{0x00, 0x01, 0xc0, 0x00, "450"					},
+	{0x00, 0x01, 0xc0, 0x40, "600"					},
+	{0x00, 0x01, 0xc0, 0x80, "750"					},
+	{0x00, 0x01, 0xc0, 0xc0, "900"					},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"			},
-	{0x0b, 0x01, 0x02, 0x02, "Off"					},
-	{0x0b, 0x01, 0x02, 0x00, "On"					},
+	{0x01, 0x01, 0x02, 0x02, "Off"					},
+	{0x01, 0x01, 0x02, 0x00, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Hires Mode"			},
-	{0x0d, 0x01, 0x01, 0x00, "No"					},
-	{0x0d, 0x01, 0x01, 0x01, "Yes"					},
+	{0x03, 0x01, 0x01, 0x00, "No"					},
+	{0x03, 0x01, 0x01, 0x01, "Yes"					},
 };
 
 STDDIPINFO(Llander1)
 
 static struct BurnDIPInfo LlandertDIPList[]=
 {
-	{0x01, 0xff, 0xff, 0x40, NULL					},
+	DIP_OFFSET(0x01) // yes!
+	{0x00, 0xff, 0xff, 0x40, NULL					},
 
 	{0   , 0xfe, 0   ,    4, "Parameter 1"			},
-	{0x01, 0x01, 0x24, 0x00, "0"					},
-	{0x01, 0x01, 0x24, 0x04, "1"					},
-	{0x01, 0x01, 0x24, 0x20, "2"					},
-	{0x01, 0x01, 0x24, 0x24, "Invalid"				},
+	{0x00, 0x01, 0x24, 0x00, "0"					},
+	{0x00, 0x01, 0x24, 0x04, "1"					},
+	{0x00, 0x01, 0x24, 0x20, "2"					},
+	{0x00, 0x01, 0x24, 0x24, "Invalid"				},
 
 	{0   , 0xfe, 0   ,    8, "Parameter 2"			},
-	{0x01, 0x01, 0xd0, 0x00, "0"					},
-	{0x01, 0x01, 0xd0, 0x40, "1"					},
-	{0x01, 0x01, 0xd0, 0x80, "2"					},
-	{0x01, 0x01, 0xd0, 0xc0, "3"					},
-	{0x01, 0x01, 0xd0, 0x10, "4"					},
-	{0x01, 0x01, 0xd0, 0x50, "5"					},
-	{0x01, 0x01, 0xd0, 0x90, "6"					},
-	{0x01, 0x01, 0xd0, 0xd0, "7"					},
+	{0x00, 0x01, 0xd0, 0x00, "0"					},
+	{0x00, 0x01, 0xd0, 0x40, "1"					},
+	{0x00, 0x01, 0xd0, 0x80, "2"					},
+	{0x00, 0x01, 0xd0, 0xc0, "3"					},
+	{0x00, 0x01, 0xd0, 0x10, "4"					},
+	{0x00, 0x01, 0xd0, 0x50, "5"					},
+	{0x00, 0x01, 0xd0, 0x90, "6"					},
+	{0x00, 0x01, 0xd0, 0xd0, "7"					},
 };
 
 STDDIPINFO(Llandert)
@@ -654,7 +677,7 @@ static UINT8 asteroidb_read(UINT16 address)
 				return (~DrvInputs[0] & 0x7f) | (avgdvg_done() ? 0 : 0x80);
 
 			case 0x2003:
-				return DrvInputs[1] ^ 0x0a;
+				return (DrvInputs[2] ? 0 : 0x80);
 		}
 		
 	return asteroid_read(address);
@@ -771,6 +794,7 @@ static INT32 res_check()
 
 		if (Height != 1080) {
 			vector_rescale((1080*640/480), 1080);
+			DrvRecalc = 1;
 			return 1;
 		}
 	} else {
@@ -779,6 +803,7 @@ static INT32 res_check()
 
 		if (Height != 480) {
 			vector_rescale(640, 480);
+			DrvRecalc = 1;
 			return 1;
 		}
 	}
@@ -930,7 +955,7 @@ static INT32 AstdeluxInit()
 
 	earom_init();
 
-	PokeyInit(12096000/8, 1, 1.40, 1);
+	PokeyInit(12096000/8, 1, 0.65, 1);
 	PokeySetTotalCyclesCB(M6502TotalCycles);
 	PokeyAllPotCallback(0, allpot_read);
 
@@ -999,12 +1024,23 @@ static INT32 DrvExit()
 static void DrvPaletteInit()
 {
     for (INT32 i = 0; i < 0x20; i++) // color
-	{		
+	{
 		for (INT32 j = 0; j < 256; j++) // intensity
 		{
-			INT32 c = (0xff * j) / 0xff;
+			INT32 r = (0xff * j) / 0xff;
+			INT32 g = r;
+			INT32 b = r;
 
-			DrvPalette[i * 256 + j] = (c << 16) | (c << 8) | c; // must be 32bit palette! -dink (see vector.cpp)
+			if (astdelux) {
+				INT32 hires = (DrvDips[3] & 1);
+				INT32 plus = (hires) ? 0x00 : 0x40; // lores mode needs to be brighter
+
+				r = ((0x27+plus) * j) / 0xff;
+				g = ((0xa0+plus) * j) / 0xff;
+				b = ((0xa0+plus) * j) / 0xff;
+			}
+
+			DrvPalette[i * 256 + j] = (r << 16) | (g << 8) | b; // must be 32bit palette! -dink (see vector.cpp)
 		}
 	}
 }
@@ -1023,30 +1059,6 @@ static INT32 DrvDraw()
 	return 0;
 }
 
-static void dcfilter_dac() // for llander!
-{
-	// dc-blocking filter
-	static INT16 dac_lastin_r  = 0;
-	static INT16 dac_lastout_r = 0;
-	static INT16 dac_lastin_l  = 0;
-	static INT16 dac_lastout_l = 0;
-
-	for (INT32 i = 0; i < nBurnSoundLen; i++) {
-		INT16 r = pBurnSoundOut[i*2+0];
-		INT16 l = pBurnSoundOut[i*2+1];
-
-		INT16 outr = r - dac_lastin_r + 0.995 * dac_lastout_r;
-		INT16 outl = l - dac_lastin_l + 0.995 * dac_lastout_l;
-
-		dac_lastin_r = r;
-		dac_lastout_r = outr;
-		dac_lastin_l = l;
-		dac_lastout_l = outl;
-		pBurnSoundOut[i*2+0] = outr;
-		pBurnSoundOut[i*2+1] = outl;
-	}
-}
-
 static INT32 DrvFrame()
 {
 	BurnWatchdogUpdate();
@@ -1063,7 +1075,7 @@ static INT32 DrvFrame()
 		for (INT32 i = 0; i < 8; i++) {
 			DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;
 			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
-			DrvInputs[1] ^= (DrvJoy3[i] & 1) << i;
+			DrvInputs[2] ^= (DrvJoy3[i] & 1) << i;
 		}
 
 		if (llander) {
@@ -1071,7 +1083,7 @@ static INT32 DrvFrame()
 		}
 	}
 
-	INT32 nInterleave = 256; // nmi is 4x per frame!
+	INT32 nInterleave = 64; // nmi is 4x per frame!
 	INT32 nCyclesTotal[1] = { (1512000 * 100) / 6152 }; // 61.5234375 hz
 	INT32 nCyclesDone[1]  = { 0 };
 	INT32 nSoundBufferPos = 0;
@@ -1083,7 +1095,7 @@ static INT32 DrvFrame()
 	{
 		CPU_RUN(0, M6502);
 
-		if ((i % 64) == 63 && interrupts_enabled)
+		if ((i % 16) == 15 && interrupts_enabled)
 			M6502SetIRQLine(0x20, CPU_IRQSTATUS_AUTO);
 
 		// Render Sound Segment
@@ -1115,11 +1127,9 @@ static INT32 DrvFrame()
 				asteroid_sound_update(pSoundBuf, nSegmentLength);
 		}
 
-		if (astdelux)
+		if (astdelux) {
 			pokey_update(pBurnSoundOut, nBurnSoundLen);
-
-		if (llander)
-			dcfilter_dac();
+		}
 	}
 
 	if (pBurnDraw) {
@@ -1151,22 +1161,28 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		SCAN_VAR(avgOK);
 		SCAN_VAR(bankdata);
+		SCAN_VAR(nThrust);
 
-		if (astdelux)
+		if (llander) {
+			llander_sound_scan();
+		} else {
+			// asteroids / astdelux
+			asteroid_sound_scan();
+		}
+
+		if (astdelux) {
 			pokey_scan(nAction, pnMin);
+		}
 	}
 
-	if (astdelux)
+	if (astdelux) {
 		earom_scan(nAction, pnMin); // here.
+	}
 
 	if (nAction & ACB_WRITE) {
 		M6502Open(0);
 		bankswitch(bankdata);
 		M6502Close();
-
-		if (avgOK) {
-			avgdvg_go();
-		}
 	}
 
 	return 0;
@@ -1192,7 +1208,7 @@ struct BurnDriver BurnDrvAsteroid = {
 	"asteroid", NULL, NULL, NULL, "1979",
 	"Asteroids (rev 4)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, asteroidRomInfo, asteroidRomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AsteroidDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1217,7 +1233,7 @@ struct BurnDriver BurnDrvAsteroid2 = {
 	"asteroid2", "asteroid", NULL, NULL, "1979",
 	"Asteroids (rev 2)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, asteroid2RomInfo, asteroid2RomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AsteroidDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1243,7 +1259,7 @@ struct BurnDriver BurnDrvAsteroid1 = {
 	"asteroid1", "asteroid", NULL, NULL, "1979",
 	"Asteroids (rev 1)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, asteroid1RomInfo, asteroid1RomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AsteroidDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1283,7 +1299,7 @@ struct BurnDriver BurnDrvAsteroidb1 = {
 	"asteroidb1", "asteroid", NULL, NULL, "1979",
 	"Asteroids (bootleg on Lunar Lander hardware, set 1)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, asteroidb1RomInfo, asteroidb1RomName, NULL, NULL, NULL, NULL, AsteroidbInputInfo, AsteroidbDIPInfo,
 	AsteroidbInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1310,9 +1326,9 @@ struct BurnDriver BurnDrvAsteroidb2 = {
 	"asteroidb2", "asteroid", NULL, NULL, "1979",
 	"Asteroids (bootleg on Lunar Lander hardware, set 2)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
-	NULL, asteroidb2RomInfo, asteroidb2RomName, NULL, NULL, NULL, NULL, AsteroidbInputInfo, AsteroidbDIPInfo,
-	AsteroidbInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
+	NULL, asteroidb2RomInfo, asteroidb2RomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AsteroidDIPInfo,
+	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
 };
 
@@ -1336,7 +1352,7 @@ struct BurnDriver BurnDrvSpcrocks = {
 	"spcrocks", "asteroid", NULL, NULL, "1981",
 	"Space Rocks (Spanish clone of Asteroids)\0", NULL, "Atari (J.Estevez license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, spcrocksRomInfo, spcrocksRomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AerolitosDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1362,7 +1378,7 @@ struct BurnDriver BurnDrvAerolitos = {
 	"aerolitos", "asteroid", NULL, NULL, "1980",
 	"Aerolitos (Spanish bootleg of Asteroids)\0", NULL, "bootleg (Rodmar Elec.)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, aerolitosRomInfo, aerolitosRomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AerolitosDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1406,7 +1422,7 @@ struct BurnDriver BurnDrvAsterock = {
 	"asterock", "asteroid", NULL, NULL, "1979",
 	"Asterock (Sidam bootleg of Asteroids)\0", NULL, "bootleg (Sidam)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, asterockRomInfo, asterockRomName, NULL, NULL, NULL, NULL, AsterockInputInfo, AsterockDIPInfo,
 	AsterockInt, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1436,7 +1452,7 @@ struct BurnDriver BurnDrvAsterockv = {
 	"asterockv", "asteroid", NULL, NULL, "1979",
 	"Asterock (Videotron bootleg of Asteroids)\0", NULL, "bootleg (Videotron)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, asterockvRomInfo, asterockvRomName, NULL, NULL, NULL, NULL, AsterockInputInfo, AsterockDIPInfo,
 	AsterockInt, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1466,7 +1482,7 @@ struct BurnDriver BurnDrvMeteorite = {
 	"meteorite", "asteroid", NULL, NULL, "1979",
 	"Meteorite (Proel bootleg of Asteroids)\0", NULL, "bootleg (Proel)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, meteoriteRomInfo, meteoriteRomName, NULL, NULL, NULL, NULL, AsterockInputInfo, AsterockDIPInfo,
 	AsterockInt, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1492,7 +1508,7 @@ struct BurnDriver BurnDrvMeteorts = {
 	"meteorts", "asteroid", NULL, NULL, "1979",
 	"Meteorites (VGG bootleg of Asteroids)\0", NULL, "bootleg (VGG)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, meteortsRomInfo, meteortsRomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AsteroidDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1522,7 +1538,7 @@ struct BurnDriver BurnDrvMeteorho = {
 	"meteorho", "asteroid", NULL, NULL, "1979",
 	"Meteor (Hoei bootleg of Asteroids)\0", NULL, "bootleg (Hoei)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, meteorhoRomInfo, meteorhoRomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AsteroidDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1551,7 +1567,7 @@ struct BurnDriver BurnDrvMeteorbl = {
 	"meteorbl", "asteroid", NULL, NULL, "1979",
 	"Meteor (bootleg of Asteroids)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, meteorblRomInfo, meteorblRomName, NULL, NULL, NULL, NULL, AsterockInputInfo, AsterockDIPInfo,
 	AsterockInt, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1577,12 +1593,15 @@ struct BurnDriver BurnDrvHyperspc = {
 	"hyperspc", "asteroid", NULL, NULL, "1979",
 	"Hyperspace (bootleg of Asteroids)\0", NULL, "bootleg (Rumiano)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, hyperspcRomInfo, hyperspcRomName, NULL, NULL, NULL, NULL, AsteroidInputInfo, AsteroidDIPInfo,
 	AsteroidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
 };
 
+// note: the astdelux entry in hiscore.dat breaks the game and seems wrong (the 3rd area is saving game timers ?),
+//       for that reason and also because it is unnecessary (the hiscores are persisted through nvram anyway),
+//       we prefer keeping the BDF_HISCORE_SUPPORTED flag disabled
 
 // Asteroids Deluxe (rev 3)
 
@@ -1605,7 +1624,7 @@ struct BurnDriver BurnDrvAstdelux = {
 	"astdelux", NULL, NULL, NULL, "1980",
 	"Asteroids Deluxe (rev 3)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING /* | BDF_HISCORE_SUPPORTED */, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, astdeluxRomInfo, astdeluxRomName, NULL, NULL, NULL, NULL, AstdeluxInputInfo, AstdeluxDIPInfo,
 	AstdeluxInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1632,7 +1651,7 @@ struct BurnDriver BurnDrvAstdelux2 = {
 	"astdelux2", "astdelux", NULL, NULL, "1980",
 	"Asteroids Deluxe (rev 2)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE /* | BDF_HISCORE_SUPPORTED */, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, astdelux2RomInfo, astdelux2RomName, NULL, NULL, NULL, NULL, AstdeluxInputInfo, AstdeluxDIPInfo,
 	AstdeluxInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1660,7 +1679,7 @@ struct BurnDriver BurnDrvAstdelux1 = {
 	"astdelux1", "astdelux", NULL, NULL, "1980",
 	"Asteroids Deluxe (rev 1)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE /* | BDF_HISCORE_SUPPORTED */, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, astdelux1RomInfo, astdelux1RomName, NULL, NULL, NULL, NULL, AstdeluxInputInfo, AstdeluxDIPInfo,
 	AstdeluxInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1689,7 +1708,7 @@ struct BurnDriver BurnDrvLlander = {
 	"llander", NULL, NULL, NULL, "1979",
 	"Lunar Lander (rev 2)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC | GBF_VECTOR, 0,
 	NULL, llanderRomInfo, llanderRomName, NULL, NULL, NULL, NULL, LlanderInputInfo, LlanderDIPInfo,
 	LlanderInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1718,7 +1737,7 @@ struct BurnDriver BurnDrvLlander1 = {
 	"llander1", "llander", NULL, NULL, "1979",
 	"Lunar Lander (rev 1)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC | GBF_VECTOR, 0,
 	NULL, llander1RomInfo, llander1RomName, NULL, NULL, NULL, NULL, LlanderInputInfo, Llander1DIPInfo,
 	LlanderInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1746,7 +1765,7 @@ struct BurnDriverD BurnDrvLlandert = {
 	"llandert", "llander", NULL, NULL, "1979",
 	"Lunar Lander (screen test)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC | GBF_VECTOR, 0,
 	NULL, llandertRomInfo, llandertRomName, NULL, NULL, NULL, NULL, LlandertInputInfo, LlandertDIPInfo,
 	LlanderInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3

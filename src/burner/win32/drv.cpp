@@ -8,7 +8,7 @@ TCHAR szAppRomPaths[DIRS_MAX][MAX_PATH] = {
 	{ _T("") },
 	{ _T("") },
 	{ _T("") },
-	{ _T("") },
+	{ _T("roms/romdata/") },
 	{ _T("roms/channelf/") },
 	{ _T("roms/ngp/") },
 	{ _T("roms/nes/") },
@@ -70,6 +70,8 @@ static int DoLibInit()					// Do Init of Burn library driver
 {
 	int nRet = 0;
 
+	RomDataInit();
+
 	if (DrvBzipOpen()) {
 		return 1;
 	}
@@ -80,9 +82,13 @@ static int DoLibInit()					// Do Init of Burn library driver
 
 	nRet = BurnDrvInit();
 
+	RomDataSetFullName();
+
 	BzipClose();
 
 	if (!bQuietLoading) ProgressDestroy();
+
+	IpsPatchExit(); // done loading roms, disable ips patcher
 
 	if (nRet) {
 		return 3;
@@ -192,10 +198,12 @@ int DrvInit(int nDrvNum, bool bRestore)
 		NeoCDZRateChange();
 	}
 
-	{ // Init input and audio, save blitter init for later. (reduce # of mode changes, nice for emu front-ends)
-		bVidOkay = 1;
+	{ // Init input, save audio and blitter init for later. (reduce # of mode changes, nice for emu front-ends)
+		bVidOkay = 1; // don't init video yet
+		bAudOkay = 1; // don't init audio yet, but grab soundcard params (nBurnSoundRate) so soundcores can init.
 		MediaInit();
 		bVidOkay = 0;
+		bAudOkay = 0;
 	}
 
 	// Define nMaxPlayers early; GameInpInit() needs it (normally defined in DoLibInit()).
@@ -254,9 +262,8 @@ int DrvInit(int nDrvNum, bool bRestore)
 		if (bRestore) {
 			StatedAuto(0);
 			bSaveRAM = true;
-
-			ConfigCheatLoad();
 		}
+		ConfigCheatLoad();
 	}
 
 	nBurnLayer = 0xFF;				// show all layers
@@ -266,6 +273,7 @@ int DrvInit(int nDrvNum, bool bRestore)
 
 	VidExit();
 	POST_INITIALISE_MESSAGE;
+	CallRegisteredLuaFunctions(LUACALL_ONSTART);
 
 	return 0;
 }
@@ -313,7 +321,7 @@ int DrvExit()
 
 	bRunPause = 0;					// Don't pause when exitted
 
-	if (bAudOkay) {
+	if (bAudOkay && pBurnSoundOut) {
 		// Write silence into the sound buffer on exit, and for drivers which don't use pBurnSoundOut
 		memset(nAudNextSound, 0, nAudSegLen << 2);
 	}
@@ -321,6 +329,8 @@ int DrvExit()
 	CDEmuExit();
 
 	BurnExtCartridgeSetupCallback = NULL;
+
+	RomDataExit();
 
 	nBurnDrvActive = ~0U;			// no driver selected
 

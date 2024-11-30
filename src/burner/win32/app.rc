@@ -223,7 +223,7 @@ BEGIN
     CONTROL         BMP_ABOUT,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE | SS_SUNKEN,3,3,100,50
     CONTROL         "version",IDC_FBA_VER,"Static",SS_OWNERDRAW | WS_GROUP,83,65,269,10
     CONTROL         "specialbuild",IDC_SPECIALSTRING,"Static",SS_OWNERDRAW | WS_GROUP,83,73,269,10
-    LTEXT           "FB Neo contains parts of MAME && Final Burn.\n© 2004-2020, Team FBNeo.",IDC_STATIC,6,88,235,16,WS_DISABLED
+    LTEXT           "FB Neo contains parts of MAME && Final Burn.\n© 2004-2023, Team FBNeo.",IDC_STATIC,6,88,235,16,WS_DISABLED
     DEFPUSHBUTTON   "OK",IDOK,305,90,50,14
     PUSHBUTTON      "License",IDC_SHOWLICENSE,251,90,50,14
     CONTROL         "",IDC_LICENSE,"RICHEDIT20A",ES_MULTILINE | ES_READONLY | WS_VSCROLL | ES_NOIME,3,109,353,77, WS_EX_STATICEDGE | ES_EX_NOCALLOLEINIT
@@ -294,6 +294,7 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTI
 CAPTION "Shots Factory"
 FONT 8, "MS Shell Dlg"
 BEGIN
+	CONTROL         "Keep", IDC_SHOTKEEP, "Button", BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 9, 72, 31, 14
     DEFPUSHBUTTON   "&Capture",IDCAPTURE,125,72,70,14
     PUSHBUTTON      "OK",IDOK,197,72,70,14
     PUSHBUTTON      "&Advance Frame",IDC_ADVANCE,54,72,70,14
@@ -603,7 +604,7 @@ BEGIN
     GROUPBOX        "",IDC_STATIC1,2,0,470,298
     CONTROL         "",IDC_STATIC_INFOBOX,"Static",SS_WHITERECT | SS_SUNKEN,8,190,250,100
     EDITTEXT        IDC_TEXTCOMMENT,8,190,458,100,ES_MULTILINE | ES_READONLY | NOT WS_BORDER | NOT WS_TABSTOP | WS_VSCROLL
-    RTEXT           "Language:", IDC_IPSMAN_LANGUAGE, 8, 170, 40, 10, SS_CENTERIMAGE
+    LTEXT           "Language:", IDC_IPSMAN_LANGUAGE, 8, 170, 40, 10, SS_CENTERIMAGE
     COMBOBOX        IDC_CHOOSE_LIST, 60, 169, 100, 128, CBS_DROPDOWNLIST | WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL
     CONTROL         "Deselect All",IDC_IPSMAN_DESELECTALL,"Button",WS_TABSTOP,170,169,58,13
     CONTROL         "",IDC_SCREENSHOT_H,"Static",SS_BITMAP | SS_REALSIZEIMAGE | SS_SUNKEN,262,10,106,100, WS_EX_CLIENTEDGE
@@ -786,9 +787,12 @@ BEGIN
     LTEXT           "",IDC_REPLAYRESET,76,80,190,8
     LTEXT           "",IDC_REPLAYTIME,76,89,190,8
     CONTROL         "Open Read-Only",IDC_READONLY,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,35,25,69,10
+                    WS_TABSTOP,14,25,69,10
     CONTROL         "Show Joystick Movement",IDC_SHOWMOVEMENT,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,120,25,100,10
+                    WS_TABSTOP,97,25,99,10
+    CONTROL         "Start Paused",IDC_STARTPAUSED,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,207,25,57,10
+    LTEXT           "WARNING: Start NeoGeo CD game before loading replay file!!!",IDC_NGCD_WARN,11,104,240,10
 END
 
 IDD_RECORDINP DIALOGEX 0, 0, 276, 98
@@ -804,7 +808,9 @@ BEGIN
     EDITTEXT        IDC_FILENAME,55,10,189,14,ES_AUTOHSCROLL
     PUSHBUTTON      "...",IDC_BROWSE,249,10,18,14
     EDITTEXT        IDC_METADATA,55,30,189,37,ES_AUTOHSCROLL
-    CONTROL         "Record From Power-On",IDC_REPLAYRESET,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,55,79,106,14
+//    CONTROL         "Record From Power-On",IDC_REPLAYRESET,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,55,79,106,14
+	CONTROL         "Record From Power-On", IDC_REPLAYRESET, "Button", BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 5, 78, 93, 14
+	CONTROL         "w/NVRAM", IDC_REPLAYNVRAM, "Button", BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 103, 78, 53, 14
 END
 
 IDD_CHOOSEMONITOR DIALOGEX 0, 0, 242, 77
@@ -822,6 +828,21 @@ BEGIN
     CONTROL         "OK",IDOK,"Button",WS_TABSTOP,180,59,58,14
 END
 
+IDD_LUA DIALOGEX 0, 0, 270, 150
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_POPUP | WS_CLIPCHILDREN | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
+CAPTION "Lua Script"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    PUSHBUTTON      "Browse...",IDC_BUTTON_LUABROWSE,7,31,48,16
+    PUSHBUTTON      "Run",IDC_BUTTON_LUARUN,213,31,50,16
+    PUSHBUTTON      "Stop",IDC_BUTTON_LUASTOP,160,31,50,16
+    EDITTEXT        IDC_EDIT_LUAPATH,7,16,256,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_LUACONSOLE,7,61,256,81,ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | WS_VSCROLL
+    LTEXT           "Output Console",IDC_LUACONSOLE_OUTPUT,7,51,51,8
+    LTEXT           "Script File",IDC_LUACONSOLE_SCRIPTFILE,7,7,32,8
+    PUSHBUTTON      "Edit",IDC_BUTTON_LUAEDIT,58,31,46,16
+END
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Menu
@@ -832,9 +853,10 @@ BEGIN
     POPUP "Game"
     BEGIN
         MENUITEM "Load game...\tF6",					MENU_LOAD
+        MENUITEM "Load game from Romdata...\tCtrl+R",	MENU_LOAD_ROMDATA
         MENUITEM "Play via Kaillera...",				MENU_STARTNET
         POPUP "Most recent games..."
-	BEGIN
+		BEGIN
             MENUITEM "no game selected",				MENU_PREVIOUSGAMES1, GRAYED
             MENUITEM "no game selected",				MENU_PREVIOUSGAMES2, GRAYED
             MENUITEM "no game selected",				MENU_PREVIOUSGAMES3, GRAYED
@@ -854,10 +876,26 @@ BEGIN
 		MENUITEM "Start Neo Geo CDZ...\tCtrl+Shift+F6",	MENU_START_NEOGEO_CD
 		MENUITEM SEPARATOR
         MENUITEM "Exit game\tCtrl+F4",					MENU_QUIT, GRAYED
-        MENUITEM "Pause game\tPause",					MENU_PAUSE, GRAYED        
+        MENUITEM "Reset game",							MENU_RESET, GRAYED
+        MENUITEM "Pause game\tPause",					MENU_PAUSE, GRAYED
 		MENUITEM SEPARATOR
         MENUITEM "Adjust CPU speed...",					MENU_SETCPUCLOCK, GRAYED
         MENUITEM "Reset CPU speed to 100%",				MENU_RESETCPUCLOCK, GRAYED
+        MENUITEM SEPARATOR
+		POPUP "Slow-Mo"
+        BEGIN
+            MENUITEM "Normal",							ID_SLOMO_0, GRAYED
+            MENUITEM "Slow",							ID_SLOMO_1, GRAYED
+            MENUITEM "Slower",							ID_SLOMO_2, GRAYED
+            MENUITEM "Slowest",							ID_SLOMO_3, GRAYED
+            MENUITEM "Slowerest",						ID_SLOMO_4, GRAYED
+        END
+        MENUITEM SEPARATOR
+		POPUP "Lua Scripting..."
+        BEGIN
+            MENUITEM "&New Lua Script Window...",		ID_LUA_OPEN, GRAYED
+            MENUITEM "&Close Script Window",			ID_LUA_CLOSE_ALL, GRAYED
+        END
         MENUITEM SEPARATOR
         POPUP "Memory Card..."
         BEGIN
@@ -872,18 +910,18 @@ BEGIN
 	        MENUITEM "Replay input...",					MENU_STARTREPLAY, GRAYED
         	MENUITEM "Record input...",					MENU_STARTRECORD, GRAYED
 	        MENUITEM "Stop replay/record",					MENU_STOPREPLAY, GRAYED
-	END
+		END
         MENUITEM SEPARATOR
         POPUP "Save states..."
         BEGIN
 	        MENUITEM "Load state...\tCtrl+F9",				MENU_STATE_LOAD_DIALOG, GRAYED
         	MENUITEM "Save state...\tCtrl+F10",				MENU_STATE_SAVE_DIALOG, GRAYED
 	        POPUP "State slots..."
-		BEGIN
+			BEGIN
 	            MENUITEM "Activate previous slot\tF8",			MENU_STATE_PREVSLOT
         	    MENUITEM "Activate next slot\tF11",				MENU_STATE_NEXTSLOT
     		    MENUITEM "MENU_STATE_LOAD_SLOT",				MENU_STATE_LOAD_SLOT, GRAYED
-            	    MENUITEM "MENU_STATE_SAVE_SLOT",				MENU_STATE_SAVE_SLOT, GRAYED
+            	MENUITEM "MENU_STATE_SAVE_SLOT",				MENU_STATE_SAVE_SLOT, GRAYED
         	    MENUITEM "Undo last state save\tShift+F8",			MENU_STATE_UNDO
         	END
         	MENUITEM "Restore full state on load",				MENU_ALLRAM
@@ -1011,6 +1049,7 @@ BEGIN
 		MENUITEM "Enable VSync (Windowed)",						MENU_VIDEOVSYNC
 		MENUITEM "Enable DWM Sync (Windowed)",				MENU_DWMFIX
 		MENUITEM "Auto Frameskip",								MENU_AUTOFRAMESKIP
+		MENUITEM "Enable RunAhead",								MENU_RUNAHEAD
     END
     POPUP "Audio"
     BEGIN
@@ -1020,6 +1059,20 @@ BEGIN
     	    MENUITEM "XAudio2",						MENU_AUD_PLUGIN_2
     	END
     	MENUITEM "Plugin &options",					MENU_AUDIO_OPTIONS, GRAYED
+		POPUP "&Audio Volume"
+		BEGIN
+			MENUITEM "100% (max)",					MENU_AUDIO_VOLUME_100
+			MENUITEM "90%",							MENU_AUDIO_VOLUME_90
+			MENUITEM "80%",							MENU_AUDIO_VOLUME_80
+			MENUITEM "70%",							MENU_AUDIO_VOLUME_70
+			MENUITEM "60%",							MENU_AUDIO_VOLUME_60
+			MENUITEM "50%",							MENU_AUDIO_VOLUME_50
+			MENUITEM "40%",							MENU_AUDIO_VOLUME_40
+			MENUITEM "30%",							MENU_AUDIO_VOLUME_30
+			MENUITEM "20%",							MENU_AUDIO_VOLUME_20
+			MENUITEM "10%",							MENU_AUDIO_VOLUME_10
+			MENUITEM "0% (mute)",					MENU_AUDIO_VOLUME_0
+		END
     	MENUITEM SEPARATOR
         MENUITEM "2-point 1st order sample interpolation",		MENU_INTERPOLATE_1
         MENUITEM "4-point 3rd order sample interpolation",		MENU_INTERPOLATE_3
@@ -1046,7 +1099,19 @@ BEGIN
     	    MENUITEM "Slow",						MENU_INPUT_AUTOFIRE_RATE_1
     	    MENUITEM "Medium",						MENU_INPUT_AUTOFIRE_RATE_2
     	    MENUITEM "Fast",						MENU_INPUT_AUTOFIRE_RATE_3
-    	    MENUITEM "Very Fast",					MENU_INPUT_AUTOFIRE_RATE_4
+    	    MENUITEM "Faster",						MENU_INPUT_AUTOFIRE_RATE_4
+    	    MENUITEM "Very Fast",					MENU_INPUT_AUTOFIRE_RATE_5
+    	    MENUITEM "Very Faster",					MENU_INPUT_AUTOFIRE_RATE_6
+    	END
+		MENUITEM SEPARATOR
+    	POPUP "&Rewind Settings"
+    	BEGIN
+    	    MENUITEM "Enabled",						MENU_INPUT_REWIND_ENABLED
+    	    MENUITEM "128MB",						MENU_INPUT_REWIND_128MB
+    	    MENUITEM "256MB",						MENU_INPUT_REWIND_256MB
+    	    MENUITEM "512MB",						MENU_INPUT_REWIND_512MB
+    	    MENUITEM "768MB",						MENU_INPUT_REWIND_768MB
+    	    MENUITEM "1GB",							MENU_INPUT_REWIND_1GB
     	END
     	MENUITEM SEPARATOR
         MENUITEM "Map game inputs...\tF5",				MENU_INPUT, GRAYED
@@ -1061,7 +1126,7 @@ BEGIN
            MENUITEM "Display mode indicator",				MENU_DISPLAYINDICATOR
            MENUITEM "Modeless menu",					MENU_MODELESS
            MENUITEM "Don't change Num Lock status",			MENU_NOCHANGENUMLOCK
-	   MENUITEM "Create support folders at runtime",		MENU_CREATEDIRS
+	       MENUITEM "Create support folders at runtime",		MENU_CREATEDIRS
            MENUITEM "Show Game List at start-up",			MENU_AUTOLOADGAMELIST
            MENUITEM "Scan ROMs at start-up (if needed)",	MENU_AUTOSCANGAMELIST
            MENUITEM SEPARATOR
@@ -1080,6 +1145,8 @@ BEGIN
            MENUITEM "Save High Scores when supported",			MENU_SAVEHISCORES
 	   MENUITEM "Use alpha blend effects when supported",		MENU_USEBLEND
 	   MENUITEM "Display Gear-Shift Indicator when supported",	MENU_GEARSHIFT
+	   MENUITEM "Display Lightgun Reticles when supported",	MENU_LIGHTGUNRETICLES
+
 #ifdef INCLUDE_AVI_RECORDING
 	   POPUP "AVI Writer Output size"
        	   BEGIN
@@ -1093,6 +1160,7 @@ BEGIN
         POPUP    "Generate dat file"
         BEGIN
 	        MENUITEM "Generate dat (Arcade only)...",			MENU_CLRMAME_PRO_XML
+	        MENUITEM "Generate dat (Neo Geo only)...",			MENU_CLRMAME_PRO_XML_NEOGEO_ONLY
 	        MENUITEM "Generate dat (Megadrive only)...",		MENU_CLRMAME_PRO_XML_MD_ONLY
 			MENUITEM "Generate dat (PC-Engine only)...",		MENU_CLRMAME_PRO_XML_PCE_ONLY
 			MENUITEM "Generate dat (TurboGrafx16 only)...",		MENU_CLRMAME_PRO_XML_TG16_ONLY
@@ -1260,6 +1328,9 @@ BEGIN
 						MENUITEM "4xBR Semi-Rounded",					MENU_ENHANCED_SOFT_4XBR_B
 						MENUITEM "4xBR Rounded",						MENU_ENHANCED_SOFT_4XBR_C
 						MENUITEM "DDT3x",	        					MENU_ENHANCED_SOFT_DDT3X
+						MENUITEM "CRT 2x2 (Fast 480p)",                 MENU_ENHANCED_SOFT_CRTx22
+						MENUITEM "CRT 3x3 (720p)",                      MENU_ENHANCED_SOFT_CRTx33
+						MENUITEM "CRT 4x4 (1080p)",                     MENU_ENHANCED_SOFT_CRTx44
                         MENUITEM SEPARATOR
                         MENUITEM "Force image to SoftFX size",          MENU_ENHANCED_SOFT_AUTOSIZE
                 END
@@ -1339,6 +1410,9 @@ BEGIN
 				MENUITEM "4xBR Semi-Rounded\t(16-bit only)",			MENU_SOFTFX_SOFT_4XBR_B
 				MENUITEM "4xBR Rounded\t(16-bit only)",					MENU_SOFTFX_SOFT_4XBR_C
 				MENUITEM "DDT3x\t(16-bit only)",            	        MENU_SOFTFX_SOFT_DDT3X
+				MENUITEM "CRT 2x2 (Fast 480p)\t(32-bit only)",          MENU_SOFTFX_SOFT_CRTx22
+				MENUITEM "CRT 3x3 (720p)\t(32-bit only)",               MENU_SOFTFX_SOFT_CRTx33
+				MENUITEM "CRT 4x4 (1080p)\t(32-bit only)",              MENU_SOFTFX_SOFT_CRTx44
                 MENUITEM SEPARATOR
                 MENUITEM "&Force image to SoftFX size",                 MENU_SOFTFX_SOFT_AUTOSIZE
                 POPUP "Buffering &method"
@@ -1401,6 +1475,17 @@ BEGIN
 		MENUITEM "Point filtering",                             MENU_DX9_ALT_POINT
 		MENUITEM "Linear filtering",                            MENU_DX9_ALT_LINEAR
 		MENUITEM SEPARATOR
+        POPUP "HardFX algorithm"
+        BEGIN
+            MENUITEM "None",                    				MENU_DX9_ALT_HARD_FX_NONE
+            MENUITEM "CRT Aperture",            				MENU_DX9_ALT_HARD_FX_CRT_APERTURE
+            MENUITEM "CRT Caligari",            				MENU_DX9_ALT_HARD_FX_CRT_CALIGARI
+            MENUITEM "CRT CGWG Fast",           				MENU_DX9_ALT_HARD_FX_CRT_CGWG_FAST
+            MENUITEM "CRT Easy Mode",           				MENU_DX9_ALT_HARD_FX_CRT_EASY_MODE
+			MENUITEM "CRT Standard",            				MENU_DX9_ALT_HARD_FX_CRT_STANDARD
+			MENUITEM "CRT Bicubic",								MENU_DX9_ALT_HARD_FX_CRT_BICUBIC
+			MENUITEM "CRT CGA",									MENU_DX9_ALT_HARD_FX_CRT_CGA
+        END        
 		POPUP "SoftFX algorithm"
 		BEGIN
 			MENUITEM "Double pixels (3D hardware)",				MENU_DX9_ALT_SOFT_STRETCH
@@ -1438,6 +1523,9 @@ BEGIN
 			MENUITEM "4xBR Semi-Rounded",						MENU_DX9_ALT_SOFT_4XBR_B
 			MENUITEM "4xBR Rounded",							MENU_DX9_ALT_SOFT_4XBR_C
 			MENUITEM "DDT3x",	        					    MENU_DX9_ALT_SOFT_DDT3X
+			MENUITEM "CRT 2x2 (Fast 480p)",                   	MENU_DX9_ALT_SOFT_CRTx22
+			MENUITEM "CRT 3x3 (720p)",                        	MENU_DX9_ALT_SOFT_CRTx33
+			MENUITEM "CRT 4x4 (1080p)",                       	MENU_DX9_ALT_SOFT_CRTx44
 			MENUITEM SEPARATOR
 			MENUITEM "Force image to SoftFX size",          	MENU_DX9_ALT_SOFT_AUTOSIZE
         END
@@ -1458,8 +1546,6 @@ BEGIN
 		MENUITEM "Use Low-pass filter",					MENU_DSOUND_BASS
 		MENUITEM SEPARATOR
 		MENUITEM "Sound disabled",					MENU_DSOUND_NOSOUND
-        	MENUITEM "11025Hz samplerate",					MENU_DSOUND_11025
-        	MENUITEM "22050Hz samplerate",					MENU_DSOUND_22050
         	MENUITEM "44100Hz samplerate",					MENU_DSOUND_44100
         	MENUITEM "48000Hz samplerate",					MENU_DSOUND_48000
 	END
@@ -1473,8 +1559,6 @@ BEGIN
 		MENUITEM "Use reverb",						MENU_XAUDIO_REVERB
 		MENUITEM SEPARATOR
 		MENUITEM "Sound disabled",					MENU_XAUDIO_NOSOUND
-        	MENUITEM "11025Hz samplerate",					MENU_XAUDIO_11025
-        	MENUITEM "22050Hz samplerate",					MENU_XAUDIO_22050
         	MENUITEM "44100Hz samplerate",					MENU_XAUDIO_44100
         	MENUITEM "48000Hz samplerate",					MENU_XAUDIO_48000
 	END
@@ -1492,6 +1576,15 @@ BEGIN
 		MENUITEM SEPARATOR
 		MENUITEM "Favorite",						GAMESEL_MENU_FAVORITE
 	END
+END
+
+IDR_MENU_LUAWINDOW MENU
+BEGIN
+    POPUP "Console"
+    BEGIN
+        MENUITEM "&Font...",                    IDC_LUACONSOLE_CHOOSEFONT
+        MENUITEM "Clear",                       IDC_LUACONSOLE_CLEAR
+    END
 END
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1541,6 +1634,7 @@ BEGIN
     VK_SUBTRACT, MENU_CHEATSEARCH_DECREASE, CONTROL, VIRTKEY, NOINVERT
     VK_ADD,     MENU_CHEATSEARCH_INCREASE, CONTROL, VIRTKEY, NOINVERT
 	"W",	MENU_QUIT, CONTROL, VIRTKEY, NOINVERT
+	"R",	MENU_LOAD_ROMDATA, 	CONTROL, VIRTKEY, NOINVERT
 END
 
 /////////////////////////////////////////////////////////////////////////////

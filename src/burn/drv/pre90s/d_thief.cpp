@@ -412,7 +412,7 @@ static void coprocessor_write(UINT8 offset, UINT8 data)
 
 static inline void tape_set_audio(INT32 track, INT32 bOn)
 {
-	BurnSampleSetAllRoutes(track, bOn ? 1.0 : 0.0, BURN_SND_ROUTE_BOTH);
+	BurnSampleSetAllRoutes(track, bOn ? 0.65 : 0.0, BURN_SND_ROUTE_BOTH);
 }
 
 static inline void tape_set_motor(INT32 data)
@@ -634,13 +634,13 @@ static INT32 DrvDoReset(INT32 clear_mem)
 
 	ZetOpen(0);
 	ZetReset();
+	BurnSampleReset();
 	ZetClose();
 
 	BurnWatchdogReset();
 
 	AY8910Reset(0);
 	AY8910Reset(1);
-	BurnSampleReset();
 
 	tms_reset = 1;
 	read_mask = 0;
@@ -650,6 +650,8 @@ static INT32 DrvDoReset(INT32 clear_mem)
 
 	coprocessor.bank = 0;
 	memset (coprocessor.param, 0, sizeof(coprocessor.param));
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -763,8 +765,10 @@ static INT32 DrvInit(INT32 game)
 	AY8910Init(1, 2000000, 1);
 	AY8910SetAllRoutes(0, 0.30, BURN_SND_ROUTE_BOTH);
 	AY8910SetAllRoutes(1, 0.30, BURN_SND_ROUTE_BOTH);
+	AY8910SetBuffered(ZetTotalCycles, 4000000);
 
 	BurnSampleInit(0);
+	BurnSampleSetBuffered(ZetTotalCycles, 4000000);
 	BurnSampleSetAllRoutesAllSamples(0.50, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
@@ -860,6 +864,8 @@ static INT32 DrvFrame()
 		DrvDoReset(1);
 	}
 
+	ZetNewFrame();
+
 	{
 		DrvInputs[0] = 0xff;
 		DrvInputs[1] = 0xff;
@@ -872,20 +878,11 @@ static INT32 DrvFrame()
 	INT32 nInterleave = 32;
 	INT32 nCyclesTotal[1] = { 4000000 / 60 };
 	INT32 nCyclesDone[1] =  { 0 };
-	INT32 nSoundBufferPos = 0;
 
-	BurnSoundClear();
 	ZetOpen(0);
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		CPU_RUN(0, Zet);
-
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnSampleRender(pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
 	}
 	if (DrvInputs[1] & 0x10)
 		ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
@@ -894,11 +891,7 @@ static INT32 DrvFrame()
 	ZetClose();
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		if (nSegmentLength) {
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnSampleRender(pSoundBuf, nSegmentLength);
-		}
+		BurnSampleRender(pBurnSoundOut, nBurnSoundLen);
 		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
@@ -982,7 +975,7 @@ struct BurnDriver BurnDrvSharkatt = {
 	"sharkatt", NULL, NULL, "sharkatt", "1980",
 	"Shark Attack\0", NULL, "Pacific Novelty", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_ACTION, 0,
 	NULL, sharkattRomInfo, sharkattRomName, NULL, NULL, DrvSampleInfo, DrvSampleName, SharkattInputInfo, SharkattDIPInfo,
 	SharkattInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	256, 192, 4, 3
@@ -1020,7 +1013,7 @@ struct BurnDriver BurnDrvThief = {
 	"thief", NULL, NULL, "thief", "1981",
 	"Thief\0", NULL, "Pacific Novelty", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, thiefRomInfo, thiefRomName, NULL, NULL, DrvSampleInfo, DrvSampleName, ThiefInputInfo, ThiefDIPInfo,
 	ThiefInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	256, 256, 4, 3
@@ -1030,25 +1023,25 @@ struct BurnDriver BurnDrvThief = {
 // NATO Defense
 
 static struct BurnRomInfo natodefRomDesc[] = {
-	{ "natodef.cp0",	0x1000, 0x8397c787, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
-	{ "natodef.cp2",	0x1000, 0x8cfbf26f, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "natodef.cp4",	0x1000, 0xb4c90fb2, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "natodef.cp6",	0x1000, 0xc6d0d35e, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "natodef.cp8",	0x1000, 0xe4b6c21e, 1 | BRF_PRG | BRF_ESS }, //  4
-	{ "natodef.cpa",	0x1000, 0x888ecd42, 1 | BRF_PRG | BRF_ESS }, //  5
-	{ "natodef.cpc",	0x1000, 0xcf713bc9, 1 | BRF_PRG | BRF_ESS }, //  6
-	{ "natodef.cpe",	0x1000, 0x4eef6bf4, 1 | BRF_PRG | BRF_ESS }, //  7
-	{ "natodef.cp5",	0x1000, 0x65c3601b, 1 | BRF_PRG | BRF_ESS }, //  8
+	{ "p.n.m._inc._nato_062182_c317h_cpu_0.n1",		0x1000, 0x8397c787, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
+	{ "p.n.m._inc._nato_062182_21efh_cpu_2.l1",		0x1000, 0x8cfbf26f, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "p.n.m._inc._nato_062182_0a9eh_cpu_4.i1",		0x1000, 0xb4c90fb2, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "p.n.m._inc._nato_062182_dcc8h_cpu_6.g1",		0x1000, 0xc6d0d35e, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "p.n.m._inc._nato_062182_1a23h_cpu_8.n2",		0x1000, 0xe4b6c21e, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "p.n.m._inc._nato_062182_cbf8h_cpu_10.l2",	0x1000, 0x888ecd42, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "p.n.m._inc._nato_062182_8c95h_cpu_12.i2",	0x1000, 0xcf713bc9, 1 | BRF_PRG | BRF_ESS }, //  6
+	{ "p.n.m._inc._nato_062182_bb32h_cpu_14.g2",	0x1000, 0x4eef6bf4, 1 | BRF_PRG | BRF_ESS }, //  7
+	{ "p.n.m._inc._nato_062182_b312h_cpu_5.h1",		0x1000, 0x65c3601b, 1 | BRF_PRG | BRF_ESS }, //  8
 
-	{ "b8",				0x0200, 0xfe865b2a, 2 | BRF_PRG | BRF_ESS }, //  9 Coprocessor Code
-	{ "c8",				0x0200, 0x7ed5c923, 2 | BRF_PRG | BRF_ESS }, // 10
+	{ "nato_cop_b8.b8",								0x0200, 0xfe865b2a, 2 | BRF_PRG | BRF_ESS }, //  9 Coprocessor Code
+	{ "nato_cop_c8.c8",								0x0200, 0x7ed5c923, 2 | BRF_PRG | BRF_ESS }, // 10
 
-	{ "natodef.o4",		0x1000, 0x39a868f8, 3 | BRF_GRA },           // 11 Blitter Graphics
-	{ "natodef.e1",		0x1000, 0xb6d1623d, 3 | BRF_GRA },           // 12
-	{ "natodef.o2",		0x1000, 0x77cc9cfd, 3 | BRF_GRA },           // 13
-	{ "natodef.e3",		0x1000, 0x5302410d, 3 | BRF_GRA },           // 14
-	{ "natodef.o3",		0x1000, 0xb217909a, 3 | BRF_GRA },           // 15
-	{ "natodef.e2",		0x1000, 0x886c3f05, 3 | BRF_GRA },           // 16
+	{ "p.n.m._inc._nato_062182_7058h_cop_d4.d4",	0x1000, 0x39a868f8, 3 | BRF_GRA },           // 11 Blitter Graphics
+	{ "p.n.m._inc._nato_062182_f67ah_cop_h4.h4",	0x1000, 0xb6d1623d, 3 | BRF_GRA },           // 12
+	{ "p.n.m._inc._nato_060982_59aah_cop_c4.c4",	0x1000, 0x77cc9cfd, 3 | BRF_GRA },           // 13
+	{ "p.n.m._inc._nato_060982_e987h_cop_j4.j4",	0x1000, 0x5302410d, 3 | BRF_GRA },           // 14
+	{ "p.n.m._inc._nato_060982_71fch_cop_b4.b4",	0x1000, 0xb217909a, 3 | BRF_GRA },           // 15
+	{ "p.n.m._inc._nato_060982_629ch_cop_k4.k4",	0x1000, 0x886c3f05, 3 | BRF_GRA },           // 16
 };
 
 STD_ROM_PICK(natodef)
@@ -1063,7 +1056,7 @@ struct BurnDriver BurnDrvNatodef = {
 	"natodef", NULL, NULL, "natodef", "1982",
 	"NATO Defense\0", NULL, "Pacific Novelty", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_SHOOT, 0,
 	NULL, natodefRomInfo, natodefRomName, NULL, NULL, DrvSampleInfo, DrvSampleName, NatodefInputInfo, NatodefDIPInfo,
 	NatodefInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	256, 256, 4, 3
@@ -1073,25 +1066,25 @@ struct BurnDriver BurnDrvNatodef = {
 // NATO Defense (alternate mazes)
 
 static struct BurnRomInfo natodefaRomDesc[] = {
-	{ "natodef.cp0",	0x1000, 0x8397c787, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
-	{ "natodef.cp2",	0x1000, 0x8cfbf26f, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "natodef.cp4",	0x1000, 0xb4c90fb2, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "natodef.cp6",	0x1000, 0xc6d0d35e, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "natodef.cp8",	0x1000, 0xe4b6c21e, 1 | BRF_PRG | BRF_ESS }, //  4
-	{ "natodef.cpa",	0x1000, 0x888ecd42, 1 | BRF_PRG | BRF_ESS }, //  5
-	{ "natodef.cpc",	0x1000, 0xcf713bc9, 1 | BRF_PRG | BRF_ESS }, //  6
-	{ "natodef.cpe",	0x1000, 0x4eef6bf4, 1 | BRF_PRG | BRF_ESS }, //  7
-	{ "natodef.cp5",	0x1000, 0x65c3601b, 1 | BRF_PRG | BRF_ESS }, //  8
+	{ "p.n.m._inc._nato_062182_c317h_cpu_0.n1",		0x1000, 0x8397c787, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
+	{ "p.n.m._inc._nato_062182_21efh_cpu_2.l1",		0x1000, 0x8cfbf26f, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "p.n.m._inc._nato_062182_0a9eh_cpu_4.i1",		0x1000, 0xb4c90fb2, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "p.n.m._inc._nato_062182_dcc8h_cpu_6.g1",		0x1000, 0xc6d0d35e, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "p.n.m._inc._nato_062182_1a23h_cpu_8.n2",		0x1000, 0xe4b6c21e, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "p.n.m._inc._nato_062182_cbf8h_cpu_10.l2",	0x1000, 0x888ecd42, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "p.n.m._inc._nato_062182_8c95h_cpu_12.i2",	0x1000, 0xcf713bc9, 1 | BRF_PRG | BRF_ESS }, //  6
+	{ "p.n.m._inc._nato_062182_bb32h_cpu_14.g2",	0x1000, 0x4eef6bf4, 1 | BRF_PRG | BRF_ESS }, //  7
+	{ "p.n.m._inc._nato_062182_b312h_cpu_5.h1",		0x1000, 0x65c3601b, 1 | BRF_PRG | BRF_ESS }, //  8
 
-	{ "b8",				0x0200, 0xfe865b2a, 2 | BRF_PRG | BRF_ESS }, //  9 Coprocessor Code
-	{ "c8",				0x0200, 0x7ed5c923, 2 | BRF_PRG | BRF_ESS }, // 10
+	{ "nato_cop_b8.b8",								0x0200, 0xfe865b2a, 2 | BRF_PRG | BRF_ESS }, //  9 Coprocessor Code
+	{ "nato_cop_c8.c8",								0x0200, 0x7ed5c923, 2 | BRF_PRG | BRF_ESS }, // 10
 
-	{ "natodef.o4",		0x1000, 0x39a868f8, 3 | BRF_GRA },           // 11 Blitter Graphics
-	{ "natodef.e1",		0x1000, 0xb6d1623d, 3 | BRF_GRA },           // 12
-	{ "natodef.o3",		0x1000, 0xb217909a, 3 | BRF_GRA },           // 13
-	{ "natodef.e2",		0x1000, 0x886c3f05, 3 | BRF_GRA },           // 14
-	{ "natodef.o2",		0x1000, 0x77cc9cfd, 3 | BRF_GRA },           // 15
-	{ "natodef.e3",		0x1000, 0x5302410d, 3 | BRF_GRA },           // 16
+	{ "p.n.m._inc._nato_062182_7058h_cop_d4.d4",	0x1000, 0x39a868f8, 3 | BRF_GRA },           // 11 Blitter Graphics
+	{ "p.n.m._inc._nato_062182_f67ah_cop_h4.h4",	0x1000, 0xb6d1623d, 3 | BRF_GRA },           // 12
+	{ "p.n.m._inc._nato_060982_71fch_cop_b4.b4",	0x1000, 0xb217909a, 3 | BRF_GRA },           // 13
+	{ "p.n.m._inc._nato_060982_629ch_cop_k4.k4",	0x1000, 0x886c3f05, 3 | BRF_GRA },           // 14
+	{ "p.n.m._inc._nato_060982_59aah_cop_c4.c4",	0x1000, 0x77cc9cfd, 3 | BRF_GRA },           // 15
+	{ "p.n.m._inc._nato_060982_e987h_cop_j4.j4",	0x1000, 0x5302410d, 3 | BRF_GRA },           // 16
 };
 
 STD_ROM_PICK(natodefa)
@@ -1101,7 +1094,7 @@ struct BurnDriver BurnDrvNatodefa = {
 	"natodefa", "natodef", NULL, "natodef", "1982",
 	"NATO Defense (alternate mazes)\0", NULL, "Pacific Novelty", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_SHOOT, 0,
 	NULL, natodefaRomInfo, natodefaRomName, NULL, NULL, DrvSampleInfo, DrvSampleName, NatodefInputInfo, NatodefDIPInfo,
 	NatodefInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	256, 256, 4, 3

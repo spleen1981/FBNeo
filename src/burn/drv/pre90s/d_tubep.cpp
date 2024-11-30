@@ -702,6 +702,8 @@ static INT32 DrvDoReset()
 
 	sprite_timer = -1;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -839,9 +841,9 @@ static INT32 TubepInit()
 	AY8910Init(0, 1248000, 0);
 	AY8910Init(1, 1248000, 0);
 	AY8910Init(2, 1248000, 0);
-	AY8910SetAllRoutes(0, 0.15, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(1, 0.15, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(2, 0.15, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(0, 0.10, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(1, 0.10, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(2, 0.10, BURN_SND_ROUTE_BOTH);
 	AY8910SetBuffered(ZetTotalCycles, 2496000);
 
 	GenericTilesInit();
@@ -964,9 +966,9 @@ static INT32 TubepbInit()
 	AY8910Init(0, 1248000, 0);
 	AY8910Init(1, 1248000, 0);
 	AY8910Init(2, 1248000, 0);
-	AY8910SetAllRoutes(0, 0.15, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(1, 0.15, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(2, 0.15, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(0, 0.10, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(1, 0.10, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(2, 0.10, BURN_SND_ROUTE_BOTH);
 	AY8910SetBuffered(ZetTotalCycles, 2496000);
 
 	GenericTilesInit();
@@ -1074,13 +1076,14 @@ static INT32 RjammerInit()
 	AY8910Init(0, 1248000, 1);
 	AY8910Init(1, 1248000, 1);
 	AY8910Init(2, 1248000, 1);
-	AY8910SetAllRoutes(0, 0.10, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(1, 0.10, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(2, 0.10, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(0, 0.06, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(1, 0.06, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(2, 0.06, BURN_SND_ROUTE_BOTH);
 	AY8910SetBuffered(ZetTotalCycles, 2496000);
 
 	MSM5205Init(0, DrvMSM5205SynchroniseStream, 384000, rjammer_adpcm_vck, MSM5205_S48_4B, 0);
-	MSM5205SetRoute(0, 1.10, BURN_SND_ROUTE_BOTH);
+	MSM5205SetRoute(0, 0.65, BURN_SND_ROUTE_BOTH);
+	MSM5205DCBlock(0, 1);
 
 	GenericTilesInit();
 
@@ -1598,7 +1601,7 @@ struct BurnDriver BurnDrvTubep = {
 	"tubep", NULL, NULL, NULL, "1984",
 	"Tube Panic\0", NULL, "Nichibutsu / Fujitek", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, tubepRomInfo, tubepRomName, NULL, NULL, NULL, NULL, TubepInputInfo, TubepDIPInfo,
 	TubepInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x4020,
 	256, 224, 4, 3
@@ -1674,7 +1677,7 @@ struct BurnDriver BurnDrvTubepb = {
 	"tubepb", "tubep", NULL, NULL, "1984",
 	"Tube Panic (bootleg)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, tubepbRomInfo, tubepbRomName, NULL, NULL, NULL, NULL, TubepInputInfo, TubepbDIPInfo,
 	TubepbInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x4020,
 	256, 224, 4, 3
@@ -1734,7 +1737,7 @@ struct BurnDriver BurnDrvRjammer = {
 	"rjammer", NULL, NULL, NULL, "1984",
 	"Roller Jammer\0", NULL, "Nichibutsu / Alice", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
 	NULL, rjammerRomInfo, rjammerRomName, NULL, NULL, NULL, NULL, RjammerInputInfo, RjammerDIPInfo,
 	RjammerInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3

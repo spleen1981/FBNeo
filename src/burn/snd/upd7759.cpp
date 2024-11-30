@@ -12,6 +12,7 @@
 #define FRAC_MASK			(FRAC_ONE - 1)
 
 static INT32 SlaveMode = 0;
+static INT32 TimerIndex = 0;
 
 /* chip states */
 enum
@@ -38,6 +39,7 @@ struct upd7759_chip
 	UINT32		pos;						/* current output sample position */
 	UINT32		step;						/* step value per output sample */
 	double      clock_period;
+	INT32       start_delay;
 
 	/* I/O lines */
 	UINT8		fifo_in;					/* last data written to the sound chip */
@@ -137,7 +139,7 @@ static INT32 SyncUPD(upd7759_chip *Chippy, INT32 cycles)
 	return (INT32)((double)cycles * ((double)(Chippy->pTotalCyclesCB()) / ((double)Chippy->nCpuMHZ / (nBurnFPS / 100.0000))));
 }
 
-static void UpdateStream(INT32 chip);
+static void UpdateStream(INT32 chip, INT32 end);
 
 static void UPD7759AdvanceState()
 {
@@ -166,7 +168,7 @@ static void UPD7759AdvanceState()
              * Depending on the state the chip was in just before the /MD was set to 0 (reset, standby
              * or just-finished-playing-previous-sample) this number can range from 35 up to ~24000).
              * It also varies slightly from test to test, but not much - a few cycles at most.) */
-			Chip->clocks_left = 70;	/* 35 - breaks cotton */
+			Chip->clocks_left = 70 + Chip->start_delay;	/* 35 - breaks cotton */
 			Chip->state = STATE_FIRST_REQ;
 			break;
 
@@ -339,7 +341,7 @@ static void UPD7759SlaveModeUpdate()
 	Chip = Chips[0]; // slave mode only available on Chip 0
 	UINT8 OldDrq = Chip->drq;
 
-	UpdateStream(Chip->ChipNum);
+	UpdateStream(Chip->ChipNum, 0);
 
 	UPD7759AdvanceState();
 
@@ -350,7 +352,7 @@ static void UPD7759SlaveModeUpdate()
 	/* set a timer to go off when that is done */
 
 	if (Chip->state != STATE_IDLE) {
-		BurnTimerSetRetrig(0, (double)Chip->clocks_left * Chip->clock_period);
+		BurnTimerSetRetrig((TimerIndex << 1) + 0, (double)Chip->clocks_left * Chip->clock_period);
 	}
 }
 
@@ -429,12 +431,14 @@ void UPD7759Update(INT32 chip, INT32 nLength)
 	Chip->pos = Pos;
 }
 
-static void UpdateStream(INT32 chip)
+static void UpdateStream(INT32 chip, INT32 end)
 {
+	if (!pBurnSoundOut) return;
+
 	Chip = Chips[chip];
 
 	INT32 framelen = Chip->resamp.samples_to_source(nBurnSoundLen);
-	INT32 position = SyncUPD(Chip, framelen);
+	INT32 position = (end) ? framelen : SyncUPD(Chip, framelen);
 
 	INT32 samples = position - Chip->sample_counts;
 
@@ -464,7 +468,7 @@ void UPD7759Render(INT32 chip, INT16 *pSoundBuf, INT32 samples)
 
 	Chip = Chips[chip];
 
-	if (Chip->pTotalCyclesCB) UpdateStream(chip); // fill 'er up!
+	if (Chip->pTotalCyclesCB) UpdateStream(chip, 1); // fill 'er up!
 
 	INT32 nFrameLength = Chip->resamp.samples_to_source(nBurnSoundLen);
 
@@ -476,12 +480,24 @@ void UPD7759Render(INT32 chip, INT16 *pSoundBuf, INT32 samples)
 	}
 
 	// resample to host rate
-	Chip->resamp.resample(Chip->out_buf_linear, Chip->out_buf_linear_resampled, samples, Chip->volume, Chip->output_dir);
+	Chip->resamp.resample_mono(Chip->out_buf_linear, Chip->out_buf_linear_resampled, samples, 1.00);
+
+	// filter
+	Chip->biquadL.filter_buffer(Chip->out_buf_linear_resampled, samples); // shelf
+	Chip->biquadR.filter_buffer(Chip->out_buf_linear_resampled, samples); // lowpass
 
 	// filter and mix into pSoundBuf
 	for (INT32 i = 0; i < samples; i++) {
-		INT32 l = Chip->biquadL.filter(Chip->out_buf_linear_resampled[i*2 + 0]);
-		INT32 r = Chip->biquadR.filter(Chip->out_buf_linear_resampled[i*2 + 1]);
+		INT32 l = 0, r = 0;
+		INT32 sample = Chip->out_buf_linear_resampled[i];
+
+		if ((Chip->output_dir & BURN_SND_ROUTE_LEFT) == BURN_SND_ROUTE_LEFT) {
+			l = (INT32)(sample * Chip->volume);
+		}
+		if ((Chip->output_dir & BURN_SND_ROUTE_RIGHT) == BURN_SND_ROUTE_RIGHT) {
+			r = (INT32)(sample * Chip->volume);
+		}
+		
 		pSoundBuf[i*2 + 0] = BURN_SND_CLIP(pSoundBuf[i*2 + 0] + l);
 		pSoundBuf[i*2 + 1] = BURN_SND_CLIP(pSoundBuf[i*2 + 1] + r);
 	}
@@ -543,8 +559,10 @@ void UPD7759Init(INT32 chip, INT32 clock, UINT8* pSoundData)
 	memset(Chip, 0, sizeof(upd7759_chip));
 
 	SlaveMode = 0;
+	TimerIndex = 0;
 
 	Chip->ChipNum = chip;
+
 	// init resampler
 	Chip->resamp.init(clock / 4, nBurnSoundRate, 0);
 
@@ -571,7 +589,7 @@ void UPD7759Init(INT32 chip, INT32 clock, UINT8* pSoundData)
 		SlaveMode = 0;
 	} else {
 		SlaveMode = 1;
-		BurnTimerInit(&slave_timer_cb, NULL); // for high-freq timer
+		TimerIndex = BurnTimerInit(&slave_timer_cb, NULL); // for high-freq timer
 	}
 	
 	Chip->reset = 1;
@@ -584,6 +602,13 @@ void UPD7759Init(INT32 chip, INT32 clock, UINT8* pSoundData)
 	UPD7759Reset();
 }
 
+void UPD7759SetStartDelay(INT32 chip, INT32 nDelay)
+{
+	Chip = Chips[chip];
+
+	Chip->start_delay = nDelay;
+}
+
 void UPD7759SetFilter(INT32 chip, INT32 nCutOff)
 {
 #if defined FBNEO_DEBUG
@@ -593,8 +618,8 @@ void UPD7759SetFilter(INT32 chip, INT32 nCutOff)
 
 	Chip = Chips[chip];
 
-	Chip->biquadL.init(FILT_LOWPASS, nBurnSoundRate, nCutOff, 0.554, 0.0);
-	Chip->biquadR.init(FILT_LOWPASS, nBurnSoundRate, nCutOff, 0.554, 0.0);
+	Chip->biquadL.init(FILT_HIGHSHELF, nBurnSoundRate, nCutOff, 0.0, -25.0);
+	Chip->biquadR.init(FILT_LOWPASS, nBurnSoundRate, 4000, 0.70, 0.0);
 }
 
 void UPD7759SetRoute(INT32 chip, double nVolume, INT32 nRouteDir)
@@ -652,7 +677,7 @@ void UPD7759ResetWrite(INT32 chip, UINT8 Data)
 
 	Chip = Chips[chip];
 
-	if (Chip->pTotalCyclesCB) UpdateStream(chip);
+	if (Chip->pTotalCyclesCB) UpdateStream(chip, 0);
 
 	UINT8 Oldreset = Chip->reset;
 	Chip->reset = (Data != 0);
@@ -674,7 +699,7 @@ void UPD7759StartWrite(INT32 chip, UINT8 Data)
 	UINT8 Oldstart = Chip->start;
 	Chip->start = (Data != 0);
 
-	if (Chip->pTotalCyclesCB) UpdateStream(chip);
+	if (Chip->pTotalCyclesCB) UpdateStream(chip, 0);
 
 	if (Chip->state == STATE_IDLE && !Oldstart && Chip->start && Chip->reset) {
 		Chip->state = STATE_START;

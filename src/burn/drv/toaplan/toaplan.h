@@ -31,7 +31,7 @@ void ToaZExit();
 extern UINT8* RomZ80;
 extern UINT8* RamZ80;
 
-extern INT32 nCyclesDone[2], nCyclesTotal[2];
+extern INT32 nCyclesDone[3], nCyclesTotal[3];
 extern INT32 nCyclesSegment;
 
 #ifdef DRIVER_ROTATION
@@ -97,6 +97,7 @@ extern INT32 nLayer3XOffset, nLayer3YOffset;
 
 INT32 ToaBufferGP9001Sprites();
 INT32 ToaRenderGP9001();
+INT32 ToaRenderGP9001One(INT32 nSelect);
 INT32 ToaInitGP9001(INT32 n = 1);
 INT32 ToaExitGP9001();
 INT32 ToaScanGP9001(INT32 nAction, INT32* pnMin);
@@ -168,7 +169,7 @@ inline static UINT16 ToaScanlineRegister()
 {
 	static INT32 nPreviousScanline;
 	UINT16 nFlags = 0xFE00;
-	INT32 nCurrentScanline = SekCurrentScanline();
+	INT32 nCurrentScanline = (SekCurrentScanline() + 1) % 262;
 
 #if 0
 	// None of the games actually use this
@@ -186,33 +187,7 @@ inline static UINT16 ToaScanlineRegister()
 
 	}
 
-	return nFlags | nCurrentScanline;
-}
-
-inline static UINT16 ToaScanlineRegisterLoctest() // bgaregga location test
-{
-	static INT32 nPreviousScanline;
-	UINT16 nFlags = 0xFE00;
-	INT32 nCurrentScanline = (SekCurrentScanline() + 15) % 262;
-	if (nCurrentScanline > 0xff) nCurrentScanline = 0xff;
-
-#if 0
-	// None of the games actually use this
-	INT32 nCurrentBeamPosition = SekTotalCycles() % nToaCyclesScanline;
-	if (nCurrentBeamPosition < 64) {
-		nFlags &= ~0x4000;
-	}
-#endif
-
-	if (nCurrentScanline != nPreviousScanline) {
-		nPreviousScanline = nCurrentScanline;
-		nFlags &= ~0x8000;
-
-//		bprintf(PRINT_NORMAL, _T("  - line %3i, PC 0x%08X\n"), nCurrentScanline, SekGetPC(-1));
-
-	}
-
-	return nFlags | nCurrentScanline;
+	return nFlags | ((nCurrentScanline > 255) ? 0x1ff : nCurrentScanline);
 }
 
 // toa_extratext.cpp

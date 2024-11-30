@@ -37,7 +37,7 @@ static void YMF278BRender(INT32 nSegmentLength)
 	if (!DebugSnd_YMF278BInitted) bprintf(PRINT_ERROR, _T("YMF278BRender called without init\n"));
 #endif
 
-	if (nYMF278BPosition >= nSegmentLength) {
+	if (nYMF278BPosition >= nSegmentLength || !pBurnSoundOut) {
 		return;
 	}
 
@@ -270,7 +270,8 @@ INT32 BurnYMF278BInit(INT32 nClockFrequency, UINT8* YMF278BROM, INT32 YMF278BROM
 	} else {
 		nBurnYMF278SoundRate = nClockFrequency / 768; // hw rate based on input clock (44100 @ STD clock)
 	}
-	nSampleSize = (UINT32)nBurnYMF278SoundRate * (1 << 16) / nBurnSoundRate;
+
+	if (nBurnSoundRate) nSampleSize = (UINT32)nBurnYMF278SoundRate * (1 << 16) / nBurnSoundRate;
 	bYMF278BAddSignal = 0; // not used by any driver. (yet)
 
 	uses_timer = (IRQCallback != NULL);
@@ -318,7 +319,7 @@ void BurnYMF278BScan(INT32 nAction, INT32* pnMin)
 
 	ymf278b_scan(nAction, pnMin);
 
-	if (nAction & ACB_WRITE) {
+	if (nAction & ACB_WRITE && ~nAction & ACB_RUNAHEAD) {
 		nYMF278BPosition = 0;
 		nFractionalPosition = 0;
 		memset(pBuffer, 0, 4096 * 2 * sizeof(INT16));

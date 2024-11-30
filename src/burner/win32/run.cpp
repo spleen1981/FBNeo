@@ -24,11 +24,45 @@ static int nNormalFrac = 0;					// Extra fraction we did
 static bool bAppDoStep = 0;
 static bool bAppDoFast = 0;
 static bool bAppDoFasttoggled = 0;
+static bool bAppDoRewind = 0;
+
 static int nFastSpeed = 6;
+
+// in FFWD, the avi-writer still needs to write all frames (skipped or not)
+#define FFWD_GHOST_FRAME 0x8000
+
+// SlowMo T.A. feature
+int nSlowMo = 0;
+static int flippy = 0; // free running RunFrame() counter
 
 // For System Macros (below)
 static int prevPause = 0, prevFFWD = 0, prevFrame = 0, prevSState = 0, prevLState = 0, prevUState = 0;
 UINT32 prevPause_debounce = 0;
+
+struct lua_hotkey_handler {
+	UINT8 * macroSystemLuaHotkey_ref;
+	UINT8 macroSystemLuaHotkey_val;
+	int prev_value;
+	char *hotkey_name;
+};
+
+struct lua_hotkey_handler hotkey_debounces[] = {
+	{ &macroSystemLuaHotkey1, macroSystemLuaHotkey1, 0, "lua_hotkey" },
+	{ &macroSystemLuaHotkey2, macroSystemLuaHotkey2, 0, "lua_hotkey" },
+	{ &macroSystemLuaHotkey3, macroSystemLuaHotkey3, 0, "lua_hotkey" },
+	{ &macroSystemLuaHotkey4, macroSystemLuaHotkey4, 0, "lua_hotkey" },
+	{ &macroSystemLuaHotkey5, macroSystemLuaHotkey5, 0, "lua_hotkey" },
+	{ &macroSystemLuaHotkey6, macroSystemLuaHotkey6, 0, "lua_hotkey" },
+	{ &macroSystemLuaHotkey7, macroSystemLuaHotkey7, 0, "lua_hotkey" },
+	{ &macroSystemLuaHotkey8, macroSystemLuaHotkey8, 0, "lua_hotkey" },
+	{ &macroSystemLuaHotkey9, macroSystemLuaHotkey9, 0, "lua_hotkey" },
+	{ NULL, 0, 0, NULL }
+};
+
+void EmulatorAppDoFast(bool dofast) {
+	bAppDoFast = dofast;
+	bAppDoFasttoggled = 0;
+}
 
 static void CheckSystemMacros() // These are the Pause / FFWD macros added to the input dialog
 {
@@ -59,6 +93,32 @@ static void CheckSystemMacros() // These are the Pause / FFWD macros added to th
 		} else {
 			prevFrame = 0;
 		}
+
+		// SlowMo
+		int slow = macroSystemSlowMo[0] * 1 + macroSystemSlowMo[1] * 2 + macroSystemSlowMo[2] * 3 + macroSystemSlowMo[3] * 4 + macroSystemSlowMo[4] * 5;
+		if (slow) {
+			slow -= 1;
+			if (slow >= 0 && slow <= 4) {
+				nSlowMo = slow;
+				MenuUpdateSlowMo();
+			}
+		}
+
+		// Rewind handled in RunFrame()!
+
+		for (int hotkey_num = 0; hotkey_debounces[hotkey_num].macroSystemLuaHotkey_ref != NULL; hotkey_num++) {
+			// Use the reference to the hotkey variable in order to update our stored value
+			// Because the hotkeys are hard coded into variables this allows us to iterate on them
+			hotkey_debounces[hotkey_num].macroSystemLuaHotkey_val = *hotkey_debounces[hotkey_num].macroSystemLuaHotkey_ref;
+			if (
+				hotkey_debounces[hotkey_num].macroSystemLuaHotkey_val &&
+				hotkey_debounces[hotkey_num].macroSystemLuaHotkey_val != hotkey_debounces[hotkey_num].prev_value
+			) {
+				CallRegisteredLuaFunctions((LuaCallID)(LUACALL_HOTKEY_1 + hotkey_num));
+			}
+			hotkey_debounces[hotkey_num].prev_value = hotkey_debounces[hotkey_num].macroSystemLuaHotkey_val;
+		}
+
 	}
 	// Load State
 	if (macroSystemLoadState && macroSystemLoadState != prevLState) {
@@ -143,6 +203,12 @@ int RunFrame(int bDraw, int bPause)
 			SuperWaitVBlank();
 	}
 
+	flippy++;
+	if (nSlowMo) { // SlowMo T.A.
+		if (nSlowMo == 1) {	if ((flippy % 4) == 0) return 0; } // 75% speed
+		else if ((flippy % ((nSlowMo-1) * 2)) < (((nSlowMo-1) * 2) - 1)) return 0; // 50% and less
+	}
+
 	if (!bDrvOkay) {
 		return 1;
 	}
@@ -178,19 +244,58 @@ int RunFrame(int bDraw, int bPause)
 			}
 		}
 
+		CallRegisteredLuaFunctions(LUACALL_BEFOREEMULATION);
+		if (FBA_LuaUsingJoypad()) {
+			FBA_LuaReadJoypad();
+		}
+
 		if (nReplayStatus == 1) {
 			RecordInput();						// Write input to file
 		}
 
 		if (bDraw) {                            // Draw Frame
-			nFramesRendered++;
+			if ((bDraw & FFWD_GHOST_FRAME) == 0)
+				nFramesRendered++;
 
-			if (VidFrame()) {					// Do one frame
-				AudBlankSound();
+			if (!bRunAhead || (BurnDrvGetFlags() & BDF_RUNAHEAD_DISABLED) || bAppDoFast) {
+				if (VidFrame()) {				// Do one normal frame (w/o RunAhead)
+
+					// VidFrame() failed, but we must run a driver frame because we have
+					// a clocked input.  Possibly from recording or netplay(!)
+					// Note: VidFrame() calls BurnDrvFrame() on success.
+					pBurnDraw = NULL;			// Make sure no image is drawn
+					BurnDrvFrame();
+
+					AudBlankSound();
+				}
+			} else {
+				pBurnDraw = (BurnDrvGetFlags() & BDF_RUNAHEAD_DRAWSYNC) ? pVidImage : NULL;
+				BurnDrvFrame();
+				StateRunAheadSave();
+				INT16 *pBurnSoundOut_temp = pBurnSoundOut;
+				pBurnSoundOut = NULL;
+				nCurrentFrame++;
+				bBurnRunAheadFrame = 1;
+
+				if (VidFrame()) {
+					// VidFrame() failed, but we must run a driver frame because we have
+					// an input.  Possibly from recording or netplay(!)
+					pBurnDraw = NULL;			// Make sure no image is drawn, since video failed this time 'round.
+					BurnDrvFrame();
+				}
+
+				bBurnRunAheadFrame = 0;
+				nCurrentFrame--;
+				StateRunAheadLoad();
+				pBurnSoundOut = pBurnSoundOut_temp; // restore pointer, for wav & avi writer
 			}
-		} else {								// frame skipping
+		} else {								// frame skipping / ffwd-frame (without avi writing)
 			pBurnDraw = NULL;					// Make sure no image is drawn
 			BurnDrvFrame();
+		}
+
+		if (kNetGame == 0) {                    // Rewind Implementation
+			StateRewindDoFrame(macroSystemRewind || bAppDoRewind, macroSystemRewindCancel, bRunPause);
 		}
 
 		if (bShowFPS) {
@@ -199,6 +304,9 @@ int RunFrame(int bDraw, int bPause)
 				nDoFPS = nFramesRendered + 30;
 			}
 		}
+
+		FBA_LuaFrameBoundary();
+		CallRegisteredLuaFunctions(LUACALL_AFTEREMULATION);
 
 #ifdef INCLUDE_AVI_RECORDING
 		if (nAviStatus) {
@@ -210,6 +318,7 @@ int RunFrame(int bDraw, int bPause)
 	}
 
 	bPrevPause = bPause;
+	if (bDraw & FFWD_GHOST_FRAME) bDraw = 0; // ffwd-frame w/avi write, do not draw!
 	bPrevDraw = bDraw;
 
 	return 0;
@@ -245,7 +354,7 @@ static int RunGetNextSound(int bDraw)
 			if (nAviStatus) {
 				// Render frame with sound
 				pBurnSoundOut = nAudNextSound;
-				RunFrame(bDraw, 0);
+				RunFrame(bDraw | FFWD_GHOST_FRAME, 0);
 			} else {
 				RunFrame(0, 0);
 			}
@@ -371,6 +480,7 @@ static int RunExit()
 
 	bAppDoFast = 0;
 	bAppDoFasttoggled = 0;
+	bAppDoRewind = 0;
 
 	return 0;
 }
@@ -503,6 +613,7 @@ int RunMessageLoop()
 									_stprintf(buffer, FBALoadStringEx(hAppInst, IDS_SOUND_VOLUMESET, true), nAudVolume / 100);
 									VidSNewShortMsg(buffer);
 								}
+								MenuUpdateVolume();
 								break;
 							}
 							case VK_OEM_MINUS: {
@@ -525,11 +636,37 @@ int RunMessageLoop()
 									_stprintf(buffer, FBALoadStringEx(hAppInst, IDS_SOUND_VOLUMESET, true), nAudVolume / 100);
 									VidSNewShortMsg(buffer);
 								}
+								MenuUpdateVolume();
 								break;
 							}
 							case VK_MENU: {
 								continue;
 							}
+
+							// Open (L)ua Dialog
+							case 'L': {
+								ScrnInitLua();
+								break;
+							}
+							case 'T': {
+								PostMessage(LuaConsoleHWnd, WM_CLOSE, 0, 0);
+								break;
+							}
+							case 'E': {
+								PostMessage(LuaConsoleHWnd, WM_COMMAND, IDC_BUTTON_LUARUN, 0);
+								break;
+							}
+			                // (P)ause Lua Scripting (This is the stop button)
+							case 'P': {
+								PostMessage(LuaConsoleHWnd, WM_COMMAND, IDC_BUTTON_LUASTOP, 0);
+								break;
+							}
+							// (B)rowse Lua Scripts
+							case 'B': {
+								PostMessage(LuaConsoleHWnd, WM_COMMAND, IDC_BUTTON_LUABROWSE, 0);
+								break;
+							}
+							break;
 						}
 					} else {
 
@@ -596,6 +733,10 @@ int RunMessageLoop()
 
 								break;
 							}
+							case VK_PRIOR: {
+								bAppDoRewind = 1;
+								break;
+							}
 							case VK_F1: {
 								bool bOldAppDoFast = bAppDoFast;
 
@@ -635,7 +776,6 @@ int RunMessageLoop()
 										DisplayFPSInit();
 									} else {
 										VidSKillShortMsg();
-										VidSKillOSDMsg();
 									}
 								}
 								break;
@@ -659,6 +799,11 @@ int RunMessageLoop()
 						switch (Msg.wParam) {
 							case VK_MENU:
 								continue;
+
+							case VK_PRIOR:
+								bAppDoRewind = 0;
+								break;
+
 							case VK_F1: {
 								bool bOldAppDoFast = bAppDoFast;
 
@@ -694,7 +839,6 @@ int RunMessageLoop()
 		MediaExit();
 		if (bRestartVideo) {
 			MediaInit();
-			PausedRedraw();
 		}
 	} while (bRestartVideo);
 

@@ -91,12 +91,17 @@ static UINT32 chardma_table_address = 0;
 static INT32 dma_timer = 0;
 static UINT16 dma_status = 0;
 
+static INT32 palette_dmas = 0; // debugging
+
 static UINT16 spritelist_dma = 0;
 static UINT16 spritelist_dma_prev = 0;
+
+static INT32 cps_int10_cnt = 0;
 
 static INT32 cps3_gfx_width, cps3_gfx_height;
 static INT32 cps3_gfx_max_x, cps3_gfx_max_y;
 
+static INT32 nExtraCycles;
 
 // -- AMD/Fujitsu 29F016 --------------------------------------------------
 
@@ -496,10 +501,10 @@ static INT32 MemIndex()
 
 	RomUser		= Next; Next += cps3_data_rom_size;	// 0x5000000;
 	
-	RamStart	= Next;
-	
 	RomGame 	= Next; Next += 0x1000000;
 	RomGame_D 	= Next; Next += 0x1000000;
+
+	RamStart	= Next;
 	
 	RamC000		= Next; Next += 0x0000400;
 	RamC000_D	= Next; Next += 0x0000400;
@@ -507,22 +512,22 @@ static INT32 MemIndex()
 	RamMain		= Next; Next += 0x0080000;
 
 	RamPal		= (UINT16 *) Next; Next += 0x0020000 * sizeof(UINT16);
-	RamSpr		= (UINT32 *) Next; Next += 0x0020000 * sizeof(UINT32);
-	SprList		= (UINT32 *) Next; Next += 0x80000/4 * sizeof(UINT32);
+	RamSpr		= (UINT32 *) Next; Next += (0x0080000/4) * sizeof(UINT32);
+	SprList		= (UINT32 *) Next; Next += (0x0080000/4) * sizeof(UINT32);
 
 	RamCRam		= (UINT32 *) Next; Next += 0x0200000 * sizeof(UINT32);
 	RamSS		= (UINT32 *) Next; Next += 0x0004000 * sizeof(UINT32);
 	
 	RamVReg		= (UINT32 *) Next; Next += 0x0000040 * sizeof(UINT32);
 	RamVRegBuf  = (UINT32 *) Next; Next += 0x0000040 * sizeof(UINT32);
+
+	RamEnd		= Next;
 	
 	EEPROM		= (UINT16 *) Next; Next += 0x0000100 * sizeof(UINT16);
 	
-	RamEnd		= Next;
-	
 	Cps3CurPal  = (UINT16 *) Next; Next += 0x020002 * sizeof(UINT16); // iq_132 - layer disable, +1 to keep things aligned
 	RamScreen	= (UINT32 *) Next; Next += (512 * 2) * (224 * 2 + 32) * sizeof(UINT32);
-	
+
 	MemEnd		= Next;
 	return 0;
 }
@@ -656,6 +661,11 @@ inline static UINT8 cps3_get_fade(INT32 c, INT32 f)
 	return c;
 }
 
+static void bankswitch_cram()
+{
+	Sh2MapMemory(((UINT8 *)RamCRam) + (cram_bank << 20), 0x04100000, 0x041fffff, MAP_RAM);
+}
+
 void __fastcall cps3WriteWord(UINT32 addr, UINT16 data)
 {
 	addr &= 0xc7ffffff;
@@ -684,10 +694,10 @@ void __fastcall cps3WriteWord(UINT32 addr, UINT16 data)
 
 	case 0x040c0084: break;
 	case 0x040c0086:
-		if (cram_bank != data) {
+		if (cram_bank != (data & 7)) {
 			cram_bank = data & 7;
 			//bprintf(PRINT_NORMAL, _T("CRAM bank set to %d\n"), data);
-			Sh2MapMemory(((UINT8 *)RamCRam) + (cram_bank << 20), 0x04100000, 0x041fffff, MAP_RAM);
+			bankswitch_cram();
 		}
 		break;
 
@@ -751,6 +761,7 @@ void __fastcall cps3WriteWord(UINT32 addr, UINT16 data)
 
 			dma_status |= 4;
 			dma_timer = ((25000000 / 1000000) * 100);
+			palette_dmas++;
 			Sh2StopRun();
 		}
 		break;
@@ -1084,9 +1095,11 @@ static void Cps3PatchRegion()
 
 static INT32 Cps3Reset()
 {
+	memset(RamStart, 0, RamEnd - RamStart);
+
 	// re-map cram_bank
 	cram_bank = 0;
-	Sh2MapMemory((UINT8 *)RamCRam, 0x04100000, 0x041fffff, MAP_RAM);
+	bankswitch_cram();
 
 	Cps3PatchRegion();
 	
@@ -1113,15 +1126,34 @@ static INT32 Cps3Reset()
 		EEPROM[0x29] = 0x000 + (EEPROM[0x29] & 0xff);
 	}
 
-	cps3_current_eeprom_read = 0;
-	cps3SndReset();
-	cps3_reset = 0;
+	ss_bank_base = 0;
+	ss_pal_base = 0;
 
+	cram_bank = 0;
+	cps3_current_eeprom_read = 0;
+	gfxflash_bank = 0;
+
+	paldma_source = 0;
+	paldma_dest = 0;
+	paldma_fade = 0;
+	paldma_length = 0;
+
+	chardma_source = 0;
+	chardma_table_address = 0;
+
+	dma_timer = -1;
 	dma_status = 0;
+
 	spritelist_dma = 0;
 	spritelist_dma_prev = 0;
 
-	dma_timer = -1;
+	cps_int10_cnt = 0;
+
+	cps3SndReset();
+
+	cps3_reset = 0;
+
+	nExtraCycles = 0;
 
 	HiscoreReset();
 
@@ -1334,6 +1366,7 @@ INT32 cps3Init()
 
 INT32 cps3Exit()
 {
+	bprintf(0, _T("CPS-3 Driver exit....\n"));
 	Sh2Exit();
 	
 	BurnFree(Mem);
@@ -1788,7 +1821,7 @@ INT32 DrvCps3Draw()
 	UINT32 fullscreenzoom = RamVReg[ 6 * 4 + 3 ] & 0xff;
 	UINT32 fullscreenzoomwidecheck = RamVReg[6 * 4 + 1];
 	
-	if (((fullscreenzoomwidecheck & 0xffff0000) >> 16) == 0x0265) {
+	if (((fullscreenzoomwidecheck & 0xffff0000) >> 16) == 0x0265 || strcmp(BurnDrvGetTextA(DRV_NAME), "sfiii3ws") == 0) {
 		INT32 Width, Height;
 		BurnDrvGetVisibleSize(&Width, &Height);
 		
@@ -2008,11 +2041,16 @@ INT32 DrvCps3Draw()
 		// bank select? (sfiii2 intro)
 		INT32 bank = (ss_bank_base & 0x01000000) ? 0x0000 : 0x0800;
 
+		INT32 prev_rowscroll = 0;
+
 		for (INT32 line = 0; line < 224; line++) {
 			INT32 y = line / 8;
 			INT32 count = (y * 64) + bank;
 			// 'combo meter' in JoJo games uses rowscroll
 			INT32 rowscroll = RamSS[((line - 1) & 0x1ff) + 0x4000 / 4] >> 16;
+			// if neither rowscroll nor count are varying from previous loop, skipping directly to next loop should be fine
+			if (rowscroll == prev_rowscroll && (y*8 != line)) continue;
+			prev_rowscroll = rowscroll;
 
 			for (INT32 x = 0; x < 64; x++, count++) {
 				UINT32 data = RamSS[count]; // +0x800 = 2nd bank, used on sfiii2 intro..
@@ -2034,8 +2072,6 @@ INT32 DrvCps3Draw()
 	}
 	return 0;
 }
-
-static INT32 cps_int10_cnt = 0;
 
 INT32 cps3Frame()
 {
@@ -2069,7 +2105,7 @@ INT32 cps3Frame()
 			r |= r >> 5;
 			g |= g >> 5;
 			b |= b >> 5;
-			Cps3CurPal[i] = BurnHighCol(r, g, b, 0);	
+			Cps3CurPal[i] = BurnHighCol(r, g, b, 0);
 		}
 		cps3_palette_change = 0;
 	}
@@ -2111,33 +2147,42 @@ INT32 cps3Frame()
 	Sh2NewFrame();
 
 	INT32 nInterleave = 4;
-	INT32 nCyclesTotal[1] = { 25000000 / 60 };
-	INT32 nCyclesDone[1] = { 0 };
+	INT32 nCyclesTotal[1] = { (INT32)((double)25000000 * 100 / nBurnFPS) };
+	INT32 nCyclesDone[1] = { nExtraCycles };
+
+	Sh2Idle(nExtraCycles);
+	palette_dmas = 0;
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		CPU_RUN_SYNCINT(0, Sh2);
+		do {
+			if (dma_timer > 0)
+			{
+				nCyclesDone[0] += Sh2Run(dma_timer);
+				dma_timer = -1;
+				dma_status &= ~6;
+				Sh2SetIRQLine(10, CPU_IRQSTATUS_ACK);
+			}
+			CPU_RUN_SYNCINT(0, Sh2); // (try to) finish line
+		} while (dma_timer != -1);
 
 		if (cps_int10_cnt >= 2) {
 			cps_int10_cnt = 0;
 			Sh2SetIRQLine(10, CPU_IRQSTATUS_ACK);
 		} else cps_int10_cnt++;
-
-		if (dma_timer > 0)
-		{
-			nCyclesDone[0] += Sh2Run(dma_timer);
-			dma_timer = -1;
-			dma_status &= ~6;
-			Sh2SetIRQLine(10, CPU_IRQSTATUS_ACK);
-			CPU_RUN_SYNCINT(0, Sh2); // finish line
-		}
 	}
 	Sh2SetIRQLine(12, CPU_IRQSTATUS_ACK);
 
+	nExtraCycles = Sh2TotalCycles() - nCyclesTotal[0];
+
+#if 0
+	if (palette_dmas || nExtraCycles) {
+		bprintf(0, _T("palette dmas / extra cyc:  %d   %d\n"), palette_dmas, nExtraCycles);
+	}
+#endif
+
 	cps3SndUpdate();
-	
-//	bprintf(0, _T("PC: %08x\n"), Sh2GetPC(0));
-	
+
 	if (pBurnDraw) DrvCps3Draw();
 
 	return 0;
@@ -2152,7 +2197,7 @@ INT32 cps3Scan(INT32 nAction, INT32 *pnMin)
 	if (nAction & ACB_NVRAM) {
 		// Save EEPROM configuration
 		ba.Data		= EEPROM;
-		ba.nLen		= 0x0000400;
+		ba.nLen		= 0x0000100 * sizeof(UINT16);
 		ba.nAddress = 0;
 		ba.szName	= "EEPROM RAM";
 		BurnAcb(&ba);
@@ -2167,57 +2212,54 @@ INT32 cps3Scan(INT32 nAction, INT32 *pnMin)
 		BurnAcb(&ba);
 
 		ba.Data		= RamSpr;
-		ba.nLen		= 0x0080000;
+		ba.nLen		= (0x0080000/4) * sizeof(UINT32);
 		ba.nAddress = 0;
 		ba.szName	= "Sprite RAM";
 		BurnAcb(&ba);
 
 		ba.Data		= SprList;
-		ba.nLen		= 0x0080000;
+		ba.nLen		= (0x0080000/4) * sizeof(UINT32);
 		ba.nAddress = 0;
 		ba.szName	= "Sprite List";
 		BurnAcb(&ba);
 
 		ba.Data		= RamSS;
-		ba.nLen		= 0x0010000;
+		ba.nLen		= 0x0004000 * sizeof(UINT32);
 		ba.nAddress = 0;
 		ba.szName	= "Char ROM";
 		BurnAcb(&ba);
 		
 		ba.Data		= RamVReg;
-		ba.nLen		= 0x0000100;
+		ba.nLen		= 0x0000040 * sizeof(UINT32);
 		ba.nAddress = 0;
 		ba.szName	= "Video REG";
 		BurnAcb(&ba);
+
+		ba.Data		= RamVRegBuf;
+		ba.nLen		= 0x0000040 * sizeof(UINT32);
+		ba.nAddress = 0;
+		ba.szName	= "Video REG_BUF";
+		BurnAcb(&ba);
 		
 		ba.Data		= RamC000;
-		ba.nLen		= 0x0000400 * 2;
+		ba.nLen		= 0x0000400 * 2; // includes _D (!)
 		ba.nAddress = 0;
 		ba.szName	= "RAM C000";
 		BurnAcb(&ba);
 		
 		ba.Data		= RamPal;
-		ba.nLen		= 0x0040000;
+		ba.nLen		= 0x0020000 * sizeof(UINT16);
 		ba.nAddress = 0;
 		ba.szName	= "Palette";
 		BurnAcb(&ba);
 
-#ifdef __LIBRETRO__
-		// netplay relying on savestates doesn't want those 8mb
-		if (!kNetGame) {
+		if (~nAction & ACB_NET_OPT && ~nAction & ACB_RUNAHEAD) {
 			ba.Data		= RamCRam;
-			ba.nLen		= 0x0800000;
+			ba.nLen		= 0x0200000 * sizeof(UINT32);
 			ba.nAddress = 0;
 			ba.szName	= "Sprite ROM";
 			BurnAcb(&ba);
 		}
-#else
-		ba.Data		= RamCRam;
-		ba.nLen		= 0x0800000;
-		ba.nAddress = 0;
-		ba.szName	= "Sprite ROM";
-		BurnAcb(&ba);
-#endif
 
 /*		// so huge. need not backup it while NOCD
 		// otherwize, need backup gfx also
@@ -2233,9 +2275,7 @@ INT32 cps3Scan(INT32 nAction, INT32 *pnMin)
 		
 		Sh2Scan(nAction);
 		cps3SndScan(nAction);
-		
-		SCAN_VAR(Cps3Input);
-		
+
 		SCAN_VAR(ss_bank_base);
 		SCAN_VAR(ss_pal_base);
 		SCAN_VAR(cram_bank);
@@ -2256,24 +2296,27 @@ INT32 cps3Scan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(dma_status);
 		SCAN_VAR(dma_timer);
 
-		//SCAN_VAR(main_flash);
+		SCAN_VAR(main_flash);
 		
-		//SCAN_VAR(last_normal_byte);
-		//SCAN_VAR(lastb);
-		//SCAN_VAR(lastb2);
+		SCAN_VAR(last_normal_byte);
+		SCAN_VAR(lastb);
+		SCAN_VAR(lastb2);
 		
 		SCAN_VAR(cps_int10_cnt);
-				
+
+		SCAN_VAR(cps3_gfx_width);  // must be scanned (for rewind!)
+		SCAN_VAR(cps3_gfx_height); // ""
+
+		SCAN_VAR(nExtraCycles);
+
 		if (nAction & ACB_WRITE) {
 			
 			// rebuild current palette
 			cps3_palette_change = 1;
 			
 			// remap RamCRam
-			Sh2MapMemory(((UINT8 *)RamCRam) + (cram_bank << 20), 0x04100000, 0x041fffff, MAP_RAM);
-			
+			bankswitch_cram();
 		}
-		
 	}
 	
 	return 0;

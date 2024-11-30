@@ -345,7 +345,8 @@ static INT32 DrvDoReset()
 	
 	BurnYM2203Reset();
 	DACReset();
-	
+	HiscoreReset();
+
 	DrvCredits = 0;
 	DrvTrigState = 0;
 	DrvDeposits1 = 0;
@@ -747,7 +748,8 @@ static INT32 SstingryInit()
 	
 	DACInit(0, 0, 1, ZetTotalCycles, nDrvTotalZ80Cycles);
 	DACSetRoute(0, 0.75, BURN_SND_ROUTE_BOTH);
-	
+	DACDCBlock(1);
+
 	GenericTilesInit();
 	
 	DrvMicroControllerID = 0x00ff;
@@ -860,6 +862,7 @@ static INT32 KyrosInit()
 	
 	DACInit(0, 0, 1, ZetTotalCycles, nDrvTotalZ80Cycles);
 	DACSetRoute(0, 0.75, BURN_SND_ROUTE_BOTH);
+	DACDCBlock(1);
 	
 	GenericTilesInit();
 	
@@ -1070,19 +1073,20 @@ static INT32 DrvFrame()
 		}
 		if (i == 66) SekSetIRQLine(2, CPU_IRQSTATUS_AUTO);
 
-		BurnTimerUpdate((i + 1) * (nCyclesTotal[1] / nInterleave));
-		if (i == 44 || i == 88) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
+		CPU_RUN_TIMER(1);
+		if (i == 44 || i == 88) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		if (i & 1) ZetNmi();
-	}
-
-	BurnTimerEndFrame(nCyclesTotal[1]);
-	if (pBurnSoundOut) {
-		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
-		DACUpdate(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	SekClose();
 	ZetClose();
+
+	if (pBurnSoundOut) {
+		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
+		BurnSoundDCFilter(); // ay on ym2203 has nasty dc offset
+		DACUpdate(pBurnSoundOut, nBurnSoundLen);
+	}
+
 
 	return 0;
 }
@@ -1125,7 +1129,7 @@ struct BurnDriver BurnDrvSstingry = {
 	"sstingry", NULL, NULL, NULL, "1986",
 	"Super Stingray (Japan)\0", NULL, "Alpha Denshi Co.", "Alpha 68k",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, SstingryRomInfo, SstingryRomName, NULL, NULL, NULL, NULL, SstingryInputInfo, SstingryDIPInfo,
 	SstingryInit, DrvExit, DrvFrame, SstingryDraw, DrvScan,
 	NULL, 0x101, 224, 256, 3, 4
@@ -1135,7 +1139,7 @@ struct BurnDriver BurnDrvKyros = {
 	"kyros", NULL, NULL, NULL, "1987",
 	"Kyros\0", NULL, "Alpha Denshi Co. (World Games Inc. license)", "Alpha 68k",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, KyrosRomInfo, KyrosRomName, NULL, NULL, NULL, NULL, SstingryInputInfo, KyrosDIPInfo,
 	KyrosInit, DrvExit, DrvFrame, KyrosDraw, DrvScan,
 	NULL, 0x101, 224, 256, 3, 4
@@ -1143,9 +1147,9 @@ struct BurnDriver BurnDrvKyros = {
 
 struct BurnDriver BurnDrvKyrosj = {
 	"kyrosj", "kyros", NULL, NULL, "1986",
-	"Kyros No Yakata (Japan)\0", NULL, "Alpha Denshi Co.", "Alpha 68k",
+	"Kyros no Yakata (Japan)\0", NULL, "Alpha Denshi Co.", "Alpha 68k",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, KyrosjRomInfo, KyrosjRomName, NULL, NULL, NULL, NULL, SstingryInputInfo, KyrosDIPInfo,
 	KyrosInit, DrvExit, DrvFrame, KyrosDraw, DrvScan,
 	NULL, 0x101, 224, 256, 3, 4

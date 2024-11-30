@@ -157,17 +157,22 @@ static int DisplayHistory()
 #pragma GCC diagnostic ignored "-Wformat-overflow="
 #endif
 
+#define ASCIIONLY				(1 << 31)
+
 static int GameInfoInit()
 {
 	// Get the games full name
 	TCHAR szText[1024] = _T("");
 	TCHAR* pszPosition = szText;
-	TCHAR* pszName = BurnDrvGetText(DRV_FULLNAME);
+
+	int nGetTextFlags = nLoadMenuShowY & ASCIIONLY ? DRV_ASCIIONLY : 0;
+
+	TCHAR* pszName = BurnDrvGetText(nGetTextFlags | DRV_FULLNAME);
 
 	pszPosition += _sntprintf(szText, 1024, pszName);
 
-	pszName = BurnDrvGetText(DRV_FULLNAME);
-	while ((pszName = BurnDrvGetText(DRV_NEXTNAME | DRV_FULLNAME)) != NULL) {
+	pszName = BurnDrvGetText(nGetTextFlags | DRV_FULLNAME);
+	while ((pszName = BurnDrvGetText(nGetTextFlags | DRV_NEXTNAME | DRV_FULLNAME)) != NULL) {
 		if (pszPosition + _tcslen(pszName) - 1024 > szText) {
 			break;
 		}
@@ -405,7 +410,9 @@ static int GameInfoInit()
 
 	// Check for board roms
 	if (BurnDrvGetTextA(DRV_BOARDROM)) {
-		char szBoardName[12] = "";
+		// spec_spectrum (14 characters)
+		// spec_spec128  (13 characters)
+		char szBoardName[14] = "";
 		unsigned int nOldDrvSelect = nBurnDrvActive;
 		strcpy(szBoardName, BurnDrvGetTextA(DRV_BOARDROM));
 

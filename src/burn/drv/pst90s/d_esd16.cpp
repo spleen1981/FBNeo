@@ -888,7 +888,7 @@ static INT32 DrvInit(INT32 (*pInitCallback)())
 	ZetClose();
 
 	BurnYM3812Init(1, 4000000, NULL, &DrvSynchroniseStream, 0);
-	BurnTimerAttachYM3812(&ZetConfig, 4000000);
+	BurnTimerAttach(&ZetConfig, 4000000);
 	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 0.30, BURN_SND_ROUTE_BOTH);
 
 	MSM6295Init(0, 1056000 / 132, 1);
@@ -1141,7 +1141,6 @@ static INT32 DrvFrame()
 	SekNewFrame();
 	ZetNewFrame();
 
-	INT32 nCyclesSegment;
 	INT32 nInterleave = 64;
 	INT32 nCyclesTotal[2] = { 16000000 / 60, 4000000 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
@@ -1151,26 +1150,21 @@ static INT32 DrvFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesSegment = (nCyclesTotal[0] - nCyclesDone[0]) / (nInterleave - i);
+		CPU_RUN(0, Sek);
+		CPU_RUN_TIMER(1);
 
-		nCyclesDone[0] += SekRun(nCyclesSegment);
-
-		nCyclesSegment = (nCyclesTotal[1] - nCyclesDone[1]) / (nInterleave - i);
-
-		BurnTimerUpdateYM3812(i * (nCyclesTotal[1] / nInterleave));
 		if (i & 1) ZetNmi();
 	}
 
 	SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
-	
-	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
+
+	ZetClose();
+	SekClose();
+
 	if (pBurnSoundOut) {
 		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
 		MSM6295Render(0, pBurnSoundOut, nBurnSoundLen);
 	}
-
-	ZetClose();
-	SekClose();
 
 	if (pBurnDraw) {
 		DrvDraw();
@@ -1304,7 +1298,7 @@ struct BurnDriver BurnDrvMultchmp = {
 	"multchmp", NULL, NULL, NULL, "1999",
 	"Multi Champ (World)\0", NULL, "ESD", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MINIGAMES, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MINIGAMES, 0,
 	NULL, multchmpRomInfo, multchmpRomName, NULL, NULL, NULL, NULL, MultchmpInputInfo, MultchmpDIPInfo,
 	MultchmpInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x800, 320, 240, 4, 3
@@ -1344,7 +1338,7 @@ struct BurnDriver BurnDrvMultchmk = {
 	"multchmpk", "multchmp", NULL, NULL, "1999",
 	"Multi Champ (Korea, older)\0", NULL, "ESD", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MINIGAMES, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MINIGAMES, 0,
 	NULL, multchmkRomInfo, multchmkRomName, NULL, NULL, NULL, NULL, MultchmpInputInfo, MultchmpDIPInfo,
 	MultchmpInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x800, 320, 240, 4, 3
@@ -1467,7 +1461,7 @@ struct BurnDriver BurnDrvHedpanic = {
 	"hedpanic", NULL, NULL, NULL, "2000",
 	"Head Panic (ver. 0117, 17/01/2000)\0", "Story line & game instructions in English", "ESD", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, hedpanicRomInfo, hedpanicRomName, NULL, NULL, NULL, NULL, HedpanicInputInfo, NULL,
 	HedpanicInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x800, 320, 240, 4, 3
@@ -1501,7 +1495,7 @@ struct BurnDriver BurnDrvHedpanica = {
 	"hedpanica", "hedpanic", NULL, NULL, "1999",
 	"Head Panic (ver. 0702, 02/07/1999)\0", "Story line & game instructions in English", "ESD / Fuuki", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, hedpanicaRomInfo, hedpanicaRomName, NULL, NULL, NULL, NULL, HedpanicInputInfo, NULL,
 	HedpanicInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x800, 320, 240, 4, 3
@@ -1535,7 +1529,7 @@ struct BurnDriver BurnDrvHedpanif = {
 	"hedpanicf", "hedpanic", NULL, NULL, "2000",
 	"Head Panic (ver. 0315, 15/03/2000)\0", "Story line in Japanese, game instructions in English", "ESD / Fuuki", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, hedpanifRomInfo, hedpanifRomName, NULL, NULL, NULL, NULL, HedpanicInputInfo, NULL,
 	HedpanicInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x800, 320, 240, 4, 3
@@ -1615,7 +1609,7 @@ struct BurnDriver BurnDrvMchampdx = {
 	"mchampdx", NULL, NULL, NULL, "2000",
 	"Multi Champ Deluxe (ver. 0106, 06/01/2000)\0", NULL, "ESD", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MINIGAMES, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MINIGAMES, 0,
 	NULL, mchampdxRomInfo, mchampdxRomName, NULL, NULL, NULL, NULL, HedpanicInputInfo, NULL,
 	MchampdxInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x800, 320, 240, 4, 3
@@ -1649,7 +1643,7 @@ struct BurnDriver BurnDrvMchampda = {
 	"mchampdxa", "mchampdx", NULL, NULL, "1999",
 	"Multi Champ Deluxe (ver. 1126, 26/11/1999)\0", NULL, "ESD", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MINIGAMES, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MINIGAMES, 0,
 	NULL, mchampdaRomInfo, mchampdaRomName, NULL, NULL, NULL, NULL, HedpanicInputInfo, NULL,
 	MchampdxInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x800, 320, 240, 4, 3
@@ -1732,7 +1726,7 @@ struct BurnDriver BurnDrvTangtang = {
 	"tangtang", NULL, NULL, NULL, "2000",
 	"Tang Tang (ver. 0526, 26/05/2000)\0", NULL, "ESD", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, tangtangRomInfo, tangtangRomName, NULL, NULL, NULL, NULL, HedpanicInputInfo, NULL,
 	TangtangInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&DrvRecalc, 0x800, 320, 240, 4, 3

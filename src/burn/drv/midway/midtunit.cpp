@@ -569,6 +569,8 @@ static void TUnitWrite(UINT32 address, UINT16 value)
 {
 	if (address == 0x01d81070) return; // watchdog
 	if (address == 0x01c00060) return; // ?
+	if (address == 0x01a3d0d0) return; // prot RMW
+	if (address == 0x01a190e0) return; // prot RMW
 
 	bprintf(PRINT_NORMAL, _T("Unmapped Write %x, %x\n"), address, value);
 }
@@ -643,11 +645,9 @@ static void TUnitSoundWrite(UINT32 address, UINT16 value)
 			}
 
 			case SOUND_DCS: {
-
-				Dcs2kResetWrite(~value & 0x100);
 				dcs_sound_sync();
+				Dcs2kResetWrite(~value & 0x100);
 				Dcs2kDataWrite(value & 0xff);
-				Dcs2kRun(20);
 
 				DrvFakeSound = 128;
 				break;
@@ -1081,7 +1081,7 @@ INT32 TUnitInit()
 
 	if (TUnitIsMKTurbo) {
 		TMS34010SetReadHandler(13, MKTurboProtRead);
-		TMS34010MapHandler(13, 0xFF800000, 0xffffffff, MAP_READ);
+		TMS34010MapHandler(13, 0xffffe000, 0xffffffff, MAP_READ);
 	}
 
 	if (TUnitIsMK2) {
@@ -1117,15 +1117,11 @@ INT32 TUnitInit()
 		M6809Open(0);
 		M6809MapMemory(DrvSoundProgRAM, 0x0000, 0x1fff, MAP_RAM);
 		MKsound_bankswitch(0);
-		// _all_ ROM is dished out in the handler, had to do it this way
-		// because of the hidden prot ram. (and the separate op/oparg/read handlers..)
 		M6809SetReadHandler(MKSoundRead);
-		M6809SetReadOpHandler(MKSoundRead);
-		M6809SetReadOpArgHandler(MKSoundRead);
 		M6809SetWriteHandler(MKSoundWrite);
 		M6809Close();
 
-		BurnYM2151Init(3579545, 1);
+		BurnYM2151InitBuffered(3579545, 1, NULL, 0);
 		BurnTimerAttachM6809(2000000);
 		BurnYM2151SetIrqHandler(&MKYM2151IrqHandler);
 		BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.50, BURN_SND_ROUTE_LEFT);
@@ -1133,6 +1129,7 @@ INT32 TUnitInit()
 
 		DACInit(0, 0, 1, M6809TotalCycles, 2000000);
 		DACSetRoute(0, 0.25, BURN_SND_ROUTE_BOTH);
+		DACDCBlock(1);
 
 		MSM6295Init(0, /*1000000 / MSM6295_PIN7_HIGH*/8000, 1);
 		MSM6295SetRoute(0, 0.50, BURN_SND_ROUTE_BOTH);
@@ -1243,28 +1240,23 @@ INT32 TUnitFrame()
 	if (nSoundType == SOUND_ADPCM) M6809NewFrame();
 
 	INT32 nInterleave = 288;
-	INT32 nCyclesTotal[2] = { (INT32)(50000000/8/54.71), (INT32)(2000000 / 54.71) };
+	INT32 nCyclesTotal[2] = { (INT32)(50000000/8/(nBurnFPS/100)), (INT32)(2000000 / (nBurnFPS/100)) };
 	INT32 nCyclesDone[2] = { nExtraCycles, 0 };
-	INT32 nSoundBufferPos = 0;
-	INT32 bDrawn = 0;
 
 	if (nSoundType == SOUND_DCS) {
-		nCyclesTotal[1] = (INT32)(10000000 / 54.71);
+		nCyclesTotal[1] = (INT32)(10000000 / (nBurnFPS/100));
 		Dcs2kNewFrame();
 	}
-	
+
 	if (nSoundType == SOUND_ADPCM) M6809Open(0);
 	TMS34010Open(0);
 
 	for (INT32 i = 0; i < nInterleave; i++) {
+		INT32 our_line = (i + 274) % 289; // start at vblank
+
 		CPU_RUN(0, TMS34010);
 
-		TMS34010GenerateScanline(i);
-
-		if (i == vb_start && pBurnDraw) {
-			BurnDrvRedraw();
-			bDrawn = 1;
-		}
+		TMS34010GenerateScanline(our_line);
 
 		if (nSoundType == SOUND_DCS) {
 			HandleDCSIRQ(i);
@@ -1274,29 +1266,13 @@ INT32 TUnitFrame()
 		}
 
 		if (nSoundType == SOUND_ADPCM && !sound_inreset) {
-			BurnTimerUpdate((i + 1) * nCyclesTotal[1] / nInterleave);
-			if (i == nInterleave - 1) BurnTimerEndFrame(nCyclesTotal[1]);
-		}
-
-		if (pBurnSoundOut) {
-			if (nSoundType == SOUND_ADPCM && i&1) {
-				INT32 nSegmentLength = nBurnSoundLen / (nInterleave / 2);
-				INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-				BurnYM2151Render(pSoundBuf, nSegmentLength);
-				nSoundBufferPos += nSegmentLength;
-			}
+			CPU_RUN_TIMER(1);
 		}
 	}
 
-	// Make sure the buffer is entirely filled.
 	if (pBurnSoundOut) {
 		if (nSoundType == SOUND_ADPCM) {
-			INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-
-			if (nSegmentLength) {
-				BurnYM2151Render(pSoundBuf, nSegmentLength);
-			}
+			BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
 			DACUpdate(pBurnSoundOut, nBurnSoundLen);
 			MSM6295Render(pBurnSoundOut, nBurnSoundLen);
 		}
@@ -1311,7 +1287,7 @@ INT32 TUnitFrame()
 	if (nSoundType == SOUND_ADPCM) M6809Close();
 	TMS34010Close();
 
-	if (pBurnDraw && bDrawn == 0) {
+	if (pBurnDraw) {
 		TUnitDraw();
 	}
 

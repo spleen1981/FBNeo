@@ -6,7 +6,7 @@
  #include "vid_directx_support.h" 
 #endif
 
-#include <InitGuid.h>
+#include <initguid.h>
 #define DIRECT3D_VERSION 0x0700							// Use this Direct3D version
 
 #if defined BUILD_X64_EXE
@@ -1055,17 +1055,10 @@ int vidFrame(bool bRedraw)			// bRedraw = 0
 		DtoPrimClear();
 	}
 
-	if (bDrvOkay) {
-		if (bRedraw) {				// Redraw current frame
-			if (BurnDrvRedraw()) {
-				BurnDrvFrame();		// No redraw function provided, advance one frame
-			}
-		} else {
-			BurnDrvFrame();			// Run one frame and draw the screen
-		}
+	VidFrameCallback(bRedraw);				// Run emulation for 1 frame / render image
 
-		if ((BurnDrvGetFlags() & BDF_16BIT_ONLY) && pVidTransCallback)
-			pVidTransCallback();
+	if (pVidImage == NULL) {                // If a mode change was requested by game, pVidImage has been invalidated - time to leave.
+		return 0;
 	}
 
 	vidBurnToSurf();

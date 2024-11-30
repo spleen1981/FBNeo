@@ -111,6 +111,16 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 //					if (GetDlgItemText(hDlg, IDC_ROMSDIR_EDIT1 + i, buffer, sizeof(buffer)) && lstrcmp(szAppRomPaths[i], buffer)) {
 					GetDlgItemText(hDlg, IDC_ROMSDIR_EDIT1 + i, buffer, sizeof(buffer));
 					if (lstrcmp(szAppRomPaths[i], buffer)) chOk = true;
+
+					// add trailing backslash
+					int strLen = _tcslen(buffer);
+					if (strLen) {
+						if ( buffer[strLen - 1] != _T('\\') && buffer[strLen - 1] != _T('/') ) {
+							buffer[strLen] = _T('\\');
+							buffer[strLen + 1] = _T('\0');
+						}
+					}
+
 					lstrcpy(szAppRomPaths[i], buffer);
 //					}
 				}
@@ -158,7 +168,7 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 		case WM_CLOSE: {
 			hParent = NULL;
 			EndDialog(hDlg, 0);
-			if (chOk) {
+			if (chOk && bSkipStartupCheck == false) {
 				bRescanRoms = true;
 				CreateROMInfo(hDlg);
 			}
@@ -392,6 +402,7 @@ static INT_PTR CALLBACK WaitProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lPar
 			hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 
 			if (hParent == NULL) {
+#if 0
 				RECT rect;
 				int x, y;
 
@@ -404,6 +415,9 @@ static INT_PTR CALLBACK WaitProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lPar
 				SetWindowPos(hDlg, HWND_TOPMOST, (rect.right - rect.left) / 2 - x / 2, (rect.bottom - rect.top) / 2 - y / 2, x, y, 0);
 				RedrawWindow(hDlg, NULL, NULL, 0);
 				ShowWindow(hDlg, SW_SHOWNORMAL);
+#endif
+				WndInMid(hDlg, hParent);
+				SetFocus(hDlg);		// Enable Esc=close
 			} else {
 				WndInMid(hDlg, hParent);
 				SetFocus(hDlg);		// Enable Esc=close

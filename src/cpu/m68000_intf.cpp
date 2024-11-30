@@ -4,6 +4,21 @@
 #include "m68000_intf.h"
 #include "m68000_debug.h"
 
+#if defined (BUILD_WIN32)
+	enum LuaMemHookType
+	{
+		LUAMEMHOOK_WRITE,
+		LUAMEMHOOK_READ,
+		LUAMEMHOOK_EXEC,
+		LUAMEMHOOK_WRITE_SUB,
+		LUAMEMHOOK_READ_SUB,
+		LUAMEMHOOK_EXEC_SUB,
+
+		LUAMEMHOOK_COUNT
+	};
+	void CallRegisteredLuaMemHook(unsigned int address, int size, unsigned int value, LuaMemHookType hookType);
+#endif
+
 #ifdef EMU_M68K
 INT32 nSekM68KContextSize[SEK_MAX];
 INT8* SekM68KContext[SEK_MAX];
@@ -16,51 +31,29 @@ INT32 nSekActive = -1;								// The cpu which is currently being emulated
 INT32 nSekCyclesTotal, nSekCyclesScanline, nSekCyclesSegment, nSekCyclesDone, nSekCyclesToDo;
 
 INT32 nSekCPUType[SEK_MAX], nSekCycles[SEK_MAX], nSekIRQPending[SEK_MAX], nSekRESETLine[SEK_MAX], nSekHALT[SEK_MAX];
+INT32 nSekVIRQPending[SEK_MAX][8];
 INT32 nSekCyclesToDoCache[SEK_MAX], nSekm68k_ICount[SEK_MAX];
 INT32 nSekCPUOffsetAddress[SEK_MAX];
 
 static UINT32 nSekAddressMask[SEK_MAX], nSekAddressMaskActive;
 
-static INT32 core_idle(INT32 cycles)
-{
-	SekRunAdjust(cycles);
-
-	return cycles;
-}
-
-static void core_set_irq(INT32 cpu, INT32 line, INT32 state)
-{
-	INT32 active = nSekActive;
-	if (active != cpu)
-	{
-		if (active != -1) SekClose();
-		SekOpen(cpu);
-	}
-
-	SekSetIRQLine(line, state);
-
-	if (active != cpu)
-	{
-		SekClose();
-		if (active != -1) SekOpen(active);
-	}
-}
-
 cpu_core_config SekConfig =
 {
 	"68k",
-	SekOpen,
-	SekClose,
+	SekCPUPush, //SekOpen,
+	SekCPUPop, //SekClose,
 	SekCheatRead,
 	SekWriteByteROM,
 	SekGetActive,
 	SekTotalCycles,
 	SekNewFrame,
-	core_idle,
-	core_set_irq,
+	SekIdle,
+	SekSetIRQLine,
 	SekRun,
 	SekRunEnd,
 	SekReset,
+	SekScan,
+	SekExit,
 	0x1000000,
 	1 // big endian
 };
@@ -261,7 +254,9 @@ inline static UINT8 ReadByte(UINT32 a)
 	a &= nSekAddressMaskActive;
 
 //	bprintf(PRINT_NORMAL, _T("read8 0x%08X\n"), a);
-
+	#if defined (BUILD_WIN32)
+		CallRegisteredLuaMemHook(a, 1, 0, LUAMEMHOOK_READ);
+	#endif
 	pr = FIND_R(a);
 	if ((uintptr_t)pr >= SEK_MAXHANDLER) {
 		a ^= 1;
@@ -291,7 +286,9 @@ inline static void WriteByte(UINT32 a, UINT8 d)
 	UINT8* pr;
 
 	a &= nSekAddressMaskActive;
-
+	#if defined (BUILD_WIN32)
+		CallRegisteredLuaMemHook(a, 1, d, LUAMEMHOOK_WRITE);
+	#endif
 //	bprintf(PRINT_NORMAL, _T("write8 0x%08X\n"), a);
 
 	pr = FIND_W(a);
@@ -308,7 +305,9 @@ inline static void WriteByteROM(UINT32 a, UINT8 d)
 	UINT8* pr;
 
 	a &= nSekAddressMaskActive;
-
+	#if defined (BUILD_WIN32)
+		CallRegisteredLuaMemHook(a, 1, d, LUAMEMHOOK_WRITE);
+	#endif
 	// changed from FIND_R to allow for encrypted games (fd1094 etc) to work -dink apr. 23, 2021
 	// (on non-encrypted games, Fetch is mapped to Read)
 	pr = FIND_F(a);
@@ -327,7 +326,9 @@ inline static UINT16 ReadWord(UINT32 a)
 	a &= nSekAddressMaskActive;
 
 //	bprintf(PRINT_NORMAL, _T("read16 0x%08X\n"), a);
-
+	#if defined (BUILD_WIN32)
+		CallRegisteredLuaMemHook(a, 2, 0, LUAMEMHOOK_READ);
+	#endif
 	pr = FIND_R(a);
 	if ((uintptr_t)pr >= SEK_MAXHANDLER)
 	{
@@ -374,7 +375,9 @@ inline static void WriteWord(UINT32 a, UINT16 d)
 	a &= nSekAddressMaskActive;
 
 //	bprintf(PRINT_NORMAL, _T("write16 0x%08X\n"), a);
-
+	#if defined (BUILD_WIN32)
+		CallRegisteredLuaMemHook(a, 2, d, LUAMEMHOOK_WRITE);
+	#endif
 	pr = FIND_W(a);
 	if ((uintptr_t)pr >= SEK_MAXHANDLER)
 	{
@@ -402,7 +405,9 @@ inline static void WriteWordROM(UINT32 a, UINT16 d)
 	UINT8* pr;
 
 	a &= nSekAddressMaskActive;
-
+	#if defined (BUILD_WIN32)
+		CallRegisteredLuaMemHook(a, 2, d, LUAMEMHOOK_WRITE);
+	#endif
 	pr = FIND_R(a);
 	if ((uintptr_t)pr >= SEK_MAXHANDLER) {
 		*((UINT16*)(pr + (a & SEK_PAGEM))) = (UINT16)d;
@@ -422,7 +427,9 @@ inline static UINT32 ReadLong(UINT32 a)
 	a &= nSekAddressMaskActive;
 
 //	bprintf(PRINT_NORMAL, _T("read32 0x%08X\n"), a);
-
+	#if defined (BUILD_WIN32)
+		CallRegisteredLuaMemHook(a, 4, 0, LUAMEMHOOK_READ);
+	#endif
 	pr = FIND_R(a);
 	if ((uintptr_t)pr >= SEK_MAXHANDLER)
 	{
@@ -490,7 +497,9 @@ inline static void WriteLong(UINT32 a, UINT32 d)
 	a &= nSekAddressMaskActive;
 
 //	bprintf(PRINT_NORMAL, _T("write32 0x%08X\n"), a);
-
+	#if defined (BUILD_WIN32)
+		CallRegisteredLuaMemHook(a, 4, d, LUAMEMHOOK_WRITE);
+	#endif
 	pr = FIND_W(a);
 	if ((uintptr_t)pr >= SEK_MAXHANDLER)
 	{
@@ -521,7 +530,9 @@ inline static void WriteLongROM(UINT32 a, UINT32 d)
 	UINT8* pr;
 
 	a &= nSekAddressMaskActive;
-
+	#if defined (BUILD_WIN32)
+		CallRegisteredLuaMemHook(a, 4, d, LUAMEMHOOK_WRITE);
+	#endif
 	pr = FIND_R(a);
 	if ((uintptr_t)pr >= SEK_MAXHANDLER) {
 		d = (d >> 16) | (d << 16);
@@ -870,10 +881,9 @@ extern "C" INT32 M68KIRQAcknowledge(INT32 nIRQ)
 		nSekIRQPending[nSekActive] = 0;
 	}
 
-	if (nSekIRQPending[nSekActive] & SEK_IRQSTATUS_VAUTO &&
-		(nSekIRQPending[nSekActive] & 0x0007) == nIRQ) {
+	if (nSekVIRQPending[nSekActive][nIRQ] & SEK_IRQSTATUS_VAUTO) {
 		m68k_set_virq(nIRQ, 0);
-		nSekIRQPending[nSekActive] = 0;
+		nSekVIRQPending[nSekActive][nIRQ] = 0;
 	}
 	
 	if (pSekExt->IrqCallback) {
@@ -919,12 +929,17 @@ struct m68kpstack {
 	INT32 nHostCPU;
 	INT32 nPushedCPU;
 };
-#define MAX_PSTACK 10
+#define MAX_PSTACK 20
 
 static m68kpstack pstack[MAX_PSTACK];
 static INT32 pstacknum = 0;
 
-static void SekCPUPush(INT32 nCPU)
+INT32 SekCPUGetStackNum()
+{
+	return pstacknum;
+}
+
+void SekCPUPush(INT32 nCPU)
 {
 	m68kpstack *p = &pstack[pstacknum++];
 
@@ -942,7 +957,7 @@ static void SekCPUPush(INT32 nCPU)
 	}
 }
 
-static void SekCPUPop()
+void SekCPUPop()
 {
 	m68kpstack *p = &pstack[--pstacknum];
 
@@ -1031,6 +1046,15 @@ void SekNewFrame()
 	nSekCyclesTotal = 0;
 }
 
+void SekCyclesBurnRun(INT32 nCycles)
+{
+#if defined FBNEO_DEBUG
+	if (!DebugCPU_SekInitted) bprintf(PRINT_ERROR, _T("SekSetCyclesBurnRun called without init\n"));
+	if (nSekActive == -1) bprintf(PRINT_ERROR, _T("SekSetCyclesBurnRun called when no CPU open\n"));
+#endif
+	m68k_ICount -= nCycles;
+}
+
 void SekSetCyclesScanline(INT32 nCycles)
 {
 #if defined FBNEO_DEBUG
@@ -1045,6 +1069,13 @@ UINT8 SekCheatRead(UINT32 a)
 {
 	return SekReadByte(a);
 }
+
+#if defined (BUILD_WIN32)
+static void CallLuaExec(unsigned int newPC)
+{
+	CallRegisteredLuaMemHook(newPC, 1, 0, LUAMEMHOOK_EXEC);
+}
+#endif
 
 INT32 SekInit(INT32 nCount, INT32 nCPUType)
 {
@@ -1176,6 +1207,9 @@ INT32 SekInit(INT32 nCount, INT32 nCPUType)
 			SekExit();
 			return 1;
 		}
+		#if defined (BUILD_WIN32)
+			m68k_set_pc_changed_callback(CallLuaExec);
+		#endif
 #endif
 
 #ifdef EMU_A68K
@@ -1189,6 +1223,9 @@ INT32 SekInit(INT32 nCount, INT32 nCPUType)
 	nSekm68k_ICount[nCount] = 0;
 
 	nSekIRQPending[nCount] = 0;
+	for (INT32 i = 0; i < 8; i++) {
+		nSekVIRQPending[nCount][i] = 0;
+	}
 	nSekRESETLine[nCount] = 0;
 	nSekHALT[nCount] = 0;
 
@@ -1196,6 +1233,8 @@ INT32 SekInit(INT32 nCount, INT32 nCPUType)
 	nSekCyclesScanline = 0;
 
 	CpuCheatRegister(nCount, &SekConfig);
+
+	pstacknum = 0;
 
 	return 0;
 }
@@ -1220,13 +1259,14 @@ static void SekCPUExitM68K(INT32 i)
 }
 #endif
 
-INT32 SekExit()
+
+void SekExit()
 {
 #if defined FBNEO_DEBUG
 	if (!DebugCPU_SekInitted) bprintf(PRINT_ERROR, _T("SekExit called without init\n"));
 #endif
 
-	if (!DebugCPU_SekInitted) return 1;
+	if (!DebugCPU_SekInitted) return;
 
 	// Deallocate cpu extenal data (memory map etc)
 	for (INT32 i = 0; i <= nSekCount; i++) {
@@ -1237,8 +1277,10 @@ INT32 SekExit()
 
 #ifdef EMU_M68K
 		SekCPUExitM68K(i);
+		#if defined (BUILD_WIN32)
+			m68k_set_pc_changed_callback(NULL);
+		#endif
 #endif
-
 		// Deallocate other context data
 		if (SekExt[i]) {
 			free(SekExt[i]);
@@ -1254,8 +1296,6 @@ INT32 SekExit()
 	nSekCount = -1;
 	
 	DebugCPU_SekInitted = 0;
-
-	return 0;
 }
 
 void SekReset()
@@ -1277,6 +1317,9 @@ void SekReset()
 
 #ifdef EMU_M68K
 		m68k_pulse_reset();
+		for (INT32 i = 0; i < 8; i++) {
+			nSekVIRQPending[nSekActive][i] = 0;
+		}
 #endif
 
 #ifdef EMU_A68K
@@ -1297,7 +1340,6 @@ void SekReset(INT32 nCPU)
 
 	SekCPUPop();
 }
-
 // ----------------------------------------------------------------------------
 // Control the active CPU
 
@@ -1506,9 +1548,16 @@ void SekSetHALT(INT32 nStatus)
 
 	if (nSekActive != -1)
 	{
-		if (nSekHALT[nSekActive] && nStatus == 0)
+		if (nSekHALT[nSekActive] == 1 && nStatus == 0)
 		{
 			//bprintf(0, _T("SEK: cleared HALT.\n"));
+		}
+
+		if (nSekHALT[nSekActive] == 0 && nStatus == 1)
+		{
+			//bprintf(0, _T("SEK: entered HALT.\n"));
+			// we must halt in the cpu core too
+			SekRunEnd();
 		}
 
 		nSekHALT[nSekActive] = nStatus;
@@ -1613,7 +1662,7 @@ void SekSetVIRQLine(const INT32 line, INT32 nstatus)
 	INT32 status = nstatus << 12; // needed for compatibility
 
 	if (status) {
-		nSekIRQPending[nSekActive] = line | status;
+		nSekVIRQPending[nSekActive][line] = status;
 
 #ifdef EMU_M68K
 			m68k_set_virq(line, 1);
@@ -1622,7 +1671,7 @@ void SekSetVIRQLine(const INT32 line, INT32 nstatus)
 		return;
 	}
 
-	nSekIRQPending[nSekActive] = 0;
+	nSekVIRQPending[nSekActive][line] = 0;
 
 #ifdef EMU_M68K
 	m68k_set_virq(line, 0);
@@ -1737,7 +1786,7 @@ INT32 SekRun(const INT32 nCycles)
 
 #ifdef EMU_M68K
 		nSekCyclesToDo = nCycles;
-
+		
 		if (nSekRESETLine[nSekActive] || nSekHALT[nSekActive])
 		{
 			nSekCyclesSegment = nCycles; // idle when RESET high or halted
@@ -1968,6 +2017,7 @@ INT32 SekMapMemory(UINT8* pMemory, UINT32 nStart, UINT32 nEnd, INT32 nType)
 #if defined FBNEO_DEBUG
 	if (!DebugCPU_SekInitted) bprintf(PRINT_ERROR, _T("SekMapMemory called without init\n"));
 	if (nSekActive == -1) bprintf(PRINT_ERROR, _T("SekMapMemory called when no CPU open\n"));
+	if (pMemory == NULL) bprintf(0, _T("SekMapMemory() mapped NULL block!  start, end, type:  %x - %x  0x%x\n"), nStart, nEnd, nType);
 #endif
 
 	UINT8* Ptr = pMemory - nStart;
@@ -2493,6 +2543,7 @@ INT32 SekScan(INT32 nAction)
 
 		SCAN_VAR(nSekCPUType[i]);
 		SCAN_VAR(nSekIRQPending[i]);
+		SCAN_VAR(nSekVIRQPending[i]);
 		SCAN_VAR(nSekCycles[i]);
 		SCAN_VAR(nSekRESETLine[i]);
 		SCAN_VAR(nSekHALT[i]);

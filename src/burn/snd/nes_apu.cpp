@@ -96,6 +96,7 @@ struct nesapu_info
 	UINT32 (*pSyncCallback)(INT32 samples_per_frame);
 	INT32 current_position;
 	INT32 fill_buffer_hack;
+	INT32 dmc_direction_normal;
 	double gain[2];
 	INT32 output_dir[2];
 	INT32 bAdd;
@@ -127,9 +128,16 @@ static UINT8 *dmc_buffer;
 INT16 *nes_ext_buffer;
 INT16 (*nes_ext_sound_cb)();
 
+static const INT32 *noise_clocks;
 static const INT32 *dpcm_clocks;
 
 static int8 apu_dpcm(struct nesapu_info *info, dpcm_t *chan);
+
+void nesapuSetDMCBitDirection(INT32 reversed)
+{
+	struct nesapu_info *info = &nesapu_chips[0];
+	info->dmc_direction_normal = !reversed;
+}
 
 void nesapu_runclock(INT32 cycle)
 {
@@ -414,7 +422,7 @@ static int8 apu_noise(struct nesapu_info *info, noise_t *chan)
    chan->phaseacc -= 4;
    if (chan->phaseacc < 0)
    {
-      chan->phaseacc += noise_freq[chan->regs[2] & 0x0F];
+      chan->phaseacc += noise_clocks[chan->regs[2] & 0x0F];
 
 	  UINT16 feedback = (chan->lfsr & 0x01) ^ ((chan->lfsr >> ((chan->regs[2] & 0x80) ? 6 : 1)) & 0x01);
 	  chan->lfsr = ((chan->lfsr >> 1) | (feedback << 14)) & 0x7fff;
@@ -472,14 +480,27 @@ static int8 apu_dpcm(struct nesapu_info *info, dpcm_t *chan)
 	   chan->phaseacc += freq;
 
 	   if (chan->enabled) {
-		   if (chan->cur_byte & 1) {
-			   if (chan->vol < (0x7f - 2))
-				   chan->vol += 2;
+
+		   if (info->dmc_direction_normal) {
+			   if (chan->cur_byte & 1) {
+				   if (chan->vol < (0x7f - 2))
+					   chan->vol += 2;
+			   } else {
+				   if (chan->vol > 0)
+					   chan->vol -= 2;
+			   }
+			   chan->cur_byte >>= 1;
 		   } else {
-			   if (chan->vol > 0)
-				   chan->vol -= 2;
+			   // reversed!
+			   if (chan->cur_byte & 0x80) {
+				   if (chan->vol < (0x7f - 2))
+					   chan->vol += 2;
+			   } else {
+				   if (chan->vol > 0)
+					   chan->vol -= 2;
+			   }
+			   chan->cur_byte <<= 1;
 		   }
-		   chan->cur_byte >>= 1;
 	   }
 
 	   chan->bits_left--;
@@ -755,7 +776,7 @@ static void apu_update(struct nesapu_info *info)
 	INT32 square1, square2, square3, square4;
 
 //------------------------------------------------------------------------------------------------------
-	if (info->pSyncCallback == NULL) return;
+	if (info->pSyncCallback == NULL || pBurnSoundOut == NULL) return;
 	INT32 position;
 
 	if (info->fill_buffer_hack) {
@@ -815,13 +836,13 @@ void nesapuUpdate(INT32 chip, INT16 *buffer, INT32 samples)
 
 	struct nesapu_info *info = &nesapu_chips[chip];
 
-	info->fill_buffer_hack = 1;
-	apu_update(info);
-
 	if (pBurnSoundOut == NULL) {
 		info->current_position = 0;
 		return;
 	}
+
+	info->fill_buffer_hack = 1;
+	apu_update(info);
 
 	INT16 *source = info->stream + 5;
 
@@ -913,6 +934,11 @@ void nesapuWrite(INT32 chip, INT32 address, UINT8 value)
 
 /* EXTERNAL INTERFACE FUNCTIONS */
 
+void nesapuSetMode4017(UINT8 val)
+{
+	mode4017 = val;
+}
+
 void nesapuReset()
 {
 #if defined FBNEO_DEBUG
@@ -934,7 +960,7 @@ void nesapuReset()
 		info->APU.dpcm.bits_left = 8;
 		info->APU.noi.lfsr = 1;
 	    clocky = 0;
-		mode4017 = 0xc0;
+		mode4017 = 0xc0; // disabled @ startup
 		step4017 = 0;
 		frame_irq_flag = 0;
 	}
@@ -962,6 +988,7 @@ void nesapuInit(INT32 chip, INT32 clock, INT32 is_pal, UINT32 (*pSyncCallback)(I
 	/* Initialize global variables */
 	cycles_per_frame = (is_pal) ? 33248 : 29781;
 
+	noise_clocks = &noise_freq[(is_pal) ? 1 : 0][0];
 	dpcm_clocks = &dpcm_freq[(is_pal) ? 1 : 0][0];
 
 	info->samps_per_sync = 7445; //(rate * 100) / nBurnFPS;

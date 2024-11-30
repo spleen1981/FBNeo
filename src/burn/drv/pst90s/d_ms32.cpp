@@ -70,6 +70,7 @@ static INT32 analog_clock;
 static INT32 analog_starttimer;
 
 static INT32 is_wpksocv2 = 0;
+static INT32 is_p47acesa = 0; // game fails to boot when nvram is saved?
 
 static struct BurnInputInfo MS32InputList[] = {
 	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 16,	"p1 coin"	},
@@ -106,6 +107,39 @@ static struct BurnInputInfo MS32InputList[] = {
 
 STDINPUTINFO(MS32)
 
+static struct BurnInputInfo MS32MahjongInputList[] = {
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 16,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvMah1 + 0,	"p1 start"	},
+	{"P1 A",			BIT_DIGITAL,	DrvMah1 + 1,	"mah a"		},
+	{"P1 B",			BIT_DIGITAL,	DrvMah2 + 1,	"mah b"		},
+	{"P1 C",			BIT_DIGITAL,	DrvMah3 + 1,	"mah c"		},
+	{"P1 D",			BIT_DIGITAL,	DrvMah4 + 1,	"mah d"		},
+	{"P1 E",			BIT_DIGITAL,	DrvMah1 + 2,	"mah e"		},
+	{"P1 F",			BIT_DIGITAL,	DrvMah2 + 2,	"mah f"		},
+	{"P1 G",			BIT_DIGITAL,	DrvMah3 + 2,	"mah g"		},
+	{"P1 H",			BIT_DIGITAL,	DrvMah4 + 2,	"mah h"		},
+	{"P1 I",			BIT_DIGITAL,	DrvMah1 + 4,	"mah i"		},
+	{"P1 J",			BIT_DIGITAL,	DrvMah2 + 4,	"mah j"		},
+	{"P1 K",			BIT_DIGITAL,	DrvMah3 + 4,	"mah k"		},
+	{"P1 L",			BIT_DIGITAL,	DrvMah4 + 4,	"mah l"		},
+	{"P1 M",			BIT_DIGITAL,	DrvMah1 + 3,	"mah m"		},
+	{"P1 N",			BIT_DIGITAL,	DrvMah2 + 3,	"mah n"		},
+	{"P1 Pon",			BIT_DIGITAL,	DrvMah4 + 3,	"mah pon"	},
+	{"P1 Chi",			BIT_DIGITAL,	DrvMah3 + 3,	"mah chi"	},
+	{"P1 Kan",			BIT_DIGITAL,	DrvMah1 + 5,	"mah kan"	},
+	{"P1 Ron",			BIT_DIGITAL,	DrvMah3 + 5,	"mah ron"	},
+	{"P1 Reach",		BIT_DIGITAL,	DrvMah2 + 5,	"mah reach"	},
+
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 18,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Dip D",			BIT_DIPSWITCH,	DrvDips + 3,	"dip"		},
+};
+
+STDINPUTINFO(MS32Mahjong)
+
 static struct BurnInputInfo Hayaosi2InputList[] = {
 	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 16,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 20,	"p1 start"	},
@@ -139,72 +173,6 @@ static struct BurnInputInfo Hayaosi2InputList[] = {
 };
 
 STDINPUTINFO(Hayaosi2)
-
-static struct BurnInputInfo KirarastInputList[] = {
-	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 16,	"p1 coin"	},
-	{"P1 Start",		BIT_DIGITAL,	DrvMah1 + 0,	"p1 start"	},
-	{"A",				BIT_DIGITAL,	DrvMah1 + 1,	"mah a"		},
-	{"B",				BIT_DIGITAL,	DrvMah2 + 1,	"mah b"		},
-	{"C",				BIT_DIGITAL,	DrvMah3 + 1,	"mah c"		},
-	{"D",				BIT_DIGITAL,	DrvMah4 + 1,	"mah d"		},
-	{"E",				BIT_DIGITAL,	DrvMah1 + 2,	"mah e"		},
-	{"F",				BIT_DIGITAL,	DrvMah2 + 2,	"mah f"		},
-	{"G",				BIT_DIGITAL,	DrvMah3 + 2,	"mah g"		},
-	{"H",				BIT_DIGITAL,	DrvMah4 + 2,	"mah h"		},
-	{"I",				BIT_DIGITAL,	DrvMah1 + 4,	"mah i"		},
-	{"J",				BIT_DIGITAL,	DrvMah2 + 4,	"mah j"		},
-	{"K",				BIT_DIGITAL,	DrvMah1 + 5,	"mah k"		},
-	{"L",				BIT_DIGITAL,	DrvMah4 + 4,	"mah l"		},
-	{"M",				BIT_DIGITAL,	DrvMah1 + 3,	"mah m"		},
-	{"N",				BIT_DIGITAL,	DrvMah2 + 3,	"mah n"		},
-	{"Pon",				BIT_DIGITAL,	DrvMah4 + 3,	"mah pon"	},
-	{"Chi",				BIT_DIGITAL,	DrvMah3 + 3,	"mah chi"	},
-	{"Kan",				BIT_DIGITAL,	DrvMah1 + 5,	"mah kan"	},
-	{"Ron",				BIT_DIGITAL,	DrvMah3 + 5,	"mah ron"	},
-	{"Reach",			BIT_DIGITAL,	DrvMah2 + 5,	"mah reach"	},
-
-	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
-	{"Service",			BIT_DIGITAL,	DrvJoy1 + 18,	"service"	},
-	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
-	{"Dip D",			BIT_DIPSWITCH,	DrvDips + 3,	"dip"		},
-};
-
-STDINPUTINFO(Kirarast)
-
-static struct BurnInputInfo Suchie2InputList[] = {
-	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 16,	"p1 coin"	},
-	{"P1 Start",		BIT_DIGITAL,	DrvMah1 + 0,	"p1 start"	},
-	{"A",				BIT_DIGITAL,	DrvMah1 + 1,	"mah a"		},
-	{"B",				BIT_DIGITAL,	DrvMah2 + 1,	"mah b"		},
-	{"C",				BIT_DIGITAL,	DrvMah3 + 1,	"mah c"		},
-	{"D",				BIT_DIGITAL,	DrvMah4 + 1,	"mah d"		},
-	{"E",				BIT_DIGITAL,	DrvMah1 + 2,	"mah e"		},
-	{"F",				BIT_DIGITAL,	DrvMah2 + 2,	"mah f"		},
-	{"G",				BIT_DIGITAL,	DrvMah3 + 2,	"mah g"		},
-	{"H",				BIT_DIGITAL,	DrvMah4 + 2,	"mah h"		},
-	{"I",				BIT_DIGITAL,	DrvMah1 + 4,	"mah i"		},
-	{"J",				BIT_DIGITAL,	DrvMah2 + 4,	"mah j"		},
-	{"K",				BIT_DIGITAL,	DrvMah1 + 5,	"mah k"		},
-	{"L",				BIT_DIGITAL,	DrvMah4 + 4,	"mah l"		},
-	{"M",				BIT_DIGITAL,	DrvMah1 + 3,	"mah m"		},
-	{"N",				BIT_DIGITAL,	DrvMah2 + 3,	"mah n"		},
-	{"Pon",				BIT_DIGITAL,	DrvMah4 + 3,	"mah pon"	},
-	{"Chi",				BIT_DIGITAL,	DrvMah3 + 3,	"mah chi"	},
-	{"Kan",				BIT_DIGITAL,	DrvMah1 + 5,	"mah kan"	},
-	{"Ron",				BIT_DIGITAL,	DrvMah3 + 5,	"mah ron"	},
-	{"Reach",			BIT_DIGITAL,	DrvMah2 + 5,	"mah reach"	},
-
-	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
-	{"Service",			BIT_DIGITAL,	DrvJoy1 + 18,	"service"	},
-	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
-	{"Dip D",			BIT_DIPSWITCH,	DrvDips + 3,	"dip"		},
-};
-
-STDINPUTINFO(Suchie2)
 
 #define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 static struct BurnInputInfo Wpksocv2InputList[] = {
@@ -1251,6 +1219,8 @@ static INT32 DrvDoReset()
 {
 	memset (AllRam, 0, RamEnd - AllRam);
 
+	if (is_p47acesa) memset(DrvNVRAM, 0xff, 0x8000);
+
 	v60Open(0);
 	v60_irq_vector = 0;
 	v60Reset();
@@ -1277,6 +1247,8 @@ static INT32 DrvDoReset()
 	memset (bright, 0xff, sizeof(bright));
 	UINT32 *sprite_ctrl = (UINT32*)DrvSprCtrl;
 	sprite_ctrl[0x10/4] = BURN_ENDIAN_SWAP_INT32(0x8000);
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -2021,7 +1993,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(analog_starttimer);
 	}
 
-	if (nAction & ACB_NVRAM) {
+	if (nAction & ACB_NVRAM && !is_p47acesa) {
 		memset(&ba, 0, sizeof(ba));
 		ba.Data		= DrvNVRAM;
 		ba.nLen		= 0x008000;
@@ -2074,7 +2046,7 @@ struct BurnDriver BurnDrvTetrisp = {
 	"tetrisp", NULL, NULL, NULL, "1995",
 	"Tetris Plus (ver 1.0)\0", NULL, "Jaleco / BPS", "MegaSystem 32",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, tetrispRomInfo, tetrispRomName, NULL, NULL, NULL, NULL, MS32InputInfo, TetrispDIPInfo,
 	ss92046_01_init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	320, 224, 4, 3
@@ -2122,7 +2094,7 @@ struct BurnDriver BurnDrvP47aces = {
 	"p47aces", NULL, NULL, NULL, "1995",
 	"P-47 Aces (ver 1.1)\0", NULL, "Jaleco", "MegaSystem 32",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_HORSHOOT, 0,
 	NULL, p47acesRomInfo, p47acesRomName, NULL, NULL, NULL, NULL, MS32InputInfo, P47acesDIPInfo,
 	ss92048_01_init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	320, 224, 4, 3
@@ -2166,13 +2138,20 @@ static struct BurnRomInfo p47acesaRomDesc[] = {
 STD_ROM_PICK(p47acesa)
 STD_ROM_FN(p47acesa)
 
+static INT32 p47acesaInit()
+{
+	is_p47acesa = 1;
+
+	return ss92048_01_init();
+}
+
 struct BurnDriver BurnDrvP47acesa = {
 	"p47acesa", "p47aces", NULL, NULL, "1995",
 	"P-47 Aces (ver 1.0)\0", NULL, "Jaleco", "MegaSystem 32",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_HORSHOOT, 0,
 	NULL, p47acesaRomInfo, p47acesaRomName, NULL, NULL, NULL, NULL, MS32InputInfo, P47acesDIPInfo,
-	ss92048_01_init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
+	p47acesaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	320, 224, 4, 3
 };
 
@@ -2218,7 +2197,7 @@ struct BurnDriver BurnDrvBbbxing = {
 	"bbbxing", NULL, NULL, NULL, "1994",
 	"Best Bout Boxing (ver 1.3)\0", NULL, "Jaleco", "MegaSystem 32",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SPORTSMISC, 0,
 	NULL, bbbxingRomInfo, bbbxingRomName, NULL, NULL, NULL, NULL, MS32InputInfo, BbbxingDIPInfo,
 	ss92046_01_init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	320, 224, 4, 3
@@ -2265,7 +2244,7 @@ struct BurnDriver BurnDrvDesertwr = {
 	"desertwr", NULL, NULL, NULL, "1995",
 	"Desert War / Wangan Sensou (ver 1.0)\0", NULL, "Jaleco", "MegaSystem 32",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, desertwrRomInfo, desertwrRomName, NULL, NULL, NULL, NULL, MS32InputInfo, DesertwrDIPInfo,
 	ss91022_10_init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	224, 320, 3, 4
@@ -2312,7 +2291,7 @@ struct BurnDriver BurnDrvGametngk = {
 	"gametngk", NULL, NULL, NULL, "1995",
 	"The Game Paradise - Master of Shooting! / Game Tengoku - The Game Paradise (ver 1.0)\0", NULL, "Jaleco", "MegaSystem 32",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, gametngkRomInfo, gametngkRomName, NULL, NULL, NULL, NULL, MS32InputInfo, GametngkDIPInfo,
 	ss91022_10_init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	224, 320, 3, 4
@@ -2356,7 +2335,7 @@ struct BurnDriver BurnDrvGratia = {
 	"gratia", NULL, NULL, NULL, "1996",
 	"Gratia - Second Earth (ver 1.0, 92047-01 version)\0", NULL, "Jaleco", "MegaSystem 32",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_HORSHOOT, 0,
 	NULL, gratiaRomInfo, gratiaRomName, NULL, NULL, NULL, NULL, MS32InputInfo, GratiaDIPInfo,
 	ss92047_01_init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	320, 224, 4, 3
@@ -2400,7 +2379,7 @@ struct BurnDriver BurnDrvGratiaa = {
 	"gratiaa", "gratia", NULL, NULL, "1996",
 	"Gratia - Second Earth (ver 1.0, 91022-10 version)\0", NULL, "Jaleco", "MegaSystem 32",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_HORSHOOT, 0,
 	NULL, gratiaaRomInfo, gratiaaRomName, NULL, NULL, NULL, NULL, MS32InputInfo, GratiaDIPInfo,
 	ss91022_10_init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	320, 224, 4, 3
@@ -2668,7 +2647,7 @@ struct BurnDriver BurnDrvSuchie2 = {
 	"Idol Janshi Suchie-Pai II (ver 1.1)\0", NULL, "Jaleco", "MegaSystem 32",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
-	NULL, suchie2RomInfo, suchie2RomName, NULL, NULL, NULL, NULL, Suchie2InputInfo, Suchie2DIPInfo,
+	NULL, suchie2RomInfo, suchie2RomName, NULL, NULL, NULL, NULL, MS32MahjongInputInfo, Suchie2DIPInfo,
 	ss92048_01_init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	320, 224, 4, 3
 };
@@ -2714,7 +2693,7 @@ struct BurnDriver BurnDrvSuchie2o = {
 	"Idol Janshi Suchie-Pai II (ver 1.0)\0", NULL, "Jaleco", "MegaSystem 32",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
-	NULL, suchie2oRomInfo, suchie2oRomName, NULL, NULL, NULL, NULL, Suchie2InputInfo, Suchie2DIPInfo,
+	NULL, suchie2oRomInfo, suchie2oRomName, NULL, NULL, NULL, NULL, MS32MahjongInputInfo, Suchie2DIPInfo,
 	ss92048_01_init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	320, 224, 4, 3
 };
@@ -2760,7 +2739,7 @@ struct BurnDriver BurnDrvKirarast = {
 	"Ryuusei Janshi Kirara Star\0", NULL, "Jaleco", "MegaSystem 32",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
-	NULL, kirarastRomInfo, kirarastRomName, NULL, NULL, NULL, NULL, KirarastInputInfo, KirarastDIPInfo,
+	NULL, kirarastRomInfo, kirarastRomName, NULL, NULL, NULL, NULL, MS32MahjongInputInfo, KirarastDIPInfo,
 	ss92047_01_init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	320, 224, 4, 3
 };
@@ -2805,7 +2784,7 @@ struct BurnDriver BurnDrvAkiss = {
 	"Mahjong Angel Kiss (ver 1.0)\0", NULL, "Jaleco", "MegaSystem 32",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
-	NULL, akissRomInfo, akissRomName, NULL, NULL, NULL, NULL, Suchie2InputInfo, Suchie2DIPInfo,
+	NULL, akissRomInfo, akissRomName, NULL, NULL, NULL, NULL, MS32MahjongInputInfo, Suchie2DIPInfo,
 	ss92047_01_init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	320, 224, 4, 3
 };
@@ -2856,7 +2835,7 @@ struct BurnDriver BurnDrvBnstars1 = {
 	"Vs. Janshi Brandnew Stars\0", "Not currently emulated", "Jaleco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	0, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
-	NULL, bnstars1RomInfo, bnstars1RomName, NULL, NULL, NULL, NULL, Suchie2InputInfo, Suchie2DIPInfo, //BnstarsInputInfo, BnstarsDIPInfo,
+	NULL, bnstars1RomInfo, bnstars1RomName, NULL, NULL, NULL, NULL, MS32MahjongInputInfo, Suchie2DIPInfo, //BnstarsInputInfo, BnstarsDIPInfo,
 	ss92046_01_init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	320, 224, 4, 3
 };
@@ -2900,7 +2879,7 @@ struct BurnDriver BurnDrvBnstars = {
 	"Vs. Janshi Brandnew Stars (Ver 1.1, MegaSystem32 Version)\0", NULL, "Jaleco", "MegaSystem 32",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
-	NULL, bnstarsRomInfo, bnstarsRomName, NULL, NULL, NULL, NULL, Suchie2InputInfo, Suchie2DIPInfo,
+	NULL, bnstarsRomInfo, bnstarsRomName, NULL, NULL, NULL, NULL, MS32MahjongInputInfo, Suchie2DIPInfo,
 	ss92046_01_init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	320, 224, 4, 3
 };

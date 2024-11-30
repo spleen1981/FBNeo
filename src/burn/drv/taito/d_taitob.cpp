@@ -3,7 +3,6 @@
 
 // to do:
 //	fix rambo alt sets inputs
-//	master of weapon title screen is incorrect (only w/ffwd)
 
 #include "tiles_generic.h"
 #include "m68000_intf.h"
@@ -30,364 +29,371 @@ static INT32 game_config = 0; // for disable opposites
 static INT32 cpu_speed[2];
 static UINT8 nTaitoInputConfig[5] = { 0, 0, 0, 0, 0 };
 
+static UINT8 TaitoServicePort[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+static UINT8 LightgunDIP[1] = { 0 }; // positional (lightgun) for rambo3
 static INT32 has_trackball = 0; // rambo3/rambo3u
+static INT32 frame_counter; // for rambo3 lightgun hack
 
 static INT32 spritelag_disable = 0;
 
 static INT32 LastScrollX = 0; // hitice
 
+static INT32 nCyclesExtra;
+
 static struct BurnInputInfo CommonInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	TC0220IOCInputPort2 + 6,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	TC0220IOCInputPort0 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	TC0220IOCInputPort0 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	TC0220IOCInputPort0 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	TC0220IOCInputPort0 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	TC0220IOCInputPort0 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	TC0220IOCInputPort0 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	TC0220IOCInputPort0 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort0 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort0 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	TC0220IOCInputPort2 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	TC0220IOCInputPort2 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	TC0220IOCInputPort2 + 7,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	TC0220IOCInputPort1 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	TC0220IOCInputPort1 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	TC0220IOCInputPort1 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort1 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort1 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&TaitoReset,			"reset"		},
-	{"Service",		BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	TC0220IOCDip + 0,		"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	TC0220IOCDip + 1,		"dip"		},
+	{"Reset",			BIT_DIGITAL,	&TaitoReset,				"reset"		},
+	{"Service",			BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	TC0220IOCDip + 0,			"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	TC0220IOCDip + 1,			"dip"		},
 };
 
 STDINPUTINFO(Common)
 
 static struct BurnInputInfo PbobbleInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	TC0220IOCInputPort0 + 4,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	TC0220IOCInputPort0 + 4,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 4,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	TaitoInputPort3 + 0,		"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	TaitoInputPort3 + 1,		"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	TaitoInputPort3 + 2,		"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	TaitoInputPort3 + 0,		"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	TaitoInputPort3 + 1,		"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	TaitoInputPort3 + 2,		"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	TaitoInputPort3 + 3,		"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	TC0220IOCInputPort0 + 5,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	TC0220IOCInputPort0 + 5,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 5,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	TaitoInputPort3 + 4,		"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	TaitoInputPort3 + 5,		"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	TaitoInputPort3 + 6,		"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	TaitoInputPort3 + 4,		"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	TaitoInputPort3 + 5,		"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	TaitoInputPort3 + 6,		"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	TaitoInputPort3 + 7,		"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort2 + 5,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	TC0220IOCInputPort2 + 6,	"p2 fire 3"	},
 
-	{"P3 Coin",		BIT_DIGITAL,	TC0220IOCInputPort0 + 6,	"p3 coin"	},
+	{"P3 Coin",			BIT_DIGITAL,	TC0220IOCInputPort0 + 6,	"p3 coin"	},
 	{"P3 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 6,	"p3 start"	},
-	{"P3 Up",		BIT_DIGITAL,	TaitoInputPort5 + 0,		"p3 up"		},
-	{"P3 Down",		BIT_DIGITAL,	TaitoInputPort5 + 1,		"p3 down"	},
-	{"P3 Left",		BIT_DIGITAL,	TaitoInputPort5 + 2,		"p3 left"	},
+	{"P3 Up",			BIT_DIGITAL,	TaitoInputPort5 + 0,		"p3 up"		},
+	{"P3 Down",			BIT_DIGITAL,	TaitoInputPort5 + 1,		"p3 down"	},
+	{"P3 Left",			BIT_DIGITAL,	TaitoInputPort5 + 2,		"p3 left"	},
 	{"P3 Right",		BIT_DIGITAL,	TaitoInputPort5 + 3,		"p3 right"	},
 	{"P3 Button 1",		BIT_DIGITAL,	TaitoInputPort4 + 0,		"p3 fire 1"	},
 	{"P3 Button 2",		BIT_DIGITAL,	TaitoInputPort4 + 1,		"p3 fire 2"	},
 	{"P3 Button 3",		BIT_DIGITAL,	TaitoInputPort4 + 2,		"p3 fire 3"	},
 
-	{"P4 Coin",		BIT_DIGITAL,	TC0220IOCInputPort0 + 7,	"p4 coin"	},
+	{"P4 Coin",			BIT_DIGITAL,	TC0220IOCInputPort0 + 7,	"p4 coin"	},
 	{"P4 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 7,	"p4 start"	},
-	{"P4 Up",		BIT_DIGITAL,	TaitoInputPort5 + 4,		"p4 up"		},
-	{"P4 Down",		BIT_DIGITAL,	TaitoInputPort5 + 5,		"p4 down"	},
-	{"P4 Left",		BIT_DIGITAL,	TaitoInputPort5 + 6,		"p4 left"	},
+	{"P4 Up",			BIT_DIGITAL,	TaitoInputPort5 + 4,		"p4 up"		},
+	{"P4 Down",			BIT_DIGITAL,	TaitoInputPort5 + 5,		"p4 down"	},
+	{"P4 Left",			BIT_DIGITAL,	TaitoInputPort5 + 6,		"p4 left"	},
 	{"P4 Right",		BIT_DIGITAL,	TaitoInputPort5 + 7,		"p4 right"	},
 	{"P4 Button 1",		BIT_DIGITAL,	TaitoInputPort4 + 4,		"p4 fire 1"	},
 	{"P4 Button 2",		BIT_DIGITAL,	TaitoInputPort4 + 5,		"p4 fire 2"	},
 	{"P4 Button 3",		BIT_DIGITAL,	TaitoInputPort4 + 6,		"p4 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&TaitoReset,			"reset"		},
-	{"Service",		BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"service"	},
-	{"Service",		BIT_DIGITAL,	TC0220IOCInputPort1 + 2,	"service"	},
-	{"Service",		BIT_DIGITAL,	TC0220IOCInputPort1 + 3,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	TC0220IOCDip + 0,		"dip"		},
+	{"Reset",			BIT_DIGITAL,	&TaitoReset,				"reset"		},
+	{"Service 1",		BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"service"	},
+	{"Service 2",		BIT_DIGITAL,	TC0220IOCInputPort1 + 2,	"service"	},
+	{"Service 3",		BIT_DIGITAL,	TC0220IOCInputPort1 + 3,	"service"	},
+	{"Service Mode",	BIT_DIGITAL,	TaitoServicePort + 7,		"diag"		},
+	{"Tilt",			BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	TC0220IOCDip + 0,			"dip"		},
 };
 
 STDINPUTINFO(Pbobble)
 
 static struct BurnInputInfo QzshowbyInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	TC0220IOCInputPort0 + 4,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	TC0220IOCInputPort0 + 4,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 4,	"p1 start"	},
 	{"P1 Button 1",		BIT_DIGITAL,	TaitoInputPort3 + 0,		"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	TaitoInputPort3 + 1,		"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	TaitoInputPort3 + 3,		"p1 fire 3"	},
 	{"P1 Button 4",		BIT_DIGITAL,	TaitoInputPort3 + 2,		"p1 fire 4"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	TC0220IOCInputPort0 + 5,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	TC0220IOCInputPort0 + 5,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 5,	"p2 start"	},
 	{"P2 Button 1",		BIT_DIGITAL,	TaitoInputPort3 + 4,		"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	TaitoInputPort3 + 5,		"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	TaitoInputPort3 + 7,		"p2 fire 3"	},
 	{"P2 Button 4",		BIT_DIGITAL,	TaitoInputPort3 + 6,		"p2 fire 4"	},
 
-	{"P3 Coin",		BIT_DIGITAL,	TC0220IOCInputPort0 + 6,	"p3 coin"	},
+	{"P3 Coin",			BIT_DIGITAL,	TC0220IOCInputPort0 + 6,	"p3 coin"	},
 	{"P3 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 6,	"p3 start"	},
 	{"P3 Button 1",		BIT_DIGITAL,	TaitoInputPort5 + 8,		"p3 fire 1"	},
 	{"P3 Button 2",		BIT_DIGITAL,	TaitoInputPort5 + 9,		"p3 fire 2"	},
 	{"P3 Button 3",		BIT_DIGITAL,	TaitoInputPort5 + 11,		"p3 fire 3"	},
 	{"P3 Button 4",		BIT_DIGITAL,	TaitoInputPort5 + 10,		"p3 fire 4"	},
 
-	{"P4 Coin",		BIT_DIGITAL,	TC0220IOCInputPort0 + 7,	"p4 coin"	},
+	{"P4 Coin",			BIT_DIGITAL,	TC0220IOCInputPort0 + 7,	"p4 coin"	},
 	{"P4 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 7,	"p4 start"	},
 	{"P4 Button 1",		BIT_DIGITAL,	TaitoInputPort5 + 12,		"p4 fire 1"	},
 	{"P4 Button 2",		BIT_DIGITAL,	TaitoInputPort5 + 13,		"p4 fire 2"	},
 	{"P4 Button 3",		BIT_DIGITAL,	TaitoInputPort5 + 15,		"p4 fire 3"	},
 	{"P4 Button 4",		BIT_DIGITAL,	TaitoInputPort5 + 14,		"p4 fire 4"	},
 
-	{"Reset",		BIT_DIGITAL,	&TaitoReset,			"reset"		},
-	{"Service",		BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"service"	},
-	{"Service",		BIT_DIGITAL,	TC0220IOCInputPort1 + 2,	"service"	},
-	{"Service",		BIT_DIGITAL,	TC0220IOCInputPort1 + 3,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	TC0220IOCDip + 0,		"dip"		},
+	{"Reset",			BIT_DIGITAL,	&TaitoReset,				"reset"		},
+	{"Service 1",		BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"service"	},
+	{"Service 2",		BIT_DIGITAL,	TC0220IOCInputPort1 + 2,	"service"	},
+	{"Service 3",		BIT_DIGITAL,	TC0220IOCInputPort1 + 3,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	TC0220IOCDip + 0,			"dip"		},
 };
 
 STDINPUTINFO(Qzshowby)
 
 static struct BurnInputInfo SpacedxoInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	TC0220IOCInputPort1 + 4,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	TC0220IOCInputPort1 + 4,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 2,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	TC0220IOCInputPort2 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort0 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort0 + 1,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	TC0220IOCInputPort0 + 2,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	TC0220IOCInputPort1 + 5,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	TC0220IOCInputPort1 + 5,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 3,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	TC0220IOCInputPort2 + 4,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	TC0220IOCInputPort2 + 5,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	TC0220IOCInputPort2 + 6,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	TC0220IOCInputPort2 + 4,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	TC0220IOCInputPort2 + 5,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	TC0220IOCInputPort2 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	TC0220IOCInputPort2 + 7,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort0 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort0 + 4,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	TC0220IOCInputPort0 + 5,	"p2 fire 3"	},
 
-	{"P3 Coin",		BIT_DIGITAL,	TaitoInputPort5 + 0,		"p3 coin"	},
+	{"P3 Coin",			BIT_DIGITAL,	TaitoInputPort5 + 0,		"p3 coin"	},
 	{"P3 Start",		BIT_DIGITAL,	TaitoInputPort3 + 0,		"p3 start"	},
-	{"P3 Up",		BIT_DIGITAL,	TaitoInputPort3 + 3,		"p3 up"		},
-	{"P3 Down",		BIT_DIGITAL,	TaitoInputPort3 + 4,		"p3 down"	},
-	{"P3 Left",		BIT_DIGITAL,	TaitoInputPort3 + 1,		"p3 left"	},
+	{"P3 Up",			BIT_DIGITAL,	TaitoInputPort3 + 3,		"p3 up"		},
+	{"P3 Down",			BIT_DIGITAL,	TaitoInputPort3 + 4,		"p3 down"	},
+	{"P3 Left",			BIT_DIGITAL,	TaitoInputPort3 + 1,		"p3 left"	},
 	{"P3 Right",		BIT_DIGITAL,	TaitoInputPort3 + 2,		"p3 right"	},
 	{"P3 Button 1",		BIT_DIGITAL,	TaitoInputPort3 + 5,		"p3 fire 1"	},
 	{"P3 Button 2",		BIT_DIGITAL,	TaitoInputPort3 + 6,		"p3 fire 2"	},
 	{"P3 Button 3",		BIT_DIGITAL,	TaitoInputPort3 + 7,		"p3 fire 3"	},
 
-	{"P4 Coin",		BIT_DIGITAL,	TaitoInputPort5 + 2,		"p4 coin"	},
+	{"P4 Coin",			BIT_DIGITAL,	TaitoInputPort5 + 2,		"p4 coin"	},
 	{"P4 Start",		BIT_DIGITAL,	TaitoInputPort4 + 0,		"p4 start"	},
-	{"P4 Up",		BIT_DIGITAL,	TaitoInputPort4 + 3,		"p4 up"		},
-	{"P4 Down",		BIT_DIGITAL,	TaitoInputPort4 + 4,		"p4 down"	},
-	{"P4 Left",		BIT_DIGITAL,	TaitoInputPort4 + 1,		"p4 left"	},
+	{"P4 Up",			BIT_DIGITAL,	TaitoInputPort4 + 3,		"p4 up"		},
+	{"P4 Down",			BIT_DIGITAL,	TaitoInputPort4 + 4,		"p4 down"	},
+	{"P4 Left",			BIT_DIGITAL,	TaitoInputPort4 + 1,		"p4 left"	},
 	{"P4 Right",		BIT_DIGITAL,	TaitoInputPort4 + 2,		"p4 right"	},
 	{"P4 Button 1",		BIT_DIGITAL,	TaitoInputPort4 + 5,		"p4 fire 1"	},
 	{"P4 Button 2",		BIT_DIGITAL,	TaitoInputPort4 + 6,		"p4 fire 2"	},
 	{"P4 Button 3",		BIT_DIGITAL,	TaitoInputPort4 + 7,		"p4 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&TaitoReset,			"reset"		},
-	{"Service",		BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"service"	},
-	{"Service",		BIT_DIGITAL,	TaitoInputPort5 + 1,		"service"	},
-	{"Service",		BIT_DIGITAL,	TaitoInputPort5 + 3,		"service"	},
-	{"Tilt",		BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	TC0220IOCDip + 0,		"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	TC0220IOCDip + 1,		"dip"		},
+	{"Reset",			BIT_DIGITAL,	&TaitoReset,				"reset"		},
+	{"Service 1",		BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"service"	},
+	{"Service 2",		BIT_DIGITAL,	TaitoInputPort5 + 1,		"service"	},
+	{"Service 3",		BIT_DIGITAL,	TaitoInputPort5 + 3,		"service"	},
+	{"Tilt",			BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	TC0220IOCDip + 0,			"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	TC0220IOCDip + 1,			"dip"		},
 };
 
 STDINPUTINFO(Spacedxo)
 
 static struct BurnInputInfo SelfeenaInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	TC0220IOCInputPort1 + 4,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	TC0220IOCInputPort1 + 4,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 2,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	TC0220IOCInputPort2 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort0 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort0 + 1,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	TC0220IOCInputPort0 + 2,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	TC0220IOCInputPort1 + 5,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	TC0220IOCInputPort1 + 5,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 3,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	TC0220IOCInputPort2 + 4,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	TC0220IOCInputPort2 + 5,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	TC0220IOCInputPort2 + 6,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	TC0220IOCInputPort2 + 4,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	TC0220IOCInputPort2 + 5,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	TC0220IOCInputPort2 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	TC0220IOCInputPort2 + 7,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort0 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort0 + 4,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	TC0220IOCInputPort0 + 5,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&TaitoReset,	"reset"},
-	{"Service",		BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	TC0220IOCDip + 0,		"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	TC0220IOCDip + 1,		"dip"		},
+	{"Reset",			BIT_DIGITAL,	&TaitoReset,				"reset"		},
+	{"Service",			BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	TC0220IOCDip + 0,			"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	TC0220IOCDip + 1,			"dip"		},
 };
 
 STDINPUTINFO(Selfeena)
 
 static struct BurnInputInfo SbmInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	TC0220IOCInputPort0 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	TC0220IOCInputPort0 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	TC0220IOCInputPort0 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	TC0220IOCInputPort0 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	TC0220IOCInputPort0 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	TC0220IOCInputPort0 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	TC0220IOCInputPort0 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort2 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort2 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	TC0220IOCInputPort2 + 6,	"p1 fire 3"	},
 	{"P1 Button 4",		BIT_DIGITAL,	TC0220IOCInputPort2 + 7,	"p1 fire 4"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	TC0220IOCInputPort2 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	TC0220IOCInputPort2 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	TC0220IOCInputPort0 + 4,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	TC0220IOCInputPort0 + 5,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	TC0220IOCInputPort0 + 6,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	TC0220IOCInputPort0 + 4,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	TC0220IOCInputPort0 + 5,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	TC0220IOCInputPort0 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	TC0220IOCInputPort0 + 7,	"p2 right"	},
 
-	{"Reset",		BIT_DIGITAL,	&TaitoReset,			"reset"		},
-	{"Service",		BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	TC0220IOCDip + 0,		"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	TC0220IOCDip + 1,		"dip"		},
+	{"Reset",			BIT_DIGITAL,	&TaitoReset,				"reset"		},
+	{"Service",			BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	TC0220IOCDip + 0,			"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	TC0220IOCDip + 1,			"dip"		},
 };
 
 STDINPUTINFO(Sbm)
 
 static struct BurnInputInfo SilentdInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	TC0220IOCInputPort1 + 4,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	TC0220IOCInputPort1 + 4,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 2,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	TC0220IOCInputPort2 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort0 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort0 + 1,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	TC0220IOCInputPort0 + 2,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	TC0220IOCInputPort1 + 5,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	TC0220IOCInputPort1 + 5,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 3,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	TC0220IOCInputPort2 + 4,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	TC0220IOCInputPort2 + 5,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	TC0220IOCInputPort2 + 6,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	TC0220IOCInputPort2 + 4,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	TC0220IOCInputPort2 + 5,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	TC0220IOCInputPort2 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	TC0220IOCInputPort2 + 7,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort0 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort0 + 4,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	TC0220IOCInputPort0 + 5,	"p2 fire 3"	},
 
-	{"P3 Coin",		BIT_DIGITAL,	TaitoInputPort5 + 0,		"p3 coin"	},
+	{"P3 Coin",			BIT_DIGITAL,	TaitoInputPort5 + 0,		"p3 coin"	},
 	{"P3 Start",		BIT_DIGITAL,	TaitoInputPort3 + 0,		"p3 start"	},
-	{"P3 Up",		BIT_DIGITAL,	TaitoInputPort3 + 3,		"p3 up"		},
-	{"P3 Down",		BIT_DIGITAL,	TaitoInputPort3 + 4,		"p3 down"	},
-	{"P3 Left",		BIT_DIGITAL,	TaitoInputPort3 + 1,		"p3 left"	},
+	{"P3 Up",			BIT_DIGITAL,	TaitoInputPort3 + 3,		"p3 up"		},
+	{"P3 Down",			BIT_DIGITAL,	TaitoInputPort3 + 4,		"p3 down"	},
+	{"P3 Left",			BIT_DIGITAL,	TaitoInputPort3 + 1,		"p3 left"	},
 	{"P3 Right",		BIT_DIGITAL,	TaitoInputPort3 + 2,		"p3 right"	},
 	{"P3 Button 1",		BIT_DIGITAL,	TaitoInputPort3 + 5,		"p3 fire 1"	},
 	{"P3 Button 2",		BIT_DIGITAL,	TaitoInputPort3 + 6,		"p3 fire 2"	},
 	{"P3 Button 3",		BIT_DIGITAL,	TaitoInputPort3 + 7,		"p3 fire 3"	},
 
-	{"P4 Coin",		BIT_DIGITAL,	TaitoInputPort5 + 2,		"p4 coin"	},
+	{"P4 Coin",			BIT_DIGITAL,	TaitoInputPort5 + 2,		"p4 coin"	},
 	{"P4 Start",		BIT_DIGITAL,	TaitoInputPort4 + 0,		"p4 start"	},
-	{"P4 Up",		BIT_DIGITAL,	TaitoInputPort4 + 3,		"p4 up"		},
-	{"P4 Down",		BIT_DIGITAL,	TaitoInputPort4 + 4,		"p4 down"	},
-	{"P4 Left",		BIT_DIGITAL,	TaitoInputPort4 + 1,		"p4 left"	},
+	{"P4 Up",			BIT_DIGITAL,	TaitoInputPort4 + 3,		"p4 up"		},
+	{"P4 Down",			BIT_DIGITAL,	TaitoInputPort4 + 4,		"p4 down"	},
+	{"P4 Left",			BIT_DIGITAL,	TaitoInputPort4 + 1,		"p4 left"	},
 	{"P4 Right",		BIT_DIGITAL,	TaitoInputPort4 + 2,		"p4 right"	},
 	{"P4 Button 1",		BIT_DIGITAL,	TaitoInputPort4 + 5,		"p4 fire 1"	},
 	{"P4 Button 2",		BIT_DIGITAL,	TaitoInputPort4 + 6,		"p4 fire 2"	},
 	{"P4 Button 3",		BIT_DIGITAL,	TaitoInputPort4 + 7,		"p4 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&TaitoReset,			"reset"		},
-	{"Service",		BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	TC0220IOCDip + 0,		"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	TC0220IOCDip + 1,		"dip"		},
+	{"Reset",			BIT_DIGITAL,	&TaitoReset,				"reset"		},
+	{"Service",			BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	TC0220IOCDip + 0,			"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	TC0220IOCDip + 1,			"dip"		},
 };
 
 STDINPUTINFO(Silentd)
 
 static struct BurnInputInfo ViofightInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	TC0220IOCInputPort2 + 6,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	TC0220IOCInputPort0 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	TC0220IOCInputPort0 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	TC0220IOCInputPort0 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	TC0220IOCInputPort0 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	TC0220IOCInputPort0 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	TC0220IOCInputPort0 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	TC0220IOCInputPort0 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort0 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort0 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	TC0220IOCInputPort0 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	TC0220IOCInputPort2 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	TC0220IOCInputPort2 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	TC0220IOCInputPort2 + 7,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	TC0220IOCInputPort1 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	TC0220IOCInputPort1 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	TC0220IOCInputPort1 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort1 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort1 + 5,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	TC0220IOCInputPort1 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&TaitoReset,	"reset"},
-	{"Service",		BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	TC0220IOCDip + 0,		"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	TC0220IOCDip + 1,		"dip"		},
+	{"Reset",			BIT_DIGITAL,	&TaitoReset,				"reset"		},
+	{"Service",			BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	TC0220IOCDip + 0,			"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	TC0220IOCDip + 1,			"dip"		},
 };
 
 STDINPUTINFO(Viofight)
 
 static struct BurnInputInfo HiticeInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	TC0220IOCInputPort1 + 4,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	TC0220IOCInputPort1 + 4,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 2,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	TC0220IOCInputPort2 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort0 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort0 + 1,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	TC0220IOCInputPort0 + 2,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	TC0220IOCInputPort1 + 5,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	TC0220IOCInputPort1 + 5,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 3,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	TC0220IOCInputPort2 + 4,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	TC0220IOCInputPort2 + 5,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	TC0220IOCInputPort2 + 6,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	TC0220IOCInputPort2 + 4,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	TC0220IOCInputPort2 + 5,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	TC0220IOCInputPort2 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	TC0220IOCInputPort2 + 7,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort0 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort0 + 4,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	TC0220IOCInputPort0 + 5,	"p2 fire 3"	},
 
 	{"P3 Start",		BIT_DIGITAL,	TaitoInputPort3 + 7,		"p3 start"	},
-	{"P3 Up",		BIT_DIGITAL,	TaitoInputPort3 + 0,		"p3 up"		},
-	{"P3 Down",		BIT_DIGITAL,	TaitoInputPort3 + 1,		"p3 down"	},
-	{"P3 Left",		BIT_DIGITAL,	TaitoInputPort3 + 2,		"p3 left"	},
+	{"P3 Up",			BIT_DIGITAL,	TaitoInputPort3 + 0,		"p3 up"		},
+	{"P3 Down",			BIT_DIGITAL,	TaitoInputPort3 + 1,		"p3 down"	},
+	{"P3 Left",			BIT_DIGITAL,	TaitoInputPort3 + 2,		"p3 left"	},
 	{"P3 Right",		BIT_DIGITAL,	TaitoInputPort3 + 3,		"p3 right"	},
 	{"P3 Button 1",		BIT_DIGITAL,	TaitoInputPort3 + 4,		"p3 fire 1"	},
 	{"P3 Button 2",		BIT_DIGITAL,	TaitoInputPort3 + 5,		"p3 fire 2"	},
 	{"P3 Button 3",		BIT_DIGITAL,	TaitoInputPort3 + 6,		"p3 fire 3"	},
 
 	{"P4 Start",		BIT_DIGITAL,	TaitoInputPort4 + 7,		"p4 start"	},
-	{"P4 Up",		BIT_DIGITAL,	TaitoInputPort4 + 0,		"p4 up"		},
-	{"P4 Down",		BIT_DIGITAL,	TaitoInputPort4 + 1,		"p4 down"	},
-	{"P4 Left",		BIT_DIGITAL,	TaitoInputPort4 + 2,		"p4 left"	},
+	{"P4 Up",			BIT_DIGITAL,	TaitoInputPort4 + 0,		"p4 up"		},
+	{"P4 Down",			BIT_DIGITAL,	TaitoInputPort4 + 1,		"p4 down"	},
+	{"P4 Left",			BIT_DIGITAL,	TaitoInputPort4 + 2,		"p4 left"	},
 	{"P4 Right",		BIT_DIGITAL,	TaitoInputPort4 + 3,		"p4 right"	},
 	{"P4 Button 1",		BIT_DIGITAL,	TaitoInputPort4 + 4,		"p4 fire 1"	},
 	{"P4 Button 2",		BIT_DIGITAL,	TaitoInputPort4 + 5,		"p4 fire 2"	},
 	{"P4 Button 3",		BIT_DIGITAL,	TaitoInputPort4 + 6,		"p4 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&TaitoReset,			"reset"		},
-	{"Service",		BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	TC0220IOCDip + 0,		"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	TC0220IOCDip + 1,		"dip"		},
+	{"Reset",			BIT_DIGITAL,	&TaitoReset,				"reset"		},
+	{"Service",			BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	TC0220IOCDip + 0,			"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	TC0220IOCDip + 1,			"dip"		},
 };
 
 STDINPUTINFO(Hitice)
@@ -395,35 +401,36 @@ STDINPUTINFO(Hitice)
 #define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 
 static struct BurnInputInfo Rambo3InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	TC0220IOCInputPort1 + 4,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	TC0220IOCInputPort1 + 4,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 2,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	TC0220IOCInputPort2 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	TC0220IOCInputPort2 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	TC0220IOCInputPort2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	TC0220IOCInputPort2 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort0 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort0 + 1,	"p1 fire 2"	},
 
-	A("P1 Trackball X",     BIT_ANALOG_REL, &TaitoAnalogPort0,		"p1 x-axis"	),
-	A("P1 Trackball Y",     BIT_ANALOG_REL, &TaitoAnalogPort1,		"p1 y-axis"	),
+	A("P1 Trackball X",	BIT_ANALOG_REL, &TaitoAnalogPort0,			"p1 x-axis"	),
+	A("P1 Trackball Y",	BIT_ANALOG_REL, &TaitoAnalogPort1,			"p1 y-axis"	),
 
-	{"P2 Coin",		BIT_DIGITAL,	TC0220IOCInputPort1 + 5,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	TC0220IOCInputPort1 + 5,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	TC0220IOCInputPort1 + 3,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	TC0220IOCInputPort2 + 4,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	TC0220IOCInputPort2 + 5,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	TC0220IOCInputPort2 + 6,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	TC0220IOCInputPort2 + 4,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	TC0220IOCInputPort2 + 5,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	TC0220IOCInputPort2 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	TC0220IOCInputPort2 + 7,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	TC0220IOCInputPort0 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	TC0220IOCInputPort0 + 4,	"p2 fire 2"	},
 
-	A("P2 Trackball X",	BIT_ANALOG_REL, &TaitoAnalogPort2,		"p2 x-axis"	),
-	A("P2 Trackball Y",	BIT_ANALOG_REL, &TaitoAnalogPort3,		"p2 y-axis"	),
+	A("P2 Trackball X",	BIT_ANALOG_REL, &TaitoAnalogPort2,			"p2 x-axis"	),
+	A("P2 Trackball Y",	BIT_ANALOG_REL, &TaitoAnalogPort3,			"p2 y-axis"	),
 
-	{"Reset",		BIT_DIGITAL,	&TaitoReset,	"reset"},
-	{"Service",		BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	TC0220IOCDip + 0,		"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	TC0220IOCDip + 1,		"dip"		},
+	{"Reset",			BIT_DIGITAL,	&TaitoReset,				"reset"		},
+	{"Service",			BIT_DIGITAL,	TC0220IOCInputPort1 + 1,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	TC0220IOCInputPort1 + 0,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	TC0220IOCDip + 0,			"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	TC0220IOCDip + 1,			"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	LightgunDIP + 0,			"dip"		},
 };
 
 STDINPUTINFO(Rambo3)
@@ -1022,17 +1029,6 @@ static struct BurnDIPInfo MasterwDIPList[]=
 
 STDDIPINFO(Masterw)
 
-static struct BurnDIPInfo PbobbleDIPList[]=
-{
-	{0x29, 0xff, 0xff, 0xff, NULL			},
-
-	{0   , 0xfe, 0   ,    2, "Service Mode"		},
-	{0x29, 0x01, 0x80, 0x80, "Off"			},
-	{0x29, 0x01, 0x80, 0x00, "On"			},
-};
-
-STDDIPINFO(Pbobble)
-
 static struct BurnDIPInfo QzshowbyDIPList[]=
 {
 	{0x1d, 0xff, 0xff, 0x80, NULL			},
@@ -1432,6 +1428,7 @@ static struct BurnDIPInfo Rambo3DIPList[]=
 {
 	{0x17, 0xff, 0xff, 0xff, NULL			},
 	{0x18, 0xff, 0xff, 0xff, NULL			},
+	{0x19, 0xff, 0xff, 0x00, NULL			},
 
 	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
 	{0x17, 0x01, 0x02, 0x02, "Off"			},
@@ -1463,13 +1460,18 @@ static struct BurnDIPInfo Rambo3DIPList[]=
 	{0x18, 0x01, 0x03, 0x01, "Hard"			},
 	{0x18, 0x01, 0x03, 0x00, "Hardest"		},
 
+	{0   , 0xfe, 0   ,    2, "Allow Continue"	},
+	{0x18, 0x01, 0x10, 0x00, "Off"			},
+	{0x18, 0x01, 0x10, 0x10, "On"			},
+
 	{0   , 0xfe, 0   ,    2, "Control"		},
 	{0x18, 0x01, 0x08, 0x08, "8 way Joystick"	},
 	{0x18, 0x01, 0x08, 0x00, "Trackball"		},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"	},
-	{0x18, 0x01, 0x10, 0x00, "Off"			},
-	{0x18, 0x01, 0x10, 0x10, "On"			},
+	{0   , 0xfe, 0   ,    2, "Lightgun Mode for Trackball (Hack)" },
+	{0x19, 0x01, 0x01, 0x01, "On"				},
+	{0x19, 0x01, 0x01, 0x00, "Off"				},
+
 };
 
 STDDIPINFO(Rambo3)
@@ -1634,15 +1636,26 @@ static inline void DrvClearOppositesCommon(UINT8* nJoystickInputs)
 	}
 }
 
+static UINT16 Rambo3LGScaleX(UINT16 x)
+{
+	return scalerange(x, 0x0c, 0xf2, 0x7b80, 0x8480);
+}
+
+static UINT16 Rambo3LGScaleY(UINT16 y)
+{
+	return scalerange(y, 0x3a, 0xef, 0x0100, 0x0640);
+}
+
 static void DrvMakeInputs()
 {
-	memset (TC0220IOCInput, 0xff, 3);
-	memset (TaitoInput + 3, 0xff, 3);
+	memset (TC0220IOCInput, 0xff, sizeof(TC0220IOCInput));
+	memset (TaitoInput, 0xff, sizeof(TaitoInput));
 
 	for (INT32 i = 0; i < 8; i++) {
 		TC0220IOCInput[0] ^= (TC0220IOCInputPort0[i] & 1) << i;
 		TC0220IOCInput[1] ^= (TC0220IOCInputPort1[i] & 1) << i;
 		TC0220IOCInput[2] ^= (TC0220IOCInputPort2[i] & 1) << i;
+		TaitoInput[0] ^= (TaitoServicePort[i] & 1) << i;
 		TaitoInput[3] ^= (TaitoInputPort3[i] & 1) << i;
 		TaitoInput[4] ^= (TaitoInputPort4[i] & 1) << i;
 		TaitoInput[5] ^= (TaitoInputPort5[i] & 1) << i;
@@ -1690,14 +1703,40 @@ static void DrvMakeInputs()
 
 	// for rambo3's trackball
 	if (has_trackball) {
+		if (LightgunDIP[0] & 1 && frame_counter == -1) {
+			// use Lightgun hack for Rambo3
+			BurnGunMakeInputs(0, TaitoAnalogPort0, TaitoAnalogPort1);
+			BurnGunMakeInputs(1, TaitoAnalogPort2, TaitoAnalogPort3);
+			UINT16 p1_x = Rambo3LGScaleX(BurnGunReturnX(0));
+			UINT16 p1_y = Rambo3LGScaleY(0xff - BurnGunReturnY(0));
+
+			UINT16 p2_x = Rambo3LGScaleX(BurnGunReturnX(1));
+			UINT16 p2_y = Rambo3LGScaleY(0xff - BurnGunReturnY(1));
+
+			SekOpen(0);
+			SekWriteWord(0x800044, p1_x); // P1 reticule sprite X-position
+			SekWriteWord(0x8000c4, p1_x); // P1 player sprite X-position
+			SekWriteWord(0x8000c6, p1_y); // P1 player+reticule sprite Y-position
+
+			SekWriteWord(0x800084, p2_x); // P2 reticule sprite X-position
+			SekWriteWord(0x800104, p2_x); // P2 player sprite X-position
+			SekWriteWord(0x800106, p2_y); // P2 player+reticule sprite Y-position
+			SekClose();
+
+		}
+
 		BurnTrackballConfig(0, AXIS_NORMAL, AXIS_REVERSED);
-		BurnTrackballFrame(0, TaitoAnalogPort0, TaitoAnalogPort1, 0x03, 0x0f);
+		BurnTrackballFrame(0, TaitoAnalogPort0, TaitoAnalogPort1, 0x01, 0x3f);
 		BurnTrackballUpdate(0);
 
 		BurnTrackballConfig(1, AXIS_NORMAL, AXIS_REVERSED);
-		BurnTrackballFrame(1, TaitoAnalogPort2, TaitoAnalogPort3, 0x03, 0x0f);
+		BurnTrackballFrame(1, TaitoAnalogPort2, TaitoAnalogPort3, 0x01, 0x3f);
 		BurnTrackballUpdate(1);
 	}
+
+	// The Lightgun hack must stay disabled until the game boots up
+	if (frame_counter != -1) frame_counter++;
+	if (frame_counter > 200) frame_counter = -1;
 }
 
 static void DrvFMIRQHandler(INT32, INT32 nStatus)
@@ -1724,7 +1763,9 @@ static INT32 DrvDoReset(INT32 reset_ram)
 	ZetClose();
 
 	if (sound_config == 0) {
+		ZetOpen(0);
 		BurnYM2610Reset();
+		ZetClose();
 	} else {
 		ZetOpen(0);
 		BurnYM2203Reset();
@@ -1741,7 +1782,11 @@ static INT32 DrvDoReset(INT32 reset_ram)
 	TaitoZ80Bank = 0;
 	LastScrollX = 0;
 
+	nCyclesExtra = 0;
+
 	HiscoreReset();
+
+	frame_counter = 0;
 
 	return 0;
 }
@@ -1753,7 +1798,7 @@ static INT32 MemIndex()
 	Taito68KRom1			= Next; Next += ((Taito68KRom1Size - 1) | 0x7ffff) + 1;
 	TaitoZ80Rom1			= Next; Next += TaitoZ80Rom1Size;
 
-	TaitoChars			= Next; Next += (TaitoCharRomSize * 8) / 4;
+	TaitoChars				= Next; Next += (TaitoCharRomSize * 8) / 4;
 	TaitoSpritesA			= Next; Next += (TaitoCharRomSize * 8) / 4;
 
 	TaitoMSM6295Rom			= Next; Next += TaitoMSM6295RomSize;
@@ -1761,7 +1806,7 @@ static INT32 MemIndex()
 	TaitoYM2610BRom			= Next; Next += TaitoYM2610BRomSize;
 
 	if (!(TaitoMSM6295RomSize | TaitoYM2610ARomSize | TaitoYM2610ARomSize)) {
-						Next += 0x040000; // games without samples...
+							Next += 0x040000; // games without samples...
 	}
 
 	TaitoRamStart			= Next;
@@ -1771,16 +1816,16 @@ static INT32 MemIndex()
 	TaitoSpriteRam			= Next; Next += 0x002000;
 
 	// hit the ice
-	DrvPxlRAM			= Next; Next += 0x080000;
+	DrvPxlRAM				= Next; Next += 0x080000;
 	DrvPxlScroll			= (UINT16*)Next; Next += 2 * sizeof(UINT16);
 
 	TaitoZ80Ram1			= Next; Next += 0x002000;
 
-	TaitoRamEnd			= Next;
+	TaitoRamEnd				= Next;
 
 	TaitoPalette			= (UINT32*)Next; Next += 0x1000 * sizeof(UINT32);
 
-	TaitoMemEnd			= Next;
+	TaitoMemEnd				= Next;
 
 	return 0;
 }
@@ -1833,7 +1878,7 @@ static void common_ym2610_init()
 	BurnTimerAttachZet(cpu_speed[1]);
 	BurnYM2610SetRoute(BURN_SND_YM2610_YM2610_ROUTE_1, 1.00, BURN_SND_ROUTE_BOTH);
 	BurnYM2610SetRoute(BURN_SND_YM2610_YM2610_ROUTE_2, 1.00, BURN_SND_ROUTE_BOTH);
-	BurnYM2610SetRoute(BURN_SND_YM2610_AY8910_ROUTE, 0.25, BURN_SND_ROUTE_BOTH);
+	BurnYM2610SetRoute(BURN_SND_YM2610_AY8910_ROUTE, 0.15, BURN_SND_ROUTE_BOTH);
 }
 
 static void common_ym2203_init()
@@ -1857,9 +1902,9 @@ static void common_ym2203_init()
 	BurnYM2203SetPorts(0, NULL, NULL, &bankswitch, NULL);
 	BurnTimerAttachZet(cpu_speed[1]);
 	BurnYM2203SetRoute(0, BURN_SND_YM2203_YM2203_ROUTE, 0.80, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_1, 0.25, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_2, 0.25, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_3, 0.25, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_1, 0.15, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_2, 0.15, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_3, 0.15, BURN_SND_ROUTE_BOTH);
 
 	MSM6295ROM = TaitoMSM6295Rom;
 
@@ -1948,6 +1993,7 @@ static INT32 DrvExit()
 
 	if (has_trackball) {
 		BurnTrackballExit();
+		BurnGunExit();
 		has_trackball = 0;
 	}
 
@@ -2011,8 +2057,6 @@ static INT32 DrvDraw()
 		return 0;
 	}
 
-	if (spritelag_disable) TC0180VCUBufferSprites();
-
 	if (~nBurnLayer & 1) BurnTransferClear();
 
 	if (nBurnLayer & 1) TC0180VCUDrawLayer(color_config[0], 1, -1);
@@ -2028,8 +2072,7 @@ static INT32 DrvDraw()
 	if (nBurnLayer & 4) TC0180VCUDrawCharLayer(color_config[2]);
 
 	BurnTransferCopy(TaitoPalette);
-
-	if (!spritelag_disable) TC0180VCUBufferSprites();
+	BurnGunDrawTargets();
 
 	return 0;
 }
@@ -2054,25 +2097,22 @@ static INT32 DrvFrame()
 	SekOpen(0);
 	ZetOpen(0);
 
-	INT32 SekSpeed = (INT32)((INT64)cpu_speed[0] * nBurnCPUSpeedAdjust / 0x100);
-	INT32 ZetSpeed = (INT32)((INT64)cpu_speed[1] * nBurnCPUSpeedAdjust / 0x100);
-
 	INT32 nInterleave = 200;	// high so that ym2203 sounds are good, 200 is perfect for irq #0
-	INT32 nCyclesTotal[2] = { SekSpeed / 60, ZetSpeed / 60 };
-	INT32 nCyclesDone[2] = { 0, 0 };
-	INT32 nNext[2] = { 0, 0 };
+	INT32 nCyclesTotal[2] = { BurnSpeedAdjust(cpu_speed[0]) / 60, BurnSpeedAdjust(cpu_speed[1]) / 60 };
+	INT32 nCyclesDone[2] = { nCyclesExtra, 0 };
 
 	for (INT32 i = 0; i < nInterleave; i++) {
-		nNext[0] += nCyclesTotal[0] / nInterleave;
-		nCyclesDone[0] += SekRun(nNext[0] - nCyclesDone[0]);
-		if (i == 4)                     SekSetIRQLine(irq_config[0], CPU_IRQSTATUS_AUTO); // Start of frame + 5000 cycles
-		if (i == (nInterleave / 1) - 1) SekSetIRQLine(irq_config[1], CPU_IRQSTATUS_AUTO); // End of frame
-		nNext[1] += nCyclesTotal[1] / nInterleave;
-		BurnTimerUpdate(nNext[1]);
-		nCyclesDone[1] += nNext[1];
+		CPU_RUN(0, Sek);
+		if (i == 4)               SekSetIRQLine(irq_config[0], CPU_IRQSTATUS_AUTO); // Start of frame + 5000 cycles
+		if (i == nInterleave - 1) SekSetIRQLine(irq_config[1], CPU_IRQSTATUS_AUTO); // End of frame
+
+		CPU_RUN_TIMER(1);
 	}
 
-	BurnTimerEndFrame(nCyclesTotal[1]);
+	ZetClose();
+	SekClose();
+
+	nCyclesExtra = nCyclesDone[0] - nCyclesTotal[0];
 
 	if (pBurnSoundOut) {
 		if (sound_config == 0) {
@@ -2083,12 +2123,13 @@ static INT32 DrvFrame()
 		}
 	}
 
-	ZetClose();
-	SekClose();
-	
+	if (spritelag_disable) TC0180VCUBufferSprites();
+
 	if (pBurnDraw) {
 		DrvDraw();
 	}
+
+	if (!spritelag_disable) TC0180VCUBufferSprites();
 
 	return 0;
 }
@@ -2119,15 +2160,16 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		if (sound_config == 0) {
 			BurnYM2610Scan(nAction, pnMin);
 		} else {
-			ZetOpen(0); // because of bankswitch() port callback.
 			BurnYM2203Scan(nAction, pnMin);
-			ZetClose();
 			MSM6295Scan(nAction, pnMin);
 		}
 
 		SCAN_VAR(TaitoZ80Bank);
 		SCAN_VAR(TaitoWatchdog);
 		if (has_trackball) BurnTrackballScan();
+		SCAN_VAR(frame_counter);
+
+		SCAN_VAR(nCyclesExtra);
 	}
 
 	if (nAction & ACB_WRITE) {
@@ -2274,7 +2316,7 @@ static UINT8 __fastcall tetrist_read_byte(UINT32 a)
 			return TC0140SYTCommRead();
 
 		case 0x600010: {
-			return BurnTrackballReadWord(0, 1) & 0xff;
+		    return BurnTrackballReadWord(0, 1) & 0xff;
 		}
 
 		case 0x600014: {
@@ -2371,7 +2413,7 @@ static UINT8 __fastcall pbobble_read_byte(UINT32 a)
 	switch (a)
 	{
 		case 0x500000:
-			return TC0220IOCDip[0];
+			return TaitoInput[0]; // service mode button (0x80, active low)
 
 		case 0x500002:
 			return ((TC0220IOCInput[0] & 0xfe) | (EEPROMRead() & 1));
@@ -3023,10 +3065,14 @@ static struct BurnRomInfo masterwRomDesc[] = {
 	{ "b72_04.34",			0x020000, 0x141e964c, TAITO_68KROM1_BYTESWAP }, //  2
 	{ "b72_03.25",			0x020000, 0xf4523496, TAITO_68KROM1_BYTESWAP }, //  3
 
-	{ "b72_07.30",			0x010000, 0x2b1a946f, TAITO_Z80ROM1 },		//  4 Z80 code
+	{ "b72_07.30",			0x010000, 0x2b1a946f, TAITO_Z80ROM1 },			//  4 Z80 code
 
-	{ "b72-02.6",			0x080000, 0x843444eb, TAITO_CHARS },		//  5 Graphics Tiles
-	{ "b72-01.5",			0x080000, 0xa24ac26e, TAITO_CHARS },		//  6
+	{ "b72-02.6",			0x080000, 0x843444eb, TAITO_CHARS },			//  5 Graphics Tiles
+	{ "b72-01.5",			0x080000, 0xa24ac26e, TAITO_CHARS },			//  6
+	
+	{ "b72-08.ic3",			0x000104, 0x1501a44a, BRF_OPT },				//  7 PLDs
+	{ "b72-09.ic23",		0x000104, 0xa1d19d49, BRF_OPT },				//  8
+	{ "b72-10.ic32",		0x000104, 0x20b0450b, BRF_OPT },				//  9
 };
 
 STD_ROM_PICK(masterw)
@@ -3056,10 +3102,14 @@ static struct BurnRomInfo masterwuRomDesc[] = {
 	{ "b72_04.34",			0x020000, 0x141e964c, TAITO_68KROM1_BYTESWAP }, //  2
 	{ "b72_03.25",			0x020000, 0xf4523496, TAITO_68KROM1_BYTESWAP }, //  3
 
-	{ "b72_07.30",			0x010000, 0x2b1a946f, TAITO_Z80ROM1 },		//  4 Z80 code
+	{ "b72_07.30",			0x010000, 0x2b1a946f, TAITO_Z80ROM1 },			//  4 Z80 code
 
-	{ "b72-02.6",			0x080000, 0x843444eb, TAITO_CHARS },		//  5 Graphics Tiles
-	{ "b72-01.5",			0x080000, 0xa24ac26e, TAITO_CHARS },		//  6
+	{ "b72-02.6",			0x080000, 0x843444eb, TAITO_CHARS },			//  5 Graphics Tiles
+	{ "b72-01.5",			0x080000, 0xa24ac26e, TAITO_CHARS },			//  6
+	
+	{ "b72-08.ic3",			0x000104, 0x1501a44a, BRF_OPT },				//  7 PLDs
+	{ "b72-09.ic23",		0x000104, 0xa1d19d49, BRF_OPT },				//  8
+	{ "b72-10.ic32",		0x000104, 0x20b0450b, BRF_OPT },				//  9
 };
 
 STD_ROM_PICK(masterwu)
@@ -3084,10 +3134,14 @@ static struct BurnRomInfo masterwjRomDesc[] = {
 	{ "b72_04.34",			0x020000, 0x141e964c, TAITO_68KROM1_BYTESWAP }, //  2
 	{ "b72_03.25",			0x020000, 0xf4523496, TAITO_68KROM1_BYTESWAP }, //  3
 
-	{ "b72_07.30",			0x010000, 0x2b1a946f, TAITO_Z80ROM1 },		//  4 Z80 Code
+	{ "b72_07.30",			0x010000, 0x2b1a946f, TAITO_Z80ROM1 },			//  4 Z80 Code
 
-	{ "b72-02.6",			0x080000, 0x843444eb, TAITO_CHARS },		//  5 Graphics Tiles
-	{ "b72-01.5",			0x080000, 0xa24ac26e, TAITO_CHARS },		//  6
+	{ "b72-02.6",			0x080000, 0x843444eb, TAITO_CHARS },			//  5 Graphics Tiles
+	{ "b72-01.5",			0x080000, 0xa24ac26e, TAITO_CHARS },			//  6
+	
+	{ "b72-08.ic3",			0x000104, 0x1501a44a, BRF_OPT },				//  7 PLDs
+	{ "b72-09.ic23",		0x000104, 0xa1d19d49, BRF_OPT },				//  8
+	{ "b72-10.ic32",		0x000104, 0x20b0450b, BRF_OPT },				//  9
 };
 
 STD_ROM_PICK(masterwj)
@@ -3112,8 +3166,8 @@ static struct BurnRomInfo yukiwoRomDesc[] = {
 	{ "ic34-rom1e.bin",		0x010000, 0x5ab7bc95, TAITO_68KROM1_BYTESWAP }, //  2
 	{ "ic25-rom10.bin",		0x010000, 0x0571b986, TAITO_68KROM1_BYTESWAP }, //  3
 
-	{ "ic30-snd.bin",		0x008000, 0x8632adb7, TAITO_Z80ROM1 },		//  4 Z80 Code
-	{ "ic30-snd.bin",		0x008000, 0x8632adb7, TAITO_Z80ROM1 },		//
+	{ "ic30-snd.bin",		0x008000, 0x8632adb7, TAITO_Z80ROM1 },			//  4 Z80 Code
+	{ "ic30-snd.bin",		0x008000, 0x8632adb7, TAITO_Z80ROM1 },			//
 
 	{ "ic5-9df1.bin",		0x020000, 0x0507b908, TAITO_CHARS_BYTESWAP },	//  5 Graphics Tiles
 	{ "ic1-a010.bin",		0x020000, 0x0030dce2, TAITO_CHARS_BYTESWAP },	//  6
@@ -3142,21 +3196,21 @@ struct BurnDriver BurnDrvYukiwo = {
 // Nastar (World)
 
 static struct BurnRomInfo nastarRomDesc[] = {
-	{ "b81-08.50",			0x020000, 0xd6da9169, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
-	{ "b81-13.31",			0x020000, 0x60d176fb, TAITO_68KROM1_BYTESWAP }, //  1
-	{ "b81-10.49",			0x020000, 0x53f34344, TAITO_68KROM1_BYTESWAP }, //  2
-	{ "b81-09.30",			0x020000, 0x630d34af, TAITO_68KROM1_BYTESWAP }, //  3
+	{ "b81-08.50",				0x020000, 0xd6da9169, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
+	{ "b81-13.31",				0x020000, 0x60d176fb, TAITO_68KROM1_BYTESWAP }, //  1
+	{ "b81-10.49",				0x020000, 0x53f34344, TAITO_68KROM1_BYTESWAP }, //  2
+	{ "b81-09.30",				0x020000, 0x630d34af, TAITO_68KROM1_BYTESWAP }, //  3
 
-	{ "b81-11.37",			0x010000, 0x3704bf09, TAITO_Z80ROM1 },		//  4 Z80 Code
+	{ "b81-11.37",				0x010000, 0x3704bf09, TAITO_Z80ROM1 },			//  4 Z80 Code
 
-	{ "b81-03.14",			0x080000, 0x551b75e6, TAITO_CHARS },		//  5 Graphics Tiles
-	{ "b81-04.15",			0x080000, 0xcf734e12, TAITO_CHARS },		//  6
+	{ "b81-03.14",				0x080000, 0x551b75e6, TAITO_CHARS },			//  5 Graphics Tiles
+	{ "b81-04.15",				0x080000, 0xcf734e12, TAITO_CHARS },			//  6
 
-	{ "b81-02.2",			0x080000, 0x20ec3b86, TAITO_YM2610A },		//  7 YM2610 A Samples
+	{ "b81-02.2",				0x080000, 0x20ec3b86, TAITO_YM2610A },			//  7 YM2610 A Samples
 
-	{ "b81-01.1",			0x080000, 0xb33f796b, TAITO_YM2610B },		//  8 YM2610 B Samples
+	{ "b81-01.1",				0x080000, 0xb33f796b, TAITO_YM2610B },			//  8 YM2610 B Samples
 
-	{ "ampal16l8-b81-05.21",	0x000104, 0x922fd368, BRF_OPT },		//  9 PLDs
+	{ "ampal16l8-b81-05.21",	0x000104, 0x922fd368, BRF_OPT },			//  9 PLDs
 	{ "ampal16l8-b81-06a.22",	0x000104, 0xbb1cec84, BRF_OPT },	        // 10
 };
 
@@ -3188,14 +3242,14 @@ static struct BurnRomInfo rastsag2RomDesc[] = {
 	{ "b81-10.49",			0x020000, 0x53f34344, TAITO_68KROM1_BYTESWAP }, //  2
 	{ "b81-09.30",			0x020000, 0x630d34af, TAITO_68KROM1_BYTESWAP }, //  3
 
-	{ "b81-11.37",			0x010000, 0x3704bf09, TAITO_Z80ROM1 },		//  4 Z80 Code
+	{ "b81-11.37",			0x010000, 0x3704bf09, TAITO_Z80ROM1 },			//  4 Z80 Code
 
-	{ "b81-03.14",			0x080000, 0x551b75e6, TAITO_CHARS },		//  5 Graphics Tiles
-	{ "b81-04.15",			0x080000, 0xcf734e12, TAITO_CHARS },		//  6
+	{ "b81-03.14",			0x080000, 0x551b75e6, TAITO_CHARS },			//  5 Graphics Tiles
+	{ "b81-04.15",			0x080000, 0xcf734e12, TAITO_CHARS },			//  6
 
-	{ "b81-02.2",			0x080000, 0x20ec3b86, TAITO_YM2610A },		//  7 YM2610 A Samples
+	{ "b81-02.2",			0x080000, 0x20ec3b86, TAITO_YM2610A },			//  7 YM2610 A Samples
 
-	{ "b81-01.1",			0x080000, 0xb33f796b, TAITO_YM2610B },		//  8 YM2610 B Samples
+	{ "b81-01.1",			0x080000, 0xb33f796b, TAITO_YM2610B },			//  8 YM2610 B Samples
 };
 
 STD_ROM_PICK(rastsag2)
@@ -3220,14 +3274,14 @@ static struct BurnRomInfo nastarwRomDesc[] = {
 	{ "b81-10.49",			0x020000, 0x53f34344, TAITO_68KROM1_BYTESWAP }, //  2
 	{ "b81-09.30",			0x020000, 0x630d34af, TAITO_68KROM1_BYTESWAP }, //  3
 
-	{ "b81-11.37",			0x010000, 0x3704bf09, TAITO_Z80ROM1 },		//  4 Z80 Code
+	{ "b81-11.37",			0x010000, 0x3704bf09, TAITO_Z80ROM1 },			//  4 Z80 Code
 
-	{ "b81-03.14",			0x080000, 0x551b75e6, TAITO_CHARS },		//  5 Graphics Tiles
-	{ "b81-04.15",			0x080000, 0xcf734e12, TAITO_CHARS },		//  6
+	{ "b81-03.14",			0x080000, 0x551b75e6, TAITO_CHARS },			//  5 Graphics Tiles
+	{ "b81-04.15",			0x080000, 0xcf734e12, TAITO_CHARS },			//  6
 
-	{ "b81-02.2",			0x080000, 0x20ec3b86, TAITO_YM2610A },		//  7 YM2610 A Samples
+	{ "b81-02.2",			0x080000, 0x20ec3b86, TAITO_YM2610A },			//  7 YM2610 A Samples
 
-	{ "b81-01.1",			0x080000, 0xb33f796b, TAITO_YM2610B },		//  8 YM2610 B Samples
+	{ "b81-01.1",			0x080000, 0xb33f796b, TAITO_YM2610B },			//  8 YM2610 B Samples
 };
 
 STD_ROM_PICK(nastarw)
@@ -3244,7 +3298,7 @@ struct BurnDriver BurnDrvNastarw = {
 };
 
 
-// Rambo III (Europe set 1)
+// Rambo III (Europe)
 
 static struct BurnRomInfo rambo3RomDesc[] = {
 	{ "ramb3-11.bin",		0x020000, 0x1cc42247, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
@@ -3268,8 +3322,11 @@ STD_ROM_FN(rambo3)
 static INT32 Rambo3Init()
 {
 	nTaitoInputConfig[1] = 0x30;
+
 	has_trackball = 1;
-	BurnTrackballInit(2);
+	BurnTrackballInit(2); // game supports trackball
+
+	BurnGunInit(2, false); // for lightgun hack
 
 	return CommonInit(TetristInitCallback, 0, 2, 0, 1, 6);
 }
@@ -3308,7 +3365,7 @@ STD_ROM_FN(rambo3u)
 
 struct BurnDriver BurnDrvRambo3u = {
 	"rambo3u", "rambo3", NULL, NULL, "1989",
-	"Rambo III (US)\0", NULL, "Taito Europe Corporation", "Taito B System",
+	"Rambo III (US)\0", NULL, "Taito America Corporation", "Taito B System",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_TAITOB, GBF_SHOOT, 0,
 	NULL, rambo3uRomInfo, rambo3uRomName, NULL, NULL, NULL, NULL, Rambo3InputInfo, Rambo3DIPInfo,
@@ -3498,8 +3555,8 @@ static INT32 TetristInit()
 }
 
 struct BurnDriver BurnDrvTetrist = {
-	"tetrist", "tetris", NULL, NULL, "1989",
-	"Tetris (Japan, B-System, YM2610)\0", "buggy - use parent!", "Sega", "Taito B System",
+	"tetrist", "tetris", NULL, NULL, "1988",
+	"Tetris (Japan, Taito B-System, Nastar Conversion Kit)\0", "buggy - use parent!", "Sega", "Taito B System",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_TAITOB, GBF_PUZZLE, 0,
 	NULL, tetristRomInfo, tetristRomName, NULL, NULL, NULL, NULL, CommonInputInfo, TetristDIPInfo,
@@ -3531,8 +3588,8 @@ static INT32 TetristaInit()
 }
 
 struct BurnDriver BurnDrvTetrista = {
-	"tetrista", "tetris", NULL, NULL, "1989",
-	"Tetris (Japan, B-System, YM2203)\0", NULL, "Sega", "Taito B System",
+	"tetrista", "tetris", NULL, NULL, "1988",
+	"Tetris (Japan, Taito B-System, Master of Weapon Conversion Kit)\0", NULL, "Sega", "Taito B System",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_TAITOB, GBF_PUZZLE, 0,
 	NULL, tetristaRomInfo, tetristaRomName, NULL, NULL, NULL, NULL, CommonInputInfo, TetristDIPInfo,
@@ -3544,19 +3601,19 @@ struct BurnDriver BurnDrvTetrista = {
 // Violence Fight (World)
 
 static struct BurnRomInfo viofightRomDesc[] = {
-	{ "c16-11.42",			0x010000, 0x23dbd388, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
-	{ "c16-14.23",			0x010000, 0xdc934f6a, TAITO_68KROM1_BYTESWAP }, //  1
-	{ "c16-07.41",			0x020000, 0x64d1d059, TAITO_68KROM1_BYTESWAP }, //  2
-	{ "c16-06.22",			0x020000, 0x043761d8, TAITO_68KROM1_BYTESWAP }, //  3
+	{ "c16-11.42",				0x010000, 0x23dbd388, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
+	{ "c16-14.23",				0x010000, 0xdc934f6a, TAITO_68KROM1_BYTESWAP }, //  1
+	{ "c16-07.41",				0x020000, 0x64d1d059, TAITO_68KROM1_BYTESWAP }, //  2
+	{ "c16-06.22",				0x020000, 0x043761d8, TAITO_68KROM1_BYTESWAP }, //  3
 
-	{ "c16-12.32",			0x010000, 0x6fb028c7, TAITO_Z80ROM1 },          //  4 Z80 Code
+	{ "c16-12.32",				0x010000, 0x6fb028c7, TAITO_Z80ROM1 },          //  4 Z80 Code
 
-	{ "c16-01.1",			0x080000, 0x7059ce83, TAITO_CHARS },            //  5 Graphics Tiles
-	{ "c16-02.2",			0x080000, 0xb458e905, TAITO_CHARS },            //  6
-	{ "c16-03.3",			0x080000, 0x515a9431, TAITO_CHARS },            //  7
-	{ "c16-04.4",			0x080000, 0xebf285e2, TAITO_CHARS },            //  8
+	{ "c16-01.1",				0x080000, 0x7059ce83, TAITO_CHARS },            //  5 Graphics Tiles
+	{ "c16-02.2",				0x080000, 0xb458e905, TAITO_CHARS },            //  6
+	{ "c16-03.3",				0x080000, 0x515a9431, TAITO_CHARS },            //  7
+	{ "c16-04.4",				0x080000, 0xebf285e2, TAITO_CHARS },            //  8
 
-	{ "c16-05.47",			0x080000, 0xa49d064a, TAITO_MSM6295 },          //  9 MSM6295 Samples
+	{ "c16-05.47",				0x080000, 0xa49d064a, TAITO_MSM6295 },          //  9 MSM6295 Samples
 
 	{ "pal16l8b-c16-08.ic34",	0x000104, 0x9456d278, BRF_OPT },		// 10 PLDs
 	{ "pal16l8b-c16-09.ic35",	0x000104, 0x0965baab, BRF_OPT },		// 11
@@ -3584,19 +3641,19 @@ struct BurnDriver BurnDrvViofight = {
 // Violence Fight (US)
 
 static struct BurnRomInfo viofightuRomDesc[] = {
-	{ "c16-11.42",			0x010000, 0x23dbd388, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
-	{ "c16-13.23",			0x010000, 0xab947ffc, TAITO_68KROM1_BYTESWAP }, //  1
-	{ "c16-07.41",			0x020000, 0x64d1d059, TAITO_68KROM1_BYTESWAP }, //  2
-	{ "c16-06.22",			0x020000, 0x043761d8, TAITO_68KROM1_BYTESWAP }, //  3
+	{ "c16-11.42",				0x010000, 0x23dbd388, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
+	{ "c16-13.23",				0x010000, 0xab947ffc, TAITO_68KROM1_BYTESWAP }, //  1
+	{ "c16-07.41",				0x020000, 0x64d1d059, TAITO_68KROM1_BYTESWAP }, //  2
+	{ "c16-06.22",				0x020000, 0x043761d8, TAITO_68KROM1_BYTESWAP }, //  3
 
-	{ "c16-12.32",			0x010000, 0x6fb028c7, TAITO_Z80ROM1 },		//  4 Z80 Code
+	{ "c16-12.32",				0x010000, 0x6fb028c7, TAITO_Z80ROM1 },		//  4 Z80 Code
 
-	{ "c16-01.1",			0x080000, 0x7059ce83, TAITO_CHARS },		//  5 Graphics Tiles
-	{ "c16-02.2",			0x080000, 0xb458e905, TAITO_CHARS },		//  6
-	{ "c16-03.3",			0x080000, 0x515a9431, TAITO_CHARS },		//  7
-	{ "c16-04.4",			0x080000, 0xebf285e2, TAITO_CHARS }, 		//  8
+	{ "c16-01.1",				0x080000, 0x7059ce83, TAITO_CHARS },		//  5 Graphics Tiles
+	{ "c16-02.2",				0x080000, 0xb458e905, TAITO_CHARS },		//  6
+	{ "c16-03.3",				0x080000, 0x515a9431, TAITO_CHARS },		//  7
+	{ "c16-04.4",				0x080000, 0xebf285e2, TAITO_CHARS }, 		//  8
 
-	{ "c16-05.47",			0x080000, 0xa49d064a, TAITO_MSM6295 },		//  9 MSM6295 Samples
+	{ "c16-05.47",				0x080000, 0xa49d064a, TAITO_MSM6295 },		//  9 MSM6295 Samples
 
 	{ "pal16l8b-c16-08.ic34",	0x000104, 0x9456d278, BRF_OPT },		// 10 PLDs
 	{ "pal16l8b-c16-09.ic35",	0x000104, 0x0965baab, BRF_OPT },		// 11
@@ -3619,19 +3676,19 @@ struct BurnDriver BurnDrvViofightu = {
 // Violence Fight (Japan)
 
 static struct BurnRomInfo viofightjRomDesc[] = {
-	{ "c16-11.42",			0x010000, 0x23dbd388, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
-	{ "c16-10.23",			0x010000, 0x329d2e46, TAITO_68KROM1_BYTESWAP }, //  1
-	{ "c16-07.41",			0x020000, 0x64d1d059, TAITO_68KROM1_BYTESWAP }, //  2
-	{ "c16-06.22",			0x020000, 0x043761d8, TAITO_68KROM1_BYTESWAP }, //  3
+	{ "c16-11.42",				0x010000, 0x23dbd388, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
+	{ "c16-10.23",				0x010000, 0x329d2e46, TAITO_68KROM1_BYTESWAP }, //  1
+	{ "c16-07.41",				0x020000, 0x64d1d059, TAITO_68KROM1_BYTESWAP }, //  2
+	{ "c16-06.22",				0x020000, 0x043761d8, TAITO_68KROM1_BYTESWAP }, //  3
 
-	{ "c16-12.32",			0x010000, 0x6fb028c7, TAITO_Z80ROM1 },		//  4 Z80 Code
+	{ "c16-12.32",				0x010000, 0x6fb028c7, TAITO_Z80ROM1 },		//  4 Z80 Code
 
-	{ "c16-01.1",			0x080000, 0x7059ce83, TAITO_CHARS },		//  5 Graphics Tiles
-	{ "c16-02.2",			0x080000, 0xb458e905, TAITO_CHARS },		//  6
-	{ "c16-03.3",			0x080000, 0x515a9431, TAITO_CHARS },		//  7
-	{ "c16-04.4",			0x080000, 0xebf285e2, TAITO_CHARS },		//  8
+	{ "c16-01.1",				0x080000, 0x7059ce83, TAITO_CHARS },		//  5 Graphics Tiles
+	{ "c16-02.2",				0x080000, 0xb458e905, TAITO_CHARS },		//  6
+	{ "c16-03.3",				0x080000, 0x515a9431, TAITO_CHARS },		//  7
+	{ "c16-04.4",				0x080000, 0xebf285e2, TAITO_CHARS },		//  8
 
-	{ "c16-05.47",			0x080000, 0xa49d064a, TAITO_MSM6295 },          //  9 MSM6295 Samples
+	{ "c16-05.47",				0x080000, 0xa49d064a, TAITO_MSM6295 },          //  9 MSM6295 Samples
 
 	{ "pal16l8b-c16-08.ic34",	0x000104, 0x9456d278, BRF_OPT },		// 10 PLDs
 	{ "pal16l8b-c16-09.ic35",	0x000104, 0x0965baab, BRF_OPT },		// 11
@@ -3744,17 +3801,17 @@ struct BurnDriver BurnDrvAshurau = {
 // Hit the Ice (US)
 
 static struct BurnRomInfo hiticeRomDesc[] = {
-	{ "c59-10.42",			0x020000, 0xe4ffad15, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
-	{ "c59-12.64",			0x020000, 0xa080d7af, TAITO_68KROM1_BYTESWAP }, //  1
-	{ "c59-09.41",			0x010000, 0xe243e3b0, TAITO_68KROM1_BYTESWAP }, //  2
-	{ "c59-11.63",			0x010000, 0x4d4dfa52, TAITO_68KROM1_BYTESWAP }, //  3
+	{ "c59-10.42",				0x020000, 0xe4ffad15, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
+	{ "c59-12.64",				0x020000, 0xa080d7af, TAITO_68KROM1_BYTESWAP }, //  1
+	{ "c59-09.41",				0x010000, 0xe243e3b0, TAITO_68KROM1_BYTESWAP }, //  2
+	{ "c59-11.63",				0x010000, 0x4d4dfa52, TAITO_68KROM1_BYTESWAP }, //  3
 
-	{ "c59-08.50",			0x010000, 0xd3cbc10b, TAITO_Z80ROM1 },		//  4 Z80 Code
+	{ "c59-08.50",				0x010000, 0xd3cbc10b, TAITO_Z80ROM1 },		//  4 Z80 Code
 
-	{ "c59-03.12",			0x080000, 0x9e513048, TAITO_CHARS },		//  5 Graphics Tiles
-	{ "c59-02.13",			0x080000, 0xaffb5e07, TAITO_CHARS },		//  6
+	{ "c59-03.12",				0x080000, 0x9e513048, TAITO_CHARS },		//  5 Graphics Tiles
+	{ "c59-02.13",				0x080000, 0xaffb5e07, TAITO_CHARS },		//  6
 
-	{ "c59-01.30",			0x020000, 0x46ae291d, TAITO_MSM6295 },		//  7 MSM6295 Samples
+	{ "c59-01.30",				0x020000, 0x46ae291d, TAITO_MSM6295 },		//  7 MSM6295 Samples
 
 	{ "pal20l8b-c59-04.25",		0x000144, 0x2ebcf07c, BRF_OPT }, 		//  8 PLDs
 	{ "pal16l8b-c59-05.26",		0x000104, 0x37b67c5c, BRF_OPT }, 		//  9
@@ -3772,7 +3829,7 @@ static INT32 HiticeInit()
 
 struct BurnDriver BurnDrvHitice = {
 	"hitice", NULL, NULL, NULL, "1990",
-	"Hit the Ice (US)\0", NULL, "Taito Corporation (Williams licence)", "Taito B System",
+	"Hit the Ice (US)\0", NULL, "Taito Corporation (Williams license)", "Taito B System",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_TAITOB, GBF_SPORTSMISC, 0,
 	NULL, hiticeRomInfo, hiticeRomName, NULL, NULL, NULL, NULL, HiticeInputInfo, HiticeDIPInfo,
@@ -3781,20 +3838,61 @@ struct BurnDriver BurnDrvHitice = {
 };
 
 
+// Hit the Ice (US, with riser board)
+
+static struct BurnRomInfo hiticerbRomDesc[] = {
+	{ "c59-10.42",				0x20000, 0xe4ffad15, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
+	{ "c59-12.64",				0x20000, 0xa080d7af, TAITO_68KROM1_BYTESWAP }, //  1
+	{ "c59-09.41",				0x10000, 0xe243e3b0, TAITO_68KROM1_BYTESWAP }, //  2
+	{ "c59-11.63",				0x10000, 0x4d4dfa52, TAITO_68KROM1_BYTESWAP }, //  3
+
+	{ "c59-08.50",				0x10000, 0xd3cbc10b, TAITO_Z80ROM1 },		//  4 Z80 Code
+
+	{ "ic5.bin",				0x20000, 0x55698bbc, TAITO_CHARS_BYTESWAP },		//  5 Graphics Tiles
+	{ "ic6.bin",				0x20000, 0xa7cb863f, TAITO_CHARS_BYTESWAP },		//  6
+	{ "ic1.bin",				0x20000, 0xfca01c22, TAITO_CHARS_BYTESWAP },		//  7
+	{ "ic2.bin",				0x20000, 0xf1c09244, TAITO_CHARS_BYTESWAP },		//  8
+	{ "ic8.bin",				0x20000, 0x7cd3aa29, TAITO_CHARS_BYTESWAP },		//  9
+	{ "ic7.bin",				0x20000, 0x6b2979c7, TAITO_CHARS_BYTESWAP },		// 10
+	{ "ic4.bin",				0x20000, 0xd0f2fd35, TAITO_CHARS_BYTESWAP },		// 11
+	{ "ic3.bin",				0x20000, 0x51621004, TAITO_CHARS_BYTESWAP },		// 12
+
+	{ "ic30.bin",				0x20000, 0x46ae291d, TAITO_MSM6295 },		// 13 MSM6295 Samples
+
+	{ "pal20l8b-c59-04.25",		0x000144, 0x2ebcf07c, BRF_OPT }, 		// 14 PLDs
+	{ "pal16l8b-c59-05.26",		0x000104, 0x37b67c5c, BRF_OPT }, 		// 15
+	{ "pal20l8b-c59-06.53",		0x000144, 0xbf176875, BRF_OPT }, 		// 16
+	{ "pal16r4b-c59-07.61",		0x000104, 0xcf64bd95, BRF_OPT }, 		// 17
+};
+
+STD_ROM_PICK(hiticerb)
+STD_ROM_FN(hiticerb)
+
+struct BurnDriver BurnDrvHiticerb = {
+	"hiticerb", "hitice", NULL, NULL, "1990",
+	"Hit the Ice (US, with riser board)\0", NULL, "Taito Corporation (Williams license)", "Taito B System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_TAITOB, GBF_SPORTSMISC, 0,
+	NULL, hiticerbRomInfo, hiticerbRomName, NULL, NULL, NULL, NULL, HiticeInputInfo, HiticeDIPInfo,
+	HiticeInit, DrvExit, DrvFrame, DrvDraw, DrvScan, NULL, 0x1000,
+	320, 224, 4, 3
+};
+
+
 // Hit the Ice (Japan)
 
 static struct BurnRomInfo hiticejRomDesc[] = {
-	{ "c59-23.42",			0x020000, 0x01958fcc, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
-	{ "c59-25.64",			0x020000, 0x71984c76, TAITO_68KROM1_BYTESWAP }, //  1
-	{ "c59-22.41",			0x010000, 0xc2c86140, TAITO_68KROM1_BYTESWAP }, //  2
-	{ "c59-24.63",			0x010000, 0x26c8f409, TAITO_68KROM1_BYTESWAP }, //  3
+	{ "c59-23.42",				0x020000, 0x01958fcc, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
+	{ "c59-25.64",				0x020000, 0x71984c76, TAITO_68KROM1_BYTESWAP }, //  1
+	{ "c59-22.41",				0x010000, 0xc2c86140, TAITO_68KROM1_BYTESWAP }, //  2
+	{ "c59-24.63",				0x010000, 0x26c8f409, TAITO_68KROM1_BYTESWAP }, //  3
 
-	{ "c59-08.50",			0x010000, 0xd3cbc10b, TAITO_Z80ROM1 },		//  4 Z80 Code
+	{ "c59-08.50",				0x010000, 0xd3cbc10b, TAITO_Z80ROM1 },		//  4 Z80 Code
 
-	{ "c59-03.12",			0x080000, 0x9e513048, TAITO_CHARS },		//  5 Graphics Tiles
-	{ "c59-02.13",			0x080000, 0xaffb5e07, TAITO_CHARS },		//  6
+	{ "c59-03.12",				0x080000, 0x9e513048, TAITO_CHARS },		//  5 Graphics Tiles
+	{ "c59-02.13",				0x080000, 0xaffb5e07, TAITO_CHARS },		//  6
 
-	{ "c59-01.30",			0x020000, 0x46ae291d, TAITO_MSM6295 },		//  7 MSM6295 Samples
+	{ "c59-01.30",				0x020000, 0x46ae291d, TAITO_MSM6295 },		//  7 MSM6295 Samples
 
 	{ "pal20l8b-c59-04.25",		0x000144, 0x2ebcf07c, BRF_OPT }, 		//  8 PLDs
 	{ "pal16l8b-c59-05.26",		0x000104, 0x37b67c5c, BRF_OPT }, 		//  9
@@ -3965,20 +4063,20 @@ struct BurnDriver BurnDrvSilentdu = {
 // Ryu Jin (Japan, ET910000B PCB)
 
 static struct BurnRomInfo ryujinRomDesc[] = {
-	{ "rjn_02.ic32",		0x020000, 0x5fd353d5, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
-	{ "rjn_01.ic10",		0x020000, 0xf775e4b6, TAITO_68KROM1_BYTESWAP }, //  1
-	{ "ruj_04.ic31",		0x020000, 0x0c153cab, TAITO_68KROM1_BYTESWAP }, //  2
-	{ "ruj_03.ic9",			0x020000, 0x7695f89c, TAITO_68KROM1_BYTESWAP }, //  3
+	{ "rjn_02.ic32",			0x020000, 0x5fd353d5, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
+	{ "rjn_01.ic10",			0x020000, 0xf775e4b6, TAITO_68KROM1_BYTESWAP }, //  1
+	{ "ruj_04.ic31",			0x020000, 0x0c153cab, TAITO_68KROM1_BYTESWAP }, //  2
+	{ "ruj_03.ic9",				0x020000, 0x7695f89c, TAITO_68KROM1_BYTESWAP }, //  3
 
-	{ "ruj_05.ic15",		0x010000, 0x95270b16, TAITO_Z80ROM1 },		//  4 Z80 Code
+	{ "ruj_05.ic15",			0x010000, 0x95270b16, TAITO_Z80ROM1 },		//  4 Z80 Code
 
-	{ "ryujin-07.ic28",		0x100000, 0x34f50980, TAITO_CHARS },		//  5 Graphics Tiles
-	{ "ryujin-06.ic39",		0x100000, 0x1b85ff34, TAITO_CHARS },		//  6
+	{ "ryujin-07.ic28",			0x100000, 0x34f50980, TAITO_CHARS },		//  5 Graphics Tiles
+	{ "ryujin-06.ic39",			0x100000, 0x1b85ff34, TAITO_CHARS },		//  6
 
-	{ "ryujin-08.ic1",		0x080000, 0x480d040d, TAITO_YM2610A },		//  7 YM2610 A Samples
+	{ "ryujin-08.ic1",			0x080000, 0x480d040d, TAITO_YM2610A },		//  7 YM2610 A Samples
 	
-	{ "pal1618b-east-07.ic46", 0x0104, 0x0cb80f64, BRF_OPT },			//  8 plds
-	{ "pal1618b-east-08.ic47", 0x0104, 0xbdce045f, BRF_OPT },			//  9
+	{ "pal16l8b-east-07.ic46",	0x000104, 0x0cb80f64, BRF_OPT },			//  8 plds
+	{ "pal16l8b-east-08.ic47",	0x000104, 0xbdce045f, BRF_OPT },			//  9
 };
 
 STD_ROM_PICK(ryujin)
@@ -4072,34 +4170,65 @@ struct BurnDriver BurnDrvQzshowby = {
 };
 
 
-// Puzzle Bobble (Japan, B-System)
+// Bubble Buster (USA, B-System)
+// Purportedly a location test version, but has the same version number and build date as the released Japanese set below
 
-static struct BurnRomInfo pbobbleRomDesc[] = {
-	{ "pb-1c18.bin",		0x040000, 0x5de14f49, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
-	{ "pb-ic2.bin",			0x040000, 0x2abe07d1, TAITO_68KROM1_BYTESWAP }, //  1
+static struct BurnRomInfo bublbustRomDesc[] = {
+	{ "p.bobble_prg_h_kyotsu_6-15_c681.ic18",	0x040000, 0xba83e398, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
+	{ "p.bobble_prg_l_usa_6-15_e9e1.ic2",		0x040000, 0xa12cb3f2, TAITO_68KROM1_BYTESWAP }, //  1
 
-	{ "pb-ic27.bin",		0x020000, 0x26efa4c4, TAITO_Z80ROM1 },		//  2 Z80 Code
+	{ "prg_snd.ic27",							0x020000, 0x2f288fe0, TAITO_Z80ROM1 },			//  2 Z80 Code
 
-	{ "pb-ic14.bin",		0x080000, 0x55f90ea4, TAITO_CHARS },		//  3 Graphics Tiles
-	{ "pb-ic9.bin",			0x080000, 0x3253aac9, TAITO_CHARS },		//  4
+	{ "p.bobble_chr-1l_6-14_eaa0.ic11_ch_1_0l",	0x040000, 0x8d3fa2f0, TAITO_CHARS_BYTESWAP },	//  3 Graphics Tiles
+	{ "p.bobble_chr-1h_6-14_1515.ic12_ch_1_0h",	0x040000, 0xa2eb4d32, TAITO_CHARS_BYTESWAP },	//  4
+	{ "p.bobble_chr-0l_6-14_86d5.ic7_ch_0_0l",	0x040000, 0x80f1aab0, TAITO_CHARS_BYTESWAP },	//  5
+	{ "p.bobble_chr-0h_6-14_d180.ic8_ch_0_0h",	0x040000, 0xd773cac8, TAITO_CHARS_BYTESWAP },	//  6
 
-	{ "pb-ic15.bin",		0x100000, 0x0840cbc4, TAITO_YM2610A },		//  5 YM2610 A Samples
+	{ "cr40-kaigai-7bec.ic15_ach_0",			0x080000, 0xf203ae52, TAITO_YM2610A },			//  7 YM2610 A Samples
 };
 
-STD_ROM_PICK(pbobble)
-STD_ROM_FN(pbobble)
+STD_ROM_PICK(bublbust)
+STD_ROM_FN(bublbust)
 
 static INT32 PbobbleInit()
 {
 	return CommonInit(PbobbleInitCallback, 0, 1, 3, 5, 3);
 }
 
+struct BurnDriver BurnDrvBublbust = {
+	"bublbust", "pbobble", NULL, NULL, "1994",
+	"Bubble Buster (USA, B-System)\0", NULL, "Taito America Corporation", "Taito B System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_TAITOB, GBF_BREAKOUT, 0,
+	NULL, bublbustRomInfo, bublbustRomName, NULL, NULL, NULL, NULL, PbobbleInputInfo, NULL,
+	PbobbleInit, DrvExit, DrvFrame, DrvDraw, DrvScan, NULL, 0x1000,
+	320, 224, 4, 3
+};
+
+
+// Puzzle Bobble (Japan, B-System)
+
+static struct BurnRomInfo pbobbleRomDesc[] = {
+	{ "pb-ic18.ic18",		0x040000, 0x5de14f49, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
+	{ "pb-ic2.ic2",			0x040000, 0x2abe07d1, TAITO_68KROM1_BYTESWAP }, //  1
+
+	{ "pb-ic27.ic27",		0x020000, 0x26efa4c4, TAITO_Z80ROM1 },		//  2 Z80 Code
+
+	{ "pb-ic14.ic14",		0x080000, 0x55f90ea4, TAITO_CHARS },		//  3 Graphics Tiles
+	{ "pb-ic9.ic9",			0x080000, 0x3253aac9, TAITO_CHARS },		//  4
+
+	{ "pb-ic15.ic15",		0x100000, 0x0840cbc4, TAITO_YM2610A },		//  5 YM2610 A Samples
+};
+
+STD_ROM_PICK(pbobble)
+STD_ROM_FN(pbobble)
+
 struct BurnDriver BurnDrvPbobble = {
 	"pbobble", NULL, NULL, NULL, "1994",
 	"Puzzle Bobble (Japan, B-System)\0", NULL, "Taito Corporation", "Taito B System",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_TAITOB, GBF_BREAKOUT, 0,
-	NULL, pbobbleRomInfo, pbobbleRomName, NULL, NULL, NULL, NULL, PbobbleInputInfo, PbobbleDIPInfo,
+	NULL, pbobbleRomInfo, pbobbleRomName, NULL, NULL, NULL, NULL, PbobbleInputInfo, NULL,
 	PbobbleInit, DrvExit, DrvFrame, DrvDraw, DrvScan, NULL, 0x1000,
 	320, 224, 4, 3
 };
@@ -4108,22 +4237,22 @@ struct BurnDriver BurnDrvPbobble = {
 // Space Invaders DX (US, v2.1)
 
 static struct BurnRomInfo spacedxRomDesc[] = {
-	{ "d89-06",				0x040000, 0x7122751e, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
-	{ "d89-xx.ic2",			0x040000, 0x56b0be6c, TAITO_68KROM1_BYTESWAP }, //  1
+	{ "d89-06.ic18",			0x040000, 0x7122751e, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
+	{ "d89-xx.ic2",				0x040000, 0x56b0be6c, TAITO_68KROM1_BYTESWAP }, //  1
 
-	{ "d89-07.27",			0x010000, 0xbd743401, TAITO_Z80ROM1 },		//  2 Z80 Code
+	{ "d89-07.ic27",			0x010000, 0xbd743401, TAITO_Z80ROM1 },		//  2 Z80 Code
 
-	{ "d89-02.14",			0x080000, 0xc36544b9, TAITO_CHARS },		//  3 Graphics Tiles
-	{ "d89-01.9",			0x080000, 0xfffa0660, TAITO_CHARS },		//  4
+	{ "d89-02.ic14",			0x080000, 0xc36544b9, TAITO_CHARS },		//  3 Graphics Tiles
+	{ "d89-01.ic9",				0x080000, 0xfffa0660, TAITO_CHARS },		//  4
 
-	{ "d89-03.15",			0x080000, 0x218f31a4, TAITO_YM2610A },		//  5 YM2610 A Samples
+	{ "d89-03.ic15",			0x080000, 0x218f31a4, TAITO_YM2610A },		//  5 YM2610 A Samples
 
-	{ "pal16l8-d72-05.ic37",	  0x0104, 0xc3d4cb7e, BRF_OPT },		//  6 PLDs
-	{ "pal16l8-d72-06.ic50",	  0x0104, 0xe96b7f37, BRF_OPT }, 		//  7
-	{ "palce20v8-d72-07.ic28",	  0x0157, 0x6359e64c, BRF_OPT }, 		//  8
-	{ "palce20v8-d72-09.ic47",	  0x0157, 0xde1760fd, BRF_OPT }, 		//  9
-	{ "palce16v8-d72-10.ic12",    0x0117, 0xa5181ba2, BRF_OPT }, 		// 10
-	{ "pal20l8b-d89-04.ic40",	  0x0144, 0x00000000, BRF_OPT | BRF_NODUMP },	// 12
+	{ "pal16l8-d72-05.ic37",	0x000104, 0xc3d4cb7e, BRF_OPT },		//  6 PLDs
+	{ "pal16l8-d72-06.ic50",	0x000104, 0xe96b7f37, BRF_OPT }, 		//  7
+	{ "palce20v8-d72-07.ic28",	0x000157, 0x6359e64c, BRF_OPT }, 		//  8
+	{ "palce20v8-d72-09.ic47",	0x000157, 0xde1760fd, BRF_OPT }, 		//  9
+	{ "palce16v8-d72-10.ic12",	0x000117, 0xa5181ba2, BRF_OPT }, 		// 10
+	{ "pal20l8b-d89-04.ic40",	0x000144, 0x00000000, BRF_OPT | BRF_NODUMP },	// 12
 };
 
 STD_ROM_PICK(spacedx)
@@ -4134,7 +4263,7 @@ struct BurnDriver BurnDrvSpacedx = {
 	"Space Invaders DX (US, v2.1)\0", NULL, "Taito Corporation", "Taito B System",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_TAITOB, GBF_SHOOT, 0,
-	NULL, spacedxRomInfo, spacedxRomName, NULL, NULL, NULL, NULL, PbobbleInputInfo, PbobbleDIPInfo,
+	NULL, spacedxRomInfo, spacedxRomName, NULL, NULL, NULL, NULL, PbobbleInputInfo, NULL,
 	PbobbleInit, DrvExit, DrvFrame, DrvDraw, DrvScan, NULL, 0x1000,
 	320, 224, 4, 3
 };
@@ -4143,22 +4272,22 @@ struct BurnDriver BurnDrvSpacedx = {
 // Space Invaders DX (Japan, v2.1)
 
 static struct BurnRomInfo spacedxjRomDesc[] = {
-	{ "d89-06",				0x040000, 0x7122751e, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
-	{ "d89-05",				0x040000, 0xbe1638af, TAITO_68KROM1_BYTESWAP }, //  1
+	{ "d89-06.ic18",			0x040000, 0x7122751e, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
+	{ "d89-05.ic2",				0x040000, 0xbe1638af, TAITO_68KROM1_BYTESWAP }, //  1
 
-	{ "d89-07.27",			0x010000, 0xbd743401, TAITO_Z80ROM1 },		//  2 Z80 Code
+	{ "d89-07.ic27",			0x010000, 0xbd743401, TAITO_Z80ROM1 },		//  2 Z80 Code
 
-	{ "d89-02.14",			0x080000, 0xc36544b9, TAITO_CHARS },		//  3 Graphics Tiles
-	{ "d89-01.9",			0x080000, 0xfffa0660, TAITO_CHARS },		//  4
+	{ "d89-02.ic14",			0x080000, 0xc36544b9, TAITO_CHARS },		//  3 Graphics Tiles
+	{ "d89-01.ic9",				0x080000, 0xfffa0660, TAITO_CHARS },		//  4
 
-	{ "d89-03.15",			0x080000, 0x218f31a4, TAITO_YM2610A },		//  5 YM2610 A Samples
+	{ "d89-03.ic15",			0x080000, 0x218f31a4, TAITO_YM2610A },		//  5 YM2610 A Samples
 
-	{ "pal16l8-d72-05.ic37",	  0x0104, 0xc3d4cb7e, BRF_OPT },		//  6 PLDs
-	{ "pal16l8-d72-06.ic50",	  0x0104, 0xe96b7f37, BRF_OPT }, 		//  7
-	{ "palce20v8-d72-07.ic28",	  0x0157, 0x6359e64c, BRF_OPT }, 		//  8
-	{ "palce20v8-d72-09.ic47",	  0x0157, 0xde1760fd, BRF_OPT }, 		//  9
-	{ "palce16v8-d72-10.ic12",    0x0117, 0xa5181ba2, BRF_OPT }, 		// 10
-	{ "pal20l8b-d89-04.ic40",	  0x0144, 0x00000000, BRF_OPT | BRF_NODUMP },	// 12
+	{ "pal16l8-d72-05.ic37",	0x000104, 0xc3d4cb7e, BRF_OPT },		//  6 PLDs
+	{ "pal16l8-d72-06.ic50",	0x000104, 0xe96b7f37, BRF_OPT }, 		//  7
+	{ "palce20v8-d72-07.ic28",	0x000157, 0x6359e64c, BRF_OPT }, 		//  8
+	{ "palce20v8-d72-09.ic47",	0x000157, 0xde1760fd, BRF_OPT }, 		//  9
+	{ "palce16v8-d72-10.ic12",	0x000117, 0xa5181ba2, BRF_OPT }, 		// 10
+	{ "pal20l8b-d89-04.ic40",	0x000144, 0x00000000, BRF_OPT | BRF_NODUMP },	// 12
 };
 
 STD_ROM_PICK(spacedxj)
@@ -4169,7 +4298,7 @@ struct BurnDriver BurnDrvSpacedxj = {
 	"Space Invaders DX (Japan, v2.1)\0", NULL, "Taito Corporation", "Taito B System",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_TAITOB, GBF_SHOOT, 0,
-	NULL, spacedxjRomInfo, spacedxjRomName, NULL, NULL, NULL, NULL, PbobbleInputInfo, PbobbleDIPInfo,
+	NULL, spacedxjRomInfo, spacedxjRomName, NULL, NULL, NULL, NULL, PbobbleInputInfo, NULL,
 	PbobbleInit, DrvExit, DrvFrame, DrvDraw, DrvScan, NULL, 0x1000,
 	320, 224, 4, 3
 };
@@ -4181,12 +4310,12 @@ static struct BurnRomInfo spacedxoRomDesc[] = {
 	{ "d89-08.bin",			0x020000, 0x0c2fe7f9, TAITO_68KROM1_BYTESWAP }, //  0 68k Code
 	{ "d89-09.bin",			0x020000, 0x7f0a0ba4, TAITO_68KROM1_BYTESWAP }, //  1
 
-	{ "d89-07.27",			0x010000, 0xbd743401, TAITO_Z80ROM1 },		//  2 Z80 Code
+	{ "d89-07.ic27",		0x010000, 0xbd743401, TAITO_Z80ROM1 },		//  2 Z80 Code
 
 	{ "d89-12.bin",			0x080000, 0x53df86f1, TAITO_CHARS },		//  3 Graphics Tiles
 	{ "d89-13.bin",			0x080000, 0xc44c1352, TAITO_CHARS },		//  4
 
-	{ "d89-03.15",			0x080000, 0x218f31a4, TAITO_YM2610A },		//  5 YM2610 A Samples
+	{ "d89-03.ic15",		0x080000, 0x218f31a4, TAITO_YM2610A },		//  5 YM2610 A Samples
 };
 
 STD_ROM_PICK(spacedxo)

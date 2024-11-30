@@ -44,27 +44,27 @@ static UINT8 DrvInputs[6];
 static UINT8 DrvReset;
 
 static struct BurnInputInfo HvyunitInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvInputs + 4,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvInputs + 5,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvInputs + 4,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvInputs + 5,	"dip"		},
 };
 
 STDINPUTINFO(Hvyunit)
@@ -353,6 +353,8 @@ static INT32 DrvDoReset()
 
 	nExtraCycles[0] = nExtraCycles[1] = nExtraCycles[2] = nExtraCycles[3] = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -398,7 +400,7 @@ static INT32 MemIndex()
 	AllRam			= Next;
 
 	DrvSprRAM		= Next; Next += 0x001000;
-	DrvPandoraRAM		= Next; Next += 0x001000;
+	DrvPandoraRAM	= Next; Next += 0x001000;
 	DrvZ80RAM0		= Next; Next += 0x001000;
 	DrvZ80RAM1		= Next; Next += 0x001000;
 	DrvShareRAM		= Next; Next += 0x002000;
@@ -418,12 +420,7 @@ static INT32 DrvInit(INT32 select)
 {
 	BurnSetRefreshRate(58);
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x000000,  0, 1)) return 1;
@@ -561,7 +558,7 @@ static INT32 DrvExit()
 
 	BurnYM2203Exit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -634,9 +631,6 @@ static INT32 DrvFrame()
 	INT32 nCyclesDone[4] = { nExtraCycles[0], nExtraCycles[1], nExtraCycles[2], nExtraCycles[3] };
 
 	for (INT32 i = 0; i < nInterleave; i++) {
-
-		INT32 nSegment;
-
 		ZetOpen(0);
 		if (i == 64*4) {
 			ZetSetVector(0xff);
@@ -646,23 +640,20 @@ static INT32 DrvFrame()
 			ZetSetVector(0xfd);
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		}
-		nSegment = (nCyclesTotal[0] * (i + 1) / nInterleave) - nCyclesDone[0];
-		nCyclesDone[0] += ZetRun(nSegment);
+		CPU_RUN(0, Zet);
 		ZetClose();
 
 		ZetOpen(1);
 		if (i == 240*4) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
-		nSegment = (nCyclesTotal[1] * (i + 1) / nInterleave) - nCyclesDone[1];
-		nCyclesDone[1] += ZetRun(nSegment);
+		CPU_RUN(1, Zet);
 		ZetClose();
 
 		ZetOpen(2);
 		if (i == 240*4) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
-		BurnTimerUpdate((i + 1) * nCyclesTotal[2] / nInterleave);
+		CPU_RUN_TIMER(2);
 		ZetClose();
 
-		nSegment = (nCyclesTotal[3] * (i + 1) / nInterleave) - nCyclesDone[3];
-		nCyclesDone[3] += mermaidRun(nSegment);
+		CPU_RUN(3, mermaid);
 
 		if (i == 239*4) {
 			pandora_buffer_sprites();
@@ -674,12 +665,9 @@ static INT32 DrvFrame()
 	}
 
 	ZetOpen(2);
-	BurnTimerEndFrame(nCyclesTotal[2]);
-
 	if (pBurnSoundOut) {
 		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
 	}
-
 	ZetClose();
 
 	nExtraCycles[0] = nCyclesDone[0] - nCyclesTotal[0];
@@ -771,7 +759,7 @@ struct BurnDriver BurnDrvHvyunit = {
 	"hvyunit", NULL, NULL, NULL, "1988",
 	"Heavy Unit (World)\0", NULL, "Kaneko / Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_KANEKO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KANEKO_MISC, GBF_VERSHOOT, 0,
 	NULL, hvyunitRomInfo, hvyunitRomName, NULL, NULL, NULL, NULL, HvyunitInputInfo, HvyunitDIPInfo,
 	hvyunitInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 224, 4, 3
@@ -810,7 +798,7 @@ struct BurnDriver BurnDrvHvyunitj = {
 	"hvyunitj", "hvyunit", NULL, NULL, "1988",
 	"Heavy Unit (Japan, Newer)\0", NULL, "Kaneko / Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KANEKO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KANEKO_MISC, GBF_VERSHOOT, 0,
 	NULL, hvyunitjRomInfo, hvyunitjRomName, NULL, NULL, NULL, NULL, HvyunitInputInfo, HvyunitjDIPInfo,
 	hvyunitjInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 224, 4, 3
@@ -852,7 +840,7 @@ struct BurnDriver BurnDrvHvyunitja = {
 	"hvyunitja", "hvyunit", NULL, NULL, "1988",
 	"Heavy Unit (Japan, Alternate ROM format)\0", NULL, "Kaneko / Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KANEKO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KANEKO_MISC, GBF_VERSHOOT, 0,
 	NULL, hvyunitjaRomInfo, hvyunitjaRomName, NULL, NULL, NULL, NULL, HvyunitInputInfo, HvyunitjDIPInfo,
 	hvyunitjaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 224, 4, 3
@@ -889,7 +877,7 @@ struct BurnDriver BurnDrvHvyunitjo = {
 	"hvyunitjo", "hvyunit", NULL, NULL, "1988",
 	"Heavy Unit (Japan, Older)\0", NULL, "Kaneko / Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KANEKO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KANEKO_MISC, GBF_VERSHOOT, 0,
 	NULL, hvyunitjoRomInfo, hvyunitjoRomName, NULL, NULL, NULL, NULL, HvyunitInputInfo, HvyunitjDIPInfo,
 	hvyunitInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 224, 4, 3
@@ -928,7 +916,7 @@ struct BurnDriver BurnDrvHvyunitu = {
 	"hvyunitu", "hvyunit", NULL, NULL, "1988",
 	"Heavy Unit -U.S.A. Version- (US)\0", NULL, "Kaneko / Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KANEKO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KANEKO_MISC, GBF_VERSHOOT, 0,
 	NULL, hvyunituRomInfo, hvyunituRomName, NULL, NULL, NULL, NULL, HvyunitInputInfo, HvyunitjDIPInfo,
 	hvyunituInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	256, 224, 4, 3

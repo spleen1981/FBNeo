@@ -373,9 +373,11 @@ static INT32 DrvDoReset()
 
 	blitter_irq = 0;
 	for (INT32 i = 0; i < 4; i++) {
-		GenericTilemapAllTilesDirty(i);	
+		GenericTilemapAllTilesDirty(i);
 		update_tilemap[i] = 1;
 	}
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -399,13 +401,13 @@ static INT32 MemIndex()
 
 	AllRam			= Next;
 
-	Drv68KRAM		= Next; Next += 0x0100000;
-	DrvPalRAM		= Next; Next += 0x0100000;
-	DrvVidRAM[0]	= Next; Next += 0x0200000; // only first 4000 accessible by cpu
-	DrvVidRAM[1]	= Next; Next += 0x0200000; // ""
-	DrvVidRAM[2]	= Next; Next += 0x0200000; // ""
-	DrvVidRAM[3]	= Next; Next += 0x0200000; // ""
-	DrvSprRAM		= Next; Next += 0x0040000;
+	Drv68KRAM		= Next; Next += 0x010000;
+	DrvPalRAM		= Next; Next += 0x010000;
+	DrvVidRAM[0]	= Next; Next += 0x020000; // only first 4000 accessible by cpu
+	DrvVidRAM[1]	= Next; Next += 0x020000; // ""
+	DrvVidRAM[2]	= Next; Next += 0x020000; // ""
+	DrvVidRAM[3]	= Next; Next += 0x020000; // ""
+	DrvSprRAM		= Next; Next += 0x004000;
 
 	tilemapregs[0]	= (UINT32*)Next; Next += 0x000008 * sizeof(UINT32);
 	tilemapregs[1]	= (UINT32*)Next; Next += 0x000008 * sizeof(UINT32);
@@ -693,13 +695,14 @@ static INT32 DrvFrame()
 	}
 
 	INT32 nInterleave = 32;
-	INT32 nCyclesTotal = (INT32)((INT64)24000000 * nBurnCPUSpeedAdjust / (0x0100 * 60));
+	INT32 nCyclesTotal[1] = { (INT32)((INT64)24000000 * nBurnCPUSpeedAdjust / (0x0100 * 60)) };
+	INT32 nCyclesDone[1] = { 0 };
 
 	SekOpen(0);
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		SekRun(nCyclesTotal / nInterleave);
+		CPU_RUN(0, Sek);
 		if (blitter_irq) { SekSetIRQLine(4, CPU_IRQSTATUS_AUTO); blitter_irq = 0; }
 	}
 
@@ -743,6 +746,13 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(blitter_irq);
 	}
 
+	if (nAction & ACB_WRITE) {
+		for (INT32 i = 0; i < 4; i++) {
+			GenericTilemapAllTilesDirty(i);
+			update_tilemap[i] = 1;
+		}
+	}
+
 	return 0;
 }
 
@@ -779,7 +789,7 @@ struct BurnDriver BurnDrvRabbit = {
 	"rabbit", NULL, NULL, NULL, "1997",
 	"Rabbit (Asia 3/6)\0", NULL, "Aorn / Electronic Arts", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VSFIGHT, 0,
 	NULL, rabbitRomInfo, rabbitRomName, NULL, NULL, NULL, NULL, RabbitInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x4000,
 	320, 224, 4, 3
@@ -818,7 +828,7 @@ struct BurnDriver BurnDrvRabbita = {
 	"rabbita", "rabbit", NULL, NULL, "1997",
 	"Rabbit (Asia 1/28?)\0", NULL, "Aorn / Electronic Arts", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VSFIGHT, 0,
 	NULL, rabbitaRomInfo, rabbitaRomName, NULL, NULL, NULL, NULL, RabbitInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x4000,
 	320, 224, 4, 3
@@ -856,7 +866,7 @@ struct BurnDriver BurnDrvRabbitj = {
 	"rabbitj", "rabbit", NULL, NULL, "1997",
 	"Rabbit (Japan 3/6?)\0", NULL, "Aorn / Electronic Arts", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VSFIGHT, 0,
 	NULL, rabbitjRomInfo, rabbitjRomName, NULL, NULL, NULL, NULL, RabbitInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x4000,
 	320, 224, 4, 3
@@ -894,7 +904,7 @@ struct BurnDriver BurnDrvRabbitjt = {
 	"rabbitjt", "rabbit", NULL, NULL, "1996",
 	"Rabbit (Japan 1/28, location test)\0", NULL, "Aorn / Electronic Arts", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VSFIGHT, 0,
 	NULL, rabbitjtRomInfo, rabbitjtRomName, NULL, NULL, NULL, NULL, RabbitInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x4000,
 	320, 224, 4, 3

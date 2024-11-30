@@ -1,4 +1,4 @@
-// FB Alpha Armed Formation driver module
+// FB Neo Armed Formation driver module
 // Based on MAME driver by Carlos A. Lozano, Phil Stroffolino, and Takahiro Nogi
 //
 // nb1414m4 hooked up to Kozure Ookami July 8 2015 -dink
@@ -79,95 +79,95 @@ static INT32 Kozuremode = 0;
 static INT32 Skyrobo = 0;
 
 static struct BurnInputInfo ArmedfInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 10,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 10,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 8,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 11,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 8,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy2 + 10,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",       BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 8,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy2 + 10,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",       	BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Armedf)
 
 static struct BurnInputInfo Cclimbr2InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 10,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 10,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 8,	"p1 start"	},
-	{"P1 Up 1",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Up 1",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
 	{"P1 Down 1",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
 	{"P1 Left 1",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
-	{"P1 Up 2",		BIT_DIGITAL,	DrvJoy1 + 4,	"p3 up"		},
+	{"P1 Up 2",			BIT_DIGITAL,	DrvJoy1 + 4,	"p3 up"		},
 	{"P1 Down 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p3 down"	},
 	{"P1 Left 2",		BIT_DIGITAL,	DrvJoy1 + 6,	"p3 left"	},
 	{"P1 Right 2",		BIT_DIGITAL,	DrvJoy1 + 7,	"p3 right"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 11,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 start"	},
-	{"P2 Up 1",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Up 1",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
 	{"P2 Down 1",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
 	{"P2 Left 1",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
 	{"P2 Right 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
-	{"P2 Up 2",		BIT_DIGITAL,	DrvJoy2 + 4,	"p4 up"		},
+	{"P2 Up 2",			BIT_DIGITAL,	DrvJoy2 + 4,	"p4 up"		},
 	{"P2 Down 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p4 down"	},
 	{"P2 Left 2",		BIT_DIGITAL,	DrvJoy2 + 6,	"p4 left"	},
 	{"P2 Right 2",		BIT_DIGITAL,	DrvJoy2 + 7,	"p4 right"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 8,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy2 + 10,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",       BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 8,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy2 + 10,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",       	BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Cclimbr2)
 
 static struct BurnInputInfo BigfghtrInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 10,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 8,	"p1 start"},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"},
-	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 10,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 8,	"p1 start"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
+	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 coin"},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 start"},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"},
-	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 11,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
+	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 8,	"service"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"},
-	{"Dip C",       BIT_DIPSWITCH,	DrvDips + 2,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 8,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",       	BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Bigfghtr)
@@ -534,7 +534,7 @@ static struct BurnDIPInfo TerrafDIPList[]=
 	{0x15, 0x01, 0xc0, 0x40, "Hard"					},
 	{0x15, 0x01, 0xc0, 0x00, "Hardest"				},
 
-{0   , 0xfe, 0   ,    4, "Coin A"				},
+	{0   , 0xfe, 0   ,    4, "Coin A"				},
 	{0x16, 0x01, 0x03, 0x01, "2 Coins 1 Credits"			},
 	{0x16, 0x01, 0x03, 0x03, "1 Coin  1 Credits"			},
 	{0x16, 0x01, 0x03, 0x02, "1 Coin  2 Credits"			},
@@ -848,11 +848,6 @@ static INT32 DrvSynchroniseStream(INT32 nSoundRate)
 	return (INT64)ZetTotalCycles() * nSoundRate / 6000000;
 }
 
-static INT32 DrvSyncDAC()
-{
-	return (INT32)(float)(nBurnSoundLen * (ZetTotalCycles() / (6000000.000 / (nBurnFPS / 100.000))));
-}
-
 static INT32 DrvDoReset()
 {
 	DrvReset = 0;
@@ -886,6 +881,8 @@ static INT32 DrvDoReset()
 	scroll_msb = 0;
 
 	nb_1414m4_init();
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -1049,12 +1046,7 @@ static void Cclimbr268KInit()
 
 static INT32 DrvInit(INT32 (*pLoadRoms)(), void (*p68KInit)(), INT32 zLen)
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	if (pLoadRoms) {
 		if (pLoadRoms()) return 1;
@@ -1091,13 +1083,14 @@ static INT32 DrvInit(INT32 (*pLoadRoms)(), void (*p68KInit)(), INT32 zLen)
 	}
 
 	BurnYM3812Init(1, 4000000, NULL, &DrvSynchroniseStream, 0);
-	BurnTimerAttachYM3812(&ZetConfig, 6000000);
+	BurnTimerAttach(&ZetConfig, 6000000);
 	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 0.50, BURN_SND_ROUTE_BOTH);
 
-	DACInit(0, 0, 1, DrvSyncDAC);
-	DACInit(1, 0, 1, DrvSyncDAC);
+	DACInit(0, 0, 1, ZetTotalCycles, 6000000);
+	DACInit(1, 0, 1, ZetTotalCycles, 6000000);
 	DACSetRoute(0, 0.80, BURN_SND_ROUTE_BOTH);
 	DACSetRoute(1, 0.80, BURN_SND_ROUTE_BOTH);
+	DACDCBlock(1);
 
 	GenericTilesInit();
 
@@ -1128,13 +1121,11 @@ static INT32 DrvExit()
 		usemcu = 0;
 	}
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 	Terrafjb = 0;
 	Kozuremode = 0;
 	Skyrobo = 0;
-
-	BurnSetRefreshRate(59.08);
 
 	return 0;
 }
@@ -1356,8 +1347,6 @@ static INT32 DrvDraw()
 
 	BurnTransferCopy(DrvPalette);
 
-	memcpy (DrvSprBuf, DrvSprRAM, 0x1000);
-
 	return 0;
 }
 
@@ -1372,56 +1361,51 @@ static INT32 DrvFrame()
 
 	AssembleInputs();
 
-	INT32 nSegment;
 	INT32 nInterleave = 262;
-	INT32 nTotalCycles[3] = { 8000000 / (nBurnFPS / 100), 6000000 / (nBurnFPS / 100), 4000000 / (nBurnFPS / 100) };
+	INT32 nCyclesTotal[3] = { 8000000 / (nBurnFPS / 100), 6000000 / (nBurnFPS / 100), 4000000 / (nBurnFPS / 100) };
 	INT32 nCyclesDone[3] = { 0, 0, 0 };
 
-	if (usemcu) nTotalCycles[2] /= 12; // i8751 internal divider (12)
+	if (usemcu) nCyclesTotal[2] /= 12; // i8751 internal divider (12)
 
 	SekOpen(0);
 	ZetOpen(0);
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		INT32 nNext = (i + 1) * nTotalCycles[0] / nInterleave;
-		nSegment = nNext - nCyclesDone[0];
-		nCyclesDone[0] += SekRun(nSegment);
+		CPU_RUN(0, Sek);
 
-		BurnTimerUpdateYM3812((i + 1) * (nTotalCycles[1] / nInterleave));
+		CPU_RUN_TIMER(1);
 
 		if (i & 1) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO); // 130 per frame (based on nInterleave = 262)
 
 		if (usemcu) {
-			mcs51Run((nTotalCycles[2] / nInterleave));
+			CPU_RUN(2, mcs51);
 		}
 
 		if (Terrafjb) {
 			ZetClose();
 			ZetOpen(1);
-			nNext = (i + 1) * nTotalCycles[2] / nInterleave;
-			nSegment = nNext - nCyclesDone[2];
-			nCyclesDone[2] += ZetRun(nSegment);
+			CPU_RUN(2, Zet);
 			ZetClose();
 			ZetOpen(0);
 		}
 	}
 
-	BurnTimerEndFrameYM3812(nTotalCycles[1]);
-
 	SekSetIRQLine(irqline, (usemcu) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_AUTO);
+
+	ZetClose();
+	SekClose();
 
 	if (pBurnSoundOut) {
 		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
 		DACUpdate(pBurnSoundOut, nBurnSoundLen);
 	}
 
-	ZetClose();
-	SekClose();
-
 	if (pBurnDraw) {
 		DrvDraw();
 	}
+
+	memcpy (DrvSprBuf, DrvSprRAM, 0x1000);
 
 	return 0;
 }
@@ -1464,7 +1448,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 }
 
 
-// Armed Formation
+// Armed F (Japan)
 
 static struct BurnRomInfo armedfRomDesc[] = {
 	{ "06.3d",		0x10000, 0x0f9015e2, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
@@ -1490,31 +1474,6 @@ static struct BurnRomInfo armedfRomDesc[] = {
 
 STD_ROM_PICK(armedf)
 STD_ROM_FN(armedf)
-
-static struct BurnRomInfo armedffRomDesc[] = {
-	{ "af_06.rom",	0x10000, 0xc5326603, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "af_01.rom",	0x10000, 0x458e9542, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "af_07.rom",	0x10000, 0xcc8517f5, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "af_02.rom",	0x10000, 0x214ef220, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "af_08.rom",	0x10000, 0xd1d43600, 1 | BRF_PRG | BRF_ESS }, //  4
-	{ "af_03.rom",	0x10000, 0xbbe1fe2d, 1 | BRF_PRG | BRF_ESS }, //  5
-
-	{ "af_10.rom",	0x10000, 0xc5eacb87, 2 | BRF_PRG | BRF_ESS }, //  6 Z80 code
-
-	{ "af_09.rom",	0x08000, 0x7025e92d, 3 | BRF_GRA },           //  7 Characters
-
-	{ "af_04.rom",	0x10000, 0x44d3af4f, 4 | BRF_GRA },           //  8 Foreground Tiles
-	{ "af_05.rom",	0x10000, 0x92076cab, 4 | BRF_GRA },           //  9
-
-	{ "af_14.rom",	0x10000, 0x8c5dc5a7, 5 | BRF_GRA },           // 10 Background Tiles
-	{ "af_13.rom",	0x10000, 0x136a58a3, 5 | BRF_GRA },           // 11
-
-	{ "af_11.rom",	0x20000, 0xb46c473c, 6 | BRF_GRA },           // 12 Sprites
-	{ "af_12.rom",	0x20000, 0x23cb6bfe, 6 | BRF_GRA },           // 13
-};
-
-STD_ROM_PICK(armedff)
-STD_ROM_FN(armedff)
 
 static INT32 ArmedfLoadRoms()
 {
@@ -1554,19 +1513,47 @@ static INT32 ArmedfInit()
 
 struct BurnDriver BurnDrvArmedf = {
 	"armedf", NULL, NULL, NULL, "1988",
-	"Armed Formation\0", NULL, "Nichibutsu", "Miscellaneous",
+	"Armed F (Japan)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, armedfRomInfo, armedfRomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, ArmedfDIPInfo,
 	ArmedfInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	240, 320, 3, 4
 };
 
+
+// Armed F (Fillmore license)
+
+static struct BurnRomInfo armedffRomDesc[] = {
+	{ "af_06.rom",	0x10000, 0xc5326603, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "af_01.rom",	0x10000, 0x458e9542, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "af_07.rom",	0x10000, 0xcc8517f5, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "af_02.rom",	0x10000, 0x214ef220, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "af_08.rom",	0x10000, 0xd1d43600, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "af_03.rom",	0x10000, 0xbbe1fe2d, 1 | BRF_PRG | BRF_ESS }, //  5
+
+	{ "af_10.rom",	0x10000, 0xc5eacb87, 2 | BRF_PRG | BRF_ESS }, //  6 Z80 code
+
+	{ "af_09.rom",	0x08000, 0x7025e92d, 3 | BRF_GRA },           //  7 Characters
+
+	{ "af_04.rom",	0x10000, 0x44d3af4f, 4 | BRF_GRA },           //  8 Foreground Tiles
+	{ "af_05.rom",	0x10000, 0x92076cab, 4 | BRF_GRA },           //  9
+
+	{ "af_14.rom",	0x10000, 0x8c5dc5a7, 5 | BRF_GRA },           // 10 Background Tiles
+	{ "af_13.rom",	0x10000, 0x136a58a3, 5 | BRF_GRA },           // 11
+
+	{ "af_11.rom",	0x20000, 0xb46c473c, 6 | BRF_GRA },           // 12 Sprites
+	{ "af_12.rom",	0x20000, 0x23cb6bfe, 6 | BRF_GRA },           // 13
+};
+
+STD_ROM_PICK(armedff)
+STD_ROM_FN(armedff)
+
 struct BurnDriver BurnDrvArmedff = {
 	"armedff", "armedf", NULL, NULL, "1988",
-	"Armed Formation (Fillmore license)\0", NULL, "Nichibutsu (Fillmore license)", "Miscellaneous",
+	"Armed F (Fillmore license)\0", NULL, "Nichibutsu (Fillmore license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, armedffRomInfo, armedffRomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, ArmedfDIPInfo,
 	ArmedfInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	240, 320, 3, 4
@@ -1645,7 +1632,7 @@ struct BurnDriver BurnDrvCclimbr2 = {
 	"cclimbr2", NULL, NULL, NULL, "1988",
 	"Crazy Climber 2 (Japan)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, cclimbr2RomInfo, cclimbr2RomName, NULL, NULL, NULL, NULL, Cclimbr2InputInfo, Cclimbr2DIPInfo,
 	Cclimbr2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
@@ -1688,7 +1675,7 @@ struct BurnDriver BurnDrvCclmbr2a = {
 	"cclimbr2a", "cclimbr2", NULL, NULL, "1988",
 	"Crazy Climber 2 (Japan, Harder)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, cclmbr2aRomInfo, cclmbr2aRomName, NULL, NULL, NULL, NULL, Cclimbr2InputInfo, Cclimbr2DIPInfo,
 	Cclimbr2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	288, 224, 4, 3
@@ -1771,7 +1758,7 @@ struct BurnDriver BurnDrvKozure = {
 	"kozure", NULL, NULL, NULL, "1987",
 	"Kozure Ookami (Japan)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
 	NULL, kozureRomInfo, kozureRomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, KozureDIPInfo,
 	KozureInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
@@ -1850,14 +1837,15 @@ struct BurnDriver BurnDrvLegion = {
 	"legion", NULL, NULL, NULL, "1987",
 	"Legion - Spinner-87 (World ver 2.03)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, legionRomInfo, legionRomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, LegionDIPInfo,
 	LegionInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	224, 288, 3, 4
 };
 
 
-// Chouji Meikyuu Legion (Japan ver 1.05)
+// Chouji Meikyuu Legion (Japan ver 1.05, set 1)
+// this has the ROM checksum test circumvented like the bootlegs? Or maybe just a bug that was later fixed?
 
 static struct BurnRomInfo legionjRomDesc[] = {
 	{ "legion.e5",	0x10000, 0x49e8e1b7, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code1
@@ -1887,16 +1875,56 @@ STD_ROM_FN(legionj)
 
 struct BurnDriver BurnDrvLegionj = {
 	"legionj", "legion", NULL, NULL, "1987",
-	"Chouji Meikyuu Legion (Japan ver 1.05)\0", NULL, "Nichibutsu", "Miscellaneous",
+	"Chouji Meikyuu Legion (Japan ver 1.05, set 1)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, legionjRomInfo, legionjRomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, LegionDIPInfo,
 	LegionInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	224, 288, 3, 4
 };
 
 
-// Chouji Meikyuu Legion (Japan ver 1.05, bootleg)
+// Chouji Meikyuu Legion (Japan ver 1.05, set 2)
+// this has the ROM checksum test working
+
+static struct BurnRomInfo legionj2RomDesc[] = {
+	{ "legion.e5",	0x10000, 0xd7efe310, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code1
+	{ "legion.e1",	0x10000, 0xb890da35, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "legion.1d",	0x10000, 0xc2e45e1e, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "legion.1b",	0x10000, 0xc306660a, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "legion.1h",	0x04000, 0x2ca4f7f0, 2 | BRF_PRG | BRF_ESS }, //  4 Z80 code
+
+	{ "legion.1g",	0x08000, 0xc50b0125, 3 | BRF_GRA },           //  5 Characters
+
+	{ "legion.1e",	0x10000, 0xa9d70faf, 4 | BRF_GRA },           //  6 Foreground Tiles
+	{ "legion.1f",	0x08000, 0xf018313b, 4 | BRF_GRA },           //  7
+
+	{ "legion.1l",	0x10000, 0x29b8adaa, 5 | BRF_GRA },           //  8 Background Tiles
+
+	{ "legion.1k",	0x10000, 0xff5a0db9, 6 | BRF_GRA },           //  9 Sprites
+	{ "legion.1j",	0x10000, 0xbae220c8, 6 | BRF_GRA },           // 10
+
+	{ "lg7.bin",	0x04000, 0x533e2b58, 7 | BRF_GRA },           // 11 MCU data
+
+	{ "legion.1i",	0x08000, 0x79f4a827, 2 | BRF_OPT },           // 12 Unknown
+};
+
+STD_ROM_PICK(legionj2)
+STD_ROM_FN(legionj2)
+
+struct BurnDriver BurnDrvLegionj2 = {
+	"legionj2", "legion", NULL, NULL, "1987",
+	"Chouji Meikyuu Legion (Japan ver 1.05, set 2)\0", "fail ROM checksum test", "Nichibutsu", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	NULL, legionj2RomInfo, legionj2RomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, LegionDIPInfo,
+	LegionInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
+	224, 288, 3, 4
+};
+
+
+// Chouji Meikyuu Legion (Japan ver 1.05, bootleg set 1)
 /* blitter protection removed */
 
 static struct BurnRomInfo legionjbRomDesc[] = {
@@ -1963,9 +1991,9 @@ static INT32 LegionjbInit()
 
 struct BurnDriver BurnDrvLegionjb = {
 	"legionjb", "legion", NULL, NULL, "1987",
-	"Chouji Meikyuu Legion (Japan ver 1.05, bootleg)\0", NULL, "Nichibutsu", "Miscellaneous",
+	"Chouji Meikyuu Legion (Japan ver 1.05, bootleg set 1)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, legionjbRomInfo, legionjbRomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, LegionDIPInfo,
 	LegionjbInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	224, 288, 3, 4
@@ -2022,7 +2050,7 @@ struct BurnDriver BurnDrvTerraf = {
 	"terraf", NULL, NULL, NULL, "1987",
 	"Terra Force\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, terrafRomInfo, terrafRomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, TerrafDIPInfo,
 	TerrafInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
@@ -2075,8 +2103,50 @@ struct BurnDriver BurnDrvTerrafu = {
 	"terrafu", "terraf", NULL, NULL, "1987",
 	"Terra Force (US)\0", NULL, "Nichibutsu USA", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, terrafuRomInfo, terrafuRomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, TerrafDIPInfo,
+	TerrafInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 240, 4, 3
+};
+
+
+// Terra Force (US, alternate sound)
+
+static struct BurnRomInfo terrafuaRomDesc[] = {
+	{ "8.6e",		0x10000, 0xfea6dd64, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "3.6h",		0x10000, 0x02f9d05a, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "7.4e",		0x10000, 0xfde8de7e, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "2.4h",		0x10000, 0xdb987414, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "6.3e",		0x10000, 0x962585bf, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "1.3h",		0x10000, 0x3f060451, 1 | BRF_PRG | BRF_ESS }, //  5
+
+	{ "11.17k",		0x10000, 0xd4d60a51, 2 | BRF_PRG | BRF_ESS }, //  6 Z80 code
+
+	{ "9.11e",		0x08000, 0xbc6f7cbc, 3 | BRF_GRA },           //  7 Characters
+
+	{ "5.15h",		0x10000, 0x25d23dfd, 4 | BRF_GRA },           //  8 Foreground Tiles
+	{ "4.13h",		0x10000, 0xb9b0fe27, 4 | BRF_GRA },           //  9
+
+	{ "15.8a",		0x10000, 0x2144d8e0, 5 | BRF_GRA },           // 10 Background Tiles
+	{ "14.6a",		0x10000, 0x744f5c9e, 5 | BRF_GRA },           // 11
+
+	{ "12.7d",		0x10000, 0xd74085a1, 6 | BRF_GRA },           // 12 Sprites
+	{ "13.9d",		0x10000, 0x148aa0c5, 6 | BRF_GRA },           // 13
+
+	{ "10.11c",		0x04000, 0xac705812, 7 | BRF_GRA },           // 14 MCU data
+
+	{ "0302.11j",	0x00100, 0x0dc8cb70, 8 | BRF_OPT },           // 15 Proms
+};
+
+STD_ROM_PICK(terrafua)
+STD_ROM_FN(terrafua)
+
+struct BurnDriver BurnDrvterrafua = {
+	"terrafua", "terraf", NULL, NULL, "1987",
+	"Terra Force (US, alternate sound)\0", NULL, "Nichibutsu USA", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	NULL, terrafuaRomInfo, terrafuaRomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, TerrafDIPInfo,
 	TerrafInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };
@@ -2117,7 +2187,7 @@ struct BurnDriver BurnDrvTerrafj = {
 	"terrafj", "terraf", NULL, NULL, "1987",
 	"Terra Force (Japan)\0", NULL, "Nichibutsu Japan", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, terrafjRomInfo, terrafjRomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, TerrafDIPInfo,
 	TerrafInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
@@ -2199,7 +2269,7 @@ struct BurnDriver BurnDrvTerrafjb = {
 	"terrafjb", "terraf", NULL, NULL, "1987",
 	"Terra Force (Japan, bootleg with additional Z80)\0", "imperfect graphics", "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, terrafjbRomInfo, terrafjbRomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, TerrafDIPInfo,
 	TerrafjbInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
@@ -2237,7 +2307,7 @@ struct BurnDriver BurnDrvTerrafb = {
 	"terrafb", "terraf", NULL, NULL, "1987",
 	"Terra Force (Japan, bootleg set 2)\0", "imperfect graphics", "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, terrafbRomInfo, terrafbRomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, TerrafDIPInfo,
 	TerrafbInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
@@ -2315,7 +2385,7 @@ struct BurnDriver BurnDrvSkyrobo = {
 	"skyrobo", NULL, NULL, NULL, "1989",
 	"Sky Robo\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, skyroboRomInfo, skyroboRomName, NULL, NULL, NULL, NULL, BigfghtrInputInfo, BigfghtrDIPInfo,
 	SkyRoboInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
@@ -2355,7 +2425,7 @@ struct BurnDriver BurnDrvBigfghtr = {
 	"bigfghtr", "skyrobo", NULL, NULL, "1989",
 	"Tatakae! Big Fighter (Japan)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, bigfghtrRomInfo, bigfghtrRomName, NULL, NULL, NULL, NULL, BigfghtrInputInfo, BigfghtrDIPInfo,
 	SkyRoboInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3

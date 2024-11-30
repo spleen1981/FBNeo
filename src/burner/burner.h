@@ -63,12 +63,21 @@ typedef struct tagIMAGE {
 #include "interface.h"
 #endif
 
+#if defined (INCLUDE_LUA_SUPPORT) || defined (BUILD_WIN32)
+#include "luaengine.h"
+#endif
+
 #define IMG_FREE		(1 << 0)
 
 // Macros for parsing text
 #define SKIP_WS(s) while (_istspace(*s)) { s++; }			// Skip whitespace
 #define FIND_WS(s) while (*s && !_istspace(*s)) { s++; }	// Find whitespace
 #define FIND_QT(s) while (*s && *s != _T('\"')) { s++; }	// Find quote
+
+// burn/burn.cpp
+extern INT32 bRewindEnabled;
+extern INT32 nRewindMemory;
+
 
 // image.cpp
 extern int bPngImageOrientation;
@@ -92,8 +101,11 @@ extern INT32 nAnalogSpeed;
 
 extern INT32 nFireButtons;
 
+extern INT32 nSubDrvSelected;
+
 extern bool bStreetFighterLayout;
 extern bool bLeftAltkeyMapped;
+extern bool bResetDrv;
 
 INT32 GameInpInit();
 INT32 GameInpExit();
@@ -132,7 +144,7 @@ void GetHistoryDatHardwareToken(char *to_string);
 extern INT32 nAutoFireRate;
 
 // Player Default Controls
-extern INT32 nPlayerDefaultControls[5];
+extern INT32 nPlayerDefaultControls[8];
 extern TCHAR szPlayerDefaultIni[5][MAX_PATH];
 
 // mappable System Macros for the Input Dialogue
@@ -142,6 +154,18 @@ extern UINT8 macroSystemFrame;
 extern UINT8 macroSystemSaveState;
 extern UINT8 macroSystemLoadState;
 extern UINT8 macroSystemUNDOState;
+extern UINT8 macroSystemRewind;
+extern UINT8 macroSystemRewindCancel;
+extern UINT8 macroSystemSlowMo[5];
+extern UINT8 macroSystemLuaHotkey1;
+extern UINT8 macroSystemLuaHotkey2;
+extern UINT8 macroSystemLuaHotkey3;
+extern UINT8 macroSystemLuaHotkey4;
+extern UINT8 macroSystemLuaHotkey5;
+extern UINT8 macroSystemLuaHotkey6;
+extern UINT8 macroSystemLuaHotkey7;
+extern UINT8 macroSystemLuaHotkey8;
+extern UINT8 macroSystemLuaHotkey9;
 
 // scrn.cpp
 extern void scrnSSUndo();
@@ -181,6 +205,7 @@ extern INT32 bHardwareGammaOnly;
 extern double nGamma;
 
 INT32 SetBurnHighCol(INT32 nDepth);
+char* GameDecoration(UINT32 nBurnDrv);
 char* DecorateGameName(UINT32 nBurnDrv);
 TCHAR* DecorateGenreInfo();
 void ComputeGammaLUT();
@@ -219,6 +244,10 @@ INT32 BurnStateUNDO(TCHAR* szName);
 // statec.cpp
 INT32 BurnStateCompress(UINT8** pDef, INT32* pnDefLen, INT32 bAll);
 INT32 BurnStateDecompress(UINT8* Def, INT32 nDefLen, INT32 bAll);
+
+// nvram.cpp
+INT32 BurnNvramLoad(TCHAR* szName);
+INT32 BurnNvramSave(TCHAR* szName);
 
 // zipfn.cpp
 struct ZipEntry { char* szName;	UINT32 nLen; UINT32 nCrc; };

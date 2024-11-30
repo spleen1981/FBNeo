@@ -20,7 +20,6 @@ static UINT8 *DefEEPROM = NULL;
 static UINT8 *DrvSndROM;
 
 static UINT8 DrvReset = 0;
-static UINT8 bDrawScreen;
 static bool bVBlank;
 
 static INT8 nVideoIRQ;
@@ -31,6 +30,7 @@ static INT8 nIRQPending;
 
 static INT32 nCyclesTotal[2];
 static INT32 nCyclesDone[2];
+static INT32 nCyclesExtra[2];
 
 static INT32 SoundLatch;
 static INT32 SoundLatchReply;
@@ -369,6 +369,8 @@ static INT32 DrvDoReset(INT32 clear_mem)
 	SoundLatch = 0;
 	SoundLatchStatus = 0x0C;
 
+	nCyclesExtra[0] = nCyclesExtra[1] = 0;
+
 	return 0;
 }
 
@@ -382,11 +384,7 @@ static INT32 DrvDraw()
 
 	CaveClearScreen(CavePalette[0x3F00]);
 
-	if (bDrawScreen) {
-//		CaveGetBitmap();
-
-		CaveTileRender(1);					// Render tiles
-	}
+	CaveTileRender(1);					// Render tiles
 
 	return 0;
 }
@@ -419,9 +417,12 @@ static INT32 DrvFrame()
 	SekOpen(0);
 	ZetOpen(0);
 
+	ZetIdle(nCyclesExtra[1]); // using timer, must idle extra cycles
+
 	nCyclesTotal[0] = (INT32)((INT64)16000000 * nBurnCPUSpeedAdjust / (0x0100 * CAVE_REFRESHRATE));
 	nCyclesTotal[1] = (INT32)(4000000 / CAVE_REFRESHRATE);
-	nCyclesDone[0] = nCyclesDone[1] = 0;
+	nCyclesDone[0] = nCyclesExtra[0];
+	nCyclesDone[1] = 0;
 
 	nCyclesVBlank = nCyclesTotal[0] - (INT32)((nCyclesTotal[0] * CAVE_VBLANK_LINES) / 271.5);
 	bVBlank = false;
@@ -455,11 +456,13 @@ static INT32 DrvFrame()
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
+        nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 
 		BurnTimerUpdate(i * (nCyclesTotal[1] / nInterleave));
 	}
 
+    nCyclesExtra[0] = nCyclesDone[0] - nCyclesTotal[0];
+	nCyclesExtra[1] = ZetTotalCycles() - nCyclesTotal[1];
 	SekClose();
 
 	BurnTimerEndFrame(nCyclesTotal[1]);
@@ -597,11 +600,14 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		CaveScanGraphics();
 
-		SCAN_VAR(DrvInput);
 		SCAN_VAR(SoundLatch);
+		SCAN_VAR(SoundLatchReply);
+		SCAN_VAR(SoundLatchStatus);
 		SCAN_VAR(DrvZ80Bank);
 		SCAN_VAR(DrvOkiBank1);
 		SCAN_VAR(DrvOkiBank2);
+
+		SCAN_VAR(nCyclesExtra);
 
 		BurnWatchdogScan(nAction);
 
@@ -715,8 +721,6 @@ static INT32 DrvInit()
 	EEPROMInit(&eeprom_interface_93C46);
 	if (!EEPROMAvailable()) EEPROMFill(DefEEPROM, 0, 0x80);
 
-	bDrawScreen = true;
-
 	DrvDoReset(1); // Reset machine
 
 	return 0;
@@ -767,8 +771,8 @@ STD_ROM_FN(mazingerj)
 
 struct BurnDriver BurnDrvmazinger = {
 	"mazinger", NULL, NULL, NULL, "1994",
-	"Mazinger Z (World, ver. 94/06/27)\0", NULL, "Banpresto / Dynamic Pl. Toei Animation", "Cave",
-	L"Mazinger Z\0\u30DE\u30B8\u30F3\u30AC\u30FC \uFF3A (World, ver. 94/06/27)\0", NULL, NULL, NULL,
+	"Mazinger Z (World)\0", NULL, "Banpresto / Dynamic Pl. Toei Animation", "Cave",
+	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, mazingerRomInfo, mazingerRomName, NULL, NULL, NULL, NULL, mazingerInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
@@ -777,8 +781,8 @@ struct BurnDriver BurnDrvmazinger = {
 
 struct BurnDriver BurnDrvmazingerj = {
 	"mazingerj", "mazinger", NULL, NULL, "1994",
-	"Mazinger Z (Japan, ver. 94/06/27)\0", NULL, "Banpresto / Dynamic Pl. Toei Animation", "Cave",
-	L"Mazinger Z\0\u30DE\u30B8\u30F3\u30AC\u30FC \uFF3A (Japan, ver. 94/06/27)\0", NULL, NULL, NULL,
+	"Mazinger Z (Japan)\0", NULL, "Banpresto / Dynamic Pl. Toei Animation", "Cave",
+	L"Mazinger Z\0\u30de\u30b8\u30f3\u30ac\u30fc\uff3a (Japan)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, mazingerjRomInfo, mazingerjRomName, NULL, NULL, NULL, NULL, mazingerInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,

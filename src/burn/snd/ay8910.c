@@ -20,9 +20,9 @@
 #include "state.h"
 #include <stddef.h>
 
-//#define AY8910_CORE
+#define AY8910_CORE
 #include "ay8910.h"
-//#undef AY8910_CORE
+#undef AY8910_CORE
 
 #if defined FBNEO_DEBUG
 #ifdef __GNUC__
@@ -58,6 +58,12 @@ static INT32 AY8910AddSignal = 0;
 
 INT32 ay8910burgertime_mode = 0;
 
+// dc offset fixer
+static INT16 ay_lastin_r  = 0;
+static INT16 ay_lastout_r = 0;
+static INT16 ay_lastin_l  = 0;
+static INT16 ay_lastout_l = 0;
+
 // for stream-sync
 static INT32 ay8910_buffered = 0;
 static INT32 (*pCPUTotalCycles)() = NULL;
@@ -80,12 +86,11 @@ static INT32 SyncInternal()
 
 static void UpdateStream(INT32 chip, INT32 samples_len)
 {
-    if (!ay8910_buffered) return;
+    if (!ay8910_buffered || !pBurnSoundOut) return;
     if (samples_len > nBurnSoundLen) samples_len = nBurnSoundLen;
 
-	INT32 nSamplesNeeded;
-	nSamplesNeeded = samples_len - nPosition[chip];
-    if (nSamplesNeeded <= 0) return;
+	INT32 nSamplesNeeded = samples_len - nPosition[chip];
+	if (nSamplesNeeded <= 0) return;
 
 #if defined FBNEO_DEBUG
 #ifdef __GNUC__ 
@@ -131,6 +136,7 @@ struct AY8910
 
 	// not scanned
 	UINT32 UpdateStep;
+	UINT32 UpdateStepN;
 	INT32 SampleRate;
 	UINT32 VolTable[32];
 
@@ -214,8 +220,8 @@ static void _AYWriteReg(INT32 n, INT32 r, INT32 v)
 	case AY_NOISEPER:
 		PSG->Regs[AY_NOISEPER] &= 0x1f;
 		old = PSG->PeriodN;
-		PSG->PeriodN = PSG->Regs[AY_NOISEPER] * PSG->UpdateStep;
-		if (PSG->PeriodN == 0) PSG->PeriodN = PSG->UpdateStep;
+		PSG->PeriodN = PSG->Regs[AY_NOISEPER] * PSG->UpdateStepN;
+		if (PSG->PeriodN == 0) PSG->PeriodN = PSG->UpdateStepN;
 		PSG->CountN += PSG->PeriodN - old;
 		if (PSG->CountN <= 0) PSG->CountN = 1;
 		break;
@@ -350,12 +356,12 @@ static void AYWriteReg(INT32 chip, INT32 r, INT32 v)
 	{
 		struct AY8910 *PSG = &AYPSG[chip];
 
-		if (r == AY_ESHAPE || PSG->Regs[r] != v)
+	    if (r == AY_ESHAPE || PSG->Regs[r] != v)
 		{
             /* update the output buffer before changing the register */
             if (ay8910_buffered) UpdateStream(chip, SyncInternal());
 
-            AYStreamUpdate(); // for ym-cores
+            if (!FM_IS_POSTLOADING) AYStreamUpdate(); // for ym-cores
 		}
 	}
 
@@ -705,6 +711,10 @@ void AY8910Update(INT32 chip, INT16 **buffer, INT32 length)
 	}
 }
 
+// RE: PSG->UpdateStepN  -dink aug2021
+// noise channel gets a /2 divider.  this gives
+// kncljoe punch the right timbre without affecting other sounds.
+// note: also fixes "pepper" sound pitch in btime
 
 void AY8910_set_clock(INT32 chip, INT32 clock)
 {
@@ -726,6 +736,7 @@ void AY8910_set_clock(INT32 chip, INT32 clock)
 	/* STEP is a multiplier used to turn the fraction into a fixed point     */
 	/* number.                                                               */
 	PSG->UpdateStep = ((double)STEP * PSG->SampleRate * 8 + clock/2) / clock;
+	PSG->UpdateStepN = ((double)STEP * PSG->SampleRate * 8 + clock/2) / (clock/2);
 }
 
 
@@ -775,6 +786,12 @@ void AY8910Reset(INT32 chip)
 		_AYWriteReg(chip,i,0);	/* AYWriteReg() uses the timer system; we cannot */
 								/* call it at this time because the timer system */
 								/* has not been initialized. */
+
+	// reset dc blocker
+	ay_lastin_r  = 0;
+	ay_lastout_r = 0;
+	ay_lastin_l  = 0;
+	ay_lastout_l = 0;
 }
 
 void AY8910Exit(INT32 chip)
@@ -887,6 +904,7 @@ INT32 AY8910Init(INT32 chip, INT32 clock, INT32 add_signal)
 
 	AYStreamUpdate = dummy_callback;
 	if (chip == 0) AY8910AddSignal = add_signal;
+	extern INT32 nBurnSoundLen, nBurnSoundRate;
 
 	struct AY8910 *PSG = &AYPSG[chip];
 
@@ -1059,6 +1077,20 @@ void AY8910Render(INT16* dest, INT32 length)
 
 		nLeftSample = BURN_SND_CLIP(nLeftSample);
 		nRightSample = BURN_SND_CLIP(nRightSample);
+
+		{
+			// get rid of dc offset
+			INT16 outr = nRightSample - ay_lastin_r + 0.997 * ay_lastout_r;
+			INT16 outl = nLeftSample - ay_lastin_l + 0.997 * ay_lastout_l;
+
+			ay_lastin_r = nRightSample;
+			ay_lastout_r = outr;
+			ay_lastin_l = nLeftSample;
+			ay_lastout_l = outl;
+
+			nLeftSample = outl;
+			nRightSample = outr;
+		}
 
 		if (AY8910AddSignal) {
 			dest[(n << 1) + 0] = BURN_SND_CLIP(dest[(n << 1) + 0] + nLeftSample);

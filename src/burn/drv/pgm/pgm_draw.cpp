@@ -1,6 +1,29 @@
 #include "pgm.h"
 #include "pgm_sprite.h"
 
+/*
+	Video flag notes (b0e000 writes)
+
+	0000 0000 0000 000x - sprite dma enable - pulse 0->1 to trigger (does 1->0 work?)
+	0000 0000 0000 00x0 - nothing?
+	0000 0000 0000 0x00 - IRQ4 ACK - pulse to trigger (0->1 and 1->0 work?)
+	0000 0000 0000 x000 - IRQ6 ACK - pulse to trigger (0->1 and 1->0 work?)
+	0000 0000 0xx0 0000 - all games except CAVE, but seems to serve no purpose when set?
+	0000 0000 x000 0000	- loses refresh rate?
+	0000 000x 0000 0000 - shows garbage on screen for all except background?
+	0000 00x0 0000 0000 - disable everything except background layer?
+	0000 0x00 0000 0000 - nothing?
+	0000 x000 0000 0000 - disable text layer
+	000x 0000 0000 0000 - disable background layer
+	00x0 0000 0000 0000 - disable high priority sprites
+	xx00 0000 0000 0000 - nothing?
+
+
+	Sprite zooming notes:
+	
+	Dragon World II - set to English language has horrible zoom problems - this happens on real hardware
+*/
+
 //#define DUMP_SPRITE_BITMAPS
 //#define DRAW_SPRITE_NUMBER
 
@@ -604,13 +627,17 @@ static void draw_sprite_new_zoomed(INT32 wide, INT32 high, INT32 xpos, INT32 ypo
 
 static void pgm_drawsprites()
 {
-	UINT16 *source = PGMSprBuf;
-	UINT16 *finish = PGMSprBuf + 0xa00/2;
-	UINT16 *zoomtable = &PGMVidReg[0x1000/2];
-
-	while (finish > source)
+	UINT16 *source		= PGMSprBuf;
+	UINT16 *finish		= PGMSprBuf + ((OldCodeMode) ? 0x0a00 : 0x1000)/2;
+	UINT16 *zoomtable	= (OldCodeMode) ? &PGMVidReg[0x1000/2] : &PGMZoomRAM[0];
+	
+	while (source < finish)
 	{
-		if (source[4] == 0) break; // right?
+		if (!OldCodeMode) {
+			if ((source[4] & 0x7fff) == 0) break;	// verified on hardware
+		} else {
+			if (source[4] == 0) break;				// right?
+		}
 
 		INT32 xpos =  BURN_ENDIAN_SWAP_INT16(source[0]) & 0x07ff;
 		INT32 ypos =  BURN_ENDIAN_SWAP_INT16(source[1]) & 0x03ff;
@@ -625,22 +652,26 @@ static void pgm_drawsprites()
 		INT32 prio = (BURN_ENDIAN_SWAP_INT16(source[2]) & 0x0080) >> 7;
 		INT32 high =  BURN_ENDIAN_SWAP_INT16(source[4]) & 0x01ff;
 
+		if ((0 != nPGMSpriteBufferHack) || (OldCodeMode)) {
+			if (source[2] & 0x8000) boff += 0x800000; // Real hardware does not have this! Useful for some rom hacks.
+		}
+
 		if (xgrow) xzom = 0x10-xzom;
 		if (ygrow) yzom = 0x10-yzom;
 
-		UINT32 xzoom = (zoomtable[xzom*2]<<16)|zoomtable[xzom*2+1];
-		UINT32 yzoom = (zoomtable[yzom*2]<<16)|zoomtable[yzom*2+1];
+		UINT32 xzoom = (xzom & 0x10) ? 0 : ((zoomtable[xzom * 2] << 16) | zoomtable[xzom * 2 + 1]);
+		UINT32 yzoom = (yzom & 0x10) ? 0 : ((zoomtable[yzom * 2] << 16) | zoomtable[yzom * 2 + 1]);
 
 		if (xpos > 0x3ff) xpos -=0x800;
 		if (ypos > 0x1ff) ypos -=0x400;
 
 		if (enable_blending) {
-			palt|= pSpriteBlendTable[boff] << 7;
+			palt |= pSpriteBlendTable[boff] << 7;
 		}
 
 		draw_sprite_new_zoomed(wide, high, xpos, ypos, palt, boff * 2, flip, xzoom, xgrow, yzoom, ygrow, prio);
 
-		source += 5;
+		source += (OldCodeMode) ? 5 : 8;
 	}
 }
 
@@ -678,8 +709,8 @@ static void draw_text()
 {
 	UINT16 *vram = (UINT16*)PGMTxtRAM;
 
-	INT32 scrollx = ((INT16)BURN_ENDIAN_SWAP_INT16(PGMVidReg[0x6000 / 2])) & 0x1ff;
-	INT32 scrolly = ((INT16)BURN_ENDIAN_SWAP_INT16(PGMVidReg[0x5000 / 2])) & 0x0ff;
+	INT32 scrollx = ((OldCodeMode) ? ((INT16)BURN_ENDIAN_SWAP_INT16(PGMVidReg[0x6000 / 2])) : pgm_fg_scrollx) & 0x1ff;
+	INT32 scrolly = ((OldCodeMode) ? ((INT16)BURN_ENDIAN_SWAP_INT16(PGMVidReg[0x5000 / 2])) : pgm_fg_scrolly) & 0x0ff;
 
 	for (INT32 offs = 0; offs < 64 * 32; offs++)
 	{
@@ -797,8 +828,8 @@ static void draw_background()
 	UINT16 *vram = (UINT16*)PGMBgRAM;
 
 	UINT16 *rowscroll = PGMRowRAM;
-	INT32 yscroll = (INT16)BURN_ENDIAN_SWAP_INT16(PGMVidReg[0x2000 / 2]);
-	INT32 xscroll = (INT16)BURN_ENDIAN_SWAP_INT16(PGMVidReg[0x3000 / 2]);
+	INT32 yscroll = ((OldCodeMode) ? ((INT16)BURN_ENDIAN_SWAP_INT16(PGMVidReg[0x2000 / 2])) : pgm_bg_scrolly);
+	INT32 xscroll = ((OldCodeMode) ? ((INT16)BURN_ENDIAN_SWAP_INT16(PGMVidReg[0x3000 / 2])) : pgm_bg_scrollx);
 
 	// check to see if we need to do line scroll
 	INT32 t = 0;
@@ -1028,36 +1059,63 @@ INT32 pgmDraw()
 		}
 		nPgmPalRecalc = 0;
 	}
+	
+	INT32 nTemp = (OldCodeMode) ? 0x1200 : 0x2000;
 
 	{
 		// black / magenta
-		RamCurPal[0x1200/2] = (nBurnLayer & 1) ? RamCurPal[0x3ff] : BurnHighCol(0xff, 0, 0xff, 0);
-		RamCurPal[0x1202/2] = BurnHighCol(0xff,0x00,0xff,0);
+		RamCurPal[(nTemp+0)/2]	= (nBurnLayer & 1) ? RamCurPal[0x3ff] : BurnHighCol(0xff, 0, 0xff, 0);
+		RamCurPal[(nTemp+2)/2]	= BurnHighCol(0xff,0x00,0xff,0);
 	}
 
-	// Fill in background color (0x1200/2)
+	// Fill in background color (0x2000/2)
 	// also, clear buffers
 	{
+		nTemp = (OldCodeMode) ? 0x0900 : 0x1000;
 
 		for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++) {
-			pTempDraw32[i] = RamCurPal[0x900];
-			pTransDraw[i] = 0x900;
-			pTempScreen[i] = 0;
-			SpritePrio[i] = 0xff;
+			pTempDraw32[i]	= RamCurPal[nTemp];
+			pTransDraw[i]	= nTemp;
+			pTempScreen[i]	= 0;
+			SpritePrio[i]	= 0xff;
 		}
 	}
 
 	pgm_drawsprites();
+
 	if (nSpriteEnable & 1) copy_sprite_priority(1);
+
 #ifdef DRAW_SPRITE_NUMBER
 	pgm_drawsprites_fonts(1);
 #endif
-	if (nBurnLayer & 1) draw_background();
-	if (nSpriteEnable & 2) copy_sprite_priority(0);
+
+//	if ((pgm_video_control & 0x1000) == 0 && (nBurnLayer & 1)) draw_background();
+	if (nBurnLayer & 1) {
+		if (!OldCodeMode) {
+			if ((pgm_video_control & 0x1000) == 0)
+				draw_background();
+		} else {draw_background();}
+	}
+
+//	if ((pgm_video_control & 0x2000) == 0 && (nSpriteEnable & 2)) copy_sprite_priority(0);
+	if (nBurnLayer & 2) {
+		if (!OldCodeMode) {
+			if ((pgm_video_control & 0x2000) == 0)
+				copy_sprite_priority(0);
+		} else {copy_sprite_priority(0);}
+	}
+
 #ifdef DRAW_SPRITE_NUMBER
 	pgm_drawsprites_fonts(0);
 #endif
-	if (nBurnLayer & 2) draw_text();
+
+//	if ((pgm_video_control & 0x0800) == 0 && (nBurnLayer & 2)) draw_text();
+	if (nBurnLayer & 2) {
+		if (!OldCodeMode) {
+			if ((pgm_video_control & 0x0800) == 0)
+				draw_text();
+		} else {draw_text();}
+	}
 
 	if (enable_blending) {
 		pgmBlendCopy();

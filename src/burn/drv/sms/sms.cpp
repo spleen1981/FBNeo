@@ -14,7 +14,7 @@ UINT8 data_bus_pulldown = 0x00;
 
 static UINT8 *korean8kmap8000_9fff, *korean8kmapa000_bfff, *korean8kmap4000_5fff, *korean8kmap6000_7fff;
 
-void writemem_mapper_sega(UINT16 offset, UINT8 data)
+void __fastcall writemem_mapper_sega(UINT16 offset, UINT8 data)
 {
 	if (offset >= 0xc000 /*&& offset <= 0xffff*/)
 		sms.wram[offset & 0x1fff] = data;
@@ -25,7 +25,7 @@ void writemem_mapper_sega(UINT16 offset, UINT8 data)
 	}
 }
 
-void writemem_mapper_codies(UINT16 offset, UINT8 data)
+void __fastcall writemem_mapper_codies(UINT16 offset, UINT8 data)
 {
 	switch(offset & 0xC000)
 	{
@@ -41,7 +41,7 @@ void writemem_mapper_codies(UINT16 offset, UINT8 data)
 	}
 }
 
-void writemem_mapper_msx(UINT16 offset, UINT8 data)
+void __fastcall writemem_mapper_msx(UINT16 offset, UINT8 data)
 {
 	if (offset <= 0x0003) {
 		sms_mapper8k_w(offset & 3, data);
@@ -52,13 +52,13 @@ void writemem_mapper_msx(UINT16 offset, UINT8 data)
 		sms.wram[offset & 0x1fff] = data;
 }
 
-void writemem_mapper_none(UINT16 offset, UINT8 data)
+void __fastcall writemem_mapper_none(UINT16 offset, UINT8 data)
 {
 	if (offset >= 0xc000 /*&& offset <= 0xffff*/)
 		sms.wram[offset & 0x1fff] = data;
 }
 
-void writemem_mapper_korea(UINT16 offset, UINT8 data)
+void __fastcall writemem_mapper_korea(UINT16 offset, UINT8 data)
 {
 	if (offset == 0xA000) {
 		sms_mapper_w(3, data);
@@ -68,7 +68,7 @@ void writemem_mapper_korea(UINT16 offset, UINT8 data)
 	sms.wram[offset & 0x1fff] = data;
 }
 
-void writemem_mapper_4pak(UINT16 offset, UINT8 data)
+void __fastcall writemem_mapper_4pak(UINT16 offset, UINT8 data)
 {
 	switch (offset)	{
 		case 0x3FFE: {
@@ -88,7 +88,7 @@ void writemem_mapper_4pak(UINT16 offset, UINT8 data)
 	sms.wram[offset & 0x1fff] = data;
 }
 
-void writemem_mapper_xin1(UINT16 offset, UINT8 data)
+void __fastcall writemem_mapper_xin1(UINT16 offset, UINT8 data)
 {
 	if (offset == 0xFFFF) {
 		sms.wram[0x1fff] = data;
@@ -99,7 +99,7 @@ void writemem_mapper_xin1(UINT16 offset, UINT8 data)
 	sms.wram[offset & 0x1fff] = data;
 }
 
-UINT8 readmem_mapper_xin1(UINT16 offset) // HiCom Xin1
+UINT8 __fastcall readmem_mapper_xin1(UINT16 offset) // HiCom Xin1
 {
 	if(offset >= 0xc000 /*&& offset <= 0xffff*/)
 		return sms.wram[offset & 0x1fff];
@@ -112,7 +112,7 @@ UINT8 readmem_mapper_xin1(UINT16 offset) // HiCom Xin1
 }
 
 
-void writemem_mapper_korea8k(UINT16 offset, UINT8 data)
+void __fastcall writemem_mapper_korea8k(UINT16 offset, UINT8 data)
 {
 	if (offset == 0x4000) {
 		sms_mapper8kvirt_w(2, data);
@@ -146,7 +146,7 @@ void writemem_mapper_korea8k(UINT16 offset, UINT8 data)
 	sms.wram[offset & 0x1fff] = data;
 }
 
-UINT8 readmem_mapper_korea8k(UINT16 offset) // aka Janggun
+UINT8 __fastcall readmem_mapper_korea8k(UINT16 offset) // aka Janggun
 {
 	UINT8 data = 0;
 
@@ -500,7 +500,7 @@ void memctrl_w(UINT8 data)
 /* Sega Master System port handlers                                         */
 /*--------------------------------------------------------------------------*/
 
-void sms_port_w(UINT16 port, UINT8 data)
+void __fastcall sms_port_w(UINT16 port, UINT8 data)
 {
 	port &= 0xFF;
 
@@ -548,7 +548,7 @@ void sms_port_w(UINT16 port, UINT8 data)
 	}
 }
 
-UINT8 sms_port_r(UINT16 port)
+UINT8 __fastcall sms_port_r(UINT16 port)
 {
 	port &= 0xFF;
 
@@ -580,7 +580,7 @@ UINT8 sms_port_r(UINT16 port)
 /* Game Gear port handlers                                                  */
 /*--------------------------------------------------------------------------*/
 
-void gg_port_w(UINT16 port, UINT8 data)
+void __fastcall gg_port_w(UINT16 port, UINT8 data)
 {
 	port &= 0xFF;
 
@@ -612,7 +612,7 @@ void gg_port_w(UINT16 port, UINT8 data)
 }
 
 
-UINT8 gg_port_r(UINT16 port)
+UINT8 __fastcall gg_port_r(UINT16 port)
 {
 	port &= 0xFF;
 
@@ -650,7 +650,7 @@ UINT8 gg_port_r(UINT16 port)
 /* Game Gear (MS) port handlers                                             */
 /*--------------------------------------------------------------------------*/
 
-void ggms_port_w(UINT16 port, UINT8 data)
+void __fastcall ggms_port_w(UINT16 port, UINT8 data)
 {
 	port &= 0xFF;
 
@@ -676,7 +676,7 @@ void ggms_port_w(UINT16 port, UINT8 data)
 	}
 }
 
-UINT8 ggms_port_r(UINT16 port)
+UINT8 __fastcall ggms_port_r(UINT16 port)
 {
 	port &= 0xFF;
 

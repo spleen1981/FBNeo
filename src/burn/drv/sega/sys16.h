@@ -109,6 +109,7 @@ extern UINT32 System16UPD7759DataSize;
 extern UINT32 System16I8751RomNum;
 extern UINT32 System16MSM6295RomNum;
 
+extern INT32 System16SoundMute; // hangon hw
 extern UINT8 System16VideoControl;
 extern INT32 System16SoundLatch;
 extern bool System16BTileAlt;
@@ -126,6 +127,8 @@ extern bool System1668KEnable;
 extern INT32 System16YM2413IRQInterval;
 
 extern bool System16HasGears;
+
+extern INT32 s16a_update_after_vblank;
 
 extern INT32 nSystem16CyclesDone[4]; 
 extern UINT32 System16ClockSpeed;
@@ -153,6 +156,7 @@ extern System16ProcessAnalogControls System16ProcessAnalogControlsDo;
 
 typedef void (*System16MakeAnalogInputs)();
 extern System16MakeAnalogInputs System16MakeAnalogInputsDo;
+extern System16MakeAnalogInputs System16MakeInputsDo;
 
 UINT8 __fastcall System16PPIZ80PortRead(UINT16 a);
 void __fastcall System16Z80PortWrite(UINT16 a, UINT8 d);
@@ -181,6 +185,7 @@ INT32 XBoardFrame();
 INT32 XBoardFrameGPRider();
 INT32 YBoardFrame();
 INT32 System16Scan(INT32 nAction, INT32 *pnMin);
+void sys16_sync_mcu();
 
 // d_sys16a.cpp
 void System16APPI0WritePortA(UINT8 data);
@@ -211,6 +216,8 @@ UINT16 __fastcall HangonReadWord(UINT32 a);
 UINT8 __fastcall HangonReadByte(UINT32 a);
 void __fastcall HangonWriteWord(UINT32 a, UINT16 d);
 void __fastcall HangonWriteByte(UINT32 a, UINT8 d);
+UINT8 Hangon_I8751ReadPort(INT32 port);
+void Hangon_I8751WritePort(INT32 port, UINT8 data);
 
 // d_outrun.cpp
 void OutrunPPI0WritePortC(UINT8 data);
@@ -246,6 +253,7 @@ extern INT32 Pdrift_analog_target;
 
 // sys16_gfx.cpp
 extern INT32 System16VideoEnable;
+extern INT32 System16AVideoEnableDelayed;
 extern INT32 System18VdpEnable;
 extern INT32 System18VdpMixing;
 extern INT32 System16ScreenFlip;

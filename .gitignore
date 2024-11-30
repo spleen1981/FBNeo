@@ -4,3 +4,4 @@ src/dep/generated
 *.sdf
 *.suo
 *.xur
+*:Zone.Identifier

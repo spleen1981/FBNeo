@@ -267,6 +267,8 @@ static INT32 DrvDoReset()
 	soundlatch = 0;
 	sound_irq = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -646,8 +648,8 @@ static struct BurnRomInfo dblewingRomDesc[] = {
 
 	{ "kp_03-.16h",			0x020000, 0x5d7f930d, 5 | BRF_SND },             //  6 OKI M6295 Samples
 	
-	{ "pal1618-vg-00.1f",  	0x00117, 0x8c2849e5, 0 | BRF_OPT }, 			 //  7 Plds
-	{ "pal1618-vg-01.1h",  	0x00117, 0x04b0bab6, 0 | BRF_OPT }, 			 //  8
+	{ "pal16l8-vg-00.1f",  	0x00117, 0x8c2849e5, 0 | BRF_OPT }, 			 //  7 Plds
+	{ "pal16l8-vg-01.1h",  	0x00117, 0x04b0bab6, 0 | BRF_OPT }, 			 //  8
 	{ "pal16r8-vg-02.11b", 	0x00117, 0x00000000, 0 | BRF_OPT | BRF_NODUMP }, //  9
 };
 
@@ -708,7 +710,7 @@ struct BurnDriver BurnDrvDblewing = {
 	"dblewing", NULL, NULL, NULL, "1993",
 	"Double Wings (set 1)\0", NULL, "Mitchell", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
 	NULL, dblewingRomInfo, dblewingRomName, NULL, NULL, NULL, NULL, DblewingInputInfo, DblewingDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	240, 320, 3, 4
@@ -718,7 +720,7 @@ struct BurnDriver BurnDrvDblewinga = {
 	"dblewinga", "dblewing", NULL, NULL, "1993",
 	"Double Wings (set 2)\0", NULL, "Mitchell", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
 	NULL, dblewingaRomInfo, dblewingaRomName, NULL, NULL, NULL, NULL, DblewingInputInfo, DblewingDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	240, 320, 3, 4
@@ -728,7 +730,7 @@ struct BurnDriver BurnDrvDblewingb = {
 	"dblewingb", "dblewing", NULL, NULL, "1994",
 	"Double Wings (Asia)\0", NULL, "Mitchell", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
 	NULL, dblewingbRomInfo, dblewingbRomName, NULL, NULL, NULL, NULL, DblewingInputInfo, DblewingDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	240, 320, 3, 4

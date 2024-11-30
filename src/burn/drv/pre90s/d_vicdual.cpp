@@ -4,10 +4,11 @@
 /*
     finished:
 		carnival (w/sound)
+		heiankyo alien (w/sound)
+		nsub (w/sound)
 
 	to do:
-	  	bugtest
-		sound?
+	  	all the others
 */
 
 #include "tiles_generic.h"
@@ -30,8 +31,15 @@ static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
 static UINT8 coin_status;
+static INT32 coin_timer;
+static UINT8 coin_last;
+
 static UINT8 palette_bank;
 static UINT8 samurai_protection;
+// sound
+static UINT8 port1_state;
+static UINT8 port2_state;
+static INT32 sample_latch;
 
 static UINT8 DrvJoy1[1]; // coin
 static UINT8 DrvJoy2[8];
@@ -42,7 +50,10 @@ static UINT8 DrvDips[2];
 static UINT8 DrvInputs[4];
 static UINT8 DrvReset;
 
+static INT32 nExtraCycles[1];
+
 static INT32 carnival_sound = 0;
+static INT32 is_nsub = 0;
 
 static struct BurnInputInfo Invho2InputList[] = {
 	{"Game Select",		BIT_DIGITAL,	DrvJoy5 + 4,	"p1 fire 2"	},
@@ -698,6 +709,23 @@ static struct BurnDIPInfo HeadonDIPList[]=
 
 STDDIPINFO(Headon)
 
+static struct BurnDIPInfo StartrksDIPList[]=
+{
+	{0x07, 0xff, 0xff, 0x00, NULL						},
+
+	{0   , 0xfe, 0   ,    4, "Lives"					},
+	{0x07, 0x01, 0x03, 0x00, "2"						},
+	{0x07, 0x01, 0x03, 0x01, "3"						},
+	{0x07, 0x01, 0x03, 0x02, "4"						},
+	{0x07, 0x01, 0x03, 0x03, "5"						},
+
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
+	{0x07, 0x01, 0x04, 0x04, "Off"						},
+	{0x07, 0x01, 0x04, 0x00, "On"						},
+};
+
+STDDIPINFO(Startrks)
+
 static struct BurnDIPInfo BrdrlineDIPList[]=
 {
 	{0x0e, 0xff, 0xff, 0x05, NULL						},
@@ -1051,10 +1079,13 @@ static UINT8 __fastcall alphaho_read_port(UINT16 port)
 	return 0;
 }
 
-static void __fastcall heiankyo_write_port(UINT16 port, UINT8/* data*/)
+static void HeiankyoSoundWrite1(UINT16 port, UINT8 data); // forward for now..
+static void HeiankyoSoundWrite2(UINT16 port, UINT8 data);
+
+static void __fastcall heiankyo_write_port(UINT16 port, UINT8 data)
 {
-//	if (port & 1) // audio
-//	if (port & 2) // audio
+	if (port & 1) HeiankyoSoundWrite1(port, data);
+	if (port & 2) HeiankyoSoundWrite2(port, data);
 	if (port & 8) coin_status = 1;
 }
 
@@ -1069,13 +1100,13 @@ static UINT8 __fastcall heiankyo_read_port(UINT16 port)
 			return (DrvInputs[1] & ~0x0c) | get_composite_blank_comp(8);
 
 		case 0x02:
-			return (DrvInputs[2] & ~0x2a) | get_timer_value(8);
+			return (DrvInputs[2] & ~0x2e) | get_timer_value(8);
 
 		case 0x03:
 			return (DrvInputs[3] & ~0x0c) | (DrvDips[1] & 0x04) | get_coin_status(8);
 	}
 
-	return 0;
+	return 0xff;
 }
 
 static void __fastcall pulsar_write_port(UINT16 port, UINT8 data)
@@ -1324,6 +1355,7 @@ static UINT8 __fastcall spacetrk_read_port(UINT16 port)
 static void CarnivalSoundWrite1(UINT8 data);
 static void CarnivalSoundWrite2(UINT8 data);
 static void CarnivalSoundReset();
+static void NsubSoundWrite(UINT8 data);
 
 static void __fastcall carnival_write_port(UINT16 port, UINT8 data)
 {
@@ -1481,8 +1513,8 @@ static UINT8 __fastcall headonn_read_port(UINT16 port)
 static void __fastcall nsub_write_port(UINT16 port, UINT8 data)
 {
 	if (port & 0x01) coin_status = 1;
-//	if (port & 0x02) // audio?
-	if (port & 0x04) palette_bank = data & 3;
+	if (port & 0x02) NsubSoundWrite(data);
+	if (port & 0x04) palette_bank = data & 0xf;
 }
 
 static UINT8 __fastcall nsub_read_port(UINT16 port)
@@ -1501,15 +1533,24 @@ static INT32 DrvDoReset()
 	ZetReset();
 	ZetClose();
 
-	BurnSampleReset();
+	BurnSampleReset(); // buffered
 
 	if (carnival_sound) {
 		CarnivalSoundReset();
 	}
 
 	coin_status = 0;
+	coin_timer = 0;
 	palette_bank = 0;
 	samurai_protection = 0;
+
+	port1_state = (is_nsub) ? 0xff : 0x00;
+	port2_state = 0x00;
+	sample_latch = 0;
+
+	nExtraCycles[0] = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -1524,7 +1565,7 @@ static INT32 MemIndex()
 
 	DrvColPROM		= Next; Next += 0x000040;
 
-	DrvPalette		= (UINT32*)Next; Next += 0x0008 * sizeof(UINT32);
+	DrvPalette		= (UINT32*)Next; Next += (0x0008 + 0x100) * sizeof(UINT32); // + 0x100 - nsub
 
 	AllRam			= Next;
 
@@ -1598,11 +1639,170 @@ static INT32 DrvLoadRoms()
 	return 0;
 }
 
+// Heiankyo Alien sound logic. -dink sept. 2021
+#define PLAYING(x) (BurnSampleGetStatus(x) == SAMPLE_PLAYING)
+#define PLAY(sam, loop) { BurnSamplePlay(sam); BurnSampleSetLoop(sam, loop); }
+
+static INT32 out_hole = 0;
+
+// heiankyo sound
+static void HeiankyoSoundWrite1(UINT16 port, UINT8 data)
+{
+	UINT8 Low  = (port1_state ^ data) & ~data;
+	UINT8 High = (port1_state ^ data) & data;
+
+	port1_state = data;
+
+	if (Low & 0x80) {
+		BurnSamplePlay(5); // shovel
+		return; // shovel has priority, skip processing the rest of this port
+	}
+
+	if (High & 0x4 && !PLAYING(6)) // more appear (you're taking too long)
+		BurnSamplePlay(6);
+
+	if (High & 0x8 && !PLAYING(2)) {
+		BurnSamplePlay(2); // alien in hole
+		BurnSampleStop(3); // stop "aliens moving"
+	}
+	if (Low & 0x8) {
+		BurnSampleStop(2); // stop "alien in hole"
+		out_hole = 10;     // start countdown timer
+	}
+	if (Low & 0x20)
+		BurnSamplePlay(0); // aliens appear
+
+	//if (Low || High) bprintf(0, _T("p1 low:  %x\thi:  %x\tframe:  %d\n"), Low, High, nCurrentFrame);
+}
+
+static void HeiankyoSoundWrite2(UINT16 port, UINT8 data)
+{
+	palette_bank = (data >> 6) & 3;
+	data &= 0x3f;
+
+	UINT8 Low  = (port2_state ^ data) & ~data;
+	UINT8 High = (port2_state ^ data) & data;
+	UINT8 Resume_Moving = 0;
+
+	port2_state = data;
+
+	//if (Low || High) bprintf(0, _T("p2 low:  %x\thi:  %x\tframe:  %d\n"), Low, High, nCurrentFrame);
+
+	if (out_hole > 0) {
+		// if aliens escape a hole, we need to re-trigger the "aliens moving" sample loop after a short time
+		out_hole--;
+		if (out_hole == 0 && sample_latch) {
+			Resume_Moving = 1;
+		}
+	}
+
+	if ((Low & 0x8 || Resume_Moving) && !PLAYING(4) && !PLAYING(3) && !PLAYING(2) && !PLAYING(1)) {
+		sample_latch = 1;
+		BurnSamplePlay(3); // aliens moving
+		BurnSampleSetLoop(3, true);
+	}
+	if (High & 0x8) {
+		sample_latch = 0;
+		BurnSampleStop(3); // STOP aliens moving
+	}
+
+	if (Low & 0x20 && !PLAYING(4)) {
+		BurnSamplePlay(4); // hero death
+	}
+
+	if (Low & 0x10 && !PLAYING(1)) { // note: also played when hero death.
+		BurnSamplePlay(1); // alien death
+		BurnSampleStop(2); // stop "alien in hole"
+	}
+}
+
+// nsub sound board
+#define NSUB_WARNING          0x01
+#define NSUB_SONAR            0x02
+#define NSUB_LAUNCH           0x04
+#define NSUB_EXPL_L           0x08
+#define NSUB_EXPL_S           0x10
+#define NSUB_BONUS            0x20
+#define NSUB_CODE             0x40
+#define NSUB_BOAT             0x80
+
+static void NsubSoundWrite(UINT8 data)
+{
+	UINT8 Low  = (port1_state ^ data) & ~data;
+	UINT8 High = (port1_state ^ data) & data;
+
+	port1_state = data;
+
+	if (Low & NSUB_WARNING) {
+		PLAY(5, true);
+		BurnSampleStop(6);
+	} else if (High & NSUB_WARNING) {
+		PLAY(6, false);
+		BurnSampleStop(5);
+	}
+
+	if (Low & NSUB_SONAR) {
+		PLAY(2, true);
+	} else if (High & NSUB_SONAR) {
+		BurnSampleStop(2);
+	}
+
+	if (Low & NSUB_LAUNCH) {
+		PLAY(3, true);
+		BurnSampleStop(4);
+	} else if (High & NSUB_LAUNCH) {
+		PLAY(4, false);
+		BurnSampleStop(3);
+	}
+
+	if (Low & NSUB_EXPL_L) {
+		PLAY(0, true);
+		BurnSampleStop(1);
+	} else if (High & NSUB_EXPL_L) {
+		PLAY(1, false);
+		BurnSampleStop(0);
+	}
+
+	if (Low & NSUB_EXPL_S) {
+		PLAY(7, true);
+		BurnSampleStop(8);
+
+		// fade-in clicky sample
+		BurnSampleSetAllRoutes(7, 0.00, BURN_SND_ROUTE_BOTH);
+		BurnSampleSetAllRoutesFade(7, 0.50, BURN_SND_ROUTE_BOTH);
+	} else if (High & NSUB_EXPL_S) {
+		PLAY(8, false);
+		BurnSampleStop(7);
+
+		// fade-in clicky sample
+		BurnSampleSetAllRoutes(8, 0.00, BURN_SND_ROUTE_BOTH);
+		BurnSampleSetAllRoutesFade(8, 0.50, BURN_SND_ROUTE_BOTH);
+	}
+
+	if (Low & NSUB_BONUS) {
+		PLAY(9, true);
+		BurnSampleStop(10);
+	} else if (High & NSUB_BONUS) {
+		PLAY(10, false);
+		BurnSampleStop(9);
+	}
+
+	if (Low & NSUB_CODE) {
+		PLAY(11, true);
+	} else if (High & NSUB_CODE) {
+		BurnSampleStop(11);
+	}
+
+	if (Low & NSUB_BOAT) {
+		PLAY(12, true);
+	} else if (High & NSUB_BOAT) {
+		BurnSampleStop(12);
+	}
+}
+
 // carnival sound board
 static UINT8 ay8910_bus;
 static UINT8 ay8910_data;
-static UINT8 i8039_port1_state;
-static UINT8 i8039_port2_state;
 static UINT8 i8039_in_reset;
 
 #define CARNIVAL_RIFLE        0x01
@@ -1618,9 +1818,10 @@ static UINT8 i8039_in_reset;
 
 static void CarnivalSoundWrite1(UINT8 data)
 {
-	UINT8 Low = (i8039_port1_state ^ data) & ~data;
+	UINT8 Low  = (port1_state ^ data) & ~data;
+	UINT8 High = (port1_state ^ data) & data;
 
-	i8039_port1_state = data;
+	port1_state = data;
 
 	if (Low & CARNIVAL_RIFLE)
 		BurnSamplePlay(9);
@@ -1628,14 +1829,32 @@ static void CarnivalSoundWrite1(UINT8 data)
 	if (Low & CARNIVAL_CLANG)
 		BurnSamplePlay(3);
 
-	if (Low & CARNIVAL_DUCK1)
+	if (Low & CARNIVAL_DUCK1) {
+		BurnSampleSetLoop(4, true);
 		BurnSamplePlay(4);
+	}
+	if (High & CARNIVAL_DUCK1) {
+		BurnSampleSetLoop(4, false);
+		BurnSampleStop(4);
+	}
 
-	if (Low & CARNIVAL_DUCK2)
+	if (Low & CARNIVAL_DUCK2) {
+		BurnSampleSetLoop(5, true);
 		BurnSamplePlay(5);
+	}
+	if (High & CARNIVAL_DUCK2) {
+		BurnSampleSetLoop(5, false);
+		BurnSampleStop(5);
+	}
 
-	if (Low & CARNIVAL_DUCK3)
+	if (Low & CARNIVAL_DUCK3) {
+		BurnSampleSetLoop(6, true);
 		BurnSamplePlay(6);
+	}
+	if (High & CARNIVAL_DUCK3) {
+		BurnSampleSetLoop(6, false);
+		BurnSampleStop(6);
+	}
 
 	if (Low & CARNIVAL_PIPEHIT)
 		BurnSamplePlay(7);
@@ -1649,9 +1868,9 @@ static void CarnivalSoundWrite1(UINT8 data)
 
 static void CarnivalSoundWrite2(UINT8 data)
 {
-	UINT8 Low = (i8039_port2_state ^ data) & ~data;
+	UINT8 Low = (port2_state ^ data) & ~data;
 
-	i8039_port2_state = data;
+	port2_state = data;
 
 	if (Low & CARNIVAL_BEAR)
 		BurnSamplePlay(0);
@@ -1660,9 +1879,9 @@ static void CarnivalSoundWrite2(UINT8 data)
 		BurnSamplePlay(8);
 
 	if (~data & 0x10) {
-		I8039Reset();
 		i8039_in_reset = 1;
 	} else {
+		I8039Reset();
 		i8039_in_reset = 0;
 	}
 }
@@ -1682,7 +1901,7 @@ static void ay8910_check_latch()
 static UINT8 __fastcall i8039_sound_read_port(UINT32 port)
 {
 	if (port == I8039_t1)
-		return (~i8039_port2_state & 0x08) >> 3;
+		return (~port2_state & 0x08) >> 3;
 
 	return 0;
 }
@@ -1708,6 +1927,7 @@ static void CarnivalSoundInit()
 	carnival_sound = 1;
 	AY8910Init(0, 3579545 / 3, 1);
 	AY8910SetAllRoutes(0, 0.15, BURN_SND_ROUTE_BOTH);
+	AY8910SetBuffered(I8039TotalCycles, 3579545 / 15);
 
 	I8039Init(0);
 	I8039Open(0);
@@ -1731,8 +1951,8 @@ static void CarnivalSoundReset()
 
 	ay8910_bus = 0;
 	ay8910_data = 0;
-	i8039_port1_state = 0;
-	i8039_port2_state = 0;
+	port1_state = 0;
+	port2_state = 0;
 	i8039_in_reset = 0;
 }
 
@@ -1743,8 +1963,6 @@ static void CarnivalSoundScan(INT32 nAction, INT32 *pnMin)
 
 	SCAN_VAR(ay8910_bus);
 	SCAN_VAR(ay8910_data);
-	SCAN_VAR(i8039_port1_state);
-	SCAN_VAR(i8039_port2_state);
 	SCAN_VAR(i8039_in_reset);
 }
 
@@ -1757,12 +1975,7 @@ static void CarnivalSoundExit()
 
 static INT32 DrvInit(INT32 romsize, INT32 rambase, INT32 has_z80ram, void (__fastcall *wp)(UINT16,UINT8), UINT8 (__fastcall *rp)(UINT16), void (*z80_cb)(), void (*rom_cb)())
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	if (DrvLoadRoms()) return 1;
 
@@ -1799,6 +2012,7 @@ static INT32 DrvInit(INT32 romsize, INT32 rambase, INT32 has_z80ram, void (__fas
 	}
 
 	BurnSampleInit(0);
+	BurnSampleSetBuffered(ZetTotalCycles, 1933560);
 
 	GenericTilesInit();
 
@@ -1817,7 +2031,9 @@ static INT32 DrvExit()
 	if (carnival_sound)
 		CarnivalSoundExit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
+
+	is_nsub = 0;
 
 	return 0;
 }
@@ -1826,6 +2042,32 @@ static void DrvCreatePalette()
 {
 	for (INT32 i = 0; i < 8; i++) {
 		DrvPalette[i] = BurnHighCol((i & 4) ? 0xff : 0, (i & 1) ? 0xff : 0, (i & 2) ? 0xff : 0, 0);
+	}
+}
+
+static void nsub_gradient(UINT8 x, UINT8 y, UINT8 &bg)
+{
+	const UINT8 grad[] = {
+		0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x43,0x43,0x43,0x44,0x44,0x44,0x45,0x45,0x45,0x46,0x46,0x46,0x47,
+		0x47,0x47,0x48,0x48,0x48,0x49,0x49,0x49,0x4a,0x4a,0x4a,0x4b,0x4b,0x4b,0x4c,0x4c,0x4c,0x4d,0x4d,0x4d,0x4e,0x4e,0x4e,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,
+		0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x13,0x13,0x13,0x13,0x13,0x13,0x14,0x14,0x14,0x14,0x14,
+		0x15,0x15,0x15,0x15,0x16,0x16,0x16,0x17,0x17,0x17,0x18,0x18,0x19,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1e,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff
+	};
+
+	if (~palette_bank & 0x04) return;
+
+	// make pal
+	for (INT32 i = 0; i < 0x10; i++) {
+		DrvPalette[i + 0x10] = BurnHighCol(0, (i * 0x08) + 0x80, 0xff, 0);
+		DrvPalette[i + 0x20] = BurnHighCol(0, 0, i * 0x11, 0);
+	}
+
+	x = (x + 5) >> 1;
+	if (palette_bank & 0x8) x = 0x80 - x;
+
+	switch (grad[x] & 0xf0) {
+		case 0x10: bg = 0x10 | (grad[x] & 0x0f); break;
+		case 0x40: bg = 0x20 | (grad[x] & 0x0f); break;
 	}
 }
 
@@ -1838,7 +2080,7 @@ static void draw_layer()
 	UINT8 video_data = 0;
 	UINT8 back_pen = 0;
 	UINT8 fore_pen = 0;
-	UINT8 *prom = DrvColPROM + (palette_bank * 8) + (is_bw ? 0x20 : 0);
+	UINT8 *prom = DrvColPROM + ((palette_bank & 0x03) * 8) + (is_bw ? 0x20 : 0);
 
 	while (1)
 	{
@@ -1854,6 +2096,8 @@ static void draw_layer()
 			back_pen = prom[offs] & 0xf;
 			fore_pen = prom[offs] >> 4;
 		}
+
+		if (is_nsub) nsub_gradient(x, y, back_pen);
 
 		pTransDraw[(y * nScreenWidth) + x] = (video_data & 0x80) ? fore_pen : back_pen;
 
@@ -1877,6 +2121,8 @@ static INT32 DrvDraw()
 		DrvRecalc = 0;
 	}
 
+	BurnTransferClear();
+
 	draw_layer();
 
 	BurnTransferCopy(DrvPalette);
@@ -1891,8 +2137,7 @@ static INT32 DrvFrame()
 	}
 
 	ZetNewFrame();
-
-	INT32 nCyclesDone[2] = { 0, 0 };
+	I8039NewFrame();
 
 	{
 		memset (DrvInputs, 0xff, 4);
@@ -1905,45 +2150,55 @@ static INT32 DrvFrame()
 		}
 
 		{ // nutso coin handling stuff.
-			static UINT8 last_coin = 0;
-
-			if (DrvJoy1[0] & 1 && last_coin == 0) {
-				ZetOpen(0);
-				ZetReset();
-				nCyclesDone[0] += ZetRun(4000); // give some cycles for coin to be read
-				coin_status = 0;
-				ZetClose();
+			if (DrvJoy1[0] & 1 && coin_last == 0) {
+				ZetReset(0);
+				coin_timer = 4;
 			}
-			last_coin = DrvJoy1[0] & 1;
+			coin_last = DrvJoy1[0] & 1;
 		}
 	}
 
-	INT32 nInterleave = 10;
+	INT32 nInterleave = 262;
 	INT32 nCyclesTotal[2] = { 1933560 / 60, 3579545 / 15 / 60 };
+	INT32 nCyclesDone[2] = { nExtraCycles[0], 0 };
 
 	ZetOpen(0);
 
 	if (carnival_sound)	I8039Open(0);
 
 	for (INT32 i = 0; i < nInterleave; i++) {
-		nCyclesDone[0] += ZetRun(((i + 1) * nCyclesTotal[0] / nInterleave) - nCyclesDone[0]);
+		CPU_RUN(0, Zet);
 
-		if (carnival_sound && !i8039_in_reset)
-			nCyclesDone[1] += I8039Run(((i + 1) * nCyclesTotal[1] / nInterleave) - nCyclesDone[1]);
+		if (carnival_sound) {
+			if (i8039_in_reset) {
+				CPU_IDLE_SYNCINT(1, I8039);
+			} else {
+				CPU_RUN_SYNCINT(1, I8039);
+			}
+		}
+
+		if (i == 224 && pBurnDraw) {
+			BurnDrvRedraw();
+		}
+	}
+
+	if (coin_timer > 0) {
+		coin_timer--;
+		if (coin_timer == 0) {
+			coin_status = 0;
+		}
 	}
 
 	if (carnival_sound)	I8039Close();
 
 	ZetClose();
 
+	nExtraCycles[0] = nCyclesDone[0] - nCyclesTotal[0];
+
 	if (pBurnSoundOut) {
-		BurnSampleRender(pBurnSoundOut, nBurnSoundLen);
+	    BurnSampleRender(pBurnSoundOut, nBurnSoundLen);
 		if (carnival_sound)
 			AY8910Render(pBurnSoundOut, nBurnSoundLen);
-	}
-
-	if (pBurnDraw) {
-		BurnDrvRedraw();
 	}
 
 	return 0;
@@ -1973,8 +2228,17 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		}
 
 		SCAN_VAR(coin_status);
+		SCAN_VAR(coin_timer);
+		SCAN_VAR(coin_last);
 		SCAN_VAR(palette_bank);
 		SCAN_VAR(samurai_protection);
+
+		SCAN_VAR(port1_state);
+		SCAN_VAR(port2_state);
+		SCAN_VAR(sample_latch);
+		SCAN_VAR(out_hole); // heiankyo timer
+
+		SCAN_VAR(nExtraCycles);
 	}
 
 	return 0;
@@ -2019,7 +2283,7 @@ struct BurnDriverD BurnDrvDepthch = {
 	"depthch", NULL, NULL, "depthch", "1977",
 	"Depthcharge\0", "No sound", "Gremlin", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, depthchRomInfo, depthchRomName, NULL, NULL, depthchSampleInfo, depthchSampleName, DepthchInputInfo, DepthchDIPInfo,
 	DepthchInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -2053,7 +2317,7 @@ struct BurnDriverD BurnDrvDepthcho = {
 	"depthcho", "depthch", NULL, "depthch", "1977",
 	"Depthcharge (older)\0", "No sound", "Gremlin", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, depthchoRomInfo, depthchoRomName, NULL, NULL, depthchSampleInfo, depthchSampleName, DepthchInputInfo, DepthchDIPInfo,
 	DepthchInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -2087,14 +2351,14 @@ struct BurnDriverD BurnDrvSubhunt = {
 	"subhunt", "depthch", NULL, "depthch", "1977",
 	"Sub Hunter (Gremlin / Taito)\0", "No sound", "Gremlin (Taito license)", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, subhuntRomInfo, subhuntRomName, NULL, NULL, depthchSampleInfo, depthchSampleName, DepthchInputInfo, DepthchDIPInfo,
 	DepthchInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
 };
 
 
-// Invinco / Head On 2
+// Invinco / Head On 2 (set 1)
 
 static struct BurnRomInfo invho2RomDesc[] = {
 	{ "271b.u33",			0x0400, 0x44356a73, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
@@ -2144,9 +2408,9 @@ static INT32 Invho2Init()
 
 struct BurnDriverD BurnDrvInvho2 = {
 	"invho2", NULL, NULL, "invinco", "1979",
-	"Invinco / Head On 2\0", "No sound", "Sega", "Vic Dual",
+	"Invinco / Head On 2 (set 1)\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, invho2RomInfo, invho2RomName, NULL, NULL, invdsSampleInfo, invdsSampleName, Invho2InputInfo, Invho2DIPInfo,
 	Invho2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -2183,7 +2447,7 @@ struct BurnDriverD BurnDrvSafari = {
 	"safari", NULL, NULL, NULL, "1977",
 	"Safari (set 1)\0", "No sound", "Gremlin", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, safariRomInfo, safariRomName, NULL, NULL, NULL, NULL, SafariInputInfo, SafariDIPInfo,
 	SafariInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -2215,7 +2479,7 @@ struct BurnDriverD BurnDrvSafaria = {
 	"safaria", "safari", NULL, NULL, "1977",
 	"Safari (set 2, bootleg?)\0", "No sound", "Gremlin", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, safariaRomInfo, safariaRomName, NULL, NULL, NULL, NULL, SafariInputInfo, SafariDIPInfo,
 	SafariInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -2263,7 +2527,7 @@ struct BurnDriverD BurnDrvFrogs = {
 	"frogs", NULL, NULL, "frogs", "1978",
 	"Frogs\0", "No sound", "Gremlin", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, frogsRomInfo, frogsRomName, NULL, NULL, frogsSampleInfo, frogsSampleName, FrogsInputInfo, FrogsDIPInfo,
 	FrogsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -2290,7 +2554,7 @@ static struct BurnRomInfo alphahoRomDesc[] = {
 	{ "ce.bin",				0x0400, 0x3c409d57, 1 | BRF_PRG | BRF_ESS }, // 14
 	{ "cf.bin",				0x0400, 0xd03c5a09, 1 | BRF_PRG | BRF_ESS }, // 15
 
-	{ "alphaho.col",		0x0020, 0x00000000, 0 | BRF_NODUMP },        // 16 Color data (undumped)
+	{ "alphaho.col",		0x0020, 0x67104ea9, 0 | BRF_OPT },        // 16 Color data (undumped)
 };
 
 STD_ROM_PICK(alphaho)
@@ -2305,12 +2569,26 @@ struct BurnDriverD BurnDrvAlphaho = {
 	"alphaho", NULL, NULL, NULL, "19??",
 	"Alpha Fighter / Head On\0", "No sound", "Data East Corporation", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, alphahoRomInfo, alphahoRomName, NULL, NULL, NULL, NULL, AlphahoInputInfo, AlphahoDIPInfo,
 	AlphahoInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
 };
 
+
+static struct BurnSampleInfo heiankyoSampleDesc[] = {
+	{ "alien appear", SAMPLE_NOLOOP },
+	{ "alien death", SAMPLE_NOLOOP },
+	{ "alien in hole", SAMPLE_NOLOOP },
+	{ "aliens moving", SAMPLE_NOLOOP },
+	{ "hero death", SAMPLE_NOLOOP },
+	{ "shovel", SAMPLE_NOLOOP },
+	{ "more appear", SAMPLE_NOLOOP },
+	{ "", 0 }
+};
+
+STD_SAMPLE_PICK(heiankyo)
+STD_SAMPLE_FN(heiankyo)
 
 // Heiankyo Alien
 
@@ -2344,9 +2622,6 @@ static void heiankyo_callback()
 	// gap after .u3 of 0x800
 	memmove (DrvZ80ROM + 0x3800, DrvZ80ROM + 0x3000, 0x0800);
 	memset (DrvZ80ROM + 0x3000, 0, 0x800);
-	
-	// halves of color prom are swapped, only first bank used
-	memcpy (DrvColPROM, DrvColPROM + 0x10, 0x0008);
 }
 
 static INT32 HeiankyoInit()
@@ -2354,12 +2629,12 @@ static INT32 HeiankyoInit()
 	return DrvInit(0x4000, 0x8000, 0, heiankyo_write_port, heiankyo_read_port, NULL, heiankyo_callback);
 }
 
-struct BurnDriverD BurnDrvHeiankyo = {
-	"heiankyo", NULL, NULL, NULL, "1979",
-	"Heiankyo Alien\0", "No sound", "Denki Onkyo", "Vic Dual",
+struct BurnDriver BurnDrvHeiankyo = {
+	"heiankyo", NULL, NULL, "heiankyo", "1979",
+	"Heiankyo Alien\0", NULL, "Denki Onkyo", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
-	NULL, heiankyoRomInfo, heiankyoRomName, NULL, NULL, NULL, NULL, HeiankyoInputInfo, HeiankyoDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, heiankyoRomInfo, heiankyoRomName, NULL, NULL, heiankyoSampleInfo, heiankyoSampleName, HeiankyoInputInfo, HeiankyoDIPInfo,
 	HeiankyoInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
 };
@@ -2421,7 +2696,7 @@ struct BurnDriverD BurnDrvPulsar = {
 	"pulsar", NULL, NULL, "pulsar", "1981",
 	"Pulsar\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, pulsarRomInfo, pulsarRomName, NULL, NULL, pulsarSampleInfo, pulsarSampleName, PulsarInputInfo, PulsarDIPInfo,
 	PulsarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -2457,7 +2732,7 @@ struct BurnDriverD BurnDrvDigger = {
 	"digger", NULL, NULL, NULL, "1980",
 	"Digger\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, diggerRomInfo, diggerRomName, NULL, NULL, NULL, NULL, DiggerInputInfo, DiggerDIPInfo,
 	DiggerInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -2501,7 +2776,7 @@ struct BurnDriverD BurnDrvInvds = {
 	"invds", NULL, NULL, "invinco", "1979",
 	"Invinco / Deep Scan\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, invdsRomInfo, invdsRomName, NULL, NULL, invdsSampleInfo, invdsSampleName, InvdsInputInfo, InvdsDIPInfo,
 	InvdsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -2536,7 +2811,7 @@ struct BurnDriverD BurnDrvInvinco = {
 	"invinco", NULL, NULL, "invinco", "1979",
 	"Invinco\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, invincoRomInfo, invincoRomName, NULL, NULL, invdsSampleInfo, invdsSampleName, InvincoInputInfo, InvincoDIPInfo,
 	InvincoInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -2544,8 +2819,35 @@ struct BurnDriverD BurnDrvInvinco = {
 
 
 // Samurai
+// Found on a Gremlin 'EXTENDED ROM VIDEO LOGIC ASSY NO 800-003' PCB with a '834-0118' sticker and a Sega 96718-P-A riser board.
+// Everything on the board is dated 1979, but possibly the PCB was converted from something else, given the epr numbers are way bigger than the Japanese version ones
 
 static struct BurnRomInfo samuraiRomDesc[] = {
+	{ "epr-1217.u33",	0x0400, 0xa1a9cb03, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
+	{ "epr-1218.u32",	0x0400, 0x4b45d07d, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "epr-1219.u31",	0x0400, 0x9fd4b195, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "epr-1220.u30",	0x0400, 0x90370e13, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "epr-1221.u29",	0x0400, 0xdcc47158, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "epr-1222.u28",	0x0400, 0xd2fab27a, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "epr-1223.u27",	0x0400, 0xf7e2ad95, 1 | BRF_PRG | BRF_ESS }, //  6
+	{ "epr-1224.u26",	0x0400, 0xd46e306b, 1 | BRF_PRG | BRF_ESS }, //  7
+	{ "epr-1225.u8",	0x0400, 0x3dd5c41f, 1 | BRF_PRG | BRF_ESS }, //  8
+	{ "epr-1226.u7",	0x0400, 0x7c3561b1, 1 | BRF_PRG | BRF_ESS }, //  9
+	{ "epr-1227.u6",	0x0400, 0xe72c71a4, 1 | BRF_PRG | BRF_ESS }, // 10
+	{ "epr-1228.u5",	0x0400, 0xd76f4a56, 1 | BRF_PRG | BRF_ESS }, // 11
+	{ "epr-1229.u4",	0x0400, 0xe0d40395, 1 | BRF_PRG | BRF_ESS }, // 12
+	{ "epr-1230.u3",	0x0400, 0x55e9a5c4, 1 | BRF_PRG | BRF_ESS }, // 13
+
+	{ "pr55.clr",		0x0020, 0x975f5fb0, 1 | BRF_GRA },           // 14 Color data
+};
+
+STD_ROM_PICK(samurai)
+STD_ROM_FN(samurai)
+
+
+// Samuraij
+
+static struct BurnRomInfo samuraijRomDesc[] = {
 	{ "epr-289.u33",		0x0400, 0xa1a9cb03, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
 	{ "epr-290.u32",		0x0400, 0x49fede51, 1 | BRF_PRG | BRF_ESS }, //  1
 	{ "epr-291.u31",		0x0400, 0x6503dd72, 1 | BRF_PRG | BRF_ESS }, //  2
@@ -2563,12 +2865,12 @@ static struct BurnRomInfo samuraiRomDesc[] = {
 
 	{ "pr55.clr",			0x0020, 0x975f5fb0, 1 | BRF_GRA },           // 14 Color data
 
-	{ "316-0043.u87",		0x0020, 0xe60a7960, 0 | BRF_OPT },           // 15 Unused PROMs
-	{ "316-0042.u88",		0x0020, 0xa1506b9d, 0 | BRF_OPT },           // 16
+	{ "316-0043.u87",		0x0020, 0xe60a7960, 0 | BRF_OPT },           // 15 Control PROM
+	{ "316-0042.u88",		0x0020, 0xa1506b9d, 0 | BRF_OPT },           // 16 Sequence PROM
 };
 
-STD_ROM_PICK(samurai)
-STD_ROM_FN(samurai)
+STD_ROM_PICK(samuraij)
+STD_ROM_FN(samuraij)
 
 static void samurai_map()
 {
@@ -2580,12 +2882,22 @@ static INT32 SamuraiInit()
 	return DrvInit(0x4000, 0x8000, 0, samurai_write_port, samurai_read_port, samurai_map, NULL);
 }
 
-struct BurnDriverD BurnDrvSamurai = {
+struct BurnDriver BurnDrvSamurai = {
 	"samurai", NULL, NULL, NULL, "1980",
-	"Samurai\0", "No sound", "Sega", "Vic Dual",
+	"Samurai (World)\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
 	NULL, samuraiRomInfo, samuraiRomName, NULL, NULL, NULL, NULL, SamuraiInputInfo, SamuraiDIPInfo,
+	SamuraiInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
+	224, 256, 3, 4
+};
+
+struct BurnDriver BurnDrvSamuraij = {
+	"samuraij", "samurai", NULL, NULL, "1980",
+	"Samurai (Japan)\0", "No sound", "Sega", "Vic Dual",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
+	NULL, samuraijRomInfo, samuraijRomName, NULL, NULL, NULL, NULL, SamuraiInputInfo, SamuraiDIPInfo,
 	SamuraiInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
 };
@@ -2644,7 +2956,7 @@ struct BurnDriverD BurnDrvTranqgun = {
 	"tranqgun", NULL, NULL, "tranqgun", "1980",
 	"Tranquillizer Gun\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, tranqgunRomInfo, tranqgunRomName, NULL, NULL, tranqgunSampleInfo, tranqgunSampleName, TranqgunInputInfo, NULL,
 	TranqgunInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -2680,7 +2992,7 @@ struct BurnDriver BurnDrvHeadon = {
 	"headon", NULL, NULL, NULL, "1979",
 	"Head On (2 players)\0", "No sound", "Gremlin", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, headonRomInfo, headonRomName, NULL, NULL, NULL, NULL, HeadonInputInfo, HeadonDIPInfo,
 	HeadonInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -2711,7 +3023,7 @@ struct BurnDriver BurnDrvHeadon1 = {
 	"headon1", "headon", NULL, NULL, "1979",
 	"Head On (1 player)\0", "No sound", "Gremlin", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, headon1RomInfo, headon1RomName, NULL, NULL, NULL, NULL, HeadonInputInfo, HeadonDIPInfo,
 	HeadonInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -2740,7 +3052,7 @@ struct BurnDriver BurnDrvHeadons = {
 	"headons", "headon", NULL, NULL, "1979",
 	"Head On (Sidam bootleg, set 1)\0", "No sound", "bootleg (Sidam)", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, headonsRomInfo, headonsRomName, NULL, NULL, NULL, NULL, HeadonInputInfo, HeadonDIPInfo,
 	HeadonInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -2769,7 +3081,7 @@ struct BurnDriver BurnDrvHeadonsa = {
 	"headonsa", "headon", NULL, NULL, "1979",
 	"Head On (Sidam bootleg, set 2)\0", "No sound", "bootleg (Sidam)", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, headonsaRomInfo, headonsaRomName, NULL, NULL, NULL, NULL, HeadonInputInfo, HeadonDIPInfo,
 	HeadonInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -2798,7 +3110,7 @@ struct BurnDriver BurnDrvHocrash = {
 	"hocrash", "headon", NULL, NULL, "1979",
 	"Crash (bootleg of Head On)\0", "No sound", "bootleg (Fraber)", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, hocrashRomInfo, hocrashRomName, NULL, NULL, NULL, NULL, HeadonInputInfo, HeadonDIPInfo,
 	HeadonInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -2829,7 +3141,7 @@ struct BurnDriver BurnDrvHeadonmz = {
 	"headonmz", "headon", NULL, NULL, "1979",
 	"Head On (bootleg, alt maze)\0", "No sound", "bootleg", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, headonmzRomInfo, headonmzRomName, NULL, NULL, NULL, NULL, HeadonInputInfo, HeadonDIPInfo,
 	HeadonInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -2850,7 +3162,7 @@ static struct BurnRomInfo headonnRomDesc[] = {
 
 	{ "prom.g2",			0x0020, 0x67104ea9, 1 | BRF_GRA },           //  8 Color data
 
-	{ "prom.b6",			0x0020, 0x67104ea9, 0 | BRF_OPT },           //  9 Unused PROMs
+	{ "prom.b6",			0x0020, 0x7e1cb76b, 0 | BRF_OPT },           //  9 Unused PROMs
 	{ "prom.f2",			0x0020, 0xa1506b9d, 0 | BRF_OPT },           // 10
 };
 
@@ -2866,7 +3178,7 @@ struct BurnDriver BurnDrvHeadonn = {
 	"headonn", "headon", NULL, NULL, "1979",
 	"Head On N\0", "No sound", "Nintendo", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, headonnRomInfo, headonnRomName, NULL, NULL, NULL, NULL, HeadonnInputInfo, HeadonnDIPInfo,
 	HeadonnInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -2897,7 +3209,7 @@ struct BurnDriver BurnDrvSupcrash = {
 	"supcrash", "headon", NULL, NULL, "1979",
 	"Super Crash (bootleg of Head On)\0", "No sound", "bootleg (VGG)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, supcrashRomInfo, supcrashRomName, NULL, NULL, NULL, NULL, SupcrashInputInfo, SupcrashDIPInfo,
 	SupcrashInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -2923,11 +3235,41 @@ STD_ROM_PICK(startrks)
 STD_ROM_FN(startrks)
 
 struct BurnDriver BurnDrvStartrks = {
-	"startrks", NULL, NULL, NULL, "198?",
+	"startrks", "nostromo", NULL, NULL, "198?",
 	"Star Trek (Head On hardware)\0", "No sound", "bootleg (Sidam)", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
-	NULL, startrksRomInfo, startrksRomName, NULL, NULL, NULL, NULL, HeadonInputInfo, HeadonDIPInfo,
+	BDF_GAME_WORKING |BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, startrksRomInfo, startrksRomName, NULL, NULL, NULL, NULL, HeadonInputInfo, StartrksDIPInfo,
+	HeadonInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
+	256, 224, 4, 3
+};
+
+
+// Nostromo
+
+static struct BurnRomInfo nostromoRomDesc[] = {
+	{ "ns_1.bin",		0x0400, 0x2ba4202a, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
+	{ "ns_2.bin",		0x0400, 0xcf6081b8, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ns_3.bin",		0x0400, 0xfd983c0c, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ns_4.bin",		0x0400, 0x79e1dc92, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "ns_5.bin",		0x0400, 0x4deb2ce3, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "ns_6.bin",		0x0400, 0xe4ddf052, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "ns_7.bin",		0x0400, 0xa5315dc8, 1 | BRF_PRG | BRF_ESS }, //  6
+
+	// Timing PROMs, not dumped for this set but probably same as startrks given how close they are
+	{ "82s123.15c",		0x0020, 0xe60a7960, 0 | BRF_OPT },           //  7 BAD_DUMP, Control PROM
+	{ "82s123.14c",		0x0020, 0xa1506b9d, 0 | BRF_OPT },           //  8 BAD_DUMP, Sequence PROM
+};
+
+STD_ROM_PICK(nostromo)
+STD_ROM_FN(nostromo)
+
+struct BurnDriver BurnDrvNostromo = {
+	"nostromo", NULL, NULL, NULL, "198?",
+	"Nostromo\0", "No sound", "bootleg", "Vic Dual",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, nostromoRomInfo, nostromoRomName, NULL, NULL, NULL, NULL, HeadonInputInfo, StartrksDIPInfo,
 	HeadonInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
 };
@@ -2989,7 +3331,7 @@ struct BurnDriverD BurnDrvBrdrline = {
 	"brdrline", NULL, NULL, "brdrline", "1981",
 	"Borderline\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, brdrlineRomInfo, brdrlineRomName, NULL, NULL, brdrlineSampleInfo, brdrlineSampleName, BrdrlineInputInfo, BrdrlineDIPInfo,
 	BrdrlineInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3034,7 +3376,7 @@ struct BurnDriverD BurnDrvBrdrlins = {
 	"brdrlins", "brdrline", NULL, "brdrline", "1981",
 	"Borderline (Sidam bootleg)\0", "No sound", "bootleg (Sidam)", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, brdrlinsRomInfo, brdrlinsRomName, NULL, NULL, brdrlineSampleInfo, brdrlineSampleName, BrdrlineInputInfo, BrdrlineDIPInfo,
 	BrdrlineInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3069,7 +3411,7 @@ struct BurnDriverD BurnDrvBrdrlinb = {
 	"brdrlinb", "brdrline", NULL, "brdrline", "1981",
 	"Borderline (Karateco bootleg)\0", "No sound", "bootleg (Karateco)", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, brdrlinbRomInfo, brdrlinbRomName, NULL, NULL, brdrlineSampleInfo, brdrlineSampleName, BrdrlineInputInfo, BrdrlineDIPInfo,
 	BrdrlineInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3119,7 +3461,7 @@ struct BurnDriverD BurnDrvStarrkr = {
 	"starrkr", "brdrline", NULL, "brdrline", "1981",
 	"Star Raker\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, starrkrRomInfo, starrkrRomName, NULL, NULL, brdrlineSampleInfo, brdrlineSampleName, StarrkrInputInfo, StarrkrDIPInfo,
 	BrdrlineInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3132,7 +3474,7 @@ static struct BurnRomInfo brdrlinetRomDesc[] = {
 	{ "1171a.u33",			0x0400, 0x38dd9880, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
 	{ "1172a.u32",			0x0400, 0x1a3adff0, 1 | BRF_PRG | BRF_ESS }, //  1
 	{ "1173a.u31",			0x0400, 0xe668734d, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "1174a.u30.bad",		0x0400, 0x22c83ae4, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "1174a.u30",			0x0400, 0xd1ca5d52, 1 | BRF_PRG | BRF_ESS }, //  3
 	{ "1175a.u29",			0x0400, 0x116517b8, 1 | BRF_PRG | BRF_ESS }, //  4
 	{ "1176a.u28",			0x0400, 0x2b2c4ba8, 1 | BRF_PRG | BRF_ESS }, //  5
 	{ "1177a.u27",			0x0400, 0xd8cbcc1e, 1 | BRF_PRG | BRF_ESS }, //  6
@@ -3158,7 +3500,7 @@ struct BurnDriverD BurnDrvBrdrlinet = {
 	"brdrlinet", "brdrline", NULL, "tranqgun", "1981",
 	"Borderline (Tranquillizer Gun conversion)\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, brdrlinetRomInfo, brdrlinetRomName, NULL, NULL, tranqgunSampleInfo, tranqgunSampleName, TranqgunInputInfo, NULL,
 	TranqgunInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3203,7 +3545,7 @@ struct BurnDriverD BurnDrvSpacetrk = {
 	"spacetrk", NULL, NULL, NULL, "1980",
 	"Space Trek (upright)\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, spacetrkRomInfo, spacetrkRomName, NULL, NULL, NULL, NULL, SpacetrkInputInfo, SpacetrkDIPInfo,
 	SpacetrkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3243,14 +3585,14 @@ struct BurnDriverD BurnDrvSpacetrkc = {
 	"spacetrkc", "spacetrk", NULL, NULL, "1980",
 	"Space Trek (cocktail)\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, spacetrkcRomInfo, spacetrkcRomName, NULL, NULL, NULL, NULL, SpacetrkcInputInfo, SpacetrkcDIPInfo,
 	SpacetrkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
 };
 
 
-// Carnival (upright)
+// Carnival (upright, AY8912 music)
 
 static struct BurnRomInfo carnivalRomDesc[] = {
 	{ "epr-651.u33",		0x0400, 0x9f2736e6, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
@@ -3270,7 +3612,7 @@ static struct BurnRomInfo carnivalRomDesc[] = {
 	{ "epr-665.u2",			0x0400, 0x28e7b2b6, 1 | BRF_PRG | BRF_ESS }, // 14
 	{ "epr-666.u1",			0x0400, 0x4eec7fae, 1 | BRF_PRG | BRF_ESS }, // 15
 
-	{ "316-633",			0x0020, 0xf0084d80, 1 | BRF_GRA },           // 16 Color data
+	{ "316-0633.u49",		0x0020, 0xf0084d80, 1 | BRF_GRA },           // 16 Color data
 
 	{ "epr-412.u5",			0x0400, 0x0dbaa2b0, 3 | BRF_PRG | BRF_ESS }, // 17 I8039 Code
 
@@ -3309,9 +3651,9 @@ static INT32 CarnivalInit()
 
 struct BurnDriver BurnDrvCarnival = {
 	"carnival", NULL, NULL, "carnival", "1980",
-	"Carnival (upright)\0", NULL, "Sega", "Vic Dual",
+	"Carnival (upright, AY8912 music)\0", NULL, "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, carnivalRomInfo, carnivalRomName, NULL, NULL, carnivalSampleInfo, carnivalSampleName, CarnivalInputInfo, CarnivalDIPInfo,
 	CarnivalInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3350,7 +3692,7 @@ struct BurnDriverD BurnDrvCarnivalh = {
 	"carnivalh", "carnival", NULL, "carnival", "1980",
 	"Carnival (Head On hardware, set 1)\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, carnivalhRomInfo, carnivalhRomName, NULL, NULL, carnivalSampleInfo, carnivalSampleName, CarnivalhInputInfo, NULL,
 	CarnivalhInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3384,7 +3726,7 @@ struct BurnDriverD BurnDrvCarnivalha = {
 	"carnivalha", "carnival", NULL, "carnival", "1980",
 	"Carnival (Head On hardware, set 2)\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, carnivalhaRomInfo, carnivalhaRomName, NULL, NULL, carnivalSampleInfo, carnivalSampleName, CarnivalhInputInfo, NULL,
 	CarnivalhInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3411,7 +3753,7 @@ static struct BurnRomInfo carnivalcRomDesc[] = {
 	{ "epr-515.u2",			0x0400, 0x10decaa9, 1 | BRF_PRG | BRF_ESS }, // 14
 	{ "epr-516.u1",			0x0400, 0x7c32b352, 1 | BRF_PRG | BRF_ESS }, // 15
 
-	{ "316-633",			0x0020, 0xf0084d80, 1 | BRF_GRA },           // 16 Color data
+	{ "316-0633.u49",		0x0020, 0xf0084d80, 1 | BRF_GRA },           // 16 Color data
 
 	{ "epr-412.u5",			0x0400, 0x0dbaa2b0, 3 | BRF_PRG | BRF_ESS }, // 17 I8039 Code
 
@@ -3425,7 +3767,7 @@ struct BurnDriver BurnDrvCarnivalc = {
 	"carnivalc", "carnival", NULL, "carnival", "1980",
 	"Carnival (cocktail)\0", NULL, "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, carnivalcRomInfo, carnivalcRomName, NULL, NULL, carnivalSampleInfo, carnivalSampleName, CarnivalcInputInfo, CarnivalcDIPInfo,
 	CarnivalInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3464,9 +3806,9 @@ STD_ROM_FN(verbena)
 
 struct BurnDriver BurnDrvVerbena = {
 	"verbena", "carnival", NULL, "carnival", "1980",
-	"Verbena (bootleg of Carnival)\0", NULL, "bootleg (Cocomatic)", "Vic Dual",
+	"Verbena (bootleg of Carnival)\0", NULL, "bootleg (Cocamatic)", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, verbenaRomInfo, verbenaRomName, NULL, NULL, carnivalSampleInfo, carnivalSampleName, CarnivalcInputInfo, CarnivalcDIPInfo,
 	CarnivalInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3493,7 +3835,7 @@ static struct BurnRomInfo carhntdsRomDesc[] = {
 	{ "epr631.u2",			0x0400, 0x6766c7e5, 1 | BRF_PRG | BRF_ESS }, // 14
 	{ "epr632.u1",			0x0400, 0xae68b7d5, 1 | BRF_PRG | BRF_ESS }, // 15
 
-	{ "316.0390.u49",		0x0020, 0xa0811288, 1 | BRF_GRA },           // 16 Color data
+	{ "316-0390.u49",		0x0020, 0xa0811288, 1 | BRF_GRA },           // 16 Color data
 };
 
 STD_ROM_PICK(carhntds)
@@ -3508,8 +3850,47 @@ struct BurnDriverD BurnDrvCarhntds = {
 	"carhntds", NULL, NULL, NULL, "1979",
 	"Car Hunt / Deep Scan (France)\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, carhntdsRomInfo, carhntdsRomName, NULL, NULL, NULL, NULL, CarhntdsInputInfo, CarhntdsDIPInfo,
+	CarhntdsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
+	224, 256, 3, 4
+};
+
+
+// Invinco / Car Hunt (Germany)
+
+static struct BurnRomInfo invcarhtRomDesc[] = {
+	{ "411.u33",			0x0800, 0xefefba5f, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
+	{ "412.u32",			0x0400, 0x8fe401e2, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "413.u31",			0x0400, 0x61ba1046, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "414.u30",			0x0400, 0x4a521dbb, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "415.u29",			0x0400, 0xce12b71c, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "416.u28",			0x0400, 0x6899d59c, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "417.u27",			0x0400, 0x26cef14e, 1 | BRF_PRG | BRF_ESS }, //  6
+	{ "418.u26",			0x0400, 0x02b1f507, 1 | BRF_PRG | BRF_ESS }, //  7
+	{ "419.u8",				0x0400, 0x42385c4d, 1 | BRF_PRG | BRF_ESS }, //  8
+	{ "420.u7",				0x0400, 0xee83d873, 1 | BRF_PRG | BRF_ESS }, //  9
+	{ "421.u6",				0x0400, 0x2faa2e76, 1 | BRF_PRG | BRF_ESS }, // 10
+	{ "422.u5",				0x0400, 0xf8e5dc61, 1 | BRF_PRG | BRF_ESS }, // 11
+	{ "423.u4",				0x0400, 0xd783eb72, 1 | BRF_PRG | BRF_ESS }, // 12
+	{ "424.u3",				0x0400, 0x8fd4f3d4, 1 | BRF_PRG | BRF_ESS }, // 13
+	{ "425.u2",				0x0400, 0xb0552cd4, 1 | BRF_PRG | BRF_ESS }, // 14
+	{ "426.u1",				0x0400, 0xb611061b, 1 | BRF_PRG | BRF_ESS }, // 15
+
+	{ "316-0389.u49",		0x0020, 0x95cfe0d2, 1 | BRF_GRA },           // 16 Color data
+	
+	{ "316-0206.u14",		0x0020, 0x9617d796, 0 | BRF_OPT },           // 17 Unused prom
+};
+
+STD_ROM_PICK(invcarht)
+STD_ROM_FN(invcarht)
+
+struct BurnDriverD BurnDrvInvcarht = {
+	"invcarht", NULL, NULL, NULL, "1979",
+	"Invinco / Car Hunt (Germany)\0", "No sound", "Sega", "Vic Dual",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	NULL, invcarhtRomInfo, invcarhtRomName, NULL, NULL, NULL, NULL, CarhntdsInputInfo, CarhntdsDIPInfo,
 	CarhntdsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
 };
@@ -3544,7 +3925,7 @@ struct BurnDriverD BurnDrvHeadon2 = {
 	"headon2", NULL, NULL, NULL, "1979",
 	"Head On 2\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, headon2RomInfo, headon2RomName, NULL, NULL, NULL, NULL, Headon2InputInfo, Headon2DIPInfo,
 	Headon2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -3578,7 +3959,7 @@ struct BurnDriverD BurnDrvHeadon2s = {
 	"headon2s", "headon2", NULL, NULL, "1979",
 	"Head On 2 (Sidam bootleg)\0", "No sound", "bootleg (Sidam)", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, headon2sRomInfo, headon2sRomName, NULL, NULL, NULL, NULL, Headon2InputInfo, Headon2DIPInfo,
 	Headon2sInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -3607,7 +3988,7 @@ struct BurnDriverD BurnDrvCar2 = {
 	"car2", "headon2", NULL, NULL, "1979",
 	"Car 2 (bootleg of Head On 2)\0", "No sound", "bootleg (RZ Bologna)", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, car2RomInfo, car2RomName, NULL, NULL, NULL, NULL, Headon2InputInfo, Headon2DIPInfo,
 	Headon2sInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	256, 224, 4, 3
@@ -3644,7 +4025,7 @@ struct BurnDriverD BurnDrvSspaceat = {
 	"sspaceat", NULL, NULL, NULL, "1979",
 	"Space Attack (upright set 1)\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, sspaceatRomInfo, sspaceatRomName, NULL, NULL, NULL, NULL, SspaceatInputInfo, SspaceatDIPInfo,
 	SspaceatInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3676,7 +4057,7 @@ struct BurnDriverD BurnDrvSspaceat2 = {
 	"sspaceat2", "sspaceat", NULL, NULL, "1979",
 	"Space Attack (upright set 2)\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, sspaceat2RomInfo, sspaceat2RomName, NULL, NULL, NULL, NULL, SspaceatInputInfo, SspaceatDIPInfo,
 	SspaceatInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3708,7 +4089,7 @@ struct BurnDriverD BurnDrvSspaceat3 = {
 	"sspaceat3", "sspaceat", NULL, NULL, "1979",
 	"Space Attack (upright set 3)\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, sspaceat3RomInfo, sspaceat3RomName, NULL, NULL, NULL, NULL, SspaceatInputInfo, SspaceatDIPInfo,
 	SspaceatInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3740,7 +4121,7 @@ struct BurnDriverD BurnDrvSspaceatc = {
 	"sspaceatc", "sspaceat", NULL, NULL, "1979",
 	"Space Attack (cocktail)\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, sspaceatcRomInfo, sspaceatcRomName, NULL, NULL, NULL, NULL, SspaceatInputInfo, SspaceatDIPInfo,
 	SspaceatInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3776,7 +4157,7 @@ struct BurnDriverD BurnDrvSspacaho = {
 	"sspacaho", NULL, NULL, NULL, "1979",
 	"Space Attack / Head On\0", "No sound", "Sega", "Vic Dual",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, sspacahoRomInfo, sspacahoRomName, NULL, NULL, NULL, NULL, SspacahoInputInfo, SspacahoDIPInfo,
 	SspacahoInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
 	224, 256, 3, 4
@@ -3797,27 +4178,27 @@ static struct BurnRomInfo nsubRomDesc[] = {
 
 	{ "pr-69.u11",			0x0020, 0xc94dd091, 1 | BRF_GRA },           //  8 Color data
 
-	{ "pr33.u82",			0x0020, 0xe60a7960, 0 | BRF_OPT },           //  9 Unused PROMs
-	{ "pr34.u83",			0x0020, 0xa1506b9d, 0 | BRF_OPT },           // 10
+	{ "pr-33.u82",			0x0020, 0xe60a7960, 0 | BRF_OPT },           //  9 Unused PROMs
+	{ "pr-34.u83",			0x0020, 0xa1506b9d, 0 | BRF_OPT },           // 10
 };
 
 STD_ROM_PICK(nsub)
 STD_ROM_FN(nsub)
 
 static struct BurnSampleInfo nsubSampleDesc[] = {
-	{ "SND_BOAT", SAMPLE_NOLOOP },
+	{ "SND_EXPL_L0", SAMPLE_NOLOOP },
+	{ "SND_EXPL_L1", SAMPLE_NOLOOP },
+	{ "SND_SONAR", SAMPLE_NOLOOP },
+	{ "SND_LAUNCH0", SAMPLE_NOLOOP },
+	{ "SND_LAUNCH1", SAMPLE_NOLOOP },
+	{ "SND_WARNING0", SAMPLE_NOLOOP },
+	{ "SND_WARNING1", SAMPLE_NOLOOP },
+	{ "SND_EXPL_S0", SAMPLE_NOLOOP },
+	{ "SND_EXPL_S1", SAMPLE_NOLOOP },
 	{ "SND_BONUS0", SAMPLE_NOLOOP },
 	{ "SND_BONUS1", SAMPLE_NOLOOP },
 	{ "SND_CODE", SAMPLE_NOLOOP },
-	{ "SND_EXPL_L0", SAMPLE_NOLOOP },
-	{ "SND_EXPL_L1", SAMPLE_NOLOOP },
-	{ "SND_EXPL_S0", SAMPLE_NOLOOP },
-	{ "SND_EXPL_S1", SAMPLE_NOLOOP },
-	{ "SND_LAUNCH0", SAMPLE_NOLOOP },
-	{ "SND_LAUNCH1", SAMPLE_NOLOOP },
-	{ "SND_SONAR", SAMPLE_NOLOOP },
-	{ "SND_WARNING0", SAMPLE_NOLOOP },
-	{ "SND_WARNING1", SAMPLE_NOLOOP },
+	{ "SND_BOAT", SAMPLE_NOLOOP },
 	{ "", 0 }
 };
 
@@ -3833,15 +4214,21 @@ static void nsub_callback()
 
 static INT32 NsubInit()
 {
-	return DrvInit(0x4000, 0xc000, 0, nsub_write_port, nsub_read_port, NULL, nsub_callback);
+	is_nsub = 1;
+	INT32 rc = DrvInit(0x4000, 0xc000, 0, nsub_write_port, nsub_read_port, NULL, nsub_callback);
+
+	if (!rc) {
+		BurnSampleSetAllRoutesAllSamples(0.50, BURN_SND_ROUTE_BOTH);
+	}
+	return rc;
 }
 
-struct BurnDriverD BurnDrvNsub = {
+struct BurnDriver BurnDrvNsub = {
 	"nsub", NULL, NULL, "nsub", "1980",
 	"N-Sub (upright)\0", NULL, "Sega", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, nsubRomInfo, nsubRomName, NULL, NULL, nsubSampleInfo, nsubSampleName, NsubInputInfo, NULL,
-	NsubInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 8,
+	NsubInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	224, 256, 3, 4
 };

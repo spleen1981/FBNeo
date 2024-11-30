@@ -586,6 +586,8 @@ static INT32 DrvDoReset()
 
 	BurnRandomSetSeed(0x0132013201320132ull);
 
+	HiscoreReset();
+
 	irq_source = 0;
 	flipscreen = 0;
 	scroll_control = 0;
@@ -834,8 +836,8 @@ static INT32 IkkiInit()
 	
 	SN76496Init(0, 8000000 / 4, 0);
 	SN76496Init(1, 8000000 / 2, 1);
-	SN76496SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
-	SN76496SetRoute(1, 1.00, BURN_SND_ROUTE_BOTH);
+	SN76496SetRoute(0, 0.75, BURN_SND_ROUTE_BOTH);
+	SN76496SetRoute(1, 0.75, BURN_SND_ROUTE_BOTH);
 	SN76496SetBuffered(ZetTotalCycles, 4000000);
 
 	GenericTilesInit();
@@ -1143,6 +1145,7 @@ static INT32 DrvFrame()
 
 	if (pBurnSoundOut) {
 		SN76496Update(pBurnSoundOut, nBurnSoundLen);
+		BurnSoundDCFilter();
 	}
 
 	if (pBurnDraw) {
@@ -1216,7 +1219,7 @@ struct BurnDriver BurnDrvMarkham = {
 	"markham", NULL, NULL, NULL, "1983",
 	"Markham\0", NULL, "Sun Electronics", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, markhamRomInfo, markhamRomName, NULL, NULL, NULL, NULL, MarkhamInputInfo, MarkhamDIPInfo,
 	MarkhamInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	240, 224, 4, 3
@@ -1263,7 +1266,7 @@ struct BurnDriver BurnDrvStrnskil = {
 	"strnskil", NULL, NULL, NULL, "1984",
 	"Strength & Skill\0", NULL, "Sun Electronics", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, strnskilRomInfo, strnskilRomName, NULL, NULL, NULL, NULL, StrnskilInputInfo, StrnskilDIPInfo,
 	StrnskilInit, DrvExit, DrvFrame, StrnskilDraw, DrvScan, &DrvRecalc, 0x400,
 	240, 224, 4, 3
@@ -1285,7 +1288,7 @@ static struct BurnRomInfo guinessRomDesc[] = {
 	{ "tvg8.92",			0x2000, 0x1b265360, 3 | BRF_GRA },           //  7
 	{ "tvg9.94",			0x2000, 0x776c7ca6, 3 | BRF_GRA },           //  8
 
-	{ "=tvg12.15",			0x2000, 0xa82c923d, 4 | BRF_GRA },           //  9 Tiles
+	{ "tvg12.15",			0x2000, 0xa82c923d, 4 | BRF_GRA },           //  9 Tiles
 	{ "tvg11.15",			0x2000, 0xd432c96f, 4 | BRF_GRA },           // 10
 	{ "tvg10.15",			0x2000, 0xa53959d6, 4 | BRF_GRA },           // 11
 
@@ -1305,7 +1308,7 @@ struct BurnDriver BurnDrvGuiness = {
 	"guiness", "strnskil", NULL, NULL, "1984",
 	"The Guiness (Japan)\0", NULL, "Sun Electronics", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, guinessRomInfo, guinessRomName, NULL, NULL, NULL, NULL, StrnskilInputInfo, StrnskilDIPInfo,
 	StrnskilInit, DrvExit, DrvFrame, StrnskilDraw, DrvScan, &DrvRecalc, 0x400,
 	240, 224, 4, 3
@@ -1400,7 +1403,7 @@ struct BurnDriver BurnDrvPettanp = {
 	"pettanp", "banbam", NULL, NULL, "1984",
 	"Pettan Pyuu (Japan)\0", NULL, "Sun Electronics", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, pettanpRomInfo, pettanpRomName, NULL, NULL, NULL, NULL, BanbamInputInfo, BanbamDIPInfo,
 	BanbamInit, DrvExit, DrvFrame, StrnskilDraw, DrvScan, &DrvRecalc, 0x400,
 	240, 224, 4, 3

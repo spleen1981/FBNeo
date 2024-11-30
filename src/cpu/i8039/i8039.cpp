@@ -179,30 +179,30 @@ INT32 I8039GetActive()
 #define change_pc(newpc)	R.PC.w.l = (newpc)
 
 
-unsigned char I8039DummyReadIo(unsigned int)
+unsigned char __fastcall I8039DummyReadIo(unsigned int)
 {
 	return 0;
 }
 
-void I8039DummyWriteIo(unsigned int, unsigned char)
+void __fastcall I8039DummyWriteIo(unsigned int, unsigned char)
 {
 }
 
-unsigned char I8039DummyReadProg(unsigned int)
-{
-	return 0;
-}
-
-void I8039DummyWriteProg(unsigned int, unsigned char)
-{
-}
-
-unsigned char I8039DummyReadOp(unsigned int)
+unsigned char __fastcall I8039DummyReadProg(unsigned int)
 {
 	return 0;
 }
 
-unsigned char I8039DummyReadOpArg(unsigned int)
+void __fastcall I8039DummyWriteProg(unsigned int, unsigned char)
+{
+}
+
+unsigned char __fastcall I8039DummyReadOp(unsigned int)
+{
+	return 0;
+}
+
+unsigned char __fastcall I8039DummyReadOpArg(unsigned int)
 {
 	return 0;
 }
