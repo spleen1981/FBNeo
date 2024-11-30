@@ -26,111 +26,148 @@ static INT32 watchdog;
 static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
 static UINT8 DrvJoy3[8];
-static UINT8 DrvDips[1];
+static UINT8 DrvDips[2];
 static UINT8 DrvInputs[3];
 static UINT8 DrvReset;
 static UINT32 inputxor=0;
 
+enum { INVADERS=0, OZMAWARS };
+
+static INT32 game_select;
+
+#define PALETTE_BLACK  0
+#define PALETTE_WHITE  1
+#define PALETTE_RED    2
+#define PALETTE_GREEN  3
+#define PALETTE_BLUE   4
+#define PALETTE_YELLOW 5
+#define PALETTE_CYAN   6
+#define PALETTE_ORANGE 7
+#define PALETTE_PURPLE 8
+
 static struct BurnInputInfo InvadersInputList[] = {
-	{"Coin",	BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
+	{"Coin",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
 
 	{"P1 Start",	BIT_DIGITAL,	DrvJoy2 + 2,	"p1 start"	},
 	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
-	{"P1 Left",	BIT_DIGITAL,	DrvJoy2 + 5,	"p1 left"	},
+	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 left"	},
 	{"P1 Right",	BIT_DIGITAL,	DrvJoy2 + 6,	"p1 right"	},
 
 	{"P2 Start",	BIT_DIGITAL,	DrvJoy2 + 1,	"p2 start"	},
 	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
-	{"P2 Left",	BIT_DIGITAL,	DrvJoy3 + 5,	"p2 left"	},
+	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 left"	},
 	{"P2 Right",	BIT_DIGITAL,	DrvJoy3 + 6,	"p2 right"	},
 
-	{"Tilt",        BIT_DIGITAL,	DrvJoy3 + 2,	"tilt"		},
-	{"Reset",	BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dips",	BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 2,	"tilt"		},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dips",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Fake Dip",	BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Invaders)
 
 static struct BurnDIPInfo InvadersDIPList[]=
 {
-	{0x0b, 0xff, 0xff, 0x00, NULL           },
+	DIP_OFFSET(0x0b)
 
-	{0   , 0xfe, 0   , 4   , "Lives"        },
-	{0x0b, 0x01, 0x03, 0x00, "3"       	},
-	{0x0b, 0x01, 0x03, 0x01, "4"       	},
-	{0x0b, 0x01, 0x03, 0x02, "5"       	},
-	{0x0b, 0x01, 0x03, 0x03, "6"       	},
+	{0x00, 0xff, 0xff, 0x00, NULL},
+	{0x01, 0xff, 0xff, 0x01, NULL},
 
-	{0   , 0xfe, 0   , 2   , "Bonus Life"   },
-	{0x0b, 0x01, 0x0c, 0x00, "1000"   	},
-	{0x0b, 0x01, 0x0c, 0x08, "5000"     	},
+	{0   , 0xfe, 0   , 4   , "Lives"},
+	{0x00, 0x01, 0x03, 0x00, "3"},
+	{0x00, 0x01, 0x03, 0x01, "4"},
+	{0x00, 0x01, 0x03, 0x02, "5"},
+	{0x00, 0x01, 0x03, 0x03, "6"},
 
-	{0   , 0xfe, 0   , 2   , "Coin Info" 	},
-	{0x0b, 0x01, 0x80, 0x80, "Off"       	},
-	{0x0b, 0x01, 0x80, 0x00, "On"       	},
+	{0   , 0xfe, 0   , 2   , "Bonus Life"},
+	{0x00, 0x01, 0x0c, 0x00, "1000"},
+	{0x00, 0x01, 0x0c, 0x08, "5000"},
+
+	{0   , 0xfe, 0   , 2   , "Coin Info"},
+	{0x00, 0x01, 0x80, 0x80, "Off"},
+	{0x00, 0x01, 0x80, 0x00, "On"},
+
+	{0,    0xfe, 0   , 2   , "Color Overlay"},
+	{0x01, 0x01, 0x01, 0x00, "No"},
+	{0x01, 0x01, 0x01, 0x01, "Yes"},
 };
 
 STDDIPINFO(Invaders)
 
 static struct BurnInputInfo SitvInputList[] = {
-	{"Coin",	BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
+	{"Coin",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
 
 	{"P1 Start",	BIT_DIGITAL,	DrvJoy2 + 2,	"p1 start"	},
 	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
-	{"P1 Left",	BIT_DIGITAL,	DrvJoy2 + 5,	"p1 left"	},
+	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 left"	},
 	{"P1 Right",	BIT_DIGITAL,	DrvJoy2 + 6,	"p1 right"	},
 
 	{"P2 Start",	BIT_DIGITAL,	DrvJoy2 + 1,	"p2 start"	},
 	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
-	{"P2 Left",	BIT_DIGITAL,	DrvJoy3 + 5,	"p2 left"	},
+	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 left"	},
 	{"P2 Right",	BIT_DIGITAL,	DrvJoy3 + 6,	"p2 right"	},
 
-	{"Service",     BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
-	{"Tilt",        BIT_DIGITAL,	DrvJoy3 + 2,	"tilt"		},
-	{"Reset",	BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dips",	BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Service",		BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
+	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 2,	"tilt"		},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dips",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Fake Dip",	BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Sitv)
 
 static struct BurnDIPInfo SitvDIPList[]=
 {
-	{0x0c, 0xff, 0xff, 0x00, NULL           },
+	DIP_OFFSET(0x0c)
 
-	{0   , 0xfe, 0   , 4   , "Lives"        },
-	{0x0c, 0x01, 0x03, 0x00, "3"       	},
-	{0x0c, 0x01, 0x03, 0x01, "4"       	},
-	{0x0c, 0x01, 0x03, 0x02, "5"       	},
-	{0x0c, 0x01, 0x03, 0x03, "6"       	},
+	{0x00, 0xff, 0xff, 0x00, NULL},
+	{0x01, 0xff, 0xff, 0x01, NULL},
 
-	{0   , 0xfe, 0   , 2   , "Bonus Life"   },
-	{0x0c, 0x01, 0x0c, 0x00, "1000"   	},
-	{0x0c, 0x01, 0x0c, 0x08, "1500"     	},
+	{0   , 0xfe, 0   , 4   , "Lives"},
+	{0x00, 0x01, 0x03, 0x00, "3"},
+	{0x00, 0x01, 0x03, 0x01, "4"},
+	{0x00, 0x01, 0x03, 0x02, "5"},
+	{0x00, 0x01, 0x03, 0x03, "6"},
 
-	{0   , 0xfe, 0   , 2   , "Coin Info" 	},
-	{0x0c, 0x01, 0x80, 0x80, "Off"       	},
-	{0x0c, 0x01, 0x80, 0x00, "On"       	},
+	{0   , 0xfe, 0   , 2   , "Bonus Life"},
+	{0x00, 0x01, 0x0c, 0x00, "1000"},
+	{0x00, 0x01, 0x0c, 0x08, "1500"},
+
+	{0   , 0xfe, 0   , 2   , "Coin Info"},
+	{0x00, 0x01, 0x80, 0x80, "Off"},
+	{0x00, 0x01, 0x80, 0x00, "On"},
+
+	{0,    0xfe, 0   , 2   , "Color Overlay"},
+	{0x01, 0x01, 0x01, 0x00, "No"},
+	{0x01, 0x01, 0x01, 0x01, "Yes"},
 };
 
 STDDIPINFO(Sitv)
 
 static struct BurnDIPInfo OzmawarsDIPList[]=
 {
-	{0x0b, 0xff, 0xff, 0x00, NULL			},
+	DIP_OFFSET(0x0b)
 
-	{0   , 0xfe, 0   ,    4, "Energy"		},
-	{0x0b, 0x01, 0x03, 0x00, "15000"		},
-	{0x0b, 0x01, 0x03, 0x01, "20000"		},
-	{0x0b, 0x01, 0x03, 0x02, "25000"		},
-	{0x0b, 0x01, 0x03, 0x03, "35000"		},
+	{0x00, 0xff, 0xff, 0x00, NULL},
+	{0x01, 0xff, 0xff, 0x01, NULL},
 
-	{0   , 0xfe, 0   ,    2, "Bonus Energy"		},
-	{0x0b, 0x01, 0x08, 0x00, "15000"		},
-	{0x0b, 0x01, 0x08, 0x08, "10000"		},
+	{0   , 0xfe, 0   ,    4, "Energy"},
+	{0x00, 0x01, 0x03, 0x00, "15000"},
+	{0x00, 0x01, 0x03, 0x01, "20000"},
+	{0x00, 0x01, 0x03, 0x02, "25000"},
+	{0x00, 0x01, 0x03, 0x03, "35000"},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"		},
-	{0x0b, 0x01, 0x80, 0x00, "1 Coin  1 Credits"	},
-	{0x0b, 0x01, 0x80, 0x80, "1 Coin  2 Credits"	},
+	{0   , 0xfe, 0   ,    2, "Bonus Energy"},
+	{0x00, 0x01, 0x08, 0x00, "15000"},
+	{0x00, 0x01, 0x08, 0x08, "10000"},
+
+	{0   , 0xfe, 0   ,    2, "Coinage"},
+	{0x00, 0x01, 0x80, 0x00, "1 Coin  1 Credits"},
+	{0x00, 0x01, 0x80, 0x80, "1 Coin  2 Credits"},
+
+	{0,    0xfe, 0   , 2   , "Color Overlay"},
+	{0x01, 0x01, 0x01, 0x00, "No"},
+	{0x01, 0x01, 0x01, 0x01, "Yes"},
 };
 
 STDDIPINFO(Ozmawars)
@@ -218,6 +255,8 @@ static INT32 DrvDoReset(INT32 clear_mem)
 	ZetClose();
 
 	BurnSampleReset();
+	HiscoreReset();
+
 	explosion_counter = 0; // prevent double-playing sample
 
 	watchdog = 0;
@@ -231,7 +270,7 @@ static INT32 MemIndex()
 
 	DrvI8080ROM		= Next; Next += 0x006000;
 
-	DrvPalette		= (UINT32*)Next; Next += 0x0002 * sizeof(UINT32);
+	DrvPalette		= (UINT32*)Next; Next += 0x0010 * sizeof(UINT32);
 
 	AllRam			= Next;
 
@@ -304,6 +343,42 @@ static INT32 DrvExit()
 	return 0;
 }
 
+static INT32 get_overlay_color(UINT8 x, UINT8 y)
+{
+	INT32 color = PALETTE_WHITE;
+	if (DrvDips[1] & 1)
+	{
+		if (game_select == INVADERS)
+		{
+			// based on MAME's latest invaders.lay
+			if (x >= 20  && y >= 0   && x < 76  && y < 224) color = PALETTE_GREEN;
+			if (x >= 0   && y >= 16  && x < 20  && y < 134) color = PALETTE_GREEN;
+			if (x >= 198 && y >= 0   && x < 228 && y < 224) color = PALETTE_RED;
+		}
+		if (game_select == OZMAWARS)
+		{
+			// this one actually use color proms, but they are bad dumps,
+			// so let's reuse the color overlay from older mame for now
+			if (x >= 212 && y >= 0   && x < 236 && y < 224) color = PALETTE_PURPLE;
+			if (x >= 187 && y >= 0   && x < 212 && y < 224) color = PALETTE_BLUE;
+			if (x >= 160 && y >= 0   && x < 187 && y < 224) color = PALETTE_YELLOW;
+			if (x >= 132 && y >= 0   && x < 160 && y < 224) color = PALETTE_CYAN;
+			if (x >= 100 && y >= 0   && x < 132 && y < 224) color = PALETTE_PURPLE;
+			if (x >= 68  && y >= 0   && x < 100 && y < 224) color = PALETTE_YELLOW;
+			if (x >= 44  && y >= 0   && x < 68  && y < 224) color = PALETTE_ORANGE;
+			if (x >= 28  && y >= 0   && x < 44  && y < 224) color = PALETTE_CYAN;
+
+			if (x >= 236 && y >= 74  && x < 252 && y < 148) color = PALETTE_BLUE;
+			if (x >= 236 && y >= 148 && x < 252 && y < 224) color = PALETTE_YELLOW;
+			if (x >= 236 && y >= 0   && x < 252 && y < 74 ) color = PALETTE_CYAN;
+			if (x >= 12  && y >= 0   && x < 28  && y < 144) color = PALETTE_CYAN;
+			if (x >= 12  && y >= 192 && x < 28  && y < 224) color = PALETTE_CYAN;
+			if (x >= 12  && y >= 144 && x < 28  && y < 192) color = PALETTE_PURPLE;
+		}
+	}
+	return color;
+}
+
 static void draw_invaders_bitmap()
 {
 	UINT8 x = 0;
@@ -312,7 +387,7 @@ static void draw_invaders_bitmap()
 
 	while (1)
 	{
-		pTransDraw[((y - 0x20) * nScreenWidth) + x] = (video_data & 0x01);
+		pTransDraw[((y - 0x20) * nScreenWidth) + x] = (video_data & 0x01) ? get_overlay_color(x, (y - 0x20)) : 0;
 
 		video_data >>= 1;
 		x++;
@@ -321,7 +396,7 @@ static void draw_invaders_bitmap()
 		{
 			for (INT32 i = 0; i < 4; i++)
 			{
-				pTransDraw[((y - 0x20) * nScreenWidth) + (256 + i)] = (video_data & 0x01);
+				pTransDraw[((y - 0x20) * nScreenWidth) + (256 + i)] = (video_data & 0x01) ? get_overlay_color((256 + i), (y - 0x20)) : 0;
 				video_data >>= 1;
 			}
 
@@ -338,8 +413,15 @@ static void draw_invaders_bitmap()
 
 static INT32 DrvDraw()
 {
-	DrvPalette[0] = BurnHighCol(0x00,0x00,0x00,0);
-	DrvPalette[1] = BurnHighCol(0xff,0xff,0xff,0);
+	DrvPalette[PALETTE_BLACK]  = BurnHighCol(0x00,0x00,0x00,0);
+	DrvPalette[PALETTE_WHITE]  = BurnHighCol(0xff,0xff,0xff,0);
+	DrvPalette[PALETTE_RED]    = BurnHighCol(0xff,0x20,0x20,0);
+	DrvPalette[PALETTE_GREEN]  = BurnHighCol(0x20,0xff,0x20,0);
+	DrvPalette[PALETTE_BLUE]   = BurnHighCol(0x1f,0x75,0xfe,0);
+	DrvPalette[PALETTE_YELLOW] = BurnHighCol(0xff,0xff,0x20,0);
+	DrvPalette[PALETTE_CYAN]   = BurnHighCol(0x20,0xff,0xff,0);
+	DrvPalette[PALETTE_ORANGE] = BurnHighCol(0xff,0xa5,0x00,0);
+	DrvPalette[PALETTE_PURPLE] = BurnHighCol(0xff,0x00,0xff,0);
 
 	draw_invaders_bitmap();
 
@@ -351,7 +433,7 @@ static INT32 DrvDraw()
 static INT32 DrvFrame()
 {
 	watchdog++;
-	if (watchdog >= 180) {
+	if (watchdog >= 255) {
 		DrvDoReset(0);
 	}
 
@@ -482,6 +564,7 @@ STD_ROM_FN(invaders)
 
 static INT32 InvadersInit()
 {
+	game_select = INVADERS;
 	return DrvInit(0x800, 4, 0x000100);
 }
 
@@ -489,7 +572,7 @@ struct BurnDriver BurnDrvInvaders = {
 	"invaders", NULL, NULL, "invaders", "1978",
 	"Space Invaders / Space Invaders M\0", NULL, "Taito / Midway", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, invadersRomInfo, invadersRomName, NULL, NULL, InvadersSampleInfo, InvadersSampleName, InvadersInputInfo, InvadersDIPInfo,
 	InvadersInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x02,
 	224, 260, 3, 4
@@ -512,6 +595,7 @@ STD_ROM_FN(sisv1)
 
 static INT32 Sisv1Init()
 {
+	game_select = INVADERS;
 	return DrvInit(0x400, 6, 0x000100);
 }
 
@@ -544,7 +628,7 @@ struct BurnDriver BurnDrvSisv2 = {
 	"sisv2", "invaders", NULL, "invaders", "1978",
 	"Space Invaders (SV Version rev 2)\0", NULL, "Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, sisv2RomInfo, sisv2RomName, NULL, NULL, InvadersSampleInfo, InvadersSampleName, InvadersInputInfo, InvadersDIPInfo,
 	Sisv1Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 2,
 	224, 260, 3, 4
@@ -569,7 +653,7 @@ struct BurnDriver BurnDrvSisv3 = {
 	"sisv3", "invaders", NULL, "invaders", "1978",
 	"Space Invaders (SV Version rev 3)\0", NULL, "Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, sisv3RomInfo, sisv3RomName, NULL, NULL, InvadersSampleInfo, InvadersSampleName, InvadersInputInfo, InvadersDIPInfo,
 	Sisv1Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 2,
 	224, 260, 3, 4
@@ -594,7 +678,7 @@ struct BurnDriver BurnDrvSisv = {
 	"sisv", "invaders", NULL, "invaders", "1978",
 	"Space Invaders (SV Version rev 4)\0", NULL, "Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, sisvRomInfo, sisvRomName, NULL, NULL, InvadersSampleInfo, InvadersSampleName, InvadersInputInfo, InvadersDIPInfo,
 	Sisv1Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 2,
 	224, 260, 3, 4
@@ -615,6 +699,7 @@ STD_ROM_FN(sitv1)
 
 static INT32 Sitv1Init()
 {
+	game_select = INVADERS;
 	return DrvInit(0x800, 4, 0x000101);
 }
 
@@ -622,7 +707,7 @@ struct BurnDriver BurnDrvSitv1 = {
 	"sitv1", "invaders", NULL, "invaders", "1978",
 	"Space Invaders (TV Version rev 1)\0", NULL, "Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, sitv1RomInfo, sitv1RomName, NULL, NULL, InvadersSampleInfo, InvadersSampleName, SitvInputInfo, SitvDIPInfo,
 	Sitv1Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 2,
 	224, 260, 3, 4
@@ -645,7 +730,7 @@ struct BurnDriver BurnDrvSitv = {
 	"sitv", "invaders", NULL, "invaders", "1978",
 	"Space Invaders (TV Version rev 2)\0", NULL, "Taito", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, sitvRomInfo, sitvRomName, NULL, NULL, InvadersSampleInfo, InvadersSampleName, SitvInputInfo, SitvDIPInfo,
 	Sitv1Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 2,
 	224, 260, 3, 4
@@ -671,6 +756,7 @@ STD_ROM_FN(ozmawars)
 
 static INT32 OzmawarsInit()
 {
+	game_select = OZMAWARS;
 	return DrvInit(0x800, 6, 0x000000);
 }
 
@@ -678,7 +764,7 @@ struct BurnDriver BurnDrvOzmawars = {
 	"ozmawars", NULL, NULL, "invaders", "1979",
 	"Ozma Wars (set 1)\0", NULL, "SNK", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, ozmawarsRomInfo, ozmawarsRomName, NULL, NULL, OzmawarsSampleInfo, OzmawarsSampleName, InvadersInputInfo, OzmawarsDIPInfo,
 	OzmawarsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 2,
 	224, 260, 3, 4
@@ -710,6 +796,7 @@ STD_ROM_FN(ozmawars2)
 
 static INT32 Ozmawars2Init()
 {
+	game_select = OZMAWARS;
 	INT32 nRet = DrvInit(0x400, 12, 0x000000);
 
 	return nRet;
@@ -719,7 +806,7 @@ struct BurnDriver BurnDrvOzmawars2 = {
 	"ozmawars2", "ozmawars", NULL, "invaders", "1979",
 	"Ozma Wars (set 2)\0", NULL, "SNK", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, ozmawars2RomInfo, ozmawars2RomName, NULL, NULL, OzmawarsSampleInfo, OzmawarsSampleName, InvadersInputInfo, OzmawarsDIPInfo,
 	Ozmawars2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 2,
 	224, 260, 3, 4

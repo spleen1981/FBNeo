@@ -6,6 +6,8 @@
 // #include <winable.h>
 #endif
 
+#define FILTER_LAST             37 // last filter in vid_softfx.h/.cpp
+
 int nOtherRes = 0;
 
 HMENU hMenu = NULL;
@@ -61,10 +63,10 @@ static LRESULT CALLBACK MenuHook(int nCode, WPARAM wParam, LPARAM lParam)
 
 			GetWindowRect(hMenubar, &rect);
 			SendMessage(hMenubar, TB_GETITEMRECT, nLastMenu, (LPARAM)&buttonrect);
-
 			// If the button is pressed over the currently selected menu title, eat the message and close the menu
 			if (point.x >= rect.left + buttonrect.left && point.y >= rect.top + buttonrect.top && point.x < rect.left + buttonrect.right && point.y < rect.top + buttonrect.bottom) {
 				PostMessage(hMenubar, WM_CANCELMODE, 0, 0);
+				EndMenu();
 				return 1;
 			}
 			break;
@@ -576,7 +578,7 @@ static void CreateCPUSpeedItem(bool bOther)
 
 	FBALoadString(hAppInst, IDS_MENU_3, szItemText, 256);
 	if (bOther) {
-		_stprintf(szItemText + _tcslen(szItemText), _T("\t(%d%%)"), nBurnCPUSpeedAdjust * 100 / 256);
+		_stprintf(szItemText + _tcslen(szItemText), _T("\t(%d%%)"), (int)((double)nBurnCPUSpeedAdjust * 100 / 256 + 0.5));
 	}
 	menuItem.cch = _tcslen(szItemText);
 	SetMenuItemInfo(hMenu, MENU_SETCPUCLOCK, 0, &menuItem);
@@ -619,6 +621,30 @@ static void CreateCDItems()
 	SetMenuItemInfo(hMenu, MENU_CDIMAGE, 0, &menuItem);
 }
 #endif
+
+void MenuUpdateVolume()
+{
+	int var = MENU_AUDIO_VOLUME_0 + (nAudVolume / 1000);
+	CheckMenuRadioItem(hMenu, MENU_AUDIO_VOLUME_0, MENU_AUDIO_VOLUME_100, var, MF_BYCOMMAND);
+}
+
+void MenuUpdateSlowMo()
+{
+	int var;
+
+	// SlowMo T.A. feature radioselektor
+	if (nSlowMo >= 0 && nSlowMo <= 4) {
+		// verify parameter OK
+		var = ID_SLOMO_0 + nSlowMo;
+	} else {
+		// not OK, use default
+		nSlowMo = 0;
+		var = ID_SLOMO_0;
+	}
+
+	CheckMenuRadioItem(hMenu, ID_SLOMO_0, ID_SLOMO_4, var, MF_BYCOMMAND);
+}
+
 // Update bullets, checkmarks, and item text
 void MenuUpdate()
 {
@@ -683,7 +709,7 @@ void MenuUpdate()
 			CheckMenuItem(hMenu, MENU_SOFTFX, nVidBlitterOpt[nVidSelect] & 0x02000000 ? MF_CHECKED : MF_UNCHECKED);
 
 			var = ((unsigned long long)nVidBlitterOpt[nVidSelect] >> 32) + MENU_ENHANCED_SOFT_STRETCH;
-			CheckMenuRadioItem(hMenu, MENU_ENHANCED_SOFT_STRETCH, MENU_ENHANCED_SOFT_STRETCH + 34, var, MF_BYCOMMAND);
+			CheckMenuRadioItem(hMenu, MENU_ENHANCED_SOFT_STRETCH, MENU_ENHANCED_SOFT_STRETCH + FILTER_LAST, var, MF_BYCOMMAND);
 			CheckMenuItem(hMenu, MENU_ENHANCED_SOFT_AUTOSIZE, (nVidBlitterOpt[nVidSelect] & 0x04000000) ? MF_CHECKED : MF_UNCHECKED);
 			if (nVidBlitterOpt[nVidSelect] & 0x00100000) {
 				var = MENU_3DPROJECTION;
@@ -714,7 +740,7 @@ void MenuUpdate()
 			break;
 		case 2:
 			var = (nVidBlitterOpt[nVidSelect] & 0xFF) + MENU_SOFTFX_SOFT_STRETCH;
-			CheckMenuRadioItem(hMenu, MENU_SOFTFX_SOFT_STRETCH, MENU_SOFTFX_SOFT_STRETCH + 34, var, MF_BYCOMMAND);
+			CheckMenuRadioItem(hMenu, MENU_SOFTFX_SOFT_STRETCH, MENU_SOFTFX_SOFT_STRETCH + FILTER_LAST, var, MF_BYCOMMAND);
 			CheckMenuItem(hMenu, MENU_SOFTFX_SOFT_AUTOSIZE, (nVidBlitterOpt[nVidSelect] & 0x0100) ? MF_CHECKED : MF_UNCHECKED);
 			CheckMenuItem(hMenu, MENU_SOFT_DIRECTACCESS, !(nVidBlitterOpt[nVidSelect] & 0x0200) ? MF_CHECKED : MF_UNCHECKED);
 			break;
@@ -755,11 +781,12 @@ void MenuUpdate()
 			break;
 		case 4:
 			var = (nVidBlitterOpt[nVidSelect] & 0xFF) + MENU_DX9_ALT_SOFT_STRETCH;
-			CheckMenuRadioItem(hMenu, MENU_DX9_ALT_SOFT_STRETCH, MENU_DX9_ALT_SOFT_STRETCH + 34, var, MF_BYCOMMAND);
+			CheckMenuRadioItem(hMenu, MENU_DX9_ALT_SOFT_STRETCH, MENU_DX9_ALT_SOFT_STRETCH + FILTER_LAST, var, MF_BYCOMMAND);
 			CheckMenuItem(hMenu, MENU_DX9_ALT_SOFT_AUTOSIZE, (nVidBlitterOpt[nVidSelect] & 0x0100) ? MF_CHECKED : MF_UNCHECKED);
 			CheckMenuRadioItem(hMenu, MENU_DX9_ALT_POINT, MENU_DX9_ALT_POINT + 1, MENU_DX9_ALT_POINT + bVidDX9Bilinear, MF_BYCOMMAND);
 			CheckMenuItem(hMenu, MENU_DX9_ALT_HARDWAREVERTEX, (bVidHardwareVertex) ? MF_CHECKED : MF_UNCHECKED);
 			CheckMenuItem(hMenu, MENU_DX9_ALT_MOTIONBLUR, (bVidMotionBlur) ? MF_CHECKED : MF_UNCHECKED);
+			CheckMenuRadioItem(hMenu, MENU_DX9_ALT_HARD_FX_NONE, MENU_DX9_ALT_HARD_FX_LAST, MENU_DX9_ALT_HARD_FX_NONE + nVidDX9HardFX, MF_BYCOMMAND);
 			CheckMenuItem(hMenu, MENU_DX9_ALT_FORCE_16BIT, bVidForce16bitDx9Alt ? MF_CHECKED : MF_UNCHECKED);
 			break;
 	}
@@ -941,6 +968,7 @@ void MenuUpdate()
 	CheckMenuItem(hMenu, MENU_FORCE60HZ, bForce60Hz ? MF_CHECKED : MF_UNCHECKED);
 	CheckMenuItem(hMenu, MENU_VIDEOVSYNC, bVidVSync ? MF_CHECKED : MF_UNCHECKED);
 	CheckMenuItem(hMenu, MENU_AUTOFRAMESKIP, !bAlwaysDrawFrames ? MF_CHECKED : MF_UNCHECKED);
+	CheckMenuItem(hMenu, MENU_RUNAHEAD, bRunAhead ? MF_CHECKED : MF_UNCHECKED);
 
 	var = nAudSelect + MENU_AUD_PLUGIN_1;
 	CheckMenuRadioItem(hMenu, MENU_AUD_PLUGIN_1, MENU_AUD_PLUGIN_8, var, MF_BYCOMMAND);
@@ -949,18 +977,12 @@ void MenuUpdate()
 		case 0: {
 			var = MENU_DSOUND_NOSOUND;
 			if (nAudSampleRate[0] > 0) {
-				if (nAudSampleRate[0] <= 11025) {
-					var = MENU_DSOUND_11025;
+				if (nAudSampleRate[0] <= 44100) {
+					var = MENU_DSOUND_44100;
+					nAudSampleRate[0] = 44100; // sanity
 				} else {
-					if (nAudSampleRate[0] <= 22050) {
-						var = MENU_DSOUND_22050;
-					} else {
-						if (nAudSampleRate[0] <= 44100) {
-							var = MENU_DSOUND_44100;
-						} else {
-							var = MENU_DSOUND_48000;
-						}
-					}
+					var = MENU_DSOUND_48000;
+					nAudSampleRate[0] = 48000;
 				}
 			}
 			CheckMenuRadioItem(hMenu, MENU_DSOUND_NOSOUND, MENU_DSOUND_48000, var, MF_BYCOMMAND);
@@ -971,18 +993,12 @@ void MenuUpdate()
 		case 1: {
 			var = MENU_XAUDIO_NOSOUND;
 			if (nAudSampleRate[1] > 0) {
-				if (nAudSampleRate[1] <= 11025) {
-					var = MENU_XAUDIO_11025;
+				if (nAudSampleRate[1] <= 44100) {
+					var = MENU_XAUDIO_44100;
+					nAudSampleRate[1] = 44100; // sanity
 				} else {
-					if (nAudSampleRate[1] <= 22050) {
-						var = MENU_XAUDIO_22050;
-					} else {
-						if (nAudSampleRate[1] <= 44100) {
-							var = MENU_XAUDIO_44100;
-						} else {
-							var = MENU_XAUDIO_48000;
-						}
-					}
+					var = MENU_XAUDIO_48000;
+					nAudSampleRate[1] = 48000;
 				}
 			}
 			CheckMenuRadioItem(hMenu, MENU_XAUDIO_NOSOUND, MENU_XAUDIO_48000, var, MF_BYCOMMAND);
@@ -1025,6 +1041,9 @@ void MenuUpdate()
 	CheckMenuItem(hMenu, MENU_SAVEHISCORES, EnableHiscores ? MF_CHECKED : MF_UNCHECKED);
 	CheckMenuItem(hMenu, MENU_USEBLEND, bBurnUseBlend ? MF_CHECKED : MF_UNCHECKED);
 	CheckMenuItem(hMenu, MENU_GEARSHIFT, BurnShiftEnabled ? MF_CHECKED : MF_UNCHECKED);
+	CheckMenuItem(hMenu, MENU_LIGHTGUNRETICLES, bBurnGunDrawReticles ? MF_CHECKED : MF_UNCHECKED);
+
+	MenuUpdateSlowMo();
 
 #ifdef INCLUDE_AVI_RECORDING
 	if (nAvi3x <= 1) {
@@ -1067,11 +1086,25 @@ void MenuUpdate()
 	CheckMenuItem(hMenu, MENU_SAVEGAMEINPUT, bSaveInputs ? MF_CHECKED : MF_UNCHECKED);
 
 	// Auto-Fire
-	if (nAutoFireRate == 4)  var = MENU_INPUT_AUTOFIRE_RATE_4;
+	if (nAutoFireRate == 2)  var = MENU_INPUT_AUTOFIRE_RATE_6;
+	if (nAutoFireRate == 4)  var = MENU_INPUT_AUTOFIRE_RATE_5;
+	if (nAutoFireRate == 6)  var = MENU_INPUT_AUTOFIRE_RATE_4;
 	if (nAutoFireRate == 8)  var = MENU_INPUT_AUTOFIRE_RATE_3;
 	if (nAutoFireRate == 12) var = MENU_INPUT_AUTOFIRE_RATE_2;
-	if (nAutoFireRate == 22) var = MENU_INPUT_AUTOFIRE_RATE_1;
-	CheckMenuRadioItem(hMenu, MENU_INPUT_AUTOFIRE_RATE_1, MENU_INPUT_AUTOFIRE_RATE_4, var, MF_BYCOMMAND);
+	if (nAutoFireRate == 24) var = MENU_INPUT_AUTOFIRE_RATE_1;
+	CheckMenuRadioItem(hMenu, MENU_INPUT_AUTOFIRE_RATE_1, MENU_INPUT_AUTOFIRE_RATE_6, var, MF_BYCOMMAND);
+
+	// Rewind
+	CheckMenuItem(hMenu, MENU_INPUT_REWIND_ENABLED, bRewindEnabled ? MF_CHECKED : MF_UNCHECKED);
+
+	if (nRewindMemory == 128)  var = MENU_INPUT_REWIND_128MB;
+	if (nRewindMemory == 256)  var = MENU_INPUT_REWIND_256MB;
+	if (nRewindMemory == 512)  var = MENU_INPUT_REWIND_512MB;
+	if (nRewindMemory == 768)  var = MENU_INPUT_REWIND_768MB;
+	if (nRewindMemory == 1024) var = MENU_INPUT_REWIND_1GB;
+	CheckMenuRadioItem(hMenu, MENU_INPUT_REWIND_128MB, MENU_INPUT_REWIND_1GB, var, MF_BYCOMMAND);
+
+	MenuUpdateVolume(); // also called in run.cpp by alt+ / alt-
 
 #ifdef BUILD_A68K
 	CheckMenuItem(hMenu, MENU_ASSEMBLYCORE, bBurnUseASMCPUEmulation ? MF_CHECKED : MF_UNCHECKED);
@@ -1129,7 +1162,7 @@ void MenuUpdate()
 			menuItemInfo.cch = _tcslen(szText2);
 
 			SetMenuItemInfo(hMenu, MENU_PREVIOUSGAMES1 + i, FALSE, &menuItemInfo);
-			EnableMenuItem(hMenu, MENU_PREVIOUSGAMES1 + i, MF_ENABLED | MF_BYCOMMAND);
+			EnableMenuItem(hMenu, MENU_PREVIOUSGAMES1 + i, ((NULL == pDataRomDesc) ? MF_ENABLED : MF_GRAYED) | MF_BYCOMMAND);
 		} else {
 			_tcscpy(szText, FBALoadStringEx(hAppInst, IDS_MENU_6, true));
 
@@ -1270,31 +1303,41 @@ void MenuEnableItems()
 		EnableMenuItem(hMenu, MENU_DX9_CUBIC_OPTIMAL,	MF_ENABLED | MF_BYCOMMAND);
 	}
 	if (nVidSelect == 3) {
-		EnableMenuItem(hMenu, MENU_24,	                MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, MENU_24,					MF_GRAYED  | MF_BYCOMMAND);
 	}
 
-	EnableMenuItem(hMenu, MENU_MODELESS,	                MF_ENABLED  | MF_BYCOMMAND);
+	EnableMenuItem(hMenu, MENU_MODELESS,				MF_ENABLED | MF_BYCOMMAND);
 
 #if defined _MSC_VER && defined BUILD_X86_ASM
-	EnableMenuItem(hBlitterMenu[1], MENU_ENHANCED_SOFT_HQ3XS_VBA, MF_ENABLED | MF_BYCOMMAND);
-	EnableMenuItem(hBlitterMenu[2], MENU_SOFTFX_SOFT_HQ3XS_VBA, MF_ENABLED | MF_BYCOMMAND);
-	EnableMenuItem(hBlitterMenu[4], MENU_DX9_ALT_SOFT_HQ3XS_VBA, MF_ENABLED | MF_BYCOMMAND);
+	EnableMenuItem(hBlitterMenu[1], MENU_ENHANCED_SOFT_HQ3XS_VBA,	MF_ENABLED | MF_BYCOMMAND);
+	EnableMenuItem(hBlitterMenu[2], MENU_SOFTFX_SOFT_HQ3XS_VBA,		MF_ENABLED | MF_BYCOMMAND);
+	EnableMenuItem(hBlitterMenu[4], MENU_DX9_ALT_SOFT_HQ3XS_VBA,	MF_ENABLED | MF_BYCOMMAND);
 #endif
 
 	if (bDrvOkay) {
+		if (NULL == pDataRomDesc) {
+			EnableMenuItem(hMenu, MENU_LOAD,     (kNetGame ? MF_GRAYED : MF_ENABLED) | MF_BYCOMMAND);
+			EnableMenuItem(hMenu, MENU_STARTNET, (kNetGame ? MF_GRAYED : MF_ENABLED) | MF_BYCOMMAND);
+			EnableMenuItem(hMenu, MENU_START_NEOGEO_MVS,	MF_ENABLED | MF_BYCOMMAND);
+			EnableMenuItem(hMenu, MENU_LOAD_NEOCD,			MF_ENABLED | MF_BYCOMMAND);
+			EnableMenuItem(hMenu, MENU_START_NEOGEO_CD,		MF_ENABLED | MF_BYCOMMAND);
+		} else {
+			EnableMenuItem(hMenu, MENU_LOAD,				MF_GRAYED  | MF_BYCOMMAND);
+			EnableMenuItem(hMenu, MENU_STARTNET,			MF_GRAYED  | MF_BYCOMMAND);
+			EnableMenuItem(hMenu, MENU_START_NEOGEO_MVS,	MF_GRAYED  | MF_BYCOMMAND);
+			EnableMenuItem(hMenu, MENU_LOAD_NEOCD,			MF_GRAYED  | MF_BYCOMMAND);
+			EnableMenuItem(hMenu, MENU_START_NEOGEO_CD,		MF_GRAYED  | MF_BYCOMMAND);
+		}
+		EnableMenuItem(hMenu, MENU_LOAD_ROMDATA,		MF_GRAYED  | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_QUIT,				MF_ENABLED | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_INPUT,				MF_ENABLED | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_FORCE60HZ,				MF_GRAYED  | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_DSOUND_NOSOUND,				MF_GRAYED  | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_DSOUND_11025,				MF_GRAYED  | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_DSOUND_22050,				MF_GRAYED  | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_DSOUND_44100,				MF_GRAYED  | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_DSOUND_48000,				MF_GRAYED  | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_XAUDIO_NOSOUND,				MF_GRAYED  | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_XAUDIO_11025,				MF_GRAYED  | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_XAUDIO_22050,				MF_GRAYED  | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_XAUDIO_44100,				MF_GRAYED  | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_XAUDIO_48000,				MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, MENU_FORCE60HZ,			MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, MENU_DSOUND_NOSOUND,		MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, MENU_DSOUND_44100,		MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, MENU_DSOUND_48000,		MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, MENU_XAUDIO_NOSOUND,		MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, MENU_XAUDIO_44100,		MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, MENU_XAUDIO_48000,		MF_GRAYED  | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_INTERPOLATE_FM_0,	MF_GRAYED  | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_INTERPOLATE_FM_3,	MF_GRAYED  | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_FRAMES,				MF_GRAYED  | MF_BYCOMMAND);
@@ -1304,18 +1347,18 @@ void MenuEnableItems()
 		EnableMenuItem(hMenu, MENU_ASSEMBLYCORE,		MF_GRAYED  | MF_BYCOMMAND);
 #endif
 		EnableMenuItem(hMenu, MENU_SAVEHISCORES,		MF_ENABLED  | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_USEBLEND,			MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, MENU_USEBLEND,			MF_GRAYED   | MF_BYCOMMAND);
 
-		EnableMenuItem(hMenu, MENU_CDIMAGE,				MF_GRAYED | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, MENU_CDIMAGE,				MF_GRAYED   | MF_BYCOMMAND);
 
-		EnableMenuItem(hMenu, MENU_AUD_PLUGIN_1, MF_GRAYED  | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_AUD_PLUGIN_2, MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, MENU_AUD_PLUGIN_1,		MF_GRAYED   | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, MENU_AUD_PLUGIN_2,		MF_GRAYED   | MF_BYCOMMAND);
 
 		BurnDIPInfo bdi;
 		if (BurnDrvGetDIPInfo(&bdi, 0) == 0) {
 			EnableMenuItem(hMenu, MENU_DIPSW,			MF_ENABLED | MF_BYCOMMAND);
 		} else {
-			EnableMenuItem(hMenu, MENU_DIPSW,			MF_GRAYED | MF_BYCOMMAND);
+			EnableMenuItem(hMenu, MENU_DIPSW,			MF_GRAYED  | MF_BYCOMMAND);
 		}
 
 		EnableMenuItem(hMenu, MENU_INTERPOLATE_1,		MF_ENABLED | MF_BYCOMMAND);
@@ -1325,6 +1368,19 @@ void MenuEnableItems()
 		EnableMenuItem(hMenu, MENU_MEMCARD_SELECT,		MF_GRAYED | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_MEMCARD_INSERT,		MF_GRAYED | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_MEMCARD_EJECT,		MF_GRAYED | MF_BYCOMMAND);
+
+		EnableMenuItem(hMenu, ID_SLOMO_0,				MF_ENABLED | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, ID_SLOMO_1,				MF_ENABLED | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, ID_SLOMO_2,				MF_ENABLED | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, ID_SLOMO_3,				MF_ENABLED | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, ID_SLOMO_4,				MF_ENABLED | MF_BYCOMMAND);
+
+		EnableMenuItem(hMenu, ID_LUA_OPEN,				MF_ENABLED | MF_BYCOMMAND);
+		if (LuaConsoleHWnd) {
+			EnableMenuItem(hMenu, ID_LUA_CLOSE_ALL,		MF_ENABLED | MF_BYCOMMAND);
+		} else {
+			EnableMenuItem(hMenu, ID_LUA_CLOSE_ALL,		MF_GRAYED | MF_BYCOMMAND);
+		}
 
 		if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SNK_NEOGEO) {
 			EnableMenuItem(hMenu, MENU_INTERPOLATE_1,				MF_GRAYED | MF_BYCOMMAND);
@@ -1344,23 +1400,21 @@ void MenuEnableItems()
 		}
 
 		if (kNetGame) {
-			EnableMenuItem(hMenu, MENU_LOAD,			MF_GRAYED | MF_BYCOMMAND);
-			EnableMenuItem(hMenu, MENU_STARTNET,		MF_GRAYED | MF_BYCOMMAND);
 			EnableMenuItem(hMenu, MENU_EXIT,			MF_GRAYED | MF_BYCOMMAND);
 			EnableMenuItem(hMenu, MENU_SETCPUCLOCK,		MF_GRAYED | MF_BYCOMMAND);
 			EnableMenuItem(hMenu, MENU_RESETCPUCLOCK,	MF_GRAYED | MF_BYCOMMAND);
 			EnableMenuItem(hMenu, MENU_PAUSE,			MF_GRAYED | MF_BYCOMMAND);
+			EnableMenuItem(hMenu, MENU_RESET,			MF_GRAYED | MF_BYCOMMAND);
 			EnableMenuItem(hMenu, MENU_ENABLECHEAT,		MF_GRAYED | MF_BYCOMMAND);
 			EnableMenuItem(hMenu, MENU_SNAPFACT,		MF_GRAYED | MF_BYCOMMAND);
 		} else {
-			EnableMenuItem(hMenu, MENU_LOAD,			MF_ENABLED | MF_BYCOMMAND);
-			EnableMenuItem(hMenu, MENU_STARTNET,		MF_ENABLED | MF_BYCOMMAND);
 			EnableMenuItem(hMenu, MENU_EXIT,			MF_ENABLED | MF_BYCOMMAND);
 			EnableMenuItem(hMenu, MENU_SETCPUCLOCK,		MF_ENABLED | MF_BYCOMMAND);
 			EnableMenuItem(hMenu, MENU_RESETCPUCLOCK,	(nBurnCPUSpeedAdjust != 0x0100 ? MF_ENABLED : MF_GRAYED) | MF_BYCOMMAND);
 			EnableMenuItem(hMenu, MENU_PAUSE,			MF_ENABLED | MF_BYCOMMAND);
+			EnableMenuItem(hMenu, MENU_RESET,			MF_ENABLED | MF_BYCOMMAND);
 			if (pCheatInfo) {
-				EnableMenuItem(hMenu, MENU_ENABLECHEAT,	MF_ENABLED | MF_BYCOMMAND);
+				EnableMenuItem(hMenu, MENU_ENABLECHEAT, MF_ENABLED | MF_BYCOMMAND);
 			}
 
 			if (CheatSearchInit()) {
@@ -1435,6 +1489,14 @@ void MenuEnableItems()
 		bAltPause = 0;
 
 		EnableMenuItem(hMenu, MENU_LOAD,				MF_ENABLED | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, MENU_LOAD_ROMDATA,		MF_ENABLED | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, ID_SLOMO_0,				MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, ID_SLOMO_1,				MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, ID_SLOMO_2,				MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, ID_SLOMO_3,				MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, ID_SLOMO_4,				MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, ID_LUA_OPEN,				MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, ID_LUA_CLOSE_ALL,			MF_GRAYED  | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_MEMCARD_CREATE,		MF_GRAYED  | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_MEMCARD_SELECT,		MF_GRAYED  | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_MEMCARD_INSERT,		MF_GRAYED  | MF_BYCOMMAND);
@@ -1449,6 +1511,7 @@ void MenuEnableItems()
 		EnableMenuItem(hMenu, MENU_SETCPUCLOCK,			MF_GRAYED  | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_RESETCPUCLOCK,		MF_GRAYED  | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_PAUSE,				MF_GRAYED  | MF_BYCOMMAND);
+		EnableMenuItem(hMenu, MENU_RESET,				MF_GRAYED  | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_FORCE60HZ,			MF_ENABLED | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_DIPSW,				MF_GRAYED  | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_ENABLECHEAT,			MF_GRAYED  | MF_BYCOMMAND);
@@ -1464,13 +1527,9 @@ void MenuEnableItems()
 		EnableMenuItem(hMenu, MENU_STATE_SAVE_DIALOG,	MF_GRAYED  | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_FRAMES,				MF_ENABLED | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_DSOUND_NOSOUND,				MF_ENABLED | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_DSOUND_11025,				MF_ENABLED | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_DSOUND_22050,				MF_ENABLED | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_DSOUND_44100,				MF_ENABLED | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_DSOUND_48000,				MF_ENABLED | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_XAUDIO_NOSOUND,				MF_ENABLED | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_XAUDIO_11025,				MF_ENABLED | MF_BYCOMMAND);
-		EnableMenuItem(hMenu, MENU_XAUDIO_22050,				MF_ENABLED | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_XAUDIO_44100,				MF_ENABLED | MF_BYCOMMAND);
 		EnableMenuItem(hMenu, MENU_XAUDIO_48000,				MF_ENABLED | MF_BYCOMMAND);
 //		EnableMenuItem(hMenu, MENU_INTERPOLATE_1,		MF_ENABLED | MF_BYCOMMAND);
@@ -1493,3 +1552,4 @@ void MenuEnableItems()
 		EnableMenuItem(hMenu, MENU_AUD_PLUGIN_2,		 MF_ENABLED  | MF_BYCOMMAND);
 	}
 }
+

@@ -31,11 +31,6 @@ enum { I8039_PC=1, I8039_SP, I8039_PSW, I8039_A,  I8039_TC,
 	   I8039_EA
 };
 
-#ifndef FASTCALL
- #undef __fastcall
- #define __fastcall
-#endif
-
 typedef unsigned char (__fastcall *i8039ReadIoHandler)(unsigned int a);
 typedef void (__fastcall *i8039WriteIoHandler)(unsigned int a, unsigned char v);
 typedef unsigned char (__fastcall *i8039ReadProgHandler)(unsigned int a);

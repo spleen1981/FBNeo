@@ -6,6 +6,7 @@
 #include "z80_intf.h"
 #include "bitswap.h"
 #include "ay8910.h"
+#include "resnet.h"
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;
@@ -50,29 +51,31 @@ static UINT8 DrvDip[2] = {0, 0};
 static UINT8 DrvInput[5];
 static UINT8 DrvReset;
 
+static INT32 nCyclesExtra;
+
 static struct BurnInputInfo SkyskiprInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 7,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 2,	"p1 start"},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 2"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 7,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 2,	"p1 start"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 coin"},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 start"},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 2"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 5,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 6,	"service"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDip + 1,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 6,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDip + 0,		"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDip + 1,		"dip"		},
 };
 
 STDINPUTINFO(Skyskipr)
@@ -145,26 +148,26 @@ static struct BurnDIPInfo SkyskiprDIPList[]=
 STDDIPINFO(Skyskipr)
 
 static struct BurnInputInfo PopeyeInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 7,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 2,	"p1 start"},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 7,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 2,	"p1 start"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 coin"},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 start"},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 5,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 6,	"service"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDip + 1,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 6,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDip + 0,		"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDip + 1,		"dip"		},
 };
 
 STDINPUTINFO(Popeye)
@@ -285,97 +288,81 @@ static struct BurnDIPInfo PopeyefDIPList[]=
 
 STDDIPINFO(Popeyef)
 
+static const res_net_decode_info popeye_7051_decode_info =
+{
+	1, 0, 15, { 0, 0, 0 }, { 0, 3, 6 }, { 7, 7, 3 }
+};
+
+static const res_net_decode_info popeye_7052_decode_info =
+{
+	2, 0, 255, { 0, 0, 0, 256, 256, 256}, { 0, 3, 0, 0, -1, 2}, { 7, 1, 0, 0, 6, 3}
+};
+
+static const res_net_info popeye_7051_txt_net_info =
+{
+	RES_NET_VCC_5V | RES_NET_VBIAS_5V | RES_NET_VIN_MB7051 | RES_NET_MONITOR_SANYO_EZV20,
+	{
+		{ RES_NET_AMP_DARLINGTON, 470, 0, 3, { 1000, 470, 220 } },
+		{ RES_NET_AMP_DARLINGTON, 470, 0, 3, { 1000, 470, 220 } },
+		{ RES_NET_AMP_DARLINGTON, 680, 0, 2, {  470, 220,   0 } }
+	}
+};
+
+static const res_net_info popeye_7051_bck_net_info =
+{
+	RES_NET_VCC_5V | RES_NET_VBIAS_5V | RES_NET_VIN_MB7051 | RES_NET_MONITOR_SANYO_EZV20,
+	{
+		{ RES_NET_AMP_DARLINGTON, 470, 0, 3, { 1200, 680, 470 } },
+		{ RES_NET_AMP_DARLINGTON, 470, 0, 3, { 1200, 680, 470 } },
+		{ RES_NET_AMP_DARLINGTON, 680, 0, 2, {  680, 470,   0 } }
+	}
+};
+
+
+static const res_net_info popeye_7052_obj_net_info =
+{
+	RES_NET_VCC_5V | RES_NET_VBIAS_5V | RES_NET_VIN_MB7052 |  RES_NET_MONITOR_SANYO_EZV20,
+	{
+		{ RES_NET_AMP_DARLINGTON, 470, 0, 3, { 1000, 470, 220 } },
+		{ RES_NET_AMP_DARLINGTON, 470, 0, 3, { 1000, 470, 220 } },
+		{ RES_NET_AMP_DARLINGTON, 680, 0, 2, {  470, 220,   0 } }
+	}
+};
+
 static void popeye_do_palette()
 {
 	UINT8 *color_prom = DrvColorPROM + 32;
 
 	for (INT32 i = 0; i < 16;i++)
 	{
-		int prom_offs = i | ((i & 8) << 1); /* address bits 3 and 4 are tied together */
-		int bit0,bit1,bit2,r,g,b;
+		INT32 prom_offs = i | ((i & 8) << 1);
+		INT32 r = compute_res_net(((color_prom[prom_offs] ^ m_invertmask) >> 0) & 0x07, 0, popeye_7051_txt_net_info);
+		INT32 g = compute_res_net(((color_prom[prom_offs] ^ m_invertmask) >> 3) & 0x07, 1, popeye_7051_txt_net_info);
+		INT32 b = compute_res_net(((color_prom[prom_offs] ^ m_invertmask) >> 6) & 0x03, 2, popeye_7051_txt_net_info);
 
-		/* red component */
-		bit0 = ((color_prom[prom_offs] ^ m_invertmask) >> 0) & 0x01;
-		bit1 = ((color_prom[prom_offs] ^ m_invertmask) >> 1) & 0x01;
-		bit2 = ((color_prom[prom_offs] ^ m_invertmask) >> 2) & 0x01;
-		r = 0x21 * bit0 + 0x47 * bit1 + 0x97 * bit2;
-		/* green component */
-		bit0 = ((color_prom[prom_offs] ^ m_invertmask) >> 3) & 0x01;
-		bit1 = ((color_prom[prom_offs] ^ m_invertmask) >> 4) & 0x01;
-		bit2 = ((color_prom[prom_offs] ^ m_invertmask) >> 5) & 0x01;
-		g = 0x21 * bit0 + 0x47 * bit1 + 0x97 * bit2;
-		/* blue component */
-		bit0 = 0;
-		bit1 = ((color_prom[prom_offs] ^ m_invertmask) >> 6) & 0x01;
-		bit2 = ((color_prom[prom_offs] ^ m_invertmask) >> 7) & 0x01;
-		b = 0x21 * bit0 + 0x47 * bit1 + 0x97 * bit2;
-
+		DrvPalette[0x100 + (2 * i) + 0] = BurnHighCol(0, 0, 0, 0);
 		DrvPalette[0x100 + (2 * i) + 1] = BurnHighCol(r, g, b, 0);
 	}
 
-	color_prom += 32;
+	color_prom += 32; // sprite section
 
-	for (INT32 i = 0; i < 256;i++)
-	{
-		int bit0,bit1,bit2,r,g,b;
+	UINT8 cpi[512];
 
+	for (INT32 i = 0; i < 512;i++)
+		cpi[i] = color_prom[i] ^ m_invertmask;
 
-		/* red component */
-		bit0 = ((color_prom[0] ^ m_invertmask) >> 0) & 0x01;
-		bit1 = ((color_prom[0] ^ m_invertmask) >> 1) & 0x01;
-		bit2 = ((color_prom[0] ^ m_invertmask) >> 2) & 0x01;
-		r = 0x21 * bit0 + 0x47 * bit1 + 0x97 * bit2;
-		/* green component */
-		bit0 = ((color_prom[0] ^ m_invertmask) >> 3) & 0x01;
-		bit1 = ((color_prom[256] ^ m_invertmask) >> 0) & 0x01;
-		bit2 = ((color_prom[256] ^ m_invertmask) >> 1) & 0x01;
-		g = 0x21 * bit0 + 0x47 * bit1 + 0x97 * bit2;
-		/* blue component */
-		bit0 = 0;
-		bit1 = ((color_prom[256] ^ m_invertmask) >> 2) & 0x01;
-		bit2 = ((color_prom[256] ^ m_invertmask) >> 3) & 0x01;
-		b = 0x21 * bit0 + 0x47 * bit1 + 0x97 * bit2;
-
-		DrvPalette[0x200 + i] = BurnHighCol(r, g, b, 0);
-
-		color_prom++;
-	}
+	compute_res_net_all(DrvPalette+0x200, &cpi[0], popeye_7052_decode_info, popeye_7052_obj_net_info);
 }
 
 static void popeye_do_background_palette(UINT32 bank)
 {
 	UINT8 *color_prom = DrvColorPROM + 16 * bank;
 
+	UINT8 cpi[16];
 	for (INT32 i = 0; i < 16;i++)
-	{
-		int bit0,bit1,bit2;
-		int r,g,b;
+		cpi[i] = color_prom[i] ^ m_invertmask;
 
-		/* red component */
-		bit0 = ((color_prom[0] ^ m_invertmask) >> 0) & 0x01;
-		bit1 = ((color_prom[0] ^ m_invertmask) >> 1) & 0x01;
-		bit2 = ((color_prom[0] ^ m_invertmask) >> 2) & 0x01;
-		r = 0x1c * bit0 + 0x31 * bit1 + 0x47 * bit2;
-		/* green component */
-		bit0 = ((color_prom[0] ^ m_invertmask) >> 3) & 0x01;
-		bit1 = ((color_prom[0] ^ m_invertmask) >> 4) & 0x01;
-		bit2 = ((color_prom[0] ^ m_invertmask) >> 5) & 0x01;
-		g = 0x1c * bit0 + 0x31 * bit1 + 0x47 * bit2;
-		/* blue component */
-		bit0 = 0;
-		bit1 = ((color_prom[0] ^ m_invertmask) >> 6) & 0x01;
-		bit2 = ((color_prom[0] ^ m_invertmask) >> 7) & 0x01;
-		if (skyskiprmode)
-		{
-			bit0 = bit1;
-			bit1 = 0;
-		}
-		b = 0x1c * bit0 + 0x31 * bit1 + 0x47 * bit2;
-
-		DrvPalette[i] = BurnHighCol(r, g, b, 0);
-
-		color_prom++;
-	}
+	compute_res_net_all(DrvPalette, cpi, popeye_7051_decode_info, popeye_7051_bck_net_info);
 }
 
 static void popeye_recalcpalette()
@@ -506,6 +493,8 @@ static INT32 DrvDoReset()
 	m_prot0 = 0;
 	m_prot1 = 0;
 	m_prot_shift = 0;
+
+	nCyclesExtra = 0;
 
 	return 0;
 }
@@ -701,7 +690,7 @@ static INT32 PopeyeblLoad(UINT8 *DrvTempRom)
 	bgbitmapwh = 512;
 
 	bootleg = 1;
-	m_invertmask = 0x00;
+	m_invertmask = 0xff;
 
 	if (BurnLoadRom(DrvTempRom + 0x0000, 0, 1)) return 1;
 	if (BurnLoadRom(DrvTempRom + 0x2000, 1, 1)) return 1;
@@ -736,7 +725,7 @@ static INT32 DrvInit(INT32 (*LoadRoms)(UINT8 *DrvTempRom))
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
-	m_invertmask = 0xff;
+	m_invertmask = 0x00;
 
 	{   // Load ROMS parse GFX
 		UINT8 *DrvTempRom = (UINT8 *)BurnMalloc(0x10000);
@@ -876,23 +865,8 @@ static void draw_sprites()
 
 		code = (code ^ 0x1ff) & sprmask;
 
-		if (flipy) { // we need a macro for this -dink
-			if (flipx) {
-				Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x200, DrvSpriteGFX);
-				Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, sx-512, sy, color, 2, 0, 0x200, DrvSpriteGFX);
-			} else {
-				Render16x16Tile_Mask_FlipY_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x200, DrvSpriteGFX);
-				Render16x16Tile_Mask_FlipY_Clip(pTransDraw, code, sx-512, sy, color, 2, 0, 0x200, DrvSpriteGFX);
-			}
-		} else {
-			if (flipx) {
-				Render16x16Tile_Mask_FlipX_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x200, DrvSpriteGFX);
-				Render16x16Tile_Mask_FlipX_Clip(pTransDraw, code, sx-512, sy, color, 2, 0, 0x200, DrvSpriteGFX);
-			} else {
-				Render16x16Tile_Mask_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x200, DrvSpriteGFX);
-				Render16x16Tile_Mask_Clip(pTransDraw, code, sx-512, sy, color, 2, 0, 0x200, DrvSpriteGFX);
-			}
-		}
+		Draw16x16MaskTile(pTransDraw, code, sx, sy, flipx, flipy, color, 2, 0, 0x200, DrvSpriteGFX);
+		Draw16x16MaskTile(pTransDraw, code, sx-512, sy, flipx, flipy, color, 2, 0, 0x200, DrvSpriteGFX);
 	}
 }
 
@@ -938,19 +912,21 @@ static INT32 DrvFrame()
 	DrvMakeInputs();
 
 	INT32 nInterleave = 256;
-	INT32 nCyclesTotal = 4000000 / 60;
-    INT32 nCyclesDone = 0;
+	INT32 nCyclesTotal[1] = { 4000000 / 60 };
+	INT32 nCyclesDone[1] = { nCyclesExtra };
 
     ZetNewFrame();
 
     ZetOpen(0);
 	for (INT32 i = 0; i < nInterleave; i++) {
-		nCyclesDone += ZetRun(((i + 1) * nCyclesTotal / nInterleave) - nCyclesDone);
+		CPU_RUN(0, Zet);
 
 		if (i == nInterleave - 1 && (ZetI(-1) & 1))
 			ZetNmi();
 	}
     ZetClose();
+
+	nCyclesExtra = nCyclesDone[0] - nCyclesTotal[0];
 
 	if (pBurnSoundOut) {
 		AY8910Render(pBurnSoundOut, nBurnSoundLen);
@@ -987,7 +963,8 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(m_prot0);
 		SCAN_VAR(m_prot1);
 		SCAN_VAR(m_prot_shift);
-		SCAN_VAR(m_invertmask);
+
+		SCAN_VAR(nCyclesExtra);
 	}
 
 	return 0;
@@ -1156,7 +1133,7 @@ static INT32 DrvInitPopeyebl()
 	return DrvInit(PopeyeblLoad);
 }
 
-// Popeye (bootleg)
+// Popeye (bootleg set 1)
 
 static struct BurnRomInfo popeyeblRomDesc[] = {
 	{ "app_exe.3j.2764",0x2000, 0x6e267c48, 1 | BRF_PRG | BRF_ESS }, //  0 maincpu
@@ -1186,11 +1163,46 @@ STD_ROM_FN(popeyebl)
 
 struct BurnDriver BurnDrvPopeyebl = {
 	"popeyebl", "popeye", NULL, NULL, "1982",
-	"Popeye (bootleg)\0", NULL, "bootleg", "Miscellaneous",
+	"Popeye (bootleg set 1)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_ACTION | GBF_PLATFORM, 0,
+	BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_ACTION | GBF_PLATFORM, 0,
 	NULL, popeyeblRomInfo, popeyeblRomName, NULL, NULL, NULL, NULL, PopeyeInputInfo, PopeyeDIPInfo,
 	DrvInitPopeyebl, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
+	512, 448, 4, 3
+};
+
+// Popeye (bootleg set 3)
+
+static struct BurnRomInfo popeyeb3RomDesc[] = {
+	{ "bdf-5",		0x2000, 0xc02b5e95, 1 | BRF_PRG | BRF_ESS }, //  0 maincpu
+	{ "bdf-6",		0x2000, 0xefdf02c3, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "bdf-7",		0x2000, 0x8eee859e, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "bdf-8",		0x2000, 0xbac64fdd, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "bdf-9",		0x1000, 0xcca61ddd, 2 | BRF_GRA }, //  4 gfx1
+
+	{ "bdf-4",		0x2000, 0x0f2cd853, 3 | BRF_GRA }, //  5 gfx2
+	{ "bdf-3",		0x2000, 0x888f3474, 3 | BRF_GRA }, //  6
+	{ "bdf-2",		0x2000, 0x7e864668, 3 | BRF_GRA }, //  7
+	{ "bdf-1",		0x2000, 0x49e1d170, 3 | BRF_GRA }, //  8
+
+	{ "tpp2-c.4a",	0x0020, 0x375e1602, 4 | BRF_GRA }, //  9 proms
+	{ "tpp2-c.3a",	0x0020, 0xe950bea1, 4 | BRF_GRA }, // 10
+	{ "tpp2-c.5b",	0x0100, 0xc5826883, 4 | BRF_GRA }, // 11
+	{ "tpp2-c.5a",	0x0100, 0xc576afba, 4 | BRF_GRA }, // 12
+	{ "tpp2-v.7j",	0x0100, 0xa4655e2e, 4 | BRF_GRA }, // 13
+};
+
+STD_ROM_PICK(popeyeb3)
+STD_ROM_FN(popeyeb3)
+
+struct BurnDriver BurnDrvPopeyeb3 = {
+	"popeyeb3", "popeye", NULL, NULL, "1982",
+	"Popeye (bootleg set 3)\0", NULL, "bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_ACTION | GBF_PLATFORM, 0,
+	NULL, popeyeb3RomInfo, popeyeb3RomName, NULL, NULL, NULL, NULL, PopeyeInputInfo, PopeyeDIPInfo,
+	DrvInitPopeye, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	512, 448, 4, 3
 };
 
@@ -1201,7 +1213,7 @@ static INT32 DrvInitPopeyej()
 	return DrvInit(PopeyejLoad);
 }
 
-// Popeye (Japan, Sky Skipper hardware)
+// Popeye (Japan)
 
 static struct BurnRomInfo popeyejRomDesc[] = {
 	{ "tpp1-c.2a,2732",		0x1000, 0x4176761e, 1 | BRF_PRG | BRF_ESS }, //  0 maincpu
@@ -1231,8 +1243,8 @@ STD_ROM_PICK(popeyej)
 STD_ROM_FN(popeyej)
 
 struct BurnDriver BurnDrvPopeyej = {
-	"popeyej", "popeye", NULL, NULL, "1981",
-	"Popeye (Japan, Sky Skipper hardware)\0", NULL, "Nintendo", "Miscellaneous",
+	"popeyej", "popeye", NULL, NULL, "1982",
+	"Popeye (Japan)\0", NULL, "Nintendo", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_ACTION | GBF_PLATFORM, 0,
 	NULL, popeyejRomInfo, popeyejRomName, NULL, NULL, NULL, NULL, PopeyeInputInfo, PopeyeDIPInfo,
@@ -1241,7 +1253,7 @@ struct BurnDriver BurnDrvPopeyej = {
 };
 
 
-// Popeye (Japan, Sky Skipper hardware, Older)
+// Popeye (Japan, Older)
 
 static struct BurnRomInfo popeyejoRomDesc[] = {
 	{ "tpp1-c.2a.bin",		0x1000, 0x4176761e, 1 | BRF_PRG | BRF_ESS }, //  0 maincpu
@@ -1273,8 +1285,8 @@ STD_ROM_PICK(popeyejo)
 STD_ROM_FN(popeyejo)
 
 struct BurnDriver BurnDrvPopeyejo = {
-	"popeyejo", "popeye", NULL, NULL, "1981",
-	"Popeye (Japan, Sky Skipper hardware, Older)\0", NULL, "Nintendo", "Miscellaneous",
+	"popeyejo", "popeye", NULL, NULL, "1982",
+	"Popeye (Japan, Older)\0", NULL, "Nintendo", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_ACTION | GBF_PLATFORM, 0,
 	NULL, popeyejoRomInfo, popeyejoRomName, NULL, NULL, NULL, NULL, PopeyeInputInfo, PopeyeDIPInfo,

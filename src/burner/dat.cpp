@@ -102,7 +102,7 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 	INT32 nRet=0;
 	UINT32 nOldSelect=0;
 	UINT32 nGameSelect=0;
-	UINT32 nParentSelect,nBoardROMSelect;
+	UINT32 nParentSelect,nBoardROMSelect,nParentBoardROMSelect;
 
 	fprintf(fDat, "<?xml version=\"1.0\"?>\n");
 	fprintf(fDat, "<!DOCTYPE datafile PUBLIC \"-//FinalBurn Neo//DTD ROM Management Datafile//EN\" \"http://www.logiqx.com/Dats/datafile.dtd\">\n\n");
@@ -119,7 +119,7 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 	if (bType == DAT_GAMEGEAR_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - Game Gear Games</name>\n");
 	if (bType == DAT_MSX_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - MSX 1 Games</name>\n");
 	if (bType == DAT_SPECTRUM_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - ZX Spectrum Games</name>\n");
-	if (bType == DAT_NEOGEO_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - Neogeo Games</name>\n");
+	if (bType == DAT_NEOGEO_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - Neo Geo Games</name>\n");
 	if (bType == DAT_NES_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - NES Games</name>\n");
 	if (bType == DAT_FDS_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - FDS Games</name>\n");
 	if (bType == DAT_NGP_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - Neo Geo Pocket Games</name>\n");
@@ -136,7 +136,7 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 	if (bType == DAT_GAMEGEAR_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" Game Gear Games</description>\n"), szAppBurnVer);
 	if (bType == DAT_MSX_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" MSX 1 Games</description>\n"), szAppBurnVer);
 	if (bType == DAT_SPECTRUM_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" ZX Spectrum Games</description>\n"), szAppBurnVer);
-	if (bType == DAT_NEOGEO_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" Neogeo Games</description>\n"), szAppBurnVer);
+	if (bType == DAT_NEOGEO_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" Neo Geo Games</description>\n"), szAppBurnVer);
 	if (bType == DAT_NES_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" NES Games</description>\n"), szAppBurnVer);
 	if (bType == DAT_FDS_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" FDS Games</description>\n"), szAppBurnVer);
 	if (bType == DAT_NGP_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" Neo Geo Pocket Games</description>\n"), szAppBurnVer);
@@ -156,9 +156,11 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 	{
 		char sgName[32];
 		char spName[32];
+		char spbName[32];
 		char sbName[32];
 		char ssName[32];
-		UINT32 i=0;
+		char sfName[32];
+		UINT32 i, j=0;
 		INT32 nPass=0;
 
 		nBurnDrvActive=nGameSelect;									// Switch to driver nGameSelect
@@ -246,6 +248,7 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 		}
 
 		strcpy(sgName, BurnDrvGetTextA(DRV_NAME));
+		strcpy(sfName, BurnDrvGetSourcefile());
 		strcpy(spName, "");											// make sure this string is empty before we start
 		strcpy(sbName, "");											// make sure this string is empty before we start
 		strcpy(ssName, "");											// make sure this string is empty before we start
@@ -253,6 +256,8 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 #ifdef DAT_DEBUG
 		bprintf(PRINT_IMPORTANT, _T("DAT(FIRSTPART): Processing %S.\n"), sgName);
 #endif
+
+		nParentBoardROMSelect=-1U;
 
 		// Check to see if the game has a parent
 		if (BurnDrvGetTextA(DRV_PARENT))
@@ -267,6 +272,21 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 					if (!strcmp(spName, BurnDrvGetTextA(DRV_NAME)))
 					{
 						nParentSelect=i;
+						// Look for parent's BoardROM, store it for later usage
+						if (BurnDrvGetTextA(DRV_BOARDROM))
+						{
+							strcpy(spbName, BurnDrvGetTextA(DRV_BOARDROM));
+							for (j=0;j<nBurnDrvCount;j++)
+							{
+								nBurnDrvActive=j;
+								if (!strcmp(sbName, BurnDrvGetTextA(DRV_NAME)))
+								{
+									nParentBoardROMSelect=j;
+									break;
+								}
+							}
+						}
+						nBurnDrvActive=i;								// restore driver select
 						break;
 					}
 				}
@@ -326,9 +346,9 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 		if (nParentSelect!=nGameSelect && nParentSelect!=-1U)
 		{
 			if (!strcmp(ssName, "") || !strcmp(ssName, sgName)) {
-				fprintf(fDat, "\t<game name=\"%s\" cloneof=\"%s\" romof=\"%s\">\n", sgName, spName, spName);
+				fprintf(fDat, "\t<game name=\"%s\" cloneof=\"%s\" romof=\"%s\" sourcefile=\"%s\">\n", sgName, spName, spName, sfName);
 			} else {
-				fprintf(fDat, "\t<game name=\"%s\" cloneof=\"%s\" romof=\"%s\" sampleof=\"%s\">\n", sgName, spName, spName, ssName);
+				fprintf(fDat, "\t<game name=\"%s\" cloneof=\"%s\" romof=\"%s\" sampleof=\"%s\" sourcefile=\"%s\">\n", sgName, spName, spName, ssName, sfName);
 			}
 		}
 		else
@@ -336,12 +356,12 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 			// Add "romof" (but not 'cloneof') line for games that have boardROMs
 			if (nBoardROMSelect!=nGameSelect && nBoardROMSelect!=-1U)
 			{
-				fprintf(fDat, "\t<game name=\"%s\" romof=\"%s\">\n", sgName, sbName);
+				fprintf(fDat, "\t<game name=\"%s\" romof=\"%s\" sourcefile=\"%s\">\n", sgName, sbName, sfName);
 			} else {
 				if (!strcmp(ssName, "") || !strcmp(ssName, sgName)) {
-					fprintf(fDat, "\t<game name=\"%s\">\n", sgName);
+					fprintf(fDat, "\t<game name=\"%s\" sourcefile=\"%s\">\n", sgName, sfName);
 				} else {
-					fprintf(fDat, "\t<game name=\"%s\" sampleof=\"%s\">\n", sgName, ssName);
+					fprintf(fDat, "\t<game name=\"%s\" sampleof=\"%s\" sourcefile=\"%s\">\n", sgName, ssName, sfName);
 				}
 			}
 		}
@@ -350,13 +370,17 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 		char szGameNameBuffer[255];
 		char szManufacturer[255];
 		char szManufacturerBuffer[255];
+		char szGameDecoration[255];
+		char szGameDecorationBuffer[255];
 
 		memset(szGameName, 0, 255);
 		memset(szGameNameBuffer, 0, 255);
 		memset(szManufacturer, 0, 255);
 		memset(szManufacturerBuffer, 0, 255);
+		memset(szGameDecoration, 0, 255);
+		memset(szGameDecorationBuffer, 0, 255);
 
-		strcpy(szGameName, DecorateGameName(nBurnDrvActive));
+		strcpy(szGameName, BurnDrvGetTextA(DRV_FULLNAME));
 		ReplaceAmpersand(szGameNameBuffer, szGameName);
 		memset(szGameName, 0, 255);
 		strcpy(szGameName, szGameNameBuffer);
@@ -378,6 +402,20 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 		memset(szManufacturerBuffer, 0, 255);
 		ReplaceGreaterThan(szManufacturerBuffer, szManufacturer);
 
+		strcpy(szGameDecoration, GameDecoration(nBurnDrvActive));
+		ReplaceAmpersand(szGameDecorationBuffer, szGameDecoration);
+		memset(szGameDecoration, 0, 255);
+		strcpy(szGameDecoration, szGameDecorationBuffer);
+		memset(szGameDecorationBuffer, 0, 255);
+		ReplaceLessThan(szGameDecorationBuffer, szGameDecoration);
+		memset(szGameDecoration, 0, 255);
+		strcpy(szGameDecoration, szGameDecorationBuffer);
+		memset(szGameDecorationBuffer, 0, 255);
+		ReplaceGreaterThan(szGameDecorationBuffer, szGameDecoration);
+
+		if (strlen(szGameDecoration) > 0) {
+			fprintf(fDat, "\t\t<comment>%s</comment>\n", szGameDecoration);
+		}
 		fprintf(fDat, "\t\t<description>%s</description>\n", szGameNameBuffer);
 		fprintf(fDat, "\t\t<year>%s</year>\n", BurnDrvGetTextA(DRV_DATE));
 		fprintf(fDat, "\t\t<manufacturer>%s</manufacturer>\n", szManufacturerBuffer);
@@ -396,9 +434,9 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 			{
 				INT32 nRetTmp=0;
 				struct BurnRomInfo ri;
-				INT32 nLen; UINT32 nCrc;
+				UINT32 nCrc;
 				char *szPossibleName=NULL;
-				INT32 j, nMerged=0;
+				INT32 nMerged=0;
 
 				memset(&ri,0,sizeof(ri));
 
@@ -409,14 +447,21 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 
 				if (ri.nLen==0) continue;
 
+				char szMergeNameBuffer[255];
+				char szMergeNameBuffer2[255];
+
+				memset(szMergeNameBuffer, 0, 255);
+				memset(szMergeNameBuffer2, 0, 255);
+
 				if (nRet==0)
 				{
 					struct BurnRomInfo riTmp;
 					char *szPossibleNameTmp;
-					nLen=ri.nLen; nCrc=ri.nCrc;
+					nCrc=ri.nCrc;
 
 					// Check for files from boardROMs
-					if (nBoardROMSelect!=nGameSelect && nBoardROMSelect!=-1U) {
+					// On clones, only merge boardROMS if they are shared with parent
+					if (nBoardROMSelect!=nGameSelect && nBoardROMSelect!=-1U && (nParentSelect==nGameSelect || nParentBoardROMSelect==nBoardROMSelect)) {
 						nBurnDrvActive=nBoardROMSelect;
 						nRetTmp=0;
 
@@ -430,11 +475,21 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 
 							if (nRetTmp==0)
 							{
-								if (riTmp.nLen && riTmp.nCrc==nCrc && !strcmp(szPossibleName, szPossibleNameTmp))
+								if (riTmp.nLen && riTmp.nCrc==nCrc)
 								{
 									// This file is from a boardROM
 									nMerged|=2;
 									nRetTmp++;
+
+									// Storing parent's rom name for later
+									ReplaceAmpersand(szMergeNameBuffer, szPossibleNameTmp);
+									strcpy(szMergeNameBuffer2, szMergeNameBuffer);
+									memset(szMergeNameBuffer, 0, 255);
+									ReplaceLessThan(szMergeNameBuffer, szMergeNameBuffer2);
+									memset(szMergeNameBuffer2, 0, 255);
+									strcpy(szMergeNameBuffer2, szMergeNameBuffer);
+									memset(szMergeNameBuffer, 0, 255);
+									ReplaceGreaterThan(szMergeNameBuffer, szMergeNameBuffer2);
 								}
 							}
 						}
@@ -454,11 +509,21 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 
 							if (nRetTmp==0)
 							{
-								if (riTmp.nLen && riTmp.nCrc==nCrc && !strcmp(szPossibleName, szPossibleNameTmp))
+								if (riTmp.nLen && riTmp.nCrc==nCrc)
 								{
 									// This file is from a parent set
 									nMerged|=1;
 									nRetTmp++;
+
+									// Storing parent's rom name for later
+									ReplaceAmpersand(szMergeNameBuffer, szPossibleNameTmp);
+									strcpy(szMergeNameBuffer2, szMergeNameBuffer);
+									memset(szMergeNameBuffer, 0, 255);
+									ReplaceLessThan(szMergeNameBuffer, szMergeNameBuffer2);
+									memset(szMergeNameBuffer2, 0, 255);
+									strcpy(szMergeNameBuffer2, szMergeNameBuffer);
+									memset(szMergeNameBuffer, 0, 255);
+									ReplaceGreaterThan(szMergeNameBuffer, szMergeNameBuffer2);
 								}
 							}
 						}
@@ -483,20 +548,15 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 				ReplaceGreaterThan(szPossibleNameBuffer, szPossibleNameBuffer2);
 
 				// File info
-				if (nPass==1 && !nMerged) {
+				if (nPass==1) {
 					if (ri.nType & BRF_NODUMP) {
 						fprintf(fDat, "\t\t<rom name=\"%s\" size=\"%d\" status=\"nodump\"/>\n", szPossibleNameBuffer, ri.nLen);
 					} else {
-						fprintf(fDat, "\t\t<rom name=\"%s\" size=\"%d\" crc=\"%08x\"/>\n", szPossibleNameBuffer, ri.nLen, ri.nCrc);
-					}
-				}
-				if (nPass==1 && nMerged)
-				{
-					// Files from parent/boardROMs
-					if (ri.nType & BRF_NODUMP) {
-						fprintf(fDat, "\t\t<rom name=\"%s\" merge=\"%s\" size=\"%d\" status=\"nodump\"/>\n", szPossibleNameBuffer, szPossibleNameBuffer, ri.nLen);
-					} else {
-						fprintf(fDat, "\t\t<rom name=\"%s\" merge=\"%s\" size=\"%d\" crc=\"%08x\"/>\n", szPossibleNameBuffer, szPossibleNameBuffer, ri.nLen, ri.nCrc);
+						if (nMerged) {
+							fprintf(fDat, "\t\t<rom name=\"%s\" merge=\"%s\" size=\"%d\" crc=\"%08x\"/>\n", szPossibleNameBuffer, szMergeNameBuffer, ri.nLen, ri.nCrc);
+						} else {
+							fprintf(fDat, "\t\t<rom name=\"%s\" size=\"%d\" crc=\"%08x\"/>\n", szPossibleNameBuffer, ri.nLen, ri.nCrc);
+						}
 					}
 				}
 			}
@@ -542,7 +602,7 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 		INT32 nGameWidth, nGameHeight, nGameAspectX, nGameAspectY;
 		BurnDrvGetVisibleSize(&nGameWidth, &nGameHeight);
 		BurnDrvGetAspect(&nGameAspectX, &nGameAspectY);
-		fprintf(fDat, "\t\t<video orientation=\"%s\" width=\"%d\" height=\"%d\" aspectx=\"%d\" aspecty=\"%d\"/>\n", (BurnDrvGetFlags() & BDF_ORIENTATION_VERTICAL ? "vertical" : "horizontal"), nGameWidth, nGameHeight, nGameAspectX, nGameAspectY);
+		fprintf(fDat, "\t\t<video type=\"%s\" orientation=\"%s\" width=\"%d\" height=\"%d\" aspectx=\"%d\" aspecty=\"%d\"/>\n", (BurnDrvGetGenreFlags() & GBF_VECTOR ? "vector" : "raster"), (BurnDrvGetFlags() & BDF_ORIENTATION_VERTICAL ? "vertical" : "horizontal"), nGameWidth, nGameHeight, nGameAspectX, nGameAspectY);
 		fprintf(fDat, "\t\t<driver status=\"%s\"/>\n", (BurnDrvGetFlags() & BDF_GAME_WORKING ? "good" : "preliminary"));
 
 		fprintf(fDat, "\t</game>\n");
@@ -554,6 +614,7 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 		char sgName[32];
 		char spName[32];
 		char sbName[32];
+		char sfName[32];
 		INT32 i, nPass;
 
 		if (!(BurnDrvGetFlags() & BDF_BOARDROM)) {
@@ -639,6 +700,7 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 		}
 
 		strcpy(sgName, BurnDrvGetTextA(DRV_NAME));
+		strcpy(sfName, BurnDrvGetSourcefile());
 
 #ifdef DAT_DEBUG
 		bprintf(PRINT_IMPORTANT, _T("DAT(BOARDROMS): Processing %S.\n"), sgName);
@@ -659,8 +721,14 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 		remove_driver_leader(HARDWARE_SNK_NGP, 4, 0)
 		remove_driver_leader(HARDWARE_CHANNELF, 4, 0)
 
-		fprintf(fDat, "\t<game isbios=\"yes\" name=\"%s\">\n", sgName);
-		fprintf(fDat, "\t\t<description>%s</description>\n", DecorateGameName(nBurnDrvActive));
+		fprintf(fDat, "\t<game isbios=\"yes\" name=\"%s\" sourcefile=\"%s\">\n", sgName, sfName);
+		char szGameDecoration[255];
+		memset(szGameDecoration, 0, 255);
+		strcpy(szGameDecoration, GameDecoration(nBurnDrvActive));
+		if (strlen(szGameDecoration) > 0) {
+			fprintf(fDat, "\t\t<comment>%s</comment>\n", szGameDecoration);
+		}
+		fprintf(fDat, "\t\t<description>%s</description>\n", BurnDrvGetTextA(DRV_FULLNAME));
 		fprintf(fDat, "\t\t<year>%s</year>\n", BurnDrvGetTextA(DRV_DATE));
 		fprintf(fDat, "\t\t<manufacturer>%s</manufacturer>\n", BurnDrvGetTextA(DRV_MANUFACTURER));
 

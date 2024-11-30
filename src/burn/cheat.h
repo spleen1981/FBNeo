@@ -7,8 +7,11 @@ extern bool bCheatsAllowed;
 struct CheatAddressInfo {
 	INT32 nCPU;
 	INT32 nAddress;
-	INT32 nMultiByte;
+	INT32 nMultiByte; // byte number for this address
+	INT32 nTotalByte; // total bytes for this address,  "1, 2, 3, 4"  (..or  8, 16, 24, 32bit)
 	UINT32 nValue;
+	UINT32 nExtended;                           // Full extended field
+	UINT8 nMask;                                // Mask for this byte (based on extended field)
 	UINT32 nOriginalValue;
 
 	INT32 bRelAddress;                          // Relative address (pointer offset) cheat, see :rdft2: or :dreamwld: in cheat.dat
@@ -31,9 +34,11 @@ struct CheatInfo {
 	INT32 nDefault;								// Default option
 	INT32 bOneShot;                             // For one-shot cheats, also acts as a frame counter for them.
 	INT32 bRestoreOnDisable;                    // Restore previous value on disable
+	INT32 nPrefillMode;                         // Prefill data (1: 0xff, 2: 0x00, 3: 0x01)
 	INT32 bWatchMode;                           // Display value on screen
 	INT32 bWaitForModification;                 // Wait for Modification before changing
 	INT32 bModified;                            // Wrote cheat?
+	INT32 bWriteWithMask;                       // Use nExtended field as mask
 
 	TCHAR szCheatName[CHEAT_MAX_NAME];
 	struct CheatOption* pOption[CHEAT_MAX_OPTIONS];
@@ -63,3 +68,9 @@ void CheatSearchDumptoFile();
 typedef void (*CheatSearchInitCallback)();
 extern CheatSearchInitCallback CheatSearchInitCallbackFunction;
 void CheatSearchExcludeAddressRange(UINT32 nStart, UINT32 nEnd);
+
+typedef UINT32 HWAddressType;
+
+unsigned int ReadValueAtHardwareAddress(HWAddressType address, unsigned int size, int isLittleEndian);
+bool WriteValueAtHardwareAddress(HWAddressType address, unsigned int value, unsigned int size, int isLittleEndian);
+bool IsHardwareAddressValid(HWAddressType address);

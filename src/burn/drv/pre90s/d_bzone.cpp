@@ -26,7 +26,6 @@ static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
 static INT32 nExtraCycles;
-static INT32 avgletsgo = 0;
 static UINT8 analog_data = 0;
 static INT32 input_select = 0;
 
@@ -35,6 +34,8 @@ static UINT8 DrvJoy2[8];
 static UINT8 DrvJoy3[8];
 static UINT8 DrvJoy4[8];
 static UINT8 DrvJoy5[8];
+static UINT8 DrvFakeInput[4];
+static UINT32 DrvFakeInputPrev;
 static UINT8 DrvDips[4];
 static UINT8 DrvInputs[5];
 static UINT8 DrvReset;
@@ -51,21 +52,25 @@ static INT32 redbaron = 0;
 static INT32 redbarona = 0;
 
 static struct BurnInputInfo BzoneInputList[] = {
-	{"P1 Coin",				BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
-	{"P2 Coin",				BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
-	{"Start 1",				BIT_DIGITAL,	DrvJoy2 + 5,	"p1 start"	},
-	{"Start 2",				BIT_DIGITAL,	DrvJoy2 + 6,	"p2 start"	},
-	{"Left Stick Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
-	{"Left Stick Down",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
-	{"Right Stick Up",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 up"		},
-	{"Right Stick Down",	BIT_DIGITAL,	DrvJoy2 + 0,	"p2 down"	},
-	{"Fire",				BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
+	{"P1 Coin",				BIT_DIGITAL,	DrvJoy1 + 0,		"p1 coin"	},
+	{"P2 Coin",				BIT_DIGITAL,	DrvJoy1 + 1,		"p2 coin"	},
+	{"Start 1",				BIT_DIGITAL,	DrvJoy2 + 5,		"p1 start"	},
+	{"Start 2",				BIT_DIGITAL,	DrvJoy2 + 6,		"p2 start"	},
+	{"Fire",				BIT_DIGITAL,	DrvJoy2 + 4,		"p1 fire 1"	},
+	{"P1 Left Stick Up",	BIT_DIGITAL,	DrvJoy2 + 3,		"p1 fire 2"	},
+	{"P1 Left Stick Down",	BIT_DIGITAL,	DrvJoy2 + 2,		"p1 fire 3"	},
+	{"P1 Right Stick Up",	BIT_DIGITAL,	DrvJoy2 + 1,		"p1 fire 4"	},
+	{"P1 Right Stick Down",	BIT_DIGITAL,	DrvJoy2 + 0,		"p1 fire 5"	},
+	{"P1 Up (Fake)",		BIT_DIGITAL,	DrvFakeInput + 0,	"p1 up"		},
+	{"P1 Down (Fake)",		BIT_DIGITAL,	DrvFakeInput + 1,	"p1 down"	},
+	{"P1 Left (Fake)",		BIT_DIGITAL,	DrvFakeInput + 2,	"p1 left"	},
+	{"P1 Right (Fake)",		BIT_DIGITAL,	DrvFakeInput + 3,	"p1 right"	},
 
-	{"Reset",				BIT_DIGITAL,	&DrvReset,		"reset"		},
-	{"Dip A",				BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",				BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",				BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
-	{"Dip D",				BIT_DIPSWITCH,	DrvDips + 3,	"dip"		},
+	{"Reset",				BIT_DIGITAL,	&DrvReset,			"reset"		},
+	{"Dip A",				BIT_DIPSWITCH,	DrvDips + 0,		"dip"		},
+	{"Dip B",				BIT_DIPSWITCH,	DrvDips + 1,		"dip"		},
+	{"Dip C",				BIT_DIPSWITCH,	DrvDips + 2,		"dip"		},
+	{"Dip D",				BIT_DIPSWITCH,	DrvDips + 3,		"dip"		},
 };
 
 STDINPUTINFO(Bzone)
@@ -127,65 +132,67 @@ STDINPUTINFO(Bradley)
 
 static struct BurnDIPInfo BzoneDIPList[]=
 {
-	{0x0a, 0xff, 0xff, 0x15, NULL					},
-	{0x0b, 0xff, 0xff, 0x02, NULL					},
-	{0x0c, 0xff, 0xff, 0x10, NULL					},
-	{0x0d, 0xff, 0xff, 0x00, NULL					},
+	DIP_OFFSET(0x0e)
+
+	{0x00, 0xff, 0xff, 0x15, NULL					},
+	{0x01, 0xff, 0xff, 0x02, NULL					},
+	{0x02, 0xff, 0xff, 0x10, NULL					},
+	{0x03, 0xff, 0xff, 0x00, NULL					},
 
 	{0   , 0xfe, 0   ,    4, "Lives"				},
-	{0x0a, 0x01, 0x03, 0x00, "2"					},
-	{0x0a, 0x01, 0x03, 0x01, "3"					},
-	{0x0a, 0x01, 0x03, 0x02, "4"					},
-	{0x0a, 0x01, 0x03, 0x03, "5"					},
+	{0x00, 0x01, 0x03, 0x00, "2"					},
+	{0x00, 0x01, 0x03, 0x01, "3"					},
+	{0x00, 0x01, 0x03, 0x02, "4"					},
+	{0x00, 0x01, 0x03, 0x03, "5"					},
 
 	{0   , 0xfe, 0   ,    4, "Missile appears at"	},
-	{0x0a, 0x01, 0x0c, 0x00, "5000"					},
-	{0x0a, 0x01, 0x0c, 0x04, "10000"				},
-	{0x0a, 0x01, 0x0c, 0x08, "20000"				},
-	{0x0a, 0x01, 0x0c, 0x0c, "30000"				},
+	{0x00, 0x01, 0x0c, 0x00, "5000"					},
+	{0x00, 0x01, 0x0c, 0x04, "10000"				},
+	{0x00, 0x01, 0x0c, 0x08, "20000"				},
+	{0x00, 0x01, 0x0c, 0x0c, "30000"				},
 
 	{0   , 0xfe, 0   ,    4, "Bonus Life"			},
-	{0x0a, 0x01, 0x30, 0x10, "15k and 100k"			},
-	{0x0a, 0x01, 0x30, 0x20, "25k and 100k"			},
-	{0x0a, 0x01, 0x30, 0x30, "50k and 100k"			},
-	{0x0a, 0x01, 0x30, 0x00, "None"					},
+	{0x00, 0x01, 0x30, 0x10, "15k and 100k"			},
+	{0x00, 0x01, 0x30, 0x20, "25k and 100k"			},
+	{0x00, 0x01, 0x30, 0x30, "50k and 100k"			},
+	{0x00, 0x01, 0x30, 0x00, "None"					},
 
 	{0   , 0xfe, 0   ,    4, "Language"				},
-	{0x0a, 0x01, 0xc0, 0x00, "English"				},
-	{0x0a, 0x01, 0xc0, 0x40, "German"				},
-	{0x0a, 0x01, 0xc0, 0x80, "French"				},
-	{0x0a, 0x01, 0xc0, 0xc0, "Spanish"				},
+	{0x00, 0x01, 0xc0, 0x00, "English"				},
+	{0x00, 0x01, 0xc0, 0x40, "German"				},
+	{0x00, 0x01, 0xc0, 0x80, "French"				},
+	{0x00, 0x01, 0xc0, 0xc0, "Spanish"				},
 
 	{0   , 0xfe, 0   ,    4, "Coinage"				},
-	{0x0b, 0x01, 0x03, 0x03, "2 Coins 1 Credits"	},
-	{0x0b, 0x01, 0x03, 0x02, "1 Coin  1 Credits"	},
-	{0x0b, 0x01, 0x03, 0x01, "1 Coin  2 Credits"	},
-	{0x0b, 0x01, 0x03, 0x00, "Free Play"			},
+	{0x01, 0x01, 0x03, 0x03, "2 Coins 1 Credits"	},
+	{0x01, 0x01, 0x03, 0x02, "1 Coin  1 Credits"	},
+	{0x01, 0x01, 0x03, 0x01, "1 Coin  2 Credits"	},
+	{0x01, 0x01, 0x03, 0x00, "Free Play"			},
 
 	{0   , 0xfe, 0   ,    4, "Coin B"				},
-	{0x0b, 0x01, 0x0c, 0x00, "*1"					},
-	{0x0b, 0x01, 0x0c, 0x04, "*4"					},
-	{0x0b, 0x01, 0x0c, 0x08, "*5"					},
-	{0x0b, 0x01, 0x0c, 0x0c, "*6"					},
+	{0x01, 0x01, 0x0c, 0x00, "*1"					},
+	{0x01, 0x01, 0x0c, 0x04, "*4"					},
+	{0x01, 0x01, 0x0c, 0x08, "*5"					},
+	{0x01, 0x01, 0x0c, 0x0c, "*6"					},
 
 	{0   , 0xfe, 0   ,    2, "Coin A"				},
-	{0x0b, 0x01, 0x10, 0x00, "*1"					},
-	{0x0b, 0x01, 0x10, 0x10, "*2"					},
+	{0x01, 0x01, 0x10, 0x00, "*1"					},
+	{0x01, 0x01, 0x10, 0x10, "*2"					},
 
 	{0   , 0xfe, 0   ,    5, "Bonus Coins"			},
-	{0x0b, 0x01, 0xe0, 0x00, "None"					},
-	{0x0b, 0x01, 0xe0, 0x20, "3 credits/2 coins"	},
-	{0x0b, 0x01, 0xe0, 0x40, "5 credits/4 coins"	},
-	{0x0b, 0x01, 0xe0, 0x60, "6 credits/4 coins"	},
-	{0x0b, 0x01, 0xe0, 0x80, "6 credits/5 coins"	},
+	{0x01, 0x01, 0xe0, 0x00, "None"					},
+	{0x01, 0x01, 0xe0, 0x20, "3 credits/2 coins"	},
+	{0x01, 0x01, 0xe0, 0x40, "5 credits/4 coins"	},
+	{0x01, 0x01, 0xe0, 0x60, "6 credits/4 coins"	},
+	{0x01, 0x01, 0xe0, 0x80, "6 credits/5 coins"	},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"			},
-	{0x0c, 0x01, 0x10, 0x00, "On"					},
-	{0x0c, 0x01, 0x10, 0x10, "Off"					},
+	{0x02, 0x01, 0x10, 0x00, "On"					},
+	{0x02, 0x01, 0x10, 0x10, "Off"					},
 
 	{0   , 0xfe, 0   ,    2, "Hires Mode"			},
-	{0x0d, 0x01, 0x01, 0x00, "No"					},
-	{0x0d, 0x01, 0x01, 0x01, "Yes"					},
+	{0x03, 0x01, 0x01, 0x00, "No"					},
+	{0x03, 0x01, 0x01, 0x01, "Yes"					},
 };
 
 STDDIPINFO(Bzone)
@@ -379,7 +386,6 @@ static void bzone_write(UINT16 address, UINT8 data)
 
 		case 0x1200:
 			avgdvg_go();
-			avgletsgo = 1;
 		return;
 
 		case 0x1400:
@@ -485,7 +491,6 @@ static void redbaron_write(UINT16 address, UINT8 data)
 
 		case 0x1200:
 			avgdvg_go();
-			avgletsgo = 1;
 		return;
 
 		case 0x1400:
@@ -590,7 +595,8 @@ static INT32 DrvDoReset(INT32 clear_mem)
 
 	earom_reset();
 
-	avgletsgo = 0;
+	HiscoreReset();
+
 	analog_data = 0;
 	nExtraCycles = 0;
 	input_select = 0;
@@ -640,16 +646,25 @@ static void DrvM6502NewFrame()
 	drv_cycles = M6502TotalCycles();
 }
 
+static UINT32 bzone_pix_cb(INT32 x, INT32 y, UINT32 color)
+{
+	const INT32 hud_end[2] = { 92, 92 * 1080 / 480 }; // hud_end[1] is 100pix scaled to the new size
+	INT32 hud = hud_end[DrvDips[3] & 1];
+
+	if (y < hud) {
+		color &= 0x00ff0000;    // mask out all but red
+	}
+	if (y > hud) {
+		color &= 0x0000ff00;    // mask out all but green
+	}
+	return color;
+}
+
 static INT32 BzoneInit()
 {
 	BurnSetRefreshRate(60.00);
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		INT32 k = 0;
@@ -691,6 +706,7 @@ static INT32 BzoneInit()
 	bzone_sound_init(DrvM6502TotalCycles, 1512000);
 
 	avgdvg_init(USE_AVG_BZONE, DrvVectorRAM, 0x5000, M6502TotalCycles, 580, 400);
+	vector_set_pix_cb(bzone_pix_cb);
 
 	DrvDoReset(1);
 
@@ -701,12 +717,7 @@ static INT32 BradleyInit()
 {
 	BurnSetRefreshRate(60.00);
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvM6502ROM  + 0x4000,  0, 1)) return 1;
@@ -756,12 +767,7 @@ static INT32 RedbaronInit()
 {
 	BurnSetRefreshRate(60.00);
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (redbarona) {
@@ -833,7 +839,7 @@ static INT32 DrvExit()
 
 	earom_exit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	redbarona = 0;
 	bradley = 0;
@@ -844,12 +850,20 @@ static INT32 DrvExit()
 static void DrvPaletteInit()
 {
     for (INT32 i = 0; i < 0x20; i++) // color
-	{		
+	{
 		for (INT32 j = 0; j < 256; j++) // intensity
 		{
-			INT32 c = (0xff * j) / 0xff;
+			INT32 r = (0xff * j) / 0xff;
+			INT32 g = r;
+			INT32 b = r;
 
-			DrvPalette[i * 256 + j] = (c << 16) | (c << 8) | c; // must be 32bit palette! -dink (see vector.cpp)
+			if (redbaron) {
+				r = (0x27 * j) / 0xff;
+				g = (0xa0 * j) / 0xff;
+				b = (0xa0 * j) / 0xff;
+			}
+
+			DrvPalette[i * 256 + j] = (r << 16) | (g << 8) | b; // must be 32bit palette! -dink (see vector.cpp)
 		}
 	}
 }
@@ -885,6 +899,19 @@ static INT32 DrvFrame()
 			DrvInputs[2] = 0xff; // active low
 			DrvInputs[3] = 0x04 + 0x08 + 0x10; // ""
 		}
+
+		// hack to map 8-ways to the 8 different combinations
+		if      (DrvFakeInput[0] && DrvFakeInput[2]) { DrvJoy2[0] = 0; DrvJoy2[1] = 1; DrvJoy2[3] = 0; DrvJoy2[2] = 0; }
+		else if (DrvFakeInput[0] && DrvFakeInput[3]) { DrvJoy2[3] = 1; DrvJoy2[2] = 0; DrvJoy2[0] = 0; DrvJoy2[1] = 0; }
+		else if (DrvFakeInput[1] && DrvFakeInput[2]) { DrvJoy2[0] = 1; DrvJoy2[1] = 0; DrvJoy2[3] = 0; DrvJoy2[2] = 0; }
+		else if (DrvFakeInput[1] && DrvFakeInput[3]) { DrvJoy2[3] = 0; DrvJoy2[2] = 1; DrvJoy2[0] = 0; DrvJoy2[1] = 0; }
+		else if (DrvFakeInput[0]) { DrvJoy2[3] = 1; DrvJoy2[1] = 1; }
+		else if (DrvFakeInput[1]) { DrvJoy2[2] = 1; DrvJoy2[0] = 1; }
+		else if (DrvFakeInput[2]) { DrvJoy2[2] = 1; DrvJoy2[1] = 1; }
+		else if (DrvFakeInput[3]) { DrvJoy2[3] = 1; DrvJoy2[0] = 1; }
+		else if (DrvFakeInputPrev) { DrvJoy2[0] = DrvJoy2[1] = DrvJoy2[2] = DrvJoy2[3] = 0; }
+
+		memcpy(&DrvFakeInputPrev, DrvFakeInput, 4);
 
 		for (INT32 i = 0; i < 8; i++) {
 			DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;
@@ -987,7 +1014,6 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		bzone_sound_scan(nAction, pnMin);
 
 		SCAN_VAR(nExtraCycles);
-		SCAN_VAR(avgletsgo);
 		SCAN_VAR(analog_data);
 		SCAN_VAR(input_select);
 		SCAN_VAR(x_target);
@@ -1034,7 +1060,7 @@ struct BurnDriver BurnDrvBzone = {
 	"bzone", NULL, NULL, NULL, "1980",
 	"Battle Zone (rev 2)\0", "GFX/Sound Issues", "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, bzoneRomInfo, bzoneRomName, NULL, NULL, NULL, NULL, BzoneInputInfo, BzoneDIPInfo,
 	BzoneInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1073,7 +1099,7 @@ struct BurnDriver BurnDrvBzonea = {
 	"bzonea", "bzone", NULL, NULL, "1980",
 	"Battle Zone (rev 1)\0", "GFX/Sound Issues", "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, bzoneaRomInfo, bzoneaRomName, NULL, NULL, NULL, NULL, BzoneInputInfo, BzoneDIPInfo,
 	BzoneInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1113,7 +1139,7 @@ struct BurnDriver BurnDrvBzonec = {
 	"bzonec", "bzone", NULL, NULL, "1980",
 	"Battle Zone (cocktail)\0", "GFX/Sound Issues", "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, bzonecRomInfo, bzonecRomName, NULL, NULL, NULL, NULL, BzoneInputInfo, BzoneDIPInfo,
 	BzoneInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1154,14 +1180,14 @@ struct BurnDriver BurnDrvBradley = {
 	"bradley", NULL, NULL, NULL, "1980",
 	"Bradley Trainer\0", "GFX/Sound Issues", "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, bradleyRomInfo, bradleyRomName, NULL, NULL, NULL, NULL, BradleyInputInfo, BradleyDIPInfo,
 	BradleyInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
 };
 
 
-// Red Baron (Revised Hardware)
+// Red Baron (revised hardware)
 
 static struct BurnRomInfo redbaronRomDesc[] = {
 	{ "037587-01.fh1",	0x1000, 0x60f23983, 1 | BRF_PRG | BRF_ESS }, //  0 M6502 Code
@@ -1193,9 +1219,9 @@ STD_ROM_FN(redbaron)
 
 struct BurnDriver BurnDrvRedbaron = {
 	"redbaron", NULL, NULL, NULL, "1980",
-	"Red Baron (Revised Hardware)\0", NULL, "Atari", "Miscellaneous",
+	"Red Baron (revised hardware)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, redbaronRomInfo, redbaronRomName, NULL, NULL, NULL, NULL, RedbaronInputInfo, RedbaronDIPInfo,
 	RedbaronInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3
@@ -1243,7 +1269,7 @@ struct BurnDriver BurnDrvRedbarona = {
 	"redbarona", "redbaron", NULL, NULL, "1980",
 	"Red Baron\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, redbaronaRomInfo, redbaronaRomName, NULL, NULL, NULL, NULL, RedbaronInputInfo, RedbaronDIPInfo,
 	RedbaronaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	640, 480, 4, 3

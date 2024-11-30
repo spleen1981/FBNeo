@@ -2,7 +2,7 @@
 #include "aud_dsp.h"
 
 //#ifdef _MSC_VER
-#include <InitGuid.h>
+#include <initguid.h>
 #include <xaudio2.h>
 #include <xaudio2fx.h>
 
@@ -15,6 +15,7 @@ static IUnknown* pXAPO = NULL;
 static bool effectEnable = false;
 
 int (*XAudio2GetNextSound)(int);
+static int XAudio2SetVolume(); // forward
 
 BYTE* pAudioBuffers = NULL;
 int currentBuffer = 0;
@@ -321,7 +322,7 @@ static int XAudio2Play()
 	}
 
 	XAudio2BlankSound();
-	pSourceVoice->SetVolume(nXAudio2Vol);
+	XAudio2SetVolume();
 
 	if (FAILED(pSourceVoice->Start(0))) {
 		return 1;
@@ -350,7 +351,7 @@ static int XAudio2SetVolume()
 		if (nAudVolume == 0) {
 			nXAudio2Vol = 0.0f;
 		} else {
-			nXAudio2Vol = 1.0f - (1.0f * pow(10.0, nAudVolume / -5000.0)) + 0.01f;
+			nXAudio2Vol = ((double)nAudVolume / 10000) * ((double)nAudVolume / 10000);
 		}
 	}
 

@@ -126,7 +126,7 @@ void SekWriteWordROM(UINT32 a, UINT16 d);
 void SekWriteLongROM(UINT32 a, UINT32 d);
 
 INT32 SekInit(INT32 nCount, INT32 nCPUType);
-INT32 SekExit();
+void SekExit();
 
 void SekNewFrame();
 void SekSetCyclesScanline(INT32 nCycles);
@@ -134,8 +134,12 @@ void SekSetCyclesScanline(INT32 nCycles);
 void SekClose();
 void SekOpen(const INT32 i);
 INT32 SekGetActive();
-INT32 SekShouldInterrupt();
+INT32 SekShouldInterrupt(); // megadrive
 void SekBurnUntilInt();
+
+void SekCPUPush(INT32 nCPU);
+void SekCPUPop();
+INT32 SekCPUGetStackNum();
 
 #define SEK_IRQSTATUS_NONE  (0x0000)
 #define SEK_IRQSTATUS_VAUTO (0x4000)
@@ -225,6 +229,9 @@ inline static INT32 SekCurrentScanline()
 
 	return SekTotalCycles() / nSekCyclesScanline;
 }
+
+// Call this from a handler to decrease m68k_ICount
+void SekCyclesBurnRun(INT32 nCycles);
 
 // Mask off address bits (usually top, default is 0xffffff)
 void SekSetAddressMask(UINT32 nAddressMask);

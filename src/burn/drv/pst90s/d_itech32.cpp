@@ -1,4 +1,4 @@
-// FB Alpha Incredible technologies (32-bit blitter) driver module
+// FB Neo Incredible technologies (32-bit blitter) driver module
 // Based on MAME driver by Aaron Giles and Brian Troha
 
 #include "tiles_generic.h"
@@ -68,6 +68,7 @@ static UINT8 DrvInputs[6];
 
 static INT32 is_shufshot = 0;
 static INT32 is_pubball = 0;
+static INT32 is_shoottv = 0;
 
 static INT32 is_16bit = 0;
 
@@ -236,6 +237,28 @@ static struct BurnInputInfo SftmInputList[] = {
 STDINPUTINFO(Sftm)
 
 #define A(a, b, c, d) {a, b, (UINT8*)(c), d}
+
+static struct BurnInputInfo ShoottvInputList[] = {
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 start"	},
+	A("P1 Gun X", 		BIT_ANALOG_REL, &DrvAnalogPort0,"p1 x-axis"),
+	A("P1 Gun Y", 		BIT_ANALOG_REL, &DrvAnalogPort1,"p1 y-axis"),
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 fire 1"	},
+
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 start"	},
+	A("P2 Gun X", 		BIT_ANALOG_REL, &DrvAnalogPort2,"p2 x-axis"),
+	A("P2 Gun Y", 		BIT_ANALOG_REL, &DrvAnalogPort3,"p2 y-axis"),
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 fire 1"	},
+
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy5 + 1,	"service"	},
+	{"Service Mode",	BIT_DIGITAL,	DrvSvc0 + 0,	"diag"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+};
+
+STDINPUTINFO(Shoottv)
+
 static struct BurnInputInfo PubballInputList[] = {
 	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 start"	},
@@ -272,7 +295,6 @@ static struct BurnInputInfo PubballInputList[] = {
 };
 
 STDINPUTINFO(Pubball)
-
 
 static struct BurnInputInfo PairsInputList[] = {
 	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
@@ -462,6 +484,30 @@ static struct BurnDIPInfo SftmDIPList[]=
 };
 
 STDDIPINFO(Sftm)
+
+static struct BurnDIPInfo ShoottvDIPList[]=
+{
+	DIP_OFFSET(0x0d)
+	{0x00, 0xff, 0xff, 0x00, NULL					},
+
+	{0   , 0xfe, 0   ,    2, "Video Sync"			},
+	{0x00, 0x01, 0x10, 0x00, "-"					},
+	{0x00, 0x01, 0x10, 0x10, "+"					},
+
+	{0   , 0xfe, 0   ,    2, "Flip Screen"			},
+	{0x00, 0x01, 0x20, 0x00, "Off"					},
+	{0x00, 0x01, 0x20, 0x20, "On"					},
+
+	{0   , 0xfe, 0   ,    2, "Unknown"				},
+	{0x00, 0x01, 0x40, 0x40, "Off"					},
+	{0x00, 0x01, 0x40, 0x00, "On"					},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"			},
+	{0x00, 0x01, 0x80, 0x00, "Off"					},
+	{0x00, 0x01, 0x80, 0x80, "On"					},
+};
+
+STDDIPINFO(Shoottv)
 
 static struct BurnDIPInfo PubballDIPList[]=
 {
@@ -859,6 +905,9 @@ static void itech32_update_interrupts(INT32 vint, INT32 xint, INT32 qint)
 {
 	INT32 level = 0;
 
+	if (is_shoottv)
+		vint = -1;
+
 	if (vint != -1) vint_state = vint;
 	if (xint != -1) xint_state = xint;
 	if (qint != -1) qint_state = qint;
@@ -1075,7 +1124,8 @@ static inline void enable_clipping()
 
 static void draw_raw(UINT16 *base, UINT16 color)
 {
-	UINT8 *src = &grom_base[(grom_bank | ((VIDEO_TRANSFER_ADDRHI & 0xff) << 16) | VIDEO_TRANSFER_ADDRLO) % grom_size];
+	UINT8* src = &grom_base[0];// UINT8 *src = &grom_base[(grom_bank | ((VIDEO_TRANSFER_ADDRHI & 0xff) << 16) | VIDEO_TRANSFER_ADDRLO) % grom_size];
+	const UINT32 grom_start = grom_bank | ((VIDEO_TRANSFER_ADDRHI & 0xff) << 16) | VIDEO_TRANSFER_ADDRLO;
 	INT32 transparent_pen = (VIDEO_TRANSFER_FLAGS & XFERFLAG_TRANSPARENT) ? 0xff : -1;
 	INT32 width = VIDEO_TRANSFER_WIDTH << 8;
 	INT32 height = ADJUSTED_HEIGHT(VIDEO_TRANSFER_HEIGHT) << 8;
@@ -1104,7 +1154,7 @@ static void draw_raw(UINT16 *base, UINT16 color)
 	/* loop over Y in src pixels */
 	for (y = 0; y < height; y += ysrcstep, sy += ydststep)
 	{
-		UINT8 *rowsrc = &src[(y >> 8) * (width >> 8)];
+		const UINT32 row_base = (y >> 8) * (width >> 8);
 
 		/* simpler case: VIDEO_YSTEP_PER_X is zero */
 		if (VIDEO_YSTEP_PER_X == 0)
@@ -1127,7 +1177,7 @@ static void draw_raw(UINT16 *base, UINT16 color)
 					/* render middle pixels */
 					for ( ; x < width && sx < scaled_clip_rect.nMaxx; x += xsrcstep, sx += xdststep)
 					{
-						INT32 pixel = rowsrc[x >> 8];
+						INT32 pixel = src[(grom_start + row_base + (x >> 8)) % grom_size];
 						if (pixel != transparent_pen)
 							base[(dstoffs + (sx >> 8)) & vram_mask] = pixel | color;
 					}
@@ -1143,7 +1193,7 @@ static void draw_raw(UINT16 *base, UINT16 color)
 					/* render middle pixels */
 					for ( ; x < width && sx >= scaled_clip_rect.nMinx; x += xsrcstep, sx += xdststep)
 					{
-						INT32 pixel = rowsrc[x >> 8];
+						INT32 pixel = src[(grom_start + row_base + (x >> 8)) % grom_size];
 						if (pixel != transparent_pen)
 							base[(dstoffs + (sx >> 8)) & vram_mask] = pixel | color;
 					}
@@ -1163,7 +1213,7 @@ static void draw_raw(UINT16 *base, UINT16 color)
 				if (ty >= scaled_clip_rect.nMiny && ty < scaled_clip_rect.nMaxy &&
 					sx >= scaled_clip_rect.nMinx && sx < scaled_clip_rect.nMaxx)
 				{
-					INT32 pixel = rowsrc[x >> 8];
+					INT32 pixel = src[(grom_start + row_base + (x >> 8)) % grom_size];
 					if (pixel != transparent_pen)
 						base[compute_safe_address(sx >> 8, ty >> 8)] = pixel | color;
 				}
@@ -2438,6 +2488,11 @@ static UINT32 track_read_4bit_both()
 	return track_read_4bit(0) | (track_read_4bit(1) << 8);
 }
 
+static UINT16 DrvGunReturnX(INT32 gun)
+{
+	return scalerange(BurnGunReturnX(gun), 0x00, 0xff, 0x1c, 0x19b);
+}
+
 static UINT32 __fastcall common32_main_read_long(UINT32 address)
 {
 	if ((address & 0xffff00) == 0x500000) {
@@ -2446,6 +2501,27 @@ static UINT32 __fastcall common32_main_read_long(UINT32 address)
 
     if ((address & 0xfff800) == 0x681000) { // timekeeper (in bytehandler)
         SEK_DEF_READ_LONG(0, address);
+	}
+
+	if (is_shoottv) {
+		switch (address)
+		{
+			case 0x183000: SekSetIRQLine(6, CPU_IRQSTATUS_NONE); return 0;
+			case 0x183800: SekSetIRQLine(5, CPU_IRQSTATUS_NONE); return 0;
+
+			case 0x190000: return (DrvGunReturnX(0) & 0x00ff) << 16;
+			case 0x190800: return (DrvGunReturnX(0) & 0xff00) << 8;
+			case 0x191000: return (BurnGunReturnY(0) & 0x00ff) << 16;
+			case 0x191800: return 0;
+
+			case 0x192000: return (DrvGunReturnX(1) & 0x00ff) << 16;
+			case 0x192800: return (DrvGunReturnX(1) & 0xff00) << 8;
+			case 0x193000: return (BurnGunReturnY(1) & 0x00ff) << 16;
+			case 0x193800: return 0;
+			case 0x200000: return 0xffffffff;
+
+			case 0x680000: return 0x2000;
+		}
 	}
 
 	// wcbowl trackball
@@ -2491,6 +2567,7 @@ static UINT32 __fastcall common32_main_read_long(UINT32 address)
 			return DrvInputs[2];
 
 		case 0x200000:
+			if (is_shoottv) return 0xffffffff;
 			return DrvInputs[3];
 
 		case 0x280000: {
@@ -2503,11 +2580,14 @@ static UINT32 __fastcall common32_main_read_long(UINT32 address)
 
 		case 0x680000: {
 			bprintf (0, _T("Prot RL\n"));
+			if (is_shoottv) return 0x2000;
 			UINT32 *ram = (UINT32*)Drv68KRAM;
 			UINT8 ret = ram[prot_address / 4] >> ((~prot_address & 3) * 8);
 			return ret << 8;
 		}
 	}
+
+	//bprintf(0, _T("rl %x\n"), address);
 
 	return 0;
 }
@@ -2585,12 +2665,16 @@ static UINT16 __fastcall common32_main_read_word(UINT32 address)
 		}
 
 		case 0x680000:
+			if (is_shoottv) return 0x0000;
 		case 0x680002: {
+			if (is_shoottv) return 0x2000;
 			UINT32 *ram = (UINT32*)Drv68KRAM;
 			UINT8 ret = ram[prot_address / 4] >> ((~prot_address & 3) * 8);
 			return ret << 8;
 		}
 	}
+
+	//bprintf(0, _T("rw %x\n"), address);
 
 	return 0;
 }
@@ -2686,14 +2770,22 @@ static UINT8 __fastcall common32_main_read_byte(UINT32 address)
 		}
 
 		case 0x680000:
+			if (is_shoottv) return 0x00;
 		case 0x680001:
+			if (is_shoottv) return 0x00;
 		case 0x680002: {
+			if (is_shoottv) return 0x20;
 			UINT32 *ram = (UINT32*)Drv68KRAM;
 			UINT32 ret = (ram[prot_address/4] << 16) | (ram[prot_address/4] >> 16);
 		//	bprintf (0, _T("Prot RB %8.8x\n"), (ret >> ((~prot_address & 3) * 8))&0xff);
 			return ret >> ((~prot_address & 3) * 8);
 		}
 	}
+
+	if (is_shoottv && address >= 0x183000 && address <= 0x200003) {
+		return (common32_main_read_long(address & ~3) >> ((~address & 3) * 8)) & 0xff;
+	}
+
 	//bprintf (0, _T("MRB: %5.5x\n"), address);
 
 	return 0;
@@ -2924,7 +3016,7 @@ static INT32 DrvGetRoms(bool bLoad)
 			if (bLoad) {
 				if (BurnLoadRom(pSndLoad[bank] + 1, i, 2)) return 1;
 			}
-			if (is_pubball) {
+			if (is_pubball || is_shoottv) {
 				pSndLoad[bank] += 0x200000; // non-pow2 snd rom sizes need padding
 			} else {
 				if (nSndROMLen[1] || is_shufshot) {
@@ -2973,12 +3065,7 @@ static INT32 TimekillInit()
 {
 	DrvGetRoms(false);
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	if (DrvGetRoms(true)) return 1;
 
@@ -3017,12 +3104,7 @@ static INT32 Common16BitInit()
 {
 	DrvGetRoms(false);
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	if (DrvGetRoms(true)) return 1;
 
@@ -3063,12 +3145,7 @@ static INT32 Common32BitInit(UINT32 prot_addr, INT32 plane_num, INT32 color_bank
 {
 	DrvGetRoms(false);
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	if (DrvGetRoms(true)) return 1;
 
@@ -3092,8 +3169,13 @@ static INT32 Common32BitInit(UINT32 prot_addr, INT32 plane_num, INT32 color_bank
 
 	TimeKeeperInit(TIMEKEEPER_M48T02, NULL);
 	BurnWatchdogInit(DrvDoReset, 180);
-	BurnTrackballInit(2);
-	BurnTrackballSetVelocityCurve(1); // logarithmic curve
+
+	if (is_shoottv) {
+		BurnGunInit(2, true);
+	} else {
+		BurnTrackballInit(2);
+		BurnTrackballSetVelocityCurve(1); // logarithmic curve
+	}
 
 	CommonSoundInit();
 
@@ -3117,15 +3199,21 @@ static INT32 DrvExit()
 	M6809Exit();
 	ES5506Exit();
 	TimeKeeperExit();
-	BurnTrackballExit();
 
-	BurnFree(AllMem);
+	if (is_shoottv) {
+		BurnGunExit();
+	} else {
+		BurnTrackballExit();
+	}
+
+	BurnFreeMemIndex();
 	BurnFree (videoram16);
 
 	Trackball_Type = -1;
 
 	is_shufshot = 0;
 	is_pubball = 0;
+	is_shoottv = 0;
 	is_16bit = 0;
 
 	return 0;
@@ -3189,6 +3277,7 @@ static INT32 DrvDraw32()
 	itech32copy();
 
 	BurnTransferCopy(DrvPalette);
+	BurnGunDrawTargets();
 
 	return 0;
 }
@@ -3228,6 +3317,11 @@ static INT32 DrvFrame()
 			BurnTrackballFrame(1, DrvAnalogPort2, DrvAnalogPort3, 0x01, 0x20);
         }
 
+		if (is_shoottv) {
+			BurnGunMakeInputs(0, DrvAnalogPort0, DrvAnalogPort1);
+			BurnGunMakeInputs(1, DrvAnalogPort2, DrvAnalogPort3);
+		}
+
         DrvDips[0] = (DrvDips[0] & ~1) | (~DrvSvc0[0] & 1); // F2 (svc mode)
 	}
 
@@ -3246,6 +3340,15 @@ static INT32 DrvFrame()
 
 		if (i == scanline_timer) {
 			scanline_interrupt();
+		}
+
+		if (is_shoottv) {
+			if ((i & 0x1f) == 0x00) {
+				SekSetIRQLine(5, CPU_IRQSTATUS_ACK);
+			}
+			if ((i & 0x1f) == 0x10) {
+				SekSetIRQLine(6, CPU_IRQSTATUS_ACK);
+			}
 		}
 
 		CPU_RUN(0, Sek);
@@ -3269,6 +3372,7 @@ static INT32 DrvFrame()
 
 	if (pBurnSoundOut) {
 		ES5506Update(pBurnSoundOut, nBurnSoundLen);
+		BurnSoundSwapLR(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	return 0;
@@ -3333,6 +3437,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		ES5506Scan(nAction, pnMin);
 		BurnTrackballScan();
+		if (is_shoottv) BurnGunScan();
 
 		SCAN_VAR(vint_state);
 		SCAN_VAR(xint_state);
@@ -3366,7 +3471,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		if (is_16bit) {
 			ScanVar(Drv68KRAM, 0x10000, "NV RAM");
 		} else {
-			ScanVar(DrvNVRAM,  (is_pubball) ? 0x20000 : 0x04000, "NV RAM");
+			ScanVar(DrvNVRAM,  (is_pubball || is_shoottv) ? 0x20000 : 0x04000, "NV RAM");
 		}
 	}
 
@@ -3576,12 +3681,12 @@ struct BurnDriver BurnDrvTimekill121a = {
 };
 
 
-// Time Killers (v1.00)
-/* Version 1.00? - actual version not shown (3-tier board set: P/N 1050 Rev 1, P/N 1051 Rev 0 &  P/N 1052 Rev 2) */
+// Time Killers (v1.20)
+/* Version 1.20 (3-tier board set: P/N 1050 Rev 1, P/N 1057 Rev 0 &  P/N 1052 Rev 2) */
 
-static struct BurnRomInfo timekill100RomDesc[] = {
-	{ "tk00.bim_u54.u54",					0x040000, 0x2b379f30, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
-	{ "tk01.bim_u53.u53",					0x040000, 0xe43e029c, 1 | BRF_PRG | BRF_ESS }, //  1
+static struct BurnRomInfo timekill120RomDesc[] = {
+	{ "tk00_v1.2_u54.u54",					0x040000, 0xdf1ce59d, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
+	{ "tk01_v1.2_u53.u53",					0x040000, 0xd42b9849, 1 | BRF_PRG | BRF_ESS }, //  1
 
 	{ "timekillsnd_u17.u17",				0x020000, 0xab1684c3, 2 | BRF_PRG | BRF_ESS }, //  2 M6809 Code
 
@@ -3597,6 +3702,55 @@ static struct BurnRomInfo timekill100RomDesc[] = {
 	{ "tksrom00_u18.u18",					0x080000, 0x79d8b83a, 6 | BRF_SND },           // 11 Ensoniq Bank 2
 	{ "tksrom01_u20.u20",					0x080000, 0xec01648c, 6 | BRF_SND },           // 12
 	{ "tksrom02_u26.u26",					0x080000, 0x051ced3e, 6 | BRF_SND },           // 13
+};
+
+STD_ROM_PICK(timekill120)
+STD_ROM_FN(timekill120)
+
+struct BurnDriver BurnDrvTimekill120 = {
+	"timekill120", "timekill", NULL, NULL, "1992",
+	"Time Killers (v1.20)\0", NULL, "Strata/Incredible Technologies", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
+	NULL, timekill120RomInfo, timekill120RomName, NULL, NULL, NULL, NULL, TimekillInputInfo, TimekillDIPInfo,
+	TimekillInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
+	384, 240, 4, 3
+};
+
+
+// Time Killers (v1.00)
+/* Version 1.00? - actual version not shown (3-tier board set: P/N 1050 Rev 1, P/N 1051 Rev 0 &  P/N 1052 Rev 2) */
+
+static struct BurnRomInfo timekill100RomDesc[] = {
+	{ "tk00.bim_u54.u54",					0x040000, 0x2b379f30, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
+	{ "tk01.bim_u53.u53",					0x040000, 0xe43e029c, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "timekillsnd_u17.u17",				0x020000, 0xab1684c3, 2 | BRF_PRG | BRF_ESS }, //  2 M6809 Code
+
+	{ "timekill_grom00.grom00",				0x080000, 0x980aab02, 3 | BRF_GRA },           //  3 Graphics (Blitter data)
+	{ "timekill_grom05.grom05",				0x080000, 0x0b28ae65, 3 | BRF_GRA },           //  4
+	{ "timekill_grom10.grom10",				0x080000, 0x6092c59e, 3 | BRF_GRA },           //  5
+	{ "timekill_grom15.grom15",				0x080000, 0xb08497c1, 3 | BRF_GRA },           //  6
+	{ "timekill_grom01.grom01",				0x080000, 0xc37d9486, 3 | BRF_GRA },           //  7
+	{ "timekill_grom06.grom06",				0x080000, 0xf698fc14, 3 | BRF_GRA },           //  8
+	{ "timekill_grom11.grom11",				0x080000, 0x69735cd0, 3 | BRF_GRA },           //  9
+	{ "timekill_grom16.grom16",				0x080000, 0x1fe7cd97, 3 | BRF_GRA },           // 10
+	{ "timekill_grom02.grom02",				0x080000, 0xa7b9240c, 3 | BRF_GRA },           // 11
+	{ "timekill_grom07.grom07",				0x080000, 0xfb9c04d2, 3 | BRF_GRA },           // 12
+	{ "timekill_grom12.grom12",				0x080000, 0x383adf84, 3 | BRF_GRA },           // 13
+	{ "timekill_grom17.grom17",				0x080000, 0x77dcbf80, 3 | BRF_GRA },           // 14
+	{ "timekill_grom03.grom03",				0x080000, 0x7a464aa0, 3 | BRF_GRA },           // 15
+	{ "timekill_grom08.grom08",				0x080000, 0x7d6f7ba9, 3 | BRF_GRA },           // 16
+	{ "timekill_grom13.grom13",				0x080000, 0xecde039d, 3 | BRF_GRA },           // 17
+	{ "timekill_grom18.grom18",				0x080000, 0x05cb6d82, 3 | BRF_GRA },           // 18
+	{ "timekill_grom04.grom04",				0x020000, 0xb030c3d9, 3 | BRF_GRA },           // 19
+	{ "timekill_grom09.grom09",				0x020000, 0xe98492a4, 3 | BRF_GRA },           // 20
+	{ "timekill_grom14.grom14",				0x020000, 0x6088fa64, 3 | BRF_GRA },           // 21
+	{ "timekill_grom19.grom19",				0x020000, 0x95be2318, 3 | BRF_GRA },           // 22
+
+	{ "tksrom00_u18.u18",					0x080000, 0x79d8b83a, 6 | BRF_SND },           // 23 Ensoniq Bank 2
+	{ "tksrom01_u20.u20",					0x080000, 0xec01648c, 6 | BRF_SND },           // 24
+	{ "tksrom02_u26.u26",					0x080000, 0x051ced3e, 6 | BRF_SND },           // 25
 };
 
 STD_ROM_PICK(timekill100)
@@ -3659,9 +3813,55 @@ struct BurnDriver BurnDrvBloodstm = {
 };
 
 
+// Blood Storm (v2.21)
+
+static struct BurnRomInfo bloodstm221RomDesc[] = {
+	{ "bld00_v221.u83",						0x040000, 0x01907aec, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
+	{ "bld01_v221.u88",						0x040000, 0xeeae123e, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "bldsnd_v10.u17",						0x020000, 0xdddeedbb, 2 | BRF_PRG | BRF_ESS }, //  2 M6809 Code
+
+	{ "bsgrom0.bin",						0x080000, 0x4e10b8c1, 3 | BRF_GRA },           //  3 Graphics (Blitter data)
+	{ "bsgrom5.bin",						0x080000, 0x6333b6ce, 3 | BRF_GRA },           //  4
+	{ "bsgrom10.bin",						0x080000, 0xa972a65c, 3 | BRF_GRA },           //  5
+	{ "bsgrom15.bin",						0x080000, 0x9a8f54aa, 3 | BRF_GRA },           //  6
+	{ "bsgrom1.bin",						0x080000, 0x10abf660, 3 | BRF_GRA },           //  7
+	{ "bsgrom6.bin",						0x080000, 0x06a260d5, 3 | BRF_GRA },           //  8
+	{ "bsgrom11.bin",						0x080000, 0xf2cab3c7, 3 | BRF_GRA },           //  9
+	{ "bsgrom16.bin",						0x080000, 0x403aef7b, 3 | BRF_GRA },           // 10
+	{ "bsgrom2.bin",						0x080000, 0x488200b1, 3 | BRF_GRA },           // 11
+	{ "bsgrom7.bin",						0x080000, 0x5bb19727, 3 | BRF_GRA },           // 12
+	{ "bsgrom12.bin",						0x080000, 0xb10d674f, 3 | BRF_GRA },           // 13
+	{ "bsgrom17.bin",						0x080000, 0x7119df7e, 3 | BRF_GRA },           // 14
+	{ "bsgrom3.bin",						0x080000, 0x2378792e, 3 | BRF_GRA },           // 15
+	{ "bsgrom8.bin",						0x080000, 0x3640ca2e, 3 | BRF_GRA },           // 16
+	{ "bsgrom13.bin",						0x080000, 0xbd4a071d, 3 | BRF_GRA },           // 17
+	{ "bsgrom18.bin",						0x080000, 0x12959bb8, 3 | BRF_GRA },           // 18
+
+	{ "ensoniq.2m",							0x200000, 0x9fdc4825, 4 | BRF_SND },           // 19 Ensoniq Bank 0
+
+	{ "bssrom0.bin",						0x080000, 0xee4570c8, 6 | BRF_SND },           // 20 Ensoniq Bank 2
+	{ "bssrom1.bin",						0x080000, 0xb0f32ec5, 6 | BRF_SND },           // 21
+	{ "bssrom2.bin",						0x040000, 0x8aee1e77, 6 | BRF_SND },           // 22
+};
+
+STD_ROM_PICK(bloodstm221)
+STD_ROM_FN(bloodstm221)
+
+struct BurnDriver BurnDrvBloodstm221 = {
+	"bloodstm221", "bloodstm", NULL, NULL, "1994",
+	"Blood Storm (v2.21)\0", NULL, "Strata/Incredible Technologies", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
+	NULL, bloodstm221RomInfo, bloodstm221RomName, NULL, NULL, NULL, NULL, BloodstmInputInfo, BloodstmDIPInfo,
+	Common16BitInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x8000,
+	384, 240, 4, 3
+};
+
+
 // Blood Storm (v2.20)
 
-static struct BurnRomInfo bloodstm22RomDesc[] = {
+static struct BurnRomInfo bloodstm220RomDesc[] = {
 	{ "bld00_v22.u83",						0x040000, 0x904e9208, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
 	{ "bld01_v22.u88",						0x040000, 0x78336a7b, 1 | BRF_PRG | BRF_ESS }, //  1
 
@@ -3691,15 +3891,15 @@ static struct BurnRomInfo bloodstm22RomDesc[] = {
 	{ "bssrom2.bin",						0x040000, 0x8aee1e77, 6 | BRF_SND },           // 22
 };
 
-STD_ROM_PICK(bloodstm22)
-STD_ROM_FN(bloodstm22)
+STD_ROM_PICK(bloodstm220)
+STD_ROM_FN(bloodstm220)
 
-struct BurnDriver BurnDrvBloodstm22 = {
-	"bloodstm22", "bloodstm", NULL, NULL, "1994",
+struct BurnDriver BurnDrvBloodstm220 = {
+	"bloodstm220", "bloodstm", NULL, NULL, "1994",
 	"Blood Storm (v2.20)\0", NULL, "Strata/Incredible Technologies", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
-	NULL, bloodstm22RomInfo, bloodstm22RomName, NULL, NULL, NULL, NULL, BloodstmInputInfo, BloodstmDIPInfo,
+	NULL, bloodstm220RomInfo, bloodstm220RomName, NULL, NULL, NULL, NULL, BloodstmInputInfo, BloodstmDIPInfo,
 	Common16BitInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x8000,
 	384, 240, 4, 3
 };
@@ -3707,7 +3907,7 @@ struct BurnDriver BurnDrvBloodstm22 = {
 
 // Blood Storm (v2.10)
 
-static struct BurnRomInfo bloodstm21RomDesc[] = {
+static struct BurnRomInfo bloodstm210RomDesc[] = {
 	{ "bld00_v21.u83",						0x040000, 0x71215c8e, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
 	{ "bld01_v21.u88",						0x040000, 0xda403da6, 1 | BRF_PRG | BRF_ESS }, //  1
 
@@ -3737,15 +3937,15 @@ static struct BurnRomInfo bloodstm21RomDesc[] = {
 	{ "bssrom2.bin",						0x040000, 0x8aee1e77, 6 | BRF_SND },           // 22
 };
 
-STD_ROM_PICK(bloodstm21)
-STD_ROM_FN(bloodstm21)
+STD_ROM_PICK(bloodstm210)
+STD_ROM_FN(bloodstm210)
 
-struct BurnDriver BurnDrvBloodstm21 = {
-	"bloodstm21", "bloodstm", NULL, NULL, "1994",
+struct BurnDriver BurnDrvBloodstm210 = {
+	"bloodstm210", "bloodstm", NULL, NULL, "1994",
 	"Blood Storm (v2.10)\0", NULL, "Strata/Incredible Technologies", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
-	NULL, bloodstm21RomInfo, bloodstm21RomName, NULL, NULL, NULL, NULL, BloodstmInputInfo, BloodstmDIPInfo,
+	NULL, bloodstm210RomInfo, bloodstm210RomName, NULL, NULL, NULL, NULL, BloodstmInputInfo, BloodstmDIPInfo,
 	Common16BitInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x8000,
 	384, 240, 4, 3
 };
@@ -3753,7 +3953,7 @@ struct BurnDriver BurnDrvBloodstm21 = {
 
 // Blood Storm (v1.10)
 
-static struct BurnRomInfo bloodstm11RomDesc[] = {
+static struct BurnRomInfo bloodstm110RomDesc[] = {
 	{ "bld00_v11.u83",						0x040000, 0x4fff8f9b, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
 	{ "bld01_v11.u88",						0x040000, 0x59ce23ea, 1 | BRF_PRG | BRF_ESS }, //  1
 
@@ -3783,15 +3983,15 @@ static struct BurnRomInfo bloodstm11RomDesc[] = {
 	{ "bssrom2.bin",						0x040000, 0x8aee1e77, 6 | BRF_SND },           // 22
 };
 
-STD_ROM_PICK(bloodstm11)
-STD_ROM_FN(bloodstm11)
+STD_ROM_PICK(bloodstm110)
+STD_ROM_FN(bloodstm110)
 
-struct BurnDriver BurnDrvBloodstm11 = {
-	"bloodstm11", "bloodstm", NULL, NULL, "1994",
+struct BurnDriver BurnDrvBloodstm110 = {
+	"bloodstm110", "bloodstm", NULL, NULL, "1994",
 	"Blood Storm (v1.10)\0", NULL, "Strata/Incredible Technologies", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
-	NULL, bloodstm11RomInfo, bloodstm11RomName, NULL, NULL, NULL, NULL, BloodstmInputInfo, BloodstmDIPInfo,
+	NULL, bloodstm110RomInfo, bloodstm110RomName, NULL, NULL, NULL, NULL, BloodstmInputInfo, BloodstmDIPInfo,
 	Common16BitInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x8000,
 	384, 240, 4, 3
 };
@@ -3799,7 +3999,7 @@ struct BurnDriver BurnDrvBloodstm11 = {
 
 // Blood Storm (v1.04)
 
-static struct BurnRomInfo bloodstm10RomDesc[] = {
+static struct BurnRomInfo bloodstm104RomDesc[] = {
 	{ "bld00_v10.u83",						0x040000, 0xa0982119, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
 	{ "bld01_v10.u88",						0x040000, 0x65800339, 1 | BRF_PRG | BRF_ESS }, //  1
 
@@ -3829,15 +4029,15 @@ static struct BurnRomInfo bloodstm10RomDesc[] = {
 	{ "bssrom2.bin",						0x040000, 0x8aee1e77, 6 | BRF_SND },           // 22
 };
 
-STD_ROM_PICK(bloodstm10)
-STD_ROM_FN(bloodstm10)
+STD_ROM_PICK(bloodstm104)
+STD_ROM_FN(bloodstm104)
 
-struct BurnDriver BurnDrvBloodstm10 = {
-	"bloodstm10", "bloodstm", NULL, NULL, "1994",
+struct BurnDriver BurnDrvBloodstm104 = {
+	"bloodstm104", "bloodstm", NULL, NULL, "1994",
 	"Blood Storm (v1.04)\0", NULL, "Strata/Incredible Technologies", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
-	NULL, bloodstm10RomInfo, bloodstm10RomName, NULL, NULL, NULL, NULL, BloodstmInputInfo, BloodstmDIPInfo,
+	NULL, bloodstm104RomInfo, bloodstm104RomName, NULL, NULL, NULL, NULL, BloodstmInputInfo, BloodstmDIPInfo,
 	Common16BitInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x8000,
 	384, 240, 4, 3
 };
@@ -4039,6 +4239,7 @@ struct BurnDriver BurnDrvPairsa = {
 
 
 // Pairs Redemption (V1.0, 10/25/94)
+/* Version RED V1.0 (3-tier board set: P/N 1059 Rev 3, P/N 1061 Rev 1 &  P/N 1060 Rev 0) */
 
 static struct BurnRomInfo pairsredRomDesc[] = {
 	{ "pair0_u83_redv1.u83",				0x020000, 0xcf27b93c, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -4073,23 +4274,23 @@ struct BurnDriver BurnDrvPairsred = {
 // Hot Memory (V1.2, Germany, 12/28/94)
 
 static struct BurnRomInfo hotmemryRomDesc[] = {
-	{ "hotmem0_v1.2.u83",					0x040000, 0x5b9d87a2, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
-	{ "hotmem1_v1.2.u88",					0x040000, 0xaeea087c, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "hotmem0_u83_v1.2.u83",				0x040000, 0x5b9d87a2, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
+	{ "hotmem1_u88_v1.2.u88",				0x040000, 0xaeea087c, 1 | BRF_PRG | BRF_ESS }, //  1
 
-	{ "hotmem_snd.u17",						0x020000, 0x805941c7, 2 | BRF_PRG | BRF_ESS }, //  2 M6809 Code
+	{ "hotmemsnd_u17_v1.u17",				0x020000, 0x805941c7, 2 | BRF_PRG | BRF_ESS }, //  2 M6809 Code
 
-	{ "hotmem.grom0",						0x080000, 0x68f279ef, 3 | BRF_GRA },           //  3 Graphics (Blitter data)
-	{ "hotmem.grom5",						0x080000, 0x295bb43d, 3 | BRF_GRA },           //  4
-	{ "hotmem.grom10",						0x080000, 0xf8cc939b, 3 | BRF_GRA },           //  5
-	{ "hotmem.grom15",						0x080000, 0xa03d9bcd, 3 | BRF_GRA },           //  6
-	{ "hotmem.grom1",						0x040000, 0xb446105e, 3 | BRF_GRA },           //  7
-	{ "hotmem.grom6",						0x040000, 0x3a7ba9eb, 3 | BRF_GRA },           //  8
-	{ "hotmem.grom11",						0x040000, 0x9ec4ea41, 3 | BRF_GRA },           //  9
-	{ "hotmem.grom16",						0x040000, 0x4507a895, 3 | BRF_GRA },           // 10
+	{ "hotmem_grom0_v1.grom0",				0x080000, 0x68f279ef, 3 | BRF_GRA },           //  3 Graphics (Blitter data)
+	{ "hotmem_grom5_v1.grom5",				0x080000, 0x295bb43d, 3 | BRF_GRA },           //  4
+	{ "hotmem_grom10_v1.grom10",			0x080000, 0xf8cc939b, 3 | BRF_GRA },           //  5
+	{ "hotmem_grom15_v1.grom15",			0x080000, 0xa03d9bcd, 3 | BRF_GRA },           //  6
+	{ "hotmem_grom1_v1.grom1",				0x040000, 0xb446105e, 3 | BRF_GRA },           //  7
+	{ "hotmem_grom6_v1.grom6",				0x040000, 0x3a7ba9eb, 3 | BRF_GRA },           //  8
+	{ "hotmem_grom11_v1.grom11",			0x040000, 0x9ec4ea41, 3 | BRF_GRA },           //  9
+	{ "hotmem_grom16_v1.grom16",			0x040000, 0x4507a895, 3 | BRF_GRA },           // 10
 
 	{ "ensoniq.2m",							0x200000, 0x9fdc4825, 4 | BRF_SND },           // 11 Ensoniq Bank 0
 
-	{ "hotmem.srom0",						0x080000, 0xc1103224, 6 | BRF_SND },           // 12 Ensoniq Bank 2
+	{ "srom0_hotmem_v1.srom0",				0x080000, 0xc1103224, 6 | BRF_SND },           // 12 Ensoniq Bank 2
 };
 
 STD_ROM_PICK(hotmemry)
@@ -4109,23 +4310,23 @@ struct BurnDriver BurnDrvHotmemry = {
 // Hot Memory (V1.1, Germany, 11/30/94)
 
 static struct BurnRomInfo hotmemry11RomDesc[] = {
-	{ "hotmem0_v1.1.u83",					0x020000, 0x8d614b1b, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
-	{ "hotmem1_v1.1.u88",					0x020000, 0x009639fb, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "hotmem0_u83_v1.1.u83",				0x020000, 0x8d614b1b, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
+	{ "hotmem1_u88_v1.1.u88",				0x020000, 0x009639fb, 1 | BRF_PRG | BRF_ESS }, //  1
 
-	{ "hotmem_snd.u17",						0x020000, 0x805941c7, 2 | BRF_PRG | BRF_ESS }, //  2 M6809 Code
+	{ "hotmemsnd_u17_v1.u17",				0x020000, 0x805941c7, 2 | BRF_PRG | BRF_ESS }, //  2 M6809 Code
 
-	{ "hotmem.grom0",						0x080000, 0x68f279ef, 3 | BRF_GRA },           //  3 Graphics (Blitter data)
-	{ "hotmem.grom5",						0x080000, 0x295bb43d, 3 | BRF_GRA },           //  4
-	{ "hotmem.grom10",						0x080000, 0xf8cc939b, 3 | BRF_GRA },           //  5
-	{ "hotmem.grom15",						0x080000, 0xa03d9bcd, 3 | BRF_GRA },           //  6
-	{ "hotmem.grom1",						0x040000, 0xb446105e, 3 | BRF_GRA },           //  7
-	{ "hotmem.grom6",						0x040000, 0x3a7ba9eb, 3 | BRF_GRA },           //  8
-	{ "hotmem.grom11",						0x040000, 0x9ec4ea41, 3 | BRF_GRA },           //  9
-	{ "hotmem.grom16",						0x040000, 0x4507a895, 3 | BRF_GRA },           // 10
+	{ "hotmem_grom0_v1.grom0",				0x080000, 0x68f279ef, 3 | BRF_GRA },           //  3 Graphics (Blitter data)
+	{ "hotmem_grom5_v1.grom5",				0x080000, 0x295bb43d, 3 | BRF_GRA },           //  4
+	{ "hotmem_grom10_v1.grom10",			0x080000, 0xf8cc939b, 3 | BRF_GRA },           //  5
+	{ "hotmem_grom15_v1.grom15",			0x080000, 0xa03d9bcd, 3 | BRF_GRA },           //  6
+	{ "hotmem_grom1_v1.grom1",				0x040000, 0xb446105e, 3 | BRF_GRA },           //  7
+	{ "hotmem_grom6_v1.grom6",				0x040000, 0x3a7ba9eb, 3 | BRF_GRA },           //  8
+	{ "hotmem_grom11_v1.grom11",			0x040000, 0x9ec4ea41, 3 | BRF_GRA },           //  9
+	{ "hotmem_grom16_v1.grom16",			0x040000, 0x4507a895, 3 | BRF_GRA },           // 10
 
 	{ "ensoniq.2m",							0x200000, 0x9fdc4825, 4 | BRF_SND },           // 11 Ensoniq Bank 0
 
-	{ "hotmem_v1.srom0",					0x080000, 0xc18b76cd, 6 | BRF_SND },           // 12 Ensoniq Bank 2
+	{ "srom0_hotmem_v1.srom0",				0x080000, 0xc1103224, 6 | BRF_SND },           // 12 Ensoniq Bank 2
 };
 
 STD_ROM_PICK(hotmemry11)
@@ -4143,6 +4344,7 @@ struct BurnDriver BurnDrvHotmemry11 = {
 
 
 // World Class Bowling Deluxe (v2.00)
+/* Deluxe version 2.00 (PCB P/N 1083 Rev 2), This version is derived from the Tournament v1.40 set, but tournament features have be removed/disabled */
 
 static struct BurnRomInfo wcbowldxRomDesc[] = {
 	{ "wcbd_prom0_2.00.prom0",				0x020000, 0x280df7f0, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -4183,10 +4385,10 @@ static INT32 WcbowldxInit()
 }
 
 struct BurnDriver BurnDrvWcbowldx = {
-	"wcbowldx", NULL, NULL, NULL, "1999",
+	"wcbowldx", "wcbowl", NULL, NULL, "1999",
 	"World Class Bowling Deluxe (v2.00)\0", NULL, "Incredible Technologies", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
 	NULL, wcbowldxRomInfo, wcbowldxRomName, NULL, NULL, NULL, NULL, WcbowlInputInfo, WcbowldxDIPInfo,
 	WcbowldxInit, DrvExit, DrvFrame, DrvDraw32, DrvScan, &DrvRecalc, 0x8000,
 	384, 256, 4, 3
@@ -4194,6 +4396,7 @@ struct BurnDriver BurnDrvWcbowldx = {
 
 
 // World Class Bowling Tournament (v1.40)
+/* Version 1.40 Tournament (PCB P/N 1083 Rev 2) */
 
 static struct BurnRomInfo wcbowl140RomDesc[] = {
 	{ "wcbf_prom0_1.40.prom0",				0x020000, 0x9d31ceb1, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -4236,7 +4439,7 @@ static INT32 Wcbowl140Init()
 }
 
 struct BurnDriver BurnDrvWcbowl140 = {
-	"wcbowl140", "wcbowldx", NULL, NULL, "1997",
+	"wcbowl140", "wcbowl", NULL, NULL, "1997",
 	"World Class Bowling Tournament (v1.40)\0", NULL, "Incredible Technologies", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
@@ -4247,6 +4450,7 @@ struct BurnDriver BurnDrvWcbowl140 = {
 
 
 // World Class Bowling Tournament (v1.30)
+/* Version 1.30 Tournament (PCB P/N 1083 Rev 2) */
 
 static struct BurnRomInfo wcbowl130RomDesc[] = {
 	{ "wcb_prom0_v1.30t.prom0",				0x020000, 0xfbcde4e0, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -4282,7 +4486,7 @@ STD_ROM_PICK(wcbowl130)
 STD_ROM_FN(wcbowl130)
 
 struct BurnDriver BurnDrvWcbowl130 = {
-	"wcbowl130", "wcbowldx", NULL, NULL, "1997",
+	"wcbowl130", "wcbowl", NULL, NULL, "1997",
 	"World Class Bowling Tournament (v1.30)\0", NULL, "Incredible Technologies", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
@@ -4293,6 +4497,7 @@ struct BurnDriver BurnDrvWcbowl130 = {
 
 
 // World Class Bowling (v1.66)
+/* Version 1.66 (PCB P/N 1083 Rev 2) */
 
 static struct BurnRomInfo wcbowlRomDesc[] = {
 	{ "wcb_prom0_v1.66n.prom0",				0x020000, 0xf6774112, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -4342,6 +4547,7 @@ struct BurnDriver BurnDrvWcbowl = {
 
 
 // World Class Bowling (v1.65)
+/* Version 1.65 (PCB P/N 1083 Rev 2) */
 
 static struct BurnRomInfo wcbowl165RomDesc[] = {
 	{ "wcb_prom0_v1.65n.prom0",				0x020000, 0xcf0f6c25, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -4384,7 +4590,8 @@ struct BurnDriver BurnDrvWcbowl165 = {
 
 
 // World Class Bowling (v1.61)
-
+ /* Version 1.61 (PCB P/N 1083 Rev 2) */
+ 
 static struct BurnRomInfo wcbowl161RomDesc[] = {
 	{ "wcb_prom0_v1.61n.prom0",				0x020000, 0xb879d4a7, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
 	{ "wcb_prom1_v1.61n.prom1",				0x020000, 0x49f3ed6a, 1 | BRF_PRG | BRF_ESS }, //  1
@@ -4426,6 +4633,7 @@ struct BurnDriver BurnDrvWcbowl161 = {
 
 
 // World Class Bowling (v1.6)
+/* Version 1.6 (PCB P/N 1083 Rev 2), This is the first set to move to the single board platform */
 
 static struct BurnRomInfo wcbowl16RomDesc[] = {
 	{ "wcb_prom0_v1.6n.prom0",				0x020000, 0x332c558f, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -4475,6 +4683,7 @@ static INT32 Wcbowl_16B_Init()
 
 
 // World Class Bowling (v1.5)
+/* Version 1.5 (3-tier board set: P/N 1059 Rev 3, P/N 1079 Rev 1 & P/N 1060 Rev 0) */
 
 static struct BurnRomInfo wcbowl15RomDesc[] = {
 	{ "wcb_v1.5_u83.u83",					0x020000, 0x3ca9ab85, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -4516,6 +4725,7 @@ struct BurnDriver BurnDrvWcbowl15 = {
 
 
 // World Class Bowling (v1.4)
+/* Version 1.4 (3-tier board set: P/N 1059 Rev 3, P/N 1079 Rev 1 & P/N 1060 Rev 0) */
 
 static struct BurnRomInfo wcbowl14RomDesc[] = {
 	{ "wcb_v1.4_u83.u83",					0x020000, 0x7086131f, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -4557,6 +4767,7 @@ struct BurnDriver BurnDrvWcbowl14 = {
 
 
 // World Class Bowling (v1.3)
+/* Version 1.3 (3-tier board set: P/N 1059 Rev 3, P/N 1079 Rev 1 & P/N 1060 Rev 0) */
 
 static struct BurnRomInfo wcbowl13RomDesc[] = {
 	{ "wcb_v1.3_u83.u83",					0x020000, 0x2b6d284e, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -4598,6 +4809,7 @@ struct BurnDriver BurnDrvWcbowl13 = {
 
 
 // World Class Bowling (v1.3J, Japan)
+/* Version 1.3 (3-tier board set: P/N 1059 Rev 3, P/N 1079 Rev 1 & P/N 1060 Rev 0) */
 
 static struct BurnRomInfo wcbowl13jRomDesc[] = {
 	{ "wcb_v1.3j_u83.u83",					0x020000, 0x5805fd92, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -4639,6 +4851,7 @@ struct BurnDriver BurnDrvWcbowl13j = {
 
 
 // World Class Bowling (v1.2)
+/* Version 1.2 (3-tier board set: P/N 1059 Rev 3, P/N 1079 Rev 1 & P/N 1060 Rev 0) */
 
 static struct BurnRomInfo wcbowl12RomDesc[] = {
 	{ "wcb_v1.2_u83.u83",					0x020000, 0x0602c5ce, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -4680,6 +4893,7 @@ struct BurnDriver BurnDrvWcbowl12 = {
 
 
 // World Class Bowling (v1.1)
+/* Version 1.1 (3-tier board set: P/N 1059 Rev 3, P/N 1079 Rev 1 & P/N 1060 Rev 0) */
 
 static struct BurnRomInfo wcbowl11RomDesc[] = {
 	{ "wcb_v1.1_u83.u83",					0x020000, 0xd4902392, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -4721,6 +4935,7 @@ struct BurnDriver BurnDrvWcbowl11 = {
 
 
 // World Class Bowling (v1.0)
+/* Version 1.0 (3-tier board set: P/N 1059 Rev 3, P/N 1079 Rev 1 & P/N 1060 Rev 0) */
 
 static struct BurnRomInfo wcbowl10RomDesc[] = {
 	{ "wcb_v1.0_u83.u83",					0x020000, 0x675ad0b1, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -5038,6 +5253,50 @@ struct BurnDriver BurnDrvSftmj112 = {
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
 	NULL, sftmj112RomInfo, sftmj112RomName, NULL, NULL, NULL, NULL, SftmInputInfo, SftmDIPInfo,
 	SftmInit, DrvExit, DrvFrame, DrvDraw32, DrvScan, &DrvRecalc, 0x8000,
+	384, 256, 4, 3
+};
+
+
+// Must Shoot TV (prototype)
+
+static struct BurnRomInfo shoottvRomDesc[] = {
+	{ "gun_0.bin",		0x00c5f9, 0x1086b219, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
+	{ "gun_1.bin",		0x00c5f9, 0xa0f0e5ea, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "gun_2.bin",		0x00c5f9, 0x1b84cf05, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "gun_3.bin",		0x00c5f9, 0x43ed58aa, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "gun.bim",		0x020000, 0x7439569a, 2 | BRF_PRG | BRF_ESS }, //  4 M6809 Code
+
+	{ "grom00_0.bin",	0x080000, 0x9a06d497, 3 | BRF_GRA },           //  5 Graphics (Blitter data)
+	{ "grom00_1.bin",	0x080000, 0x018ff629, 3 | BRF_GRA },           //  6
+	{ "grom00_2.bin",	0x080000, 0xf47ea010, 3 | BRF_GRA },           //  7
+	{ "grom00_3.bin",	0x080000, 0x3c12be47, 3 | BRF_GRA },           //  8
+	{ "grom01_0.bin",	0x04fdd5, 0xebf70a20, 3 | BRF_GRA },           //  9
+	{ "grom01_1.bin",	0x04fdd5, 0xa78fedd1, 3 | BRF_GRA },           // 10
+	{ "grom01_2.bin",	0x04fdd5, 0x3578d74d, 3 | BRF_GRA },           // 11
+	{ "grom01_3.bin",	0x04fdd5, 0x394be494, 3 | BRF_GRA },           // 12
+
+	{ "guns0.bin",		0x07fb51, 0x35e9ba70, 4 | BRF_SND },           // 13 Ensoniq Bank 0
+	{ "guns1.bin",		0x03dccd, 0xec1c3ab3, 4 | BRF_SND },           // 14
+};
+
+STD_ROM_PICK(shoottv)
+STD_ROM_FN(shoottv)
+
+static INT32 ShoottvInit()
+{
+	is_shoottv = 1;
+
+	return Common32BitInit(0x0000, 2, 0);
+}
+
+struct BurnDriver BurnDrvShoottv = {
+	"shoottv", NULL, NULL, NULL, "199?",
+	"Must Shoot TV (prototype)\0", NULL, "Incredible Technologies", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
+	NULL, shoottvRomInfo, shoottvRomName, NULL, NULL, NULL, NULL, ShoottvInputInfo, ShoottvDIPInfo,
+	ShoottvInit, DrvExit, DrvFrame, DrvDraw32, DrvScan, &DrvRecalc, 0x8000,
 	384, 256, 4, 3
 };
 

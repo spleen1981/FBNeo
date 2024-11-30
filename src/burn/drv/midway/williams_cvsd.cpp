@@ -203,14 +203,12 @@ void williams_cvsd_init(UINT8 *prgrom, INT32 prot_start, INT32 prot_end, INT32 s
 	bankswitch(0);
 	M6809SetWriteHandler(cvsd_write);
 	M6809SetReadHandler(cvsd_read);
-	M6809SetReadOpHandler(cvsd_read); // rom dished out in read handler!
-	M6809SetReadOpArgHandler(cvsd_read); // ""
 	M6809Close();
 
 	pia_init();
 	pia_config(0, PIA_STANDARD_ORDERING, &pia_intf);
 
-	BurnYM2151Init(3579545, 1);
+	BurnYM2151InitBuffered(3579545, 1, NULL, 0);
 	BurnYM2151SetIrqHandler(&YM2151IrqHandler);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.10, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.10, BURN_SND_ROUTE_RIGHT);
@@ -222,6 +220,7 @@ void williams_cvsd_init(UINT8 *prgrom, INT32 prot_start, INT32 prot_end, INT32 s
 
 	DACInit(0, 0, 1, M6809TotalCycles, 2000000);
 	DACSetRoute(0, 0.25, BURN_SND_ROUTE_BOTH);
+	DACDCBlock(1);
 
 	protection_start = prot_start;
 	protection_end = prot_end;
@@ -245,7 +244,7 @@ INT32 williams_cvsd_in_reset()
 
 void williams_cvsd_update(INT16 *stream, INT32 length)
 {
-	//BurnYM2151Render(stream, length); -- in frame!
+	BurnYM2151Render(stream, length);
 	hc55516_update(stream, length);
 	DACUpdate(stream, length);
 }
@@ -277,6 +276,7 @@ INT32 williams_cvsd_scan(INT32 nAction, INT32 *pnMin)
 
 		SCAN_VAR(talkback);
 		SCAN_VAR(bankdata);
+		SCAN_VAR(bankpos);
 		SCAN_VAR(sound_in_reset);
 		SCAN_VAR(ym_inreset);
 	}

@@ -6,7 +6,6 @@
 #include "ay8910.h"
 #include "burn_ym3526.h"
 #include "dac.h"
-#include "compat_funct.h"
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;
@@ -469,6 +468,8 @@ static INT32 DrvDoReset()
 		BurnYM3526Reset();
 	}
 
+	HiscoreReset();
+
 	soundlatch = 0;
 	timer_pulse = 0;
 
@@ -592,8 +593,9 @@ static INT32 Cop01Init()
 	AY8910Init(1, 1250000, 1);
 	AY8910Init(2, 1250000, 1);
 	AY8910SetAllRoutes(0, 0.25, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(1, 0.12, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(2, 0.12, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(1, 0.20, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(2, 0.20, BURN_SND_ROUTE_BOTH);
+	AY8910SetBuffered(ZetTotalCycles, 3000000);
 
 	GenericTilesInit();
 	GenericTilemapInit(0, TILEMAP_SCAN_ROWS, bg_map_callback, 8, 8, 64, 32);
@@ -668,7 +670,7 @@ static INT32 MightguyInit()
 	ZetClose();
 
 	BurnYM3526Init(4000000, NULL, 0);
-	BurnTimerAttachYM3526(&ZetConfig, 4000000);
+	BurnTimerAttach(&ZetConfig, 4000000);
 	BurnYM3526SetRoute(BURN_SND_YM3526_ROUTE, 0.85, BURN_SND_ROUTE_BOTH);
 
 	DACInit(0, 0, 1, ZetTotalCycles, 4000000);
@@ -803,7 +805,7 @@ static INT32 Cop01Frame()
 		DrvDoReset();
 	}
 
-	//ZetNewFrame();
+	ZetNewFrame();
 
 	{
 		memset (DrvInputs, 0xff, 3);
@@ -875,7 +877,7 @@ static INT32 MightguyFrame()
 
 		ZetOpen(1);
 		INT32 lastcyc = ZetTotalCycles();
-		BurnTimerUpdateYM3526((i + 1) * (nCyclesTotal[1] / nInterleave));
+		CPU_RUN_TIMER(1);
 
 		if (dac_intrl_table[i]) { // clock-in the dac @ prot_dac_freq (see dac_recalc_freq())
 			mightguy_prot_dac_clk();
@@ -891,16 +893,10 @@ static INT32 MightguyFrame()
 		ZetClose();
 	}
 
-	ZetOpen(1);
-
-	BurnTimerEndFrameYM3526(nCyclesTotal[1]);
-
 	if (pBurnSoundOut) {
 		BurnYM3526Update(pBurnSoundOut, nBurnSoundLen);
 		DACUpdate(pBurnSoundOut, nBurnSoundLen);
 	}
-
-	ZetClose();
 
 	if (pBurnDraw) {
 		DrvDraw();
@@ -999,7 +995,7 @@ struct BurnDriver BurnDrvCop01 = {
 	"cop01", NULL, NULL, NULL, "1985",
 	"Cop 01 (set 1)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, cop01RomInfo, cop01RomName, NULL, NULL, NULL, NULL, Cop01InputInfo, Cop01DIPInfo,
 	Cop01Init, DrvExit, Cop01Frame, DrvDraw, DrvScan, &DrvRecalc, 0x190,
 	256, 224, 4, 3
@@ -1045,7 +1041,7 @@ struct BurnDriver BurnDrvCop01a = {
 	"cop01a", "cop01", NULL, NULL, "1985",
 	"Cop 01 (set 2)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, cop01aRomInfo, cop01aRomName, NULL, NULL, NULL, NULL, Cop01InputInfo, Cop01DIPInfo,
 	Cop01Init, DrvExit, Cop01Frame, DrvDraw, DrvScan, &DrvRecalc, 0x190,
 	256, 224, 4, 3
@@ -1088,7 +1084,7 @@ struct BurnDriver BurnDrvMightguy = {
 	"mightguy", NULL, NULL, NULL, "1986",
 	"Mighty Guy\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, mightguyRomInfo, mightguyRomName, NULL, NULL, NULL, NULL, Cop01InputInfo, MightguyDIPInfo,
 	MightguyInit, DrvExit, MightguyFrame, DrvDraw, DrvScan, &DrvRecalc, 0x190,
 	224, 256, 3, 4

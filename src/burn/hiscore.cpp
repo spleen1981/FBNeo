@@ -1,6 +1,6 @@
 #include "burnint.h"
 
-// A hiscore.dat support module for FBA - written by Treble Winner, Feb 2009
+// A hiscore.dat support module for FB Neo - written by Barry Manilow, Feb 2009
 // Updates & fixes by dink and iq_132
 
 #define MAX_CONFIG_LINE_SIZE 		48
@@ -16,6 +16,7 @@ UINT32 nHiscoreNumRanges;
 struct _HiscoreMemRange
 {
 	UINT32 Loaded, nCpu, Address, NumBytes, StartValue, EndValue, ApplyNextFrame, Applied;
+	UINT32 NoConfirm; // avoid confirm check / re-apply area if it fails check
 	UINT8 *Data;
 };
 
@@ -25,12 +26,7 @@ INT32 EnableHiscores;
 static INT32 HiscoresInUse;
 static INT32 WriteCheck1;
 static INT32 LetsTryToApply = 0;
-
-struct cheat_core {
-	cpu_core_config *cpuconfig;
-
-	INT32 nCPU;			// which cpu
-};
+static INT32 nLoadingFrameDelay = 0;
 
 static cheat_core *cheat_ptr;
 static cpu_core_config *cheat_subptr;
@@ -132,6 +128,7 @@ static INT32 cpustr2num(char *pCpu)
 { // all known versions of the first cpu as of May 15, 2017
 	return (strstr(pCpu, "maincpu") ||
 		    strstr(pCpu, "cpu1") ||
+		    strstr(pCpu, "alpha") ||
 			strstr(pCpu, "master") ||
 			strstr(pCpu, "fgcpu") ||
 			strstr(pCpu, "cpua") ||
@@ -157,7 +154,7 @@ static INT32 CheckHiscoreAllowed()
 	return Allowed;
 }
 
-void HiscoreSearch(FILE *fp, const char *name)
+void HiscoreSearch_internal(FILE *fp, const char *name)
 {
 	char buffer[MAX_CONFIG_LINE_SIZE];
 	enum { FIND_NAME, FIND_DATA, FETCH_DATA } mode;
@@ -214,7 +211,54 @@ void HiscoreSearch(FILE *fp, const char *name)
 						HiscoreMemRange[nHiscoreNumRanges].Applied = 0;
 						HiscoreMemRange[nHiscoreNumRanges].Data = (UINT8*)BurnMalloc(HiscoreMemRange[nHiscoreNumRanges].NumBytes);
 						memset(HiscoreMemRange[nHiscoreNumRanges].Data, 0, HiscoreMemRange[nHiscoreNumRanges].NumBytes);
-						
+
+						// NoConfirm "feature"
+
+						// TODO: If another game needs this (someday?), we'll make a callback from the driver-side
+						// to keep kludges from piling up in here
+
+						// dbreed @ 88959
+						// the last address range in hiscore.dat is the game's animation timer/
+						// this area will never write-confirm because it's always changing.  We'll only
+						// confirm the StartValue/EndValue in memory @ bootup, but not confirm that the value has stuck
+						// a frame after it has been written, since this is impossible.
+
+						if (!strcmp(name, "dbreed") && HiscoreMemRange[nHiscoreNumRanges].Address == 0x88959) {
+							bprintf(0, _T("-- dbreed noConfirm hack for address range %x\n"), HiscoreMemRange[nHiscoreNumRanges].Address);
+							HiscoreMemRange[nHiscoreNumRanges].NoConfirm = 1;
+						}
+
+						if (!strcmp(name, "quantum") && HiscoreMemRange[nHiscoreNumRanges].Address == 0x1b5aa) {
+							bprintf(0, _T("-- dbreed noConfirm hack for address range %x\n"), HiscoreMemRange[nHiscoreNumRanges].Address);
+							HiscoreMemRange[nHiscoreNumRanges].NoConfirm = 1;
+						}
+
+						// same thing, with ledstorm, ledstorm 2011[u,p] & madgear[j]
+						if ((!strcmp(name, "leds2011") || !strcmp(name, "leds2011u") || !strcmp(name, "leds2011p") || !strcmp(name, "ledstorm") || !strcmp(name, "madgear") || !strcmp(name, "madgearj")) && HiscoreMemRange[nHiscoreNumRanges].Address == 0xff87c9) {
+							bprintf(0, _T("-- leds2011 noConfirm hack for address range %x\n"), HiscoreMemRange[nHiscoreNumRanges].Address);
+							HiscoreMemRange[nHiscoreNumRanges].NoConfirm = 1;
+						}
+
+						// gradius2/vulcan venture
+						if ((!strcmp(name, "gradius2") || !strcmp(name, "gradius2a") || !strcmp(name, "gradius2b") || !strcmp(name, "vulcan") || !strcmp(name, "vulcana") || !strcmp(name, "vulcanb"))
+							&& HiscoreMemRange[nHiscoreNumRanges].Address == 0x60008) {
+							bprintf(0, _T("-- gradius2/vulcan noConfirm hack for address range %x\n"), HiscoreMemRange[nHiscoreNumRanges].Address);
+							HiscoreMemRange[nHiscoreNumRanges].NoConfirm = 1;
+						}
+
+						// mhavoc (same comment as above, 0x0095 is a timer)
+						if (!strcmp(name, "mhavoc") && HiscoreMemRange[nHiscoreNumRanges].Address == 0x0095) {
+							bprintf(0, _T("-- mhavoc noConfirm hack for address range %x\n"), HiscoreMemRange[nHiscoreNumRanges].Address);
+							HiscoreMemRange[nHiscoreNumRanges].NoConfirm = 1;
+						}
+
+						// amspdwy e3de block is suspect -dink
+						if (!strcmp(name, "amspdwy") && HiscoreMemRange[nHiscoreNumRanges].Address == 0xe3de) {
+							bprintf(0, _T("-- amspdwy noConfirm hack for address range %x\n"), HiscoreMemRange[nHiscoreNumRanges].Address);
+							HiscoreMemRange[nHiscoreNumRanges].NoConfirm = 1;
+						}
+						// end NoConfirm "feature"
+
 #if 1 && defined FBNEO_DEBUG
 						bprintf(PRINT_IMPORTANT, _T("Hi Score Memory Range %i Loaded (New Format) - CPU %i (%S), Address %x, Bytes %02x, Start Val %x, End Val %x\n"), nHiscoreNumRanges, HiscoreMemRange[nHiscoreNumRanges].nCpu, cCpu, HiscoreMemRange[nHiscoreNumRanges].Address, HiscoreMemRange[nHiscoreNumRanges].NumBytes, HiscoreMemRange[nHiscoreNumRanges].StartValue, HiscoreMemRange[nHiscoreNumRanges].EndValue);
 #endif
@@ -228,6 +272,12 @@ void HiscoreSearch(FILE *fp, const char *name)
 				} else {
 					if (mode == FETCH_DATA) break;
 				}
+			} else if (strncmp("@delay=", buffer, 7) == 0) {
+				nLoadingFrameDelay = atof(buffer+7) * (nBurnFPS / 100.0);
+
+#if 1 && defined FBNEO_DEBUG
+				bprintf(PRINT_IMPORTANT, _T("Hi Score loading should be delayed by %d frames ?\n"), nLoadingFrameDelay);
+#endif
 			} else {
 				if (is_mem_range(buffer)) {
 					if (nHiscoreNumRanges < HISCORE_MAX_RANGES) {
@@ -260,6 +310,62 @@ void HiscoreSearch(FILE *fp, const char *name)
 			}
 		}
 	}
+}
+
+// Sometimes we have different setnames than other emu's, the table below
+// will translate our set to their set to keep hiscore.dat happy
+struct game_replace_entry {
+	char fb_name[80];
+	char mame_name[80];
+};
+
+static game_replace_entry replace_table[] = {
+	{ "vsraidbbay",		"bnglngby"		},
+	{ "vsrbibbal",		"rbibb"			},
+	{ "vsbattlecity",	"btlecity"		},
+	{ "vscastlevania",	"cstlevna"		},
+	{ "vsclucluland",	"cluclu"		},
+	{ "vsdrmario",		"drmario"		},
+	{ "vsduckhunt",		"duckhunt"		},
+	{ "vsexcitebike",	"excitebk"		},
+	{ "vsfreedomforce",	"vsfdf"			},
+	{ "vsgoonies",		"goonies"		},
+	{ "vsgradius",		"vsgradus"		},
+	{ "vsgumshoe",		"vsgshoe"		},
+	{ "vshogansalley",	"hogalley"		},
+	{ "vsiceclimber",	"iceclimb"		},
+	{ "vsmachrider",	"nvs_machrider"	},
+	{ "vsmightybomjack","nvs_mightybj"	},
+	{ "vsninjajkun",	"jajamaru"		},
+	{ "vspinball",		"vspinbal"		},
+	{ "vsplatoon",		"nvs_platoon"	},
+	{ "vsslalom",		"vsslalom"		},
+	{ "vssoccer",		"vssoccer"		},
+	{ "vsstarluster",	"starlstr"		},
+	{ "vssmgolf",		"smgolf"		},
+	{ "vssmgolfla",		"ladygolf"		},
+	{ "vssmb",			"suprmrio"		},
+	{ "vssuperskykid",	"vsskykid"		},
+	{ "vssuperxevious",	"supxevs"		},
+	{ "vstetris",		"vstetris"		},
+	{ "vstkoboxing",	"tkoboxng"		},
+	{ "vstopgun",		"topgun"		},
+	{ "\0", 			"\0"			}
+};
+
+void HiscoreSearch(FILE *fp, const char *name)
+{
+	const char *game = name; // default to passed name
+
+	// Check the above table to see if we should use an alias
+	for (INT32 i = 0; replace_table[i].fb_name[0] != '\0'; i++) {
+		if (!strcmp(replace_table[i].fb_name, name)) {
+			game = replace_table[i].mame_name;
+			break;
+		}
+	}
+
+	HiscoreSearch_internal(fp, game);
 }
 
 void HiscoreInit()
@@ -332,7 +438,7 @@ void HiscoreInit()
 	WriteCheck1 = 0;
 }
 
-void HiscoreReset()
+void HiscoreReset(INT32 bDisableInversionWriteback)
 {
 #if defined FBNEO_DEBUG
 	if (!Debug_HiscoreInitted) bprintf(PRINT_ERROR, _T("HiscoreReset called without init\n"));
@@ -348,12 +454,14 @@ void HiscoreReset()
 		HiscoreMemRange[i].ApplyNextFrame = 0;
 		HiscoreMemRange[i].Applied = APPLIED_STATE_NONE;
 		
-		/*if (HiscoreMemRange[i].Loaded)*/ {
+		if (HiscoreMemRange[i].Loaded) {
 			cpu_open(HiscoreMemRange[i].nCpu);
 			// in some games, system16b (aliensyn, everything else) rom is mapped (for cheats)
 			// on reset where the hiscore should be.  Writing here is bad.
-			//cheat_subptr->write(HiscoreMemRange[i].Address, (UINT8)~HiscoreMemRange[i].StartValue);
-			//if (HiscoreMemRange[i].NumBytes > 1) cheat_subptr->write(HiscoreMemRange[i].Address + HiscoreMemRange[i].NumBytes - 1, (UINT8)~HiscoreMemRange[i].EndValue);
+			if (bDisableInversionWriteback == 0) {
+				cheat_subptr->write(HiscoreMemRange[i].Address, (UINT8)~HiscoreMemRange[i].StartValue);
+				if (HiscoreMemRange[i].NumBytes > 1) cheat_subptr->write(HiscoreMemRange[i].Address + HiscoreMemRange[i].NumBytes - 1, (UINT8)~HiscoreMemRange[i].EndValue);
+			}
 			cheat_subptr->close();
 			
 #if 1 && defined FBNEO_DEBUG
@@ -416,13 +524,14 @@ void HiscoreApply()
 	if (!Debug_HiscoreInitted) bprintf(PRINT_ERROR, _T("HiscoreApply called without init\n"));
 #endif
 
-	if (!CheckHiscoreAllowed() || !HiscoresInUse) return;
+	if (!CheckHiscoreAllowed() || !HiscoresInUse || bBurnRunAheadFrame) return;
 
 	UINT8 WriteCheckOk = 0;
 	
 	for (UINT32 i = 0; i < nHiscoreNumRanges; i++) {
 		if (HiscoreMemRange[i].Loaded && HiscoreMemRange[i].Applied == APPLIED_STATE_ATTEMPTED) {
 			INT32 Confirmed = 1;
+
 			cpu_open(HiscoreMemRange[i].nCpu);
 
 			for (UINT32 j = 0; j < HiscoreMemRange[i].NumBytes; j++) {
@@ -432,10 +541,10 @@ void HiscoreApply()
 			}
 			cheat_subptr->close();
 			
-			if (Confirmed == 1) {
+			if (Confirmed == 1 || HiscoreMemRange[i].NoConfirm) {
 				HiscoreMemRange[i].Applied = APPLIED_STATE_CONFIRMED;
 #if 1 && defined FBNEO_DEBUG
-				bprintf(PRINT_IMPORTANT, _T("Applied Hi Score Memory Range %i on frame number %i\n"), i, GetCurrentFrame());
+				bprintf(PRINT_IMPORTANT, _T("Applied Hi Score Memory Range %i on frame number %i %s\n"), i, GetCurrentFrame(), (HiscoreMemRange[i].NoConfirm) ? _T("(no confirm)") : _T(""));
 #endif
 			} else {
 				HiscoreMemRange[i].Applied = APPLIED_STATE_NONE;
@@ -499,6 +608,16 @@ void HiscoreApply()
 			HiscoreMemRange[i].Applied = APPLIED_STATE_ATTEMPTED;
 			HiscoreMemRange[i].ApplyNextFrame = 0;
 		}
+	}
+}
+
+void HiscoreScan(INT32 nAction, INT32* pnMin)
+{
+	if (pnMin)
+		*pnMin = 0x029743;
+
+	for (UINT32 i = 0; i < nHiscoreNumRanges; i++) {
+		SCAN_VAR(HiscoreMemRange[i]);
 	}
 }
 

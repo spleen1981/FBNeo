@@ -48,6 +48,7 @@ static UINT16 DrvScrollY1;
 static UINT16 DrvScrollX2;
 static UINT16 DrvScrollY2;
 static UINT8 DrvOkiBank;
+static INT32 gun_entropy;
 
 static UINT32 DrvNumTiles;
 static UINT32 DrvNumSprites;
@@ -511,7 +512,11 @@ static INT32 DrvDoReset()
 	DrvScrollX2 = 0;
 	DrvScrollY2 = 0;
 	DrvOkiBank = 0;	
-	
+
+	gun_entropy = 0;
+
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -660,6 +665,13 @@ static void __fastcall Burglarx68KWriteWord(UINT32 a, UINT16 d)
 	}
 }
 
+static INT32 gun_reload(INT32 gun)
+{
+	INT32 x = BurnGunReturnX(gun);
+	INT32 y = BurnGunReturnY(gun);
+	return (x == 0 || x == 255 || y == 0 || y == 255);
+}
+
 static UINT8 GetGunX(INT32 gun)
 {
 	INT32 x = BurnGunReturnX(gun);
@@ -671,17 +683,16 @@ static UINT8 GetGunX(INT32 gun)
 		x = ((x - 0x160) * 0x20) / 0x1f;
 	}
 
-	return ((x & 0xff) ^ (GetCurrentFrame() & 3));
+	return (gun_reload(gun)) ? 0 : ((x & 0xff) ^ (++gun_entropy & 7));
 }
 
 static UINT8 GetGunY(INT32 gun)
 {
 	INT32 y = BurnGunReturnY(gun);
-			
-	y = 0x18 + ((y * 0xe0) / 0xff);
-			
-	return ((y & 0xff) ^ (GetCurrentFrame() & 3));
 
+	y = 0x18 + ((y * 0xe0) / 0xff);
+
+	return (gun_reload(gun)) ? 0 : ((y & 0xff) ^ (++gun_entropy & 7));
 }
 
 static UINT8 __fastcall Zeropnt68KReadByte(UINT32 a)
@@ -1092,7 +1103,7 @@ static INT32 BurglarxInit()
 	SekClose();
 	
 	BurnYM3812Init(1, 3579545, NULL, &BurglarxSynchroniseStream, 0);
-	BurnTimerAttachYM3812(&SekConfig, 16000000);
+	BurnTimerAttach(&SekConfig, 16000000);
 	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 0.40, BURN_SND_ROUTE_BOTH);
 	
 	// Setup the OKIM6295 emulation
@@ -1175,7 +1186,7 @@ static INT32 ZeropntInit()
 	SekClose();
 	
 	BurnYM3812Init(1, 3579545, NULL, &BurglarxSynchroniseStream, 0);
-	BurnTimerAttachYM3812(&SekConfig, 16000000);
+	BurnTimerAttach(&SekConfig, 16000000);
 	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 0.40, BURN_SND_ROUTE_BOTH);
 	
 	// Setup the OKIM6295 emulation
@@ -1383,35 +1394,7 @@ static void DrvRenderSprites(INT32 PriorityDraw)
 		}
 		
 		for (x = xStart; x != xEnd; x += xInc) {
-			if (x > 16 && x < 368 && sy > 16 && sy < 208) {
-				if (xFlip) {
-					if (yFlip) {
-						Render16x16Tile_Mask_FlipXY(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					} else {
-						Render16x16Tile_Mask_FlipX(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					}
-				} else {
-					if (yFlip) {
-						Render16x16Tile_Mask_FlipY(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					} else {
-						Render16x16Tile_Mask(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					}
-				}
-			} else {
-				if (xFlip) {
-					if (yFlip) {
-						Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					} else {
-						Render16x16Tile_Mask_FlipX_Clip(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					}
-				} else {
-					if (yFlip) {
-						Render16x16Tile_Mask_FlipY_Clip(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					} else {
-						Render16x16Tile_Mask_Clip(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					}
-				}
-			}
+			Draw16x16MaskTile(pTransDraw, Code++, x, sy, xFlip, yFlip, Attr & 0x1f, 8, 0, 0, DrvSprites);
 		}
 	}
 }
@@ -1452,35 +1435,7 @@ static void Zeropnt2RenderSprites(INT32 PriorityDraw)
 		}
 		
 		for (x = xStart; x != xEnd; x += xInc) {
-			if (x > 16 && x < 368 && sy > 16 && sy < 208) {
-				if (xFlip) {
-					if (yFlip) {
-						Render16x16Tile_Mask_FlipXY(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					} else {
-						Render16x16Tile_Mask_FlipX(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					}
-				} else {
-					if (yFlip) {
-						Render16x16Tile_Mask_FlipY(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					} else {
-						Render16x16Tile_Mask(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					}
-				}
-			} else {
-				if (xFlip) {
-					if (yFlip) {
-						Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					} else {
-						Render16x16Tile_Mask_FlipX_Clip(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					}
-				} else {
-					if (yFlip) {
-						Render16x16Tile_Mask_FlipY_Clip(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					} else {
-						Render16x16Tile_Mask_Clip(pTransDraw, Code++, x, sy, Attr & 0x1f, 8, 0, 0, DrvSprites);
-					}
-				}
-			}
+			Draw16x16MaskTile(pTransDraw, Code++, x, sy, xFlip, yFlip, Attr & 0x1f, 8, 0, 0, DrvSprites);
 		}
 	}
 }
@@ -1526,37 +1481,9 @@ static void DrvRenderLayer(INT32 Layer)
 			if (Layer == 0) x -= 0x31;
 			if (Layer == 1) x -= 0x30;
 			if (Layer == 2) x -= 0x2e;
-			
-			if (x > 16 && x < 368 && y > 16 && y < 208) {
-				if (xFlip) {
-					if (yFlip) {
-						Render16x16Tile_Mask_FlipXY(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-					} else {
-						Render16x16Tile_Mask_FlipX(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-					}
-				} else {
-					if (yFlip) {
-						Render16x16Tile_Mask_FlipY(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-					} else {
-						Render16x16Tile_Mask(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-					}
-				}
-			} else {
-				if (xFlip) {
-					if (yFlip) {
-						Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-					} else {
-						Render16x16Tile_Mask_FlipX_Clip(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-					}
-				} else {
-					if (yFlip) {
-						Render16x16Tile_Mask_FlipY_Clip(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-					} else {
-						Render16x16Tile_Mask_Clip(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-					}
-				}
-			}
-			
+
+			Draw16x16MaskTile(pTransDraw, Code, x, y, xFlip, yFlip, Colour, 8, 0, 0, DrvTiles);
+
 			TileIndex++;
 		}
 	}
@@ -1612,35 +1539,7 @@ static void Zeropnt2RenderLayer(INT32 Layer)
 			if (Layer == 2) x -= 0x2e;
 			
 			if (Code) {
-				if (x > 16 && x < 368 && y > 16 && y < 208) {
-					if (xFlip) {
-						if (yFlip) {
-							Render16x16Tile_Mask_FlipXY(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-						} else {
-							Render16x16Tile_Mask_FlipX(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-						}
-					} else {
-						if (yFlip) {
-							Render16x16Tile_Mask_FlipY(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-						} else {
-							Render16x16Tile_Mask(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-						}
-					}
-				} else {
-					if (xFlip) {
-						if (yFlip) {
-							Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-						} else {
-							Render16x16Tile_Mask_FlipX_Clip(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-						}
-					} else {
-						if (yFlip) {
-							Render16x16Tile_Mask_FlipY_Clip(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-						} else {
-							Render16x16Tile_Mask_Clip(pTransDraw, Code, x, y, Colour, 8, 0, 0, DrvTiles);
-						}
-					}
-				}
+				Draw16x16MaskTile(pTransDraw, Code, x, y, xFlip, yFlip, Colour, 8, 0, 0, DrvTiles);
 			}
 			
 			TileIndex++;
@@ -1691,10 +1590,8 @@ static INT32 DrvDraw()
 	if (nSpriteEnable & 8) DrvRenderSprites(3);
 	
 	BurnTransferCopy(DrvPalette);
-	
-	for (INT32 i = 0; i < nBurnGunNumPlayers; i++) {
-		BurnGunDrawTarget(i, BurnGunX[i] >> 8, BurnGunY[i] >> 8);
-	}
+
+	BurnGunDrawTargets();
 
 	return 0;
 }
@@ -1717,10 +1614,8 @@ static INT32 Zeropnt2Draw()
 	if (nSpriteEnable & 8) Zeropnt2RenderSprites(3);
 	
 	BurnTransferCopy(DrvPalette);
-	
-	for (INT32 i = 0; i < nBurnGunNumPlayers; i++) {
-		BurnGunDrawTarget(i, BurnGunX[i] >> 8, BurnGunY[i] >> 8);
-	}
+
+	BurnGunDrawTargets();
 
 	return 0;
 }
@@ -1737,7 +1632,7 @@ static INT32 DrvFrame()
 	SekNewFrame();
 	
 	SekOpen(0);
-	BurnTimerEndFrameYM3812(nCyclesTotal[0]);
+	BurnTimerEndFrame(nCyclesTotal[0]);
 	SekSetIRQLine(2, CPU_IRQSTATUS_AUTO);
 	if (pBurnSoundOut) {
 		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
@@ -1828,6 +1723,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(DrvDip);
 		SCAN_VAR(DrvInput);
 		SCAN_VAR(DrvOkiBank);
+		SCAN_VAR(gun_entropy);
 	}
 
 	return 0;
@@ -1884,7 +1780,7 @@ struct BurnDriver BurnDrvBurglarx = {
 	"burglarx", NULL, NULL, NULL, "1997",
 	"Burglar X\0", NULL, "Unico", "Unico",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MAZE, 0,
 	NULL, BurglarxRomInfo, BurglarxRomName, NULL, NULL, NULL, NULL, BurglarxInputInfo, BurglarxDIPInfo,
 	BurglarxInit, DrvExit, DrvFrame, DrvDraw, BurglarxScan,
 	NULL, 0x2000, 384, 224, 4, 3
@@ -1894,7 +1790,7 @@ struct BurnDriver BurnDrvZeropnt = {
 	"zeropnt", NULL, NULL, NULL, "1998",
 	"Zero Point (set 1)\0", NULL, "Unico", "Unico",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
 	NULL, ZeropntRomInfo, ZeropntRomName, NULL, NULL, NULL, NULL, ZeropntInputInfo, ZeropntDIPInfo,
 	ZeropntInit, DrvExit, DrvFrame, DrvDraw, ZeropntScan,
 	NULL, 0x2000, 384, 224, 4, 3
@@ -1904,7 +1800,7 @@ struct BurnDriver BurnDrvZeropntj = {
 	"zeropntj", "zeropnt", NULL, NULL, "1998",
 	"Zero Point (Japan)\0", NULL, "Unico", "Unico",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
 	NULL, ZeropntjRomInfo, ZeropntjRomName, NULL, NULL, NULL, NULL, ZeropntInputInfo, ZeropntDIPInfo,
 	ZeropntInit, DrvExit, DrvFrame, DrvDraw, ZeropntScan,
 	NULL, 0x2000, 384, 224, 4, 3
@@ -1914,7 +1810,7 @@ struct BurnDriver BurnDrvZeropnta = {
 	"zeropnta", "zeropnt", NULL, NULL, "1998",
 	"Zero Point (set 2)\0", NULL, "Unico", "Unico",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
 	NULL, ZeropntaRomInfo, ZeropntaRomName, NULL, NULL, NULL, NULL, ZeropntInputInfo, ZeropntDIPInfo,
 	ZeropntInit, DrvExit, DrvFrame, DrvDraw, ZeropntScan,
 	NULL, 0x2000, 384, 224, 4, 3
@@ -1924,7 +1820,7 @@ struct BurnDriver BurnDrvZeropnt2 = {
 	"zeropnt2", NULL, NULL, NULL, "1999",
 	"Zero Point 2\0", NULL, "Unico", "Unico",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
 	NULL, Zeropnt2RomInfo, Zeropnt2RomName, NULL, NULL, NULL, NULL, ZeropntInputInfo, Zeropnt2DIPInfo,
 	Zeropnt2Init, Zeropnt2Exit, Zeropnt2Frame, Zeropnt2Draw, Zeropnt2Scan,
 	NULL, 0x2000, 384, 224, 4, 3

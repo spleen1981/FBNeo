@@ -45,11 +45,11 @@ int ConfigAppLoad()
 	}
 
 	// Go through each line of the config file
-	while (_fgetts(szLine, sizeof(szLine), h)) {
+	while (_fgetts(szLine, 1024, h)) {
 		int nLen = _tcslen(szLine);
 
 		// Get rid of the linefeed at the end
-		if (szLine[nLen - 1] == 10) {
+		if (nLen > 0 && szLine[nLen - 1] == 10) {
 			szLine[nLen - 1] = 0;
 			nLen--;
 		}
@@ -126,6 +126,7 @@ int ConfigAppLoad()
 		VAR(bMonitorAutoCheck);
 		VAR(bForce60Hz);
 		VAR(bAlwaysDrawFrames);
+		VAR(bRunAhead);
 
 		VAR(nVidSelect);
 		VAR(nVidBlitterOpt[0]);
@@ -156,12 +157,14 @@ int ConfigAppLoad()
 
 		// DirectX Graphics 9 Alt blitter
 		VAR(bVidDX9Bilinear);
+		VAR(nVidDX9HardFX);
 		VAR(bVidHardwareVertex);
 		VAR(bVidMotionBlur);
 		VAR(bVidForce16bitDx9Alt);
 
 		// Sound
 		VAR(nAudSelect);
+		VAR(nAudVolume);
 		VAR(nAudSegCount);
 		VAR(nInterpolation);
 		VAR(nFMInterpolation);
@@ -260,10 +263,16 @@ int ConfigAppLoad()
 
 		VAR(nAutoFireRate);
 
+		VAR(bRewindEnabled);
+		VAR(nRewindMemory);
+
 		VAR(EnableHiscores);
 		VAR(bBurnUseBlend);
 		VAR(BurnShiftEnabled);
+		VAR(bBurnGunDrawReticles);
 		VAR(bSkipStartupCheck);
+
+		VAR(nSlowMo);
 
 #ifdef INCLUDE_AVI_RECORDING
 		VAR(nAvi3x);
@@ -459,6 +468,8 @@ int ConfigAppSave()
 	VAR(bForce60Hz);
 	_ftprintf(h, _T("\n// If zero, skip frames when needed to keep the emulation running at full speed\n"));
 	VAR(bAlwaysDrawFrames);
+	_ftprintf(h, _T("\n// If non-zero, enable run-ahead mode for the reduction of input lag\n"));
+	VAR(bRunAhead);
 
 	_ftprintf(h, _T("\n"));
 	_ftprintf(h, _T("// --- DirectDraw blitter module settings -------------------------------------\n"));
@@ -493,6 +504,8 @@ int ConfigAppSave()
 	_ftprintf(h, _T("// --- DirectX Graphics 9 Alt blitter module settings -------------------------\n"));
 	_ftprintf(h, _T("\n// If non-zero, use bi-linear filtering to display the image\n"));
 	VAR(bVidDX9Bilinear);
+	_ftprintf(h, _T("\n// Active HardFX shader effect\n"));
+	VAR(nVidDX9HardFX);
 	_ftprintf(h, _T("\n// If non-zero, use hardware vertex to display the image\n"));
 	VAR(bVidHardwareVertex);
 	_ftprintf(h, _T("\n// If non-zero, use motion blur to display the image\n"));
@@ -504,6 +517,8 @@ int ConfigAppSave()
 	_ftprintf(h, _T("// --- Sound ------------------------------------------------------------------\n"));
 	_ftprintf(h, _T("\n// The selected audio plugin\n"));
 	VAR(nAudSelect);
+	_ftprintf(h, _T("\n// Audio Volume\n"));
+	VAR(nAudVolume);
 	_ftprintf(h, _T("\n// Number of frames in sound buffer (= sound lag)\n"));
 	VAR(nAudSegCount);
 	_ftprintf(h, _T("\n// The order of PCM/ADPCM interpolation\n"));
@@ -676,6 +691,12 @@ int ConfigAppSave()
 	_ftprintf(h, _T("\n// Auto-Fire Rate, non-linear - use the GUI to change this setting!\n"));
 	VAR(nAutoFireRate);
 
+	_ftprintf(h, _T("\n// Rewind, If non-zero, enable rewind feature.\n"));
+	VAR(bRewindEnabled);
+
+	_ftprintf(h, _T("\n// Memory allocated to the Rewind feature, in MegaBytes\n"));
+	VAR(nRewindMemory);
+
 	_ftprintf(h, _T("\n// If non-zero, enable high score saving support.\n"));
 	VAR(EnableHiscores);
 
@@ -685,8 +706,14 @@ int ConfigAppSave()
 	_ftprintf(h, _T("\n// If non-zero, enable gear shifter display support.\n"));
 	VAR(BurnShiftEnabled);
 
+	_ftprintf(h, _T("\n// If non-zero, enable lightgun reticle display support.\n"));
+	VAR(bBurnGunDrawReticles);
+
 	_ftprintf(h, _T("\n// If non-zero, DISABLE start-up rom scan (if needed).\n"));
 	VAR(bSkipStartupCheck);
+
+	_ftprintf(h, _T("\n// If non-zero, enable SlowMo T.A. [0 - 4]\n"));
+	VAR(nSlowMo);
 
 #ifdef INCLUDE_AVI_RECORDING
 	_ftprintf(h, _T("\n// If non-zero, enable 1x - 3x pixel output for the AVI writer.\n"));

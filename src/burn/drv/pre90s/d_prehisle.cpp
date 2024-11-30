@@ -476,7 +476,7 @@ static INT32 PrehisleInit()
 	ZetClose();
 
 	BurnYM3812Init(1, 4000000, &DrvFMIRQHandler, 0);
-	BurnTimerAttachYM3812(&ZetConfig, 4000000);
+	BurnTimerAttach(&ZetConfig, 4000000);
 	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 	
 	UPD7759Init(0, UPD7759_STANDARD_CLOCK, DrvSndROM);
@@ -622,17 +622,17 @@ static INT32 DrvFrame()
 		CPU_RUN(0, Sek);
 
 		if (i == (nInterleave - 1)) SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
+
+		CPU_RUN_TIMER(1);
 	}
 
-	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
+	ZetClose();
+	SekClose();
 
 	if (pBurnSoundOut) {
 		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
 		UPD7759Render(pBurnSoundOut, nBurnSoundLen);
 	}
-
-	ZetClose();
-	SekClose();
 
 	if (pBurnDraw) {
 		BurnDrvRedraw();
@@ -780,7 +780,7 @@ STD_ROM_FN(Prehislu)
 
 struct BurnDriver BurnDrvPrehislu = {
 	"prehisleu", "prehisle", NULL, NULL, "1989",
-	"Prehistoric Isle in 1930 (US)\0", NULL, "SNK of America", "Prehistoric Isle (SNK)",
+	"Prehistoric Isle in 1930 (US)\0", NULL, "SNK", "Prehistoric Isle (SNK)",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, PrehisluRomInfo, PrehisluRomName, NULL, NULL, NULL, NULL, PrehisleInputInfo, PrehisleDIPInfo,
@@ -789,7 +789,7 @@ struct BurnDriver BurnDrvPrehislu = {
 };
 
 
-// Prehistoric Isle in 1930 (Korea)
+// Wonsido 1930's (Korea)
 
 static struct BurnRomInfo PrehislkRomDesc[] = {
 	{ "gt-k2.2h",      0x20000, 0xf2d3544d, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
@@ -817,7 +817,7 @@ STD_ROM_FN(Prehislk)
 
 struct BurnDriver BurnDrvPrehislk = {
 	"prehislek", "prehisle", NULL, NULL, "1989",
-	"Prehistoric Isle in 1930 (Korea)\0", NULL, "SNK (Victor license)", "Prehistoric Isle (SNK)",
+	"Wonsido 1930's (Korea)\0", NULL, "SNK (Victor license)", "Prehistoric Isle (SNK)",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, PrehislkRomInfo, PrehislkRomName, NULL, NULL, NULL, NULL, PrehisleInputInfo, PrehisleDIPInfo,
@@ -826,7 +826,7 @@ struct BurnDriver BurnDrvPrehislk = {
 };
 
 
-// Genshi-Tou 1930's (Japan)
+// Genshitou 1930's
 
 static struct BurnRomInfo GensitouRomDesc[] = {
 	{ "gt-j2.2h",      0x20000, 0xa2da0b6b, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
@@ -854,7 +854,7 @@ STD_ROM_FN(Gensitou)
 
 struct BurnDriver BurnDrvGensitou = {
 	"gensitou", "prehisle", NULL, NULL, "1989",
-	"Genshi-Tou 1930's (Japan)\0", NULL, "SNK", "Prehistoric Isle (SNK)",
+	"Genshitou 1930's\0", NULL, "SNK", "Prehistoric Isle (SNK)",
 	L"Genshi-Tou 1930's (Japan)\0\u539F\u59CB\u5CF6 1930's\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, GensitouRomInfo, GensitouRomName, NULL, NULL, NULL, NULL, PrehisleInputInfo, PrehisleDIPInfo,

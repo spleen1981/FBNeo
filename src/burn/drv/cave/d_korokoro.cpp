@@ -15,7 +15,6 @@ static UINT8 *Rom01;
 static UINT8 *Ram01;
 
 static UINT8 DrvReset = 0;
-static UINT8 bDrawScreen;
 static bool bVBlank;
 
 static INT32 korokoro_hopper = 0;
@@ -30,6 +29,7 @@ static INT32 nCurrentCPU;
 static INT32 nCyclesDone[2];
 static INT32 nCyclesTotal[2];
 static INT32 nCyclesSegment;
+static INT32 nCyclesExtra;
 
 static const eeprom_interface eeprom_interface_93C46_8bit =
 {
@@ -283,6 +283,7 @@ static INT32 DrvDoReset()
 	nUnknownIRQ = 1;
 
 	nIRQPending = 0;
+	nCyclesExtra = 0;
 
 	return 0;
 }
@@ -327,15 +328,8 @@ static INT32 DrvDraw()
 
 	CaveSpriteBuffer();
 
-	if (bDrawScreen) {
-		CaveTileRender(1);					// Render tiles
-	}
+	CaveTileRender(1);					// Render tiles
 
-	return 0;
-}
-
-inline static INT32 CheckSleep(INT32)
-{
 	return 0;
 }
 
@@ -363,7 +357,7 @@ static INT32 DrvFrame()
 	SekNewFrame();
 
 	nCyclesTotal[0] = (INT32)((INT64)16000000 * nBurnCPUSpeedAdjust / (0x0100 * CAVE_REFRESHRATE));
-	nCyclesDone[0] = 0;
+	nCyclesDone[0] = nCyclesExtra;
 
 	nCyclesVBlank = nCyclesTotal[0] - (INT32)((nCyclesTotal[0] * CAVE_VBLANK_LINES) / 271.5);
 	bVBlank = false;
@@ -393,11 +387,7 @@ static INT32 DrvFrame()
 		if (!bVBlank && nNext > nCyclesVBlank) {
 			if (nCyclesDone[nCurrentCPU] < nCyclesVBlank) {
 				nCyclesSegment = nCyclesVBlank - nCyclesDone[nCurrentCPU];
-				if (!CheckSleep(nCurrentCPU)) {							// See if this CPU is busywaiting
-					nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-				} else {
-					nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-				}
+				nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 			}
 
 			if (pBurnDraw != NULL) {
@@ -410,11 +400,7 @@ static INT32 DrvFrame()
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		if (!CheckSleep(nCurrentCPU)) {									// See if this CPU is busywaiting
-			nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		} else {
-			nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-		}
+        nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 
 		nCurrentCPU = -1;
 	}
@@ -430,6 +416,7 @@ static INT32 DrvFrame()
 		}
 	}
 
+    nCyclesExtra = nCyclesDone[0] - nCyclesTotal[0];
 	SekClose();
 
 	return 0;
@@ -448,7 +435,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 	if (nAction & ACB_VOLATILE) {		// Scan volatile ram
 
 		memset(&ba, 0, sizeof(ba));
-    		ba.Data		= RamStart;
+		ba.Data		= RamStart;
 		ba.nLen		= RamEnd - RamStart;
 		ba.szName	= "RAM";
 		BurnAcb(&ba);
@@ -460,7 +447,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(nVideoIRQ);
 		SCAN_VAR(nSoundIRQ);
 		SCAN_VAR(nUnknownIRQ);
-		SCAN_VAR(bVBlank);
+		SCAN_VAR(nCyclesExtra);
 
 		SCAN_VAR(korokoro_hopper);
 
@@ -475,15 +462,15 @@ static INT32 MemIndex()
 	UINT8* Next; Next = Mem;
 
 	Rom01			= Next; Next += 0x080000;		// 68K program
-	CaveSpriteROM		= Next; Next += 0x400000;
-	CaveTileROM[0]		= Next; Next += 0x200000;		// Tile layer 0
+	CaveSpriteROM	= Next; Next += 0x400000;
+	CaveTileROM[0]	= Next; Next += 0x200000;		// Tile layer 0
 	YMZ280BROM		= Next; Next += 0x200000;
 
 	RamStart		= Next;
 
 	Ram01			= Next; Next += 0x010000;		// CPU #0 work RAM
-	CaveTileRAM[0]		= Next; Next += 0x008000;
-	CaveSpriteRAM		= Next; Next += 0x010000;
+	CaveTileRAM[0]	= Next; Next += 0x008000;
+	CaveSpriteRAM	= Next; Next += 0x010000;
 	CavePalSrc		= Next; Next += 0x010000;		// palette
 
 	RamEnd			= Next;
@@ -591,8 +578,6 @@ static INT32 DrvInit()
 	YMZ280BSetRoute(BURN_SND_YMZ280B_YMZ280B_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	YMZ280BSetRoute(BURN_SND_YMZ280B_YMZ280B_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 
-	bDrawScreen = true;
-
 	DrvDoReset(); // Reset machine
 
 	return 0;
@@ -671,8 +656,6 @@ static INT32 crushermInit()
 	YMZ280BSetRoute(BURN_SND_YMZ280B_YMZ280B_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	YMZ280BSetRoute(BURN_SND_YMZ280B_YMZ280B_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 
-	bDrawScreen = true;
-
 	DrvDoReset(); // Reset machine
 
 	return 0;
@@ -698,7 +681,7 @@ STD_ROM_FN(korokoro)
 struct BurnDriver BurnDrvKorokoro = {
 	"korokoro", NULL, NULL, NULL, "1999",
 	"Koro Koro Quest (Japan)\0", NULL, "Takumi", "Cave",
-	NULL, NULL, NULL, NULL,
+	L"Koro Koro Quest\0\u30b3\u30ed\u30b3\u30ed\u30af\u30a8\u30b9\u30c8 (Japan)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_ONLY, GBF_MISC, 0,
 	NULL, korokoroRomInfo, korokoroRomName, NULL, NULL, NULL, NULL, KorokoroInputInfo, KorokoroDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
@@ -726,7 +709,7 @@ STD_ROM_FN(crusherm)
 struct BurnDriver BurnDrvCrusherm = {
 	"crusherm", NULL, NULL, NULL, "1999",
 	"Crusher Makochan (Japan)\0", NULL, "Takumi", "Miscellaneous",
-	NULL, NULL, NULL, NULL,
+	L"Crusher Mako-chan\0\u30af\u30e9\u30c3\u30b7\u30e3\u30fc\u30de\u30b3\u3061\u3083\u3093 (Japan)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_ONLY, GBF_MINIGAMES, 0,
 	NULL, crushermRomInfo, crushermRomName, NULL, NULL, NULL, NULL, KorokoroInputInfo, KorokoroDIPInfo,
 	crushermInit, DrvExit, DrvFrame, DrvDraw, DrvScan,

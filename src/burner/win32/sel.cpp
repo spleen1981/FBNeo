@@ -3,9 +3,9 @@
 #include "burner.h"
 #include <process.h>
 
-// reduce the total number of sets by this number - (isgsm, neogeo, nmk004, pgm, skns, ym2608, coleco, msx_msx, spectrum, spec128, decocass, midssio, cchip, fdsbios, ngp, bubsys, channelf, namcoc69, namcoc70, namcoc75)
+// reduce the total number of sets by this number - (isgsm, neogeo, nmk004, pgm, skns, ym2608, coleco, msx_msx, spectrum, spec128, spec1282a, decocass, midssio, cchip, fdsbios, ngp, bubsys, channelf, namcoc69, namcoc70, namcoc75)
 // don't reduce for these as we display them in the list (neogeo, neocdz)
-#define REDUCE_TOTAL_SETS_BIOS      20
+#define REDUCE_TOTAL_SETS_BIOS      21
 
 UINT_PTR nTimer					= 0;
 UINT_PTR nInitPreviewTimer		= 0;
@@ -47,7 +47,7 @@ bool bIconsLoaded				= 0;
 bool bIconsOnlyParents          = 1;
 int nIconsXDiff;
 int nIconsYDiff;
-static HICON hDrvIcon[19999];
+static HICON *hDrvIcon;
 bool bGameInfoOpen				= false;
 
 // Dialog Sizing
@@ -297,7 +297,7 @@ static UINT64 MASKALL				= ((UINT64)MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 
 #define MASKSEGAGRP				(MASKSEGA | MASKSG1000 | MASKSMS | MASKMEGADRIVE | MASKGG)
 
 UINT64 nLoadMenuShowX			= 0; // hardware etc
-int nLoadMenuShowY				= 0; // selector options
+int nLoadMenuShowY				= AVAILABLE; // selector options, default to show available
 int nLoadMenuBoardTypeFilter	= 0;
 int nLoadMenuGenreFilter		= 0;
 int nLoadMenuFavoritesFilter	= 0;
@@ -656,7 +656,7 @@ static int SelListMake()
 
 		if(!gameAv[nBurnDrvActive]) nMissingDrvCount++;
 
-		UINT64 nHardware = (UINT64)1 << (BurnDrvGetHardwareCode() >> 24);
+		UINT64 nHardware = (UINT64)1 << (((UINT32)BurnDrvGetHardwareCode() >> 24) & 0x3f);
 		if ((nHardware & MASKALL) && ((nHardware & nLoadMenuShowX) || (nHardware & MASKALL) == 0)) {
 			continue;
 		}
@@ -721,7 +721,7 @@ static int SelListMake()
 
 		if(!gameAv[nBurnDrvActive]) nMissingDrvCount++;
 
-		UINT64 nHardware = (UINT64)1 << (BurnDrvGetHardwareCode() >> 24);
+		UINT64 nHardware = (UINT64)1 << (((UINT32)BurnDrvGetHardwareCode() >> 24) & 0x3f);
 		if ((nHardware & MASKALL) && ((nHardware & nLoadMenuShowX) || ((nHardware & MASKALL) == 0))) {
 			continue;
 		}
@@ -927,6 +927,7 @@ static void SelOkay()
 	}
 #endif
 	nDialogSelect = nSelect;
+	GetIpsDrvDefine();	// Entry point : SelOkay
 
 	bDialogCancel = false;
 	MyEndDialog();
@@ -1021,16 +1022,18 @@ static VOID CALLBACK InitPreviewTimerProc(HWND, UINT, UINT_PTR, DWORD)
 	UpdatePreview(true, szAppPreviewsPath, IDC_SCREENSHOT_H, IDC_SCREENSHOT_V);
 
 	if (GetIpsNumPatches()) {
-		if (!nShowMVSCartsOnly) EnableWindow(GetDlgItem(hSelDlg, IDC_SEL_IPSMANAGER), TRUE);
+		if (!nShowMVSCartsOnly) {
+			EnableWindow(GetDlgItem(hSelDlg, IDC_SEL_IPSMANAGER), TRUE);
+			LoadIpsActivePatches();
+
+			// Whether IDC_SEL_APPLYIPS is enabled must be subordinate to IDC_SEL_IPSMANAGER
+			// to verify that xxx.dat is not removed after saving config.
+			// Reduce useless array lookups.
+			EnableWindow(GetDlgItem(hSelDlg, IDC_SEL_APPLYIPS), GetIpsNumActivePatches());
+		}
 	} else {
 		EnableWindow(GetDlgItem(hSelDlg, IDC_SEL_IPSMANAGER), FALSE);
-	}
-
-	LoadIpsActivePatches();
-	if (GetIpsNumActivePatches()) {
-		if (!nShowMVSCartsOnly) EnableWindow(GetDlgItem(hSelDlg, IDC_SEL_APPLYIPS), TRUE);
-	} else {
-		EnableWindow(GetDlgItem(hSelDlg, IDC_SEL_APPLYIPS), FALSE);
+		EnableWindow(GetDlgItem(hSelDlg, IDC_SEL_APPLYIPS), FALSE);	// xxx.dat path not found, must be disabled.
 	}
 
 	KillTimer(hSelDlg, nInitPreviewTimer);
@@ -1178,6 +1181,64 @@ static int UpdatePreview(bool bReset, TCHAR *szPath, int HorCtrl, int VerCtrl)
 	return 0;
 }
 
+// Sometimes we have different setnames than other emu's, the table below
+// will translate our set to their set to keep hiscore.dat/arcadedb happy
+// NOTE: asciiz version repeated in burn/hiscore.cpp
+
+struct game_replace_entry {
+	TCHAR fb_name[80];
+	TCHAR mame_name[80];
+};
+
+static game_replace_entry replace_table[] = {
+	{ _T("vsraidbbay"),			_T("bnglngby")		},
+	{ _T("vsrbibbal"),			_T("rbibb")			},
+	{ _T("vsbattlecity"),		_T("btlecity")		},
+	{ _T("vscastlevania"),		_T("cstlevna")		},
+	{ _T("vsclucluland"),		_T("cluclu")		},
+	{ _T("vsdrmario"),			_T("drmario")		},
+	{ _T("vsduckhunt"),			_T("duckhunt")		},
+	{ _T("vsexcitebike"),		_T("excitebk")		},
+	{ _T("vsfreedomforce"),		_T("vsfdf")			},
+	{ _T("vsgoonies"),			_T("goonies")		},
+	{ _T("vsgradius"),			_T("vsgradus")		},
+	{ _T("vsgumshoe"),			_T("vsgshoe")		},
+	{ _T("vshogansalley"),		_T("hogalley")		},
+	{ _T("vsiceclimber"),		_T("iceclimb")		},
+	{ _T("vsmachrider"),		_T("nvs_machrider")	},
+	{ _T("vsmightybomjack"),	_T("nvs_mightybj")	},
+	{ _T("vsninjajkun"),		_T("jajamaru")		},
+	{ _T("vspinball"),			_T("vspinbal")		},
+	{ _T("vsplatoon"),			_T("nvs_platoon")	},
+	{ _T("vsslalom"),			_T("vsslalom")		},
+	{ _T("vssoccer"),			_T("vssoccer")		},
+	{ _T("vsstarluster"),		_T("starlstr")		},
+	{ _T("vssmgolf"),			_T("smgolf")		},
+	{ _T("vssmgolfla"),			_T("ladygolf")		},
+	{ _T("vssmb"),				_T("suprmrio")		},
+	{ _T("vssuperskykid"),		_T("vsskykid")		},
+	{ _T("vssuperxevious"),		_T("supxevs")		},
+	{ _T("vstetris"),			_T("vstetris")		},
+	{ _T("vstkoboxing"),		_T("tkoboxng")		},
+	{ _T("vstopgun"),			_T("topgun")		},
+	{ _T("\0"), 				_T("\0")			}
+};
+
+static TCHAR *fbn_to_mame(TCHAR *name)
+{
+	TCHAR *game = name; // default to passed name
+
+	// Check the above table to see if we should use an alias
+	for (INT32 i = 0; replace_table[i].fb_name[0] != '\0'; i++) {
+		if (!_tcscmp(replace_table[i].fb_name, name)) {
+			game = replace_table[i].mame_name;
+			break;
+		}
+	}
+
+	return game;
+}
+
 static unsigned __stdcall DoShellExThread(void *arg)
 {
 	ShellExecute(NULL, _T("open"), (TCHAR*)arg, NULL, NULL, SW_SHOWNORMAL);
@@ -1189,12 +1250,11 @@ static void ViewEmma()
 {
 	HANDLE hThread = NULL;
 	unsigned ThreadID = 0;
-	TCHAR szShellExURL[MAX_PATH];
+	static TCHAR szShellExURL[MAX_PATH];
 
-	_stprintf(szShellExURL, _T("http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=%s"), BurnDrvGetText(DRV_NAME));
+	_stprintf(szShellExURL, _T("http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=%s"), fbn_to_mame(BurnDrvGetText(DRV_NAME)));
 
 	hThread = (HANDLE)_beginthreadex(NULL, 0, DoShellExThread, (void*)szShellExURL, 0, &ThreadID);
-	Sleep(150); // allow arguments to pass to ShellExecute() in new thread before they get disposed.
 }
 
 static void RebuildEverything()
@@ -1424,6 +1484,8 @@ void LoadDrvIcons()
 {
 	TCHAR szIcon[MAX_PATH];
 
+	hDrvIcon = (HICON *)malloc((nBurnDrvCount + 256) * sizeof(HICON));
+
 	if(nIconsSize == ICON_16x16) {
 		nIconsSizeXY	= 16;
 		nIconsYDiff		= 4;
@@ -1587,6 +1649,8 @@ void UnloadDrvIcons() {
 		DestroyIcon(hDrvIcon[nDrvIndex]);
 		hDrvIcon[nDrvIndex] = NULL;
 	}
+
+	free(hDrvIcon);
 }
 
 #define UM_CHECKSTATECHANGE (WM_USER + 100)
@@ -1699,8 +1763,7 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 
 		EnableWindow(GetDlgItem(hDlg, IDC_SEL_APPLYIPS), FALSE);
 		EnableWindow(GetDlgItem(hDlg, IDC_SEL_IPSMANAGER), FALSE);
-		bDoIpsPatch = FALSE;
-		IpsPatchExit();
+		IpsPatchExit();	// bDoIpsPatch = false;
 
 		WndInMid(hDlg, hParent);
 
@@ -2593,16 +2656,18 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
             CheckDlgButton(hDlg, IDC_SEL_APPLYIPS, BST_UNCHECKED);
 
             if (GetIpsNumPatches()) {
-				if (!nShowMVSCartsOnly) EnableWindow(GetDlgItem(hDlg, IDC_SEL_IPSMANAGER), TRUE);
+				if (!nShowMVSCartsOnly) {
+					EnableWindow(GetDlgItem(hDlg, IDC_SEL_IPSMANAGER), TRUE);
+					LoadIpsActivePatches();
+
+					// Whether IDC_SEL_APPLYIPS is enabled must be subordinate to IDC_SEL_IPSMANAGER
+					// to verify that xxx.dat is not removed after saving config.
+					// Reduce useless array lookups.
+					EnableWindow(GetDlgItem(hDlg, IDC_SEL_APPLYIPS), GetIpsNumActivePatches());
+				}
 			} else {
 				EnableWindow(GetDlgItem(hDlg, IDC_SEL_IPSMANAGER), FALSE);
-			}
-
-			LoadIpsActivePatches();
-			if (GetIpsNumActivePatches()) {
-				if (!nShowMVSCartsOnly) EnableWindow(GetDlgItem(hDlg, IDC_SEL_APPLYIPS), TRUE);
-			} else {
-				EnableWindow(GetDlgItem(hDlg, IDC_SEL_APPLYIPS), FALSE);
+				EnableWindow(GetDlgItem(hDlg, IDC_SEL_APPLYIPS), FALSE);	// xxx.dat path not found, must be disabled.
 			}
 
 			// Get the text from the drivers via BurnDrvGetText()

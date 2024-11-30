@@ -6,6 +6,7 @@
 #include "m6800_intf.h"
 #include "burn_ym2151.h"
 #include "namco_snd.h"
+#include "stream.h" // n63701x sound
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;
@@ -46,6 +47,10 @@ static UINT8 DrvJoy3[8];
 static UINT8 DrvDips[2];
 static UINT8 DrvInputs[3];
 static UINT8 DrvReset;
+
+static INT32 nExtraCycles[3];
+
+static Stream stream;
 
 struct voice_63701x
 {
@@ -523,7 +528,9 @@ static void namco_63701x_write(INT32 offset, UINT8 data)
 {
 	offset &= 3;
 
-	int ch = offset / 2;
+	INT32 ch = offset / 2;
+
+	stream.update();
 
 	if (offset & 1)
 		m_voices[ch].select = data;
@@ -541,17 +548,15 @@ static void namco_63701x_write(INT32 offset, UINT8 data)
 	}
 }
 
-static void namco_63701x_update(INT16 *outputs, INT32  samples)
+static void namco_63701x_update(INT16 **streams, INT32  samples)
 {
-	static const INT32  vol_table[4] = { 26, 84, 200, 258 };
-
-	INT16 t_samples[100];
-
-	memset (t_samples, 0, sizeof(t_samples));
+	const INT32 vol_table[4] = { 26, 84, 200, 258 };
 
 	for (INT32 ch = 0; ch < 2; ch++)
 	{
-		INT16 *buf = t_samples;
+		INT16 *buf = streams[0];
+		if (ch == 0) memset(buf, 0, samples * sizeof(INT16));
+
 		voice_63701x *v = &m_voices[ch];
 
 		if (v->playing)
@@ -560,7 +565,7 @@ static void namco_63701x_update(INT16 *outputs, INT32  samples)
 			INT32  pos = v->position;
 			INT32  vol = vol_table[v->volume];
 
-			for (INT32 p = 0; p < 100; p++)
+			for (INT32 p = 0; p < samples; p++)
 			{
 				if (v->silence_counter)
 				{
@@ -592,17 +597,6 @@ static void namco_63701x_update(INT16 *outputs, INT32  samples)
 			v->position = pos;
 		}
 	}
-
-	INT16 *buffer = outputs;
-
-	for (INT32 i = 0; i < samples; i++) {
-		INT32 offset = (i * 100) / nBurnSoundLen;
-		if (offset > 99) offset = 99; // safe
-		buffer[0] += t_samples[offset];
-		buffer[1] += t_samples[offset];
-		buffer += 2;
-	}
-
 }
 
 static UINT8 namcos86_cpu0_read(UINT16 address)
@@ -851,7 +845,7 @@ static void wndrmomo_cpu1_write(UINT16 address, UINT8 data)
 
 static inline UINT8 dip0_read()
 {
-	int rhi, rlo;
+	INT32 rhi, rlo;
 
 	rhi  = ( DrvDips[0] & 0x01 ) << 4;
 	rhi |= ( DrvDips[0] & 0x04 ) << 3;
@@ -868,7 +862,7 @@ static inline UINT8 dip0_read()
 
 static inline UINT8 dip1_read()
 {
-	int rhi, rlo;
+	INT32 rhi, rlo;
 
 	rhi  = ( DrvDips[0] & 0x02 ) << 3;
 	rhi |= ( DrvDips[0] & 0x08 ) << 2;
@@ -906,14 +900,11 @@ static void namcos86_mcu_write(UINT16 address, UINT8 data)
 		case 0x2800:
 		case 0x3800:
 		case 0x6000:
-			BurnYM2151SelectRegister(data);
-		return;
-
 		case 0x2001:
 		case 0x2801:
 		case 0x3801:
 		case 0x6001:
-			BurnYM2151WriteRegister(data);
+			BurnYM2151Write(address & 1, data);
 		return;
 
 		case 0x8000:
@@ -1074,6 +1065,8 @@ static INT32 DrvDoReset(INT32 clear_mem)
 	tilebank = 0;
 	memset (scroll, 0, sizeof(scroll));
 	memset (nBankData, 0, sizeof(nBankData));
+
+	memset(nExtraCycles, 0, sizeof(nExtraCycles));
 
 	HiscoreReset();
 
@@ -1287,12 +1280,9 @@ static INT32 DrvROMload()
 
 static INT32 CommonInit(INT32 nSubCPUConfig, INT32 pcmdata)
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnSetRefreshRate(60.606061);
+
+	BurnAllocMemIndex();
 
 	{
 		if (DrvROMload()) return 1;
@@ -1413,14 +1403,21 @@ static INT32 CommonInit(INT32 nSubCPUConfig, INT32 pcmdata)
 		break;
 	}
 
-	BurnYM2151Init(3579580);
+	BurnYM2151InitBuffered(3579580, 1, NULL, 0);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.60, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.60, BURN_SND_ROUTE_RIGHT);
+	BurnTimerAttachHD63701(1536000);
 
 	NamcoSoundInit(24000, 8, 1);
 	NamcoSoundSetAllRoutes(0.50 * 10.0 / 16.0, BURN_SND_ROUTE_BOTH);
 
 	has_pcm = pcmdata;
+
+	if (has_pcm) {
+		stream.init(6000, nBurnSoundRate, 1, 1, namco_63701x_update);
+		stream.set_buffered(HD63701TotalCycles, 1536000);
+		stream.set_volume(1.00);
+	}
 
 	GenericTilesInit();
 	GenericTilemapInit(0, TILEMAP_SCAN_ROWS, layer0_map_callback, 8, 8, 64, 32);
@@ -1452,7 +1449,11 @@ static INT32 DrvExit()
 
 	BurnYM2151Exit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
+
+	if (has_pcm) {
+		stream.exit();
+	}
 
 	has_pcm = 0;
 	enable_bankswitch2 = 0;
@@ -1558,15 +1559,7 @@ static INT32 DrvDraw()
 		DrvRecalc = 0;
 	}
 
-	BurnTransferClear();
-
-	{
-		INT32 bgcolor = (backcolor << 3) | 7;
-
-		for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++) {
-			pTransDraw[i] = bgcolor;
-		}
-	}
+	BurnTransferClear((backcolor << 3) | 7);
 
 	flipscreen = DrvSprRAM[0x1ff6] & 1;
 
@@ -1596,7 +1589,7 @@ static INT32 DrvDraw()
 		}
 	}
 
-	draw_sprites();
+	if (nSpriteEnable & 1) draw_sprites();
 
 	BurnTransferCopy(DrvPalette);
 
@@ -1629,44 +1622,37 @@ static INT32 DrvFrame()
 	}
 
 	INT32 nInterleave = 800;
-	INT32 nSoundBufferPos = 0;
-	INT32 nCyclesTotal[3] = { 1536000 / 60, 1536000 / 60, 1536000 / 60 };
-	INT32 nCyclesDone[3] = { 0, 0, 0 };
+	INT32 nCyclesTotal[3] = { ((double)1536000 * 100 / nBurnFPS), ((double)1536000 * 100 / nBurnFPS), ((double)1536000 * 100 / nBurnFPS) };
+	INT32 nCyclesDone[3] = { nExtraCycles[0], nExtraCycles[1], nExtraCycles[2] };
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		M6809Open(0);
 		CPU_RUN(0, M6809);
-		if (i == 725) M6809SetIRQLine(0, CPU_IRQSTATUS_ACK);
+		if (i == nInterleave - 1) M6809SetIRQLine(0, CPU_IRQSTATUS_ACK);
 		M6809Close();
 
 		M6809Open(1);
 		CPU_RUN(1, M6809);
-		if (i == 725) M6809SetIRQLine(0, CPU_IRQSTATUS_ACK);
+		if (i == nInterleave - 1) M6809SetIRQLine(0, CPU_IRQSTATUS_ACK);
 		M6809Close();
 
 		HD63701Open(0);
-		CPU_RUN(2, HD63701);
-		if (i == 725) HD63701SetIRQLine(0, CPU_IRQSTATUS_AUTO);
+		CPU_RUN_TIMER(2);
+		if (i == nInterleave - 1) HD63701SetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		HD63701Close();
-
-		if ((i % 8) == 7) {
-			if (pBurnSoundOut) {
-				INT32 nSegment = nBurnSoundLen / (nInterleave / 8);
-				BurnYM2151Render(pBurnSoundOut + (nSoundBufferPos << 1), nSegment);
-				nSoundBufferPos += nSegment;
-			}
-		}
 	}
 
-	if (pBurnSoundOut) {
-		INT32 nSegment = nBurnSoundLen - nSoundBufferPos;
-		if (nSegment > 0) {
-			BurnYM2151Render(pBurnSoundOut + (nSoundBufferPos << 1), nSegment);
-		}
-		NamcoSoundUpdate(pBurnSoundOut, nBurnSoundLen);
+	nExtraCycles[0] = nCyclesDone[0] - nCyclesTotal[0];
+	nExtraCycles[1] = nCyclesDone[1] - nCyclesTotal[1];
+	nExtraCycles[2] = nCyclesDone[2] - nCyclesTotal[2];
 
-		namco_63701x_update(pBurnSoundOut, nBurnSoundLen);
+	if (pBurnSoundOut) {
+		BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
+		NamcoSoundUpdate(pBurnSoundOut, nBurnSoundLen);
+		if (has_pcm) {
+			stream.render(pBurnSoundOut, nBurnSoundLen);
+		}
 	}
 
 	if (pBurnDraw) {
@@ -1711,11 +1697,15 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		SCAN_VAR(m_voices);
 		SCAN_VAR(buffer_sprites);
+		SCAN_VAR(watchdog);
 		SCAN_VAR(watchdog1);
 		SCAN_VAR(backcolor);
 		SCAN_VAR(tilebank);
+		SCAN_VAR(flipscreen);
 		SCAN_VAR(scroll);
 		SCAN_VAR(nBankData);
+
+		SCAN_VAR(nExtraCycles);
 	}
 
 	if (nAction & ACB_WRITE) {

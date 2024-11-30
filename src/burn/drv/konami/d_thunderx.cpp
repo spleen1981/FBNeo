@@ -43,29 +43,29 @@ static UINT8 DrvReset;
 static INT32 thunderx = 0;
 
 static struct BurnInputInfo ThunderxInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 start"},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 start"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 start"},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 0,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 2,	"service"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Thunderx)
@@ -341,20 +341,16 @@ static void thunderx_videobank(INT32 data)
 	nDrvKonamiBank[0] = data;
 	layer_priority = data & 0x08;
 
-	if (data & 0x01) {
+	if (data & 0x10) {
+		konamiMapMemory(pmcram, 0x5800, 0x5fff, MAP_RAM);
+	} else if (data & 0x01) {
 		konamiMapMemory(DrvBankRAM, 0x5800, 0x5fff, MAP_RAM);
-	} else if (data & 0x10) {
-		if (thunderx_1f98_data & 2) {
-			konamiMapMemory(pmcram + 0x800, 0x5800, 0x5fff, MAP_RAM);
-		} else {
-			konamiMapMemory(pmcram, 0x5800, 0x5fff, MAP_RAM); // junk?
-		}
 	} else {
 		konamiMapMemory(DrvPalRAM,  0x5800, 0x5fff, MAP_RAM);
 	}
 }
 
-void scontra_main_write(UINT16 address, UINT8 data)
+static void scontra_main_write(UINT16 address, UINT8 data)
 {
 	switch (address)
 	{
@@ -389,7 +385,7 @@ void scontra_main_write(UINT16 address, UINT8 data)
 	}
 }
 
-UINT8 scontra_main_read(UINT16 address)
+static UINT8 scontra_main_read(UINT16 address)
 {
 	switch (address)
 	{
@@ -429,7 +425,7 @@ static void scontra_snd_bankswitch_w(INT32 data)
 	k007232_set_bank(0, bank_A, bank_B );
 }
 
-void __fastcall scontra_sound_write(UINT16 address, UINT8 data)
+static void __fastcall scontra_sound_write(UINT16 address, UINT8 data)
 {
 	if ((address & 0xfff0) == 0xb000) {
 		K007232WriteReg(0, address & 0x0f, data);
@@ -452,7 +448,7 @@ void __fastcall scontra_sound_write(UINT16 address, UINT8 data)
 	}
 }
 
-UINT8 __fastcall scontra_sound_read(UINT16 address)
+static UINT8 __fastcall scontra_sound_read(UINT16 address)
 {
 	if ((address & 0xfff0) == 0xb000) {
 		return K007232ReadReg(0, address & 0x0f);
@@ -500,12 +496,12 @@ static void K051960Callback(INT32 *, INT32 *color,INT32 *priority, INT32 *)
 
 static void thunderx_set_lines(INT32 lines)
 {
-	nDrvKonamiBank[0] = lines;
+	nDrvKonamiBank[1] = lines;
 
 	INT32 nBank = 0x10000 + (((lines & 0x0f) ^ 0x08) * 0x2000);
 	if (nBank >= 0x28000) nBank -= 0x20000;
 
-	konamiMapMemory(DrvKonROM + nBank, 0x6000, 0x7fff, MAP_ROM); 
+	konamiMapMemory(DrvKonROM + nBank, 0x6000, 0x7fff, MAP_ROM);
 }
 
 static INT32 DrvDoReset()
@@ -543,8 +539,8 @@ static INT32 MemIndex()
 
 	DrvGfxROM0		= Next; Next += 0x100000;
 	DrvGfxROM1		= Next; Next += 0x100000;
-	DrvGfxROMExp0		= Next; Next += 0x200000;
-	DrvGfxROMExp1		= Next; Next += 0x200000;
+	DrvGfxROMExp0	= Next; Next += 0x200000;
+	DrvGfxROMExp1	= Next; Next += 0x200000;
 
 	DrvSndROM		= Next; Next += 0x080000;
 
@@ -560,7 +556,7 @@ static INT32 MemIndex()
 
 	soundlatch		= Next; Next += 0x000001;
 
-	nDrvKonamiBank		= Next; Next += 0x000002;
+	nDrvKonamiBank	= Next; Next += 0x000002;
 
 	pmcram			= Next; Next += 0x001000;
 
@@ -574,12 +570,7 @@ static INT32 DrvInit(INT32 type)
 {
 	GenericTilesInit();
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (type) {
@@ -681,8 +672,9 @@ static INT32 DrvInit(INT32 type)
 	ZetSetReadHandler(scontra_sound_read);
 	ZetClose();
 
-	BurnYM2151Init(3579545);
+	BurnYM2151InitBuffered(3579545, 1, NULL, 0);
 	BurnYM2151SetAllRoutes(1.00, BURN_SND_ROUTE_BOTH);
+	BurnTimerAttachZet(3579545);
 
 	K007232Init(0, 3579545, DrvSndROM, 0x80000);
 	K007232SetPortWriteHandler(0, DrvK007232VolCallback);
@@ -715,7 +707,7 @@ static INT32 DrvExit()
 	K007232Exit();
 	BurnYM2151Exit();
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -770,7 +762,6 @@ static INT32 DrvFrame()
 	konamiNewFrame();
 	ZetNewFrame();
 
-	INT32 nSoundBufferPos = 0;
 	INT32 nInterleave = 100;
 	INT32 nCyclesTotal[2] = { 3000000 / 60, 3579545 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
@@ -780,32 +771,15 @@ static INT32 DrvFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		INT32 nSegment = (nCyclesTotal[0] / nInterleave) * (i + 1);
-
-		nCyclesDone[0] += konamiRun(nSegment - nCyclesDone[0]);
-
-		nSegment = (nCyclesTotal[1] / nInterleave) * (i + 1);
-
-		nCyclesDone[1] += ZetRun(nSegment - nCyclesDone[1]);
-
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			K007232Update(0, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
+		CPU_RUN(0, konami);
+		CPU_RUN_TIMER(1);
 	}
 
 	if (K052109_irq_enabled) konamiSetIrqLine(KONAMI_IRQ_LINE, CPU_IRQSTATUS_AUTO);
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		if (nSegmentLength) {
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			K007232Update(0, pSoundBuf, nSegmentLength);
-		}
+		BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
+		K007232Update(0, pBurnSoundOut, nBurnSoundLen);
 	}
 
 	konamiClose();
@@ -818,7 +792,7 @@ static INT32 DrvFrame()
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -826,9 +800,8 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		*pnMin = 0x029705;
 	}
 
-	if (nAction & ACB_VOLATILE) {		
+	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
-
 		ba.Data	  = AllRam;
 		ba.nLen	  = RamEnd - AllRam;
 		ba.szName = "All Ram";
@@ -841,11 +814,8 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		K007232Scan(nAction, pnMin);
 
 		KonamiICScan(nAction);
-	}
 
-	if (nAction & ACB_DRIVER_DATA) {
 		SCAN_VAR(thunderx_1f98_data);
-
 		SCAN_VAR(layer_priority);
 	}
 
@@ -872,44 +842,44 @@ static struct BurnRomInfo scontraRomDesc[] = {
 
 	{ "775-c01.bin",	0x08000, 0x0ced785a, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 Code
 
-	{ "775-a07a.bin",	0x20000, 0xe716bdf3, 3 | BRF_GRA },           //  3 Background Tiles
-	{ "775-a07e.bin",	0x20000, 0x0986e3a5, 3 | BRF_GRA },           //  4
-	{ "775-a08a.bin",	0x20000, 0x3ddd11a4, 3 | BRF_GRA },           //  5
-	{ "775-a08e.bin",	0x20000, 0x1007d963, 3 | BRF_GRA },           //  6
-	{ "775-f07c.bin",	0x10000, 0xb0b30915, 3 | BRF_GRA },           //  7
-	{ "775-f07g.bin",	0x10000, 0xfbed827d, 3 | BRF_GRA },           //  8
-	{ "775-f08c.bin",	0x10000, 0x53abdaec, 3 | BRF_GRA },           //  9
-	{ "775-f08g.bin",	0x10000, 0x3df85a6e, 3 | BRF_GRA },           // 10
-	{ "775-f07d.bin",	0x10000, 0xf184be8e, 3 | BRF_GRA },           // 11
-	{ "775-f07h.bin",	0x10000, 0x7b56c348, 3 | BRF_GRA },           // 12
-	{ "775-f08d.bin",	0x10000, 0x102dcace, 3 | BRF_GRA },           // 13
-	{ "775-f08h.bin",	0x10000, 0xad9d7016, 3 | BRF_GRA },           // 14
+	{ "775-a07a.6f",	0x20000, 0xe716bdf3, 3 | BRF_GRA },           //  3 Background Tiles
+	{ "775-a07e.5f",	0x20000, 0x0986e3a5, 3 | BRF_GRA },           //  4
+	{ "775-a08a.4f",	0x20000, 0x3ddd11a4, 3 | BRF_GRA },           //  5
+	{ "775-a08e.3f",	0x20000, 0x1007d963, 3 | BRF_GRA },           //  6
+	{ "775-f07c.6d",	0x10000, 0xb0b30915, 3 | BRF_GRA },           //  7
+	{ "775-f07g.5d",	0x10000, 0xfbed827d, 3 | BRF_GRA },           //  8
+	{ "775-f08c.4d",	0x10000, 0x53abdaec, 3 | BRF_GRA },           //  9
+	{ "775-f08g.3d",	0x10000, 0x3df85a6e, 3 | BRF_GRA },           // 10
+	{ "775-f07d.7f",	0x10000, 0xf184be8e, 3 | BRF_GRA },           // 11
+	{ "775-f07h.7e",	0x10000, 0x7b56c348, 3 | BRF_GRA },           // 12
+	{ "775-f08d.7d",	0x10000, 0x102dcace, 3 | BRF_GRA },           // 13
+	{ "775-f08h.7c",	0x10000, 0xad9d7016, 3 | BRF_GRA },           // 14
 
-	{ "775-a05a.bin",	0x10000, 0xa0767045, 4 | BRF_GRA },           // 15 Sprites
-	{ "775-a05e.bin",	0x10000, 0x2f656f08, 4 | BRF_GRA },           // 16
-	{ "775-a06a.bin",	0x10000, 0x77a34ad0, 4 | BRF_GRA },           // 17
-	{ "775-a06e.bin",	0x10000, 0x8a910c94, 4 | BRF_GRA },           // 18
-	{ "775-a05b.bin",	0x10000, 0xab8ad4fd, 4 | BRF_GRA },           // 19
-	{ "775-a05f.bin",	0x10000, 0x1c0eb1b6, 4 | BRF_GRA },           // 20
-	{ "775-a06b.bin",	0x10000, 0x563fb565, 4 | BRF_GRA },           // 21
-	{ "775-a06f.bin",	0x10000, 0xe14995c0, 4 | BRF_GRA },           // 22
-	{ "775-f05c.bin",	0x10000, 0x5647761e, 4 | BRF_GRA },           // 23
-	{ "775-f05g.bin",	0x10000, 0xa1692cca, 4 | BRF_GRA },           // 24
-	{ "775-f06c.bin",	0x10000, 0x5ee6f3c1, 4 | BRF_GRA },           // 25
-	{ "775-f06g.bin",	0x10000, 0x2645274d, 4 | BRF_GRA },           // 26
-	{ "775-f05d.bin",	0x10000, 0xad676a6f, 4 | BRF_GRA },           // 27
-	{ "775-f05h.bin",	0x10000, 0x3f925bcf, 4 | BRF_GRA },           // 28
-	{ "775-f06d.bin",	0x10000, 0xc8b764fa, 4 | BRF_GRA },           // 29
-	{ "775-f06h.bin",	0x10000, 0xd6595f59, 4 | BRF_GRA },           // 30
+	{ "775-a05a.11f",	0x10000, 0xa0767045, 4 | BRF_GRA },           // 15 Sprites
+	{ "775-a05e.10f",	0x10000, 0x2f656f08, 4 | BRF_GRA },           // 16
+	{ "775-a06a.9f",	0x10000, 0x77a34ad0, 4 | BRF_GRA },           // 17
+	{ "775-a06e.8f",	0x10000, 0x8a910c94, 4 | BRF_GRA },           // 18
+	{ "775-a05b.11e",	0x10000, 0xab8ad4fd, 4 | BRF_GRA },           // 19
+	{ "775-a05f.10e",	0x10000, 0x1c0eb1b6, 4 | BRF_GRA },           // 20
+	{ "775-a06b.9e",	0x10000, 0x563fb565, 4 | BRF_GRA },           // 21
+	{ "775-a06f.8e",	0x10000, 0xe14995c0, 4 | BRF_GRA },           // 22
+	{ "775-f05c.11d",	0x10000, 0x5647761e, 4 | BRF_GRA },           // 23
+	{ "775-f05g.10d",	0x10000, 0xa1692cca, 4 | BRF_GRA },           // 24
+	{ "775-f06c.9d",	0x10000, 0x5ee6f3c1, 4 | BRF_GRA },           // 25
+	{ "775-f06g.8d",	0x10000, 0x2645274d, 4 | BRF_GRA },           // 26
+	{ "775-f05d.11c",	0x10000, 0xad676a6f, 4 | BRF_GRA },           // 27
+	{ "775-f05h.10c",	0x10000, 0x3f925bcf, 4 | BRF_GRA },           // 28
+	{ "775-f06d.9c",	0x10000, 0xc8b764fa, 4 | BRF_GRA },           // 29
+	{ "775-f06h.8c",	0x10000, 0xd6595f59, 4 | BRF_GRA },           // 30
 
-	{ "775-a04a.bin",	0x10000, 0x7efb2e0f, 5 | BRF_SND },           // 31 K007232 Samples
-	{ "775-a04b.bin",	0x10000, 0xf41a2b33, 5 | BRF_SND },           // 32
-	{ "775-a04c.bin",	0x10000, 0xe4e58f14, 5 | BRF_SND },           // 33
-	{ "775-a04d.bin",	0x10000, 0xd46736f6, 5 | BRF_SND },           // 34
-	{ "775-f04e.bin",	0x10000, 0xfbf7e363, 5 | BRF_SND },           // 35
-	{ "775-f04f.bin",	0x10000, 0xb031ef2d, 5 | BRF_SND },           // 36
-	{ "775-f04g.bin",	0x10000, 0xee107bbb, 5 | BRF_SND },           // 37
-	{ "775-f04h.bin",	0x10000, 0xfb0fab46, 5 | BRF_SND },           // 38
+	{ "775-a04a.11b",	0x10000, 0x7efb2e0f, 5 | BRF_SND },           // 31 K007232 Samples
+	{ "775-a04b.10b",	0x10000, 0xf41a2b33, 5 | BRF_SND },           // 32
+	{ "775-a04c.9b",	0x10000, 0xe4e58f14, 5 | BRF_SND },           // 33
+	{ "775-a04d.8b",	0x10000, 0xd46736f6, 5 | BRF_SND },           // 34
+	{ "775-f04e.11a",	0x10000, 0xfbf7e363, 5 | BRF_SND },           // 35
+	{ "775-f04f.10a",	0x10000, 0xb031ef2d, 5 | BRF_SND },           // 36
+	{ "775-f04g.9a",	0x10000, 0xee107bbb, 5 | BRF_SND },           // 37
+	{ "775-f04h.8a",	0x10000, 0xfb0fab46, 5 | BRF_SND },           // 38
 
 	{ "775a09.b19",		0x00100, 0x46d1e0df, 6 | BRF_OPT },           // 39 Proms
 };

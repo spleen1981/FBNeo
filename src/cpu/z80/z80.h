@@ -35,6 +35,7 @@ typedef struct
 	UINT8	irq_state;			/* irq line state */
 	UINT8   vector;             /* vector */
 	UINT8	after_ei;			/* are we in the EI shadow? */
+	UINT8	after_retn;			/* are we in the RETN shadow? */
 	INT32   cycles_left;
 	INT32   ICount;
 	INT32   end_run;
@@ -84,8 +85,11 @@ void Z80GetContext (void *dst);
 void Z80SetContext (void *src);
 int Z80Scan(int nAction);
 INT32 z80TotalCycles();
+INT32 z80TstateCounter();
 void Z80StopExecute();
 void z80_set_spectrum_tape_callback(int (*tape_cb)());
+void z80_set_cycle_tables_msx();
+void z80_set_cycle_tables(const UINT8 *op, const UINT8 *cb, const UINT8 *ed, const UINT8 *xy, const UINT8 *xycb, const UINT8 *ex);
 
 extern unsigned char Z80Vector;
 extern void (*z80edfe_callback)(Z80_Regs *Regs);
@@ -114,7 +118,9 @@ void ActiveZ80SetAF2(int af2);
 int ActiveZ80GetBC();
 int ActiveZ80GetDE();
 int ActiveZ80GetHL();
+int ActiveZ80GetLastOp();
 int ActiveZ80GetI();
+int ActiveZ80GetR();
 int ActiveZ80GetIX();
 int ActiveZ80GetIM();
 int ActiveZ80GetSP();

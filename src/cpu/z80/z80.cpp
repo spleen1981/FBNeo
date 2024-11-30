@@ -133,10 +133,12 @@ static void capture_opcode_history_start(UINT16 reg_bc, UINT16 reg_ir);
 static void capture_opcode_history_finish();
 static void parse_script(const char *script_desc, CM_SCRIPT_BREAKDOWN *breakdown);
 static bool find_script();
-static void run_script();
+static UINT8 run_script();
 static int  get_ula_delay();
+static void make_ula_delay_lut();
 static int  get_memory_access_delay(UINT16 pc_address);
-static void store_rwinfo(UINT16 addr, UINT8 val, UINT16 flags, const char *dbg);
+static int  get_memory_is_contended(UINT16 pc_address);
+static UINT8 store_rwinfo(UINT16 addr, UINT8 val, UINT16 flags, const char *dbg);
 
 static int		m_ula_variant;			// ULA_VARIANT_SINCLAIR  | ULA_VARIANT_AMSTRAD
 static const char*	m_ula_delay_sequence;		// "654321200"           | "10765432"
@@ -144,13 +146,14 @@ static const char*	m_contended_banks;		// "1357"                | "4567"
 static int		m_contended_banks_length;
 static CM_SCRIPT	m_scripts[MAX_CM_SCRIPTS];	// "pc:4,pc+1:4,ir:1" etc...
 static int 		m_cycles_contention_start;
+static int      m_ula_delay_lut[80000];
 static int 		m_cycles_per_line;
 static int 		m_cycles_per_frame;
 static void		(*m_raster_cb)(int); 			//Let the driver know a good time (in T-States) to update the video raster position.
 static OPCODE_HISTORY	m_opcode_history;		// A list of reads/writes per opcode.
 static int		m_tstate_counter;		// The current t-state / cpu cycle.
 static int		m_selected_bank; 		// What ram bank 7ffd port has selected.
-
+static int Z80lastop; // for snow effect
 /****************************************************************************/
 /* The Z80 registers. HALT is set to 1 when the CPU is halted, the refresh  */
 /* register is calculated as follows: refresh=(Z80.r&127)|(Z80.r2&128)      */
@@ -345,6 +348,122 @@ static const UINT8 cc_ex[0x100] = {
  6, 0, 0, 0, 7, 0, 0, 2, 6, 0, 0, 0, 7, 0, 0, 2,
  6, 0, 0, 0, 7, 0, 0, 2, 6, 0, 0, 0, 7, 0, 0, 2};
 
+static const UINT8 cc_op_msx[0x100] = {
+	4+1,10+1, 7+1, 6+1, 4+1, 4+1, 7+1, 4+1, 4+1,11+1, 7+1, 6+1, 4+1, 4+1, 7+1, 4+1,
+	8+1,10+1, 7+1, 6+1, 4+1, 4+1, 7+1, 4+1,12+1,11+1, 7+1, 6+1, 4+1, 4+1, 7+1, 4+1,
+	7+1,10+1,16+1, 6+1, 4+1, 4+1, 7+1, 4+1, 7+1,11+1,16+1, 6+1, 4+1, 4+1, 7+1, 4+1,
+	7+1,10+1,13+1, 6+1,11+1,11+1,10+1, 4+1, 7+1,11+1,13+1, 6+1, 4+1, 4+1, 7+1, 4+1,
+	4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1,
+	4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1,
+	4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1,
+	7+1, 7+1, 7+1, 7+1, 7+1, 7+1, 4+1, 7+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1,
+	4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1,
+	4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1,
+	4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1,
+	4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 4+1, 7+1, 4+1,
+	5+1,10+1,10+1,10+1,10+1,11+1, 7+1,11+1, 5+1,10+1,10+1, 0  ,10+1,17+1, 7+1,11+1,
+	5+1,10+1,10+1,11+1,10+1,11+1, 7+1,11+1, 5+1, 4+1,10+1,11+1,10+1, 0  , 7+1,11+1,
+	5+1,10+1,10+1,19+1,10+1,11+1, 7+1,11+1, 5+1, 4+1,10+1, 4+1,10+1, 0  , 7+1,11+1,
+	5+1,10+1,10+1, 4+1,10+1,11+1, 7+1,11+1, 5+1, 6+1,10+1, 4+1,10+1, 0  , 7+1,11+1
+};
+
+static const UINT8 cc_cb_msx[0x100] = {
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,12+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,12+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,12+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,12+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,12+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,12+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,12+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,12+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,15+2, 8+2
+};
+
+static const UINT8 cc_ed_msx[0x100] = {
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,
+	12+2,12+2,15+2,20+2, 8+2,14+2, 8+2, 9+2,12+2,12+2,15+2,20+2, 8+2,14+2, 8+2, 9+2,
+	12+2,12+2,15+2,20+2, 8+2,14+2, 8+2, 9+2,12+2,12+2,15+2,20+2, 8+2,14+2, 8+2, 9+2,
+	12+2,12+2,15+2,20+2, 8+2,14+2, 8+2,18+2,12+2,12+2,15+2,20+2, 8+2,14+2, 8+2,18+2,
+	12+2,12+2,15+2,20+2, 8+2,14+2, 8+2, 8+2,12+2,12+2,15+2,20+2, 8+2,14+2, 8+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,
+	16+2,16+2,16+2,16+2, 8+2, 8+2, 8+2, 8+2,16+2,16+2,16+2,16+2, 8+2, 8+2, 8+2, 8+2,
+	16+2,16+2,16+2,16+2, 8+2, 8+2, 8+2, 8+2,16+2,16+2,16+2,16+2, 8+2, 8+2, 8+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2,
+	8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2, 8+2
+};
+
+static const UINT8 cc_xy_msx[0x100] = {
+	4+4+2,10+4+2, 7+4+2, 6+4+2, 4+4+2, 4+4+2, 7+4+2, 4+4+2, 4+4+2,11+4+2, 7+4+2, 6+4+2, 4+4+2, 4+4+2, 7+4+2, 4+4+2,
+	8+4+2,10+4+2, 7+4+2, 6+4+2, 4+4+2, 4+4+2, 7+4+2, 4+4+2,12+4+2,11+4+2, 7+4+2, 6+4+2, 4+4+2, 4+4+2, 7+4+2, 4+4+2,
+	7+4+2,10+4+2,16+4+2, 6+4+2, 4+4+2, 4+4+2, 7+4+2, 4+4+2, 7+4+2,11+4+2,16+4+2, 6+4+2, 4+4+2, 4+4+2, 7+4+2, 4+4+2,
+	7+4+2,10+4+2,13+4+2, 6+4+2,23  +2,23  +2,19  +2, 4+4+2, 7+4+2,11+4+2,13+4+2, 6+4+2, 4+4+2, 4+4+2, 7+4+2, 4+4+2,
+	4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2,
+	4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2,
+	4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2,
+	19+2,   19+2,  19+2,  19+2,  19+2,  19+2, 4+4+2,  19+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2,
+	4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2,
+	4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2,
+	4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2,
+	4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2, 4+4+2,19  +2, 4+4+2,
+	5+4+2,10+4+2,10+4+2,10+4+2,10+4+2,11+4+2, 7+4+2,11+4+2, 5+4+2,10+4+2,10+4+2, 0    ,10+4+2,17+4+2, 7+4+2,11+4+2,
+	5+4+2,10+4+2,10+4+2,11+4+2,10+4+2,11+4+2, 7+4+2,11+4+2, 5+4+2, 4+4+2,10+4+2,11+4+2,10+4+2, 4  +1, 7+4+2,11+4+2,
+	5+4+2,10+4+2,10+4+2,19+4+2,10+4+2,11+4+2, 7+4+2,11+4+2, 5+4+2, 4+4+2,10+4+2, 4+4+2,10+4+2, 4  +1, 7+4+2,11+4+2,
+	5+4+2,10+4+2,10+4+2, 4+4+2,10+4+2,11+4+2, 7+4+2,11+4+2, 5+4+2, 6+4+2,10+4+2, 4+4+2,10+4+2, 4  +1, 7+4+2,11+4+2
+};
+
+static const UINT8 cc_xycb_msx[0x100] = {
+23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,
+23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,
+23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,
+23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,
+20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,
+20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,
+20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,
+20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,20+2,
+23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,
+23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,
+23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,
+23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,
+23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,
+23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,
+23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,
+23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2,23+2
+};
+
+/* extra cycles if jr/jp/call taken and 'interrupt latency' on rst 0-7 */
+static const UINT8 cc_ex_msx[0x100] = {
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* DJNZ */
+	5, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, /* JR NZ/JR Z */
+	5, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, /* JR NC/JR C */
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	5, 5, 5, 5, 0, 0, 0, 0, 5, 5, 5, 5, 0, 0, 0, 0, /* LDIR/CPIR/INIR/OTIR LDDR/CPDR/INDR/OTDR */
+	6, 0, 0, 0, 7, 0, 0, 2, 6, 0, 0, 0, 7, 0, 0, 2,
+	6, 0, 0, 0, 7, 0, 0, 2, 6, 0, 0, 0, 7, 0, 0, 2,
+	6, 0, 0, 0, 7, 0, 0, 2, 6, 0, 0, 0, 7, 0, 0, 2,
+	6, 0, 0, 0, 7, 0, 0, 2, 6, 0, 0, 0, 7, 0, 0, 2+1
+};
+
+
 static const UINT8 *cc[6];
 #define Z80_TABLE_dd	Z80_TABLE_xy
 #define Z80_TABLE_fd	Z80_TABLE_xy
@@ -522,9 +641,6 @@ static const int cc_xycb_contended[0x100] = {
 /* F */	CM21,CM21,CM21,CM21,CM21,CM21,CM21,CM21,CM21,CM21,CM21,CM21,CM21,CM21,CM21,CM21
 };
 
-
-static void take_interrupt(void);
-//void Z80Burn(int cycles);
 
 typedef void (*funcptr)(void);
 
@@ -776,18 +892,23 @@ Z80_INLINE UINT8 IN(INT16 port)
 	// For floating bus support, the read_byte triggers the
 	// 'spectrum_port_ula_r' callback which will require the tstate
 	// counter to be up-to-date.
-	store_rwinfo(port, -1, RWINFO_READ|RWINFO_IO_PORT, "in port");
-	return Z80IORead(port);
+	if (m_ula_variant != ULA_VARIANT_NONE) {
+		return store_rwinfo(port, -1, RWINFO_READ|RWINFO_IO_PORT, "in port");
+	} else {
+		return Z80IORead(port);
+	}
 }
 
 /***************************************************************
  * Output a byte to given I/O port
  ***************************************************************/
-//#define OUT(port,value) Z80IOWrite(port,value)
 Z80_INLINE void OUT(UINT16 port, UINT8 value)
 {
-	store_rwinfo(port, value, RWINFO_WRITE|RWINFO_IO_PORT, "out port");
-	Z80IOWrite(port, value);
+	if (m_ula_variant != ULA_VARIANT_NONE) {
+		store_rwinfo(port, value, RWINFO_WRITE|RWINFO_IO_PORT, "out port");
+	} else {
+		Z80IOWrite(port, value);
+	}
 }
 
 /***************************************************************
@@ -841,7 +962,7 @@ Z80_INLINE UINT8 ROP(void)
 {
 	unsigned pc = PCD;
 	PC++;
-	UINT8 res = cpu_readop(pc);
+	UINT8 res = Z80lastop = cpu_readop(pc);
 	store_rwinfo(((PAIR*)(&pc))->w.l, res, RWINFO_READ|RWINFO_MEMORY, "rop");
 	return res;
 }
@@ -1017,7 +1138,7 @@ static inline void RET_COND_SPECTRUM(int cond, UINT8 opcode)
 	POP( pc );													\
 	WZ = PC;													\
 	change_pc(PCD);												\
-	IFF1 = IFF2;												\
+	Z80.after_retn = TRUE;  									\
 }
 
 /***************************************************************
@@ -3023,8 +3144,8 @@ OP(ed,3d) { illegal_2();										} /* DB   ED          */
 OP(ed,3e) { illegal_2();										} /* DB   ED          */
 OP(ed,3f) { illegal_2();										} /* DB   ED          */
 
-OP(ed,40) { B = IN(BC); F = (F & CF) | SZP[B];					} /* IN   B,(C)       */
-OP(ed,41) { OUT(BC, B);											} /* OUT  (C),B       */
+OP(ed,40) { B = IN(BC); F = (F & CF) | SZP[B]; WZ = BC + 1; 	} /* IN   B,(C)       */
+OP(ed,41) { OUT(BC, B);	WZ = BC + 1;							} /* OUT  (C),B       */
 OP(ed,42) { SBC16( bc );										} /* SBC  HL,BC       */
 OP(ed,43) { EA = ARG16(); WM16( EA, &Z80.bc ); WZ = EA + 1;		} /* LD   (w),BC      */
 OP(ed,44) { NEG;												} /* NEG              */
@@ -3032,8 +3153,8 @@ OP(ed,45) { RETN;												} /* RETN;            */
 OP(ed,46) { IM = 0;												} /* IM   0           */
 OP(ed,47) { LD_I_A;												} /* LD   I,A         */
 
-OP(ed,48) { C = IN(BC); F = (F & CF) | SZP[C];					} /* IN   C,(C)       */
-OP(ed,49) { OUT(BC, C);											} /* OUT  (C),C       */
+OP(ed,48) { C = IN(BC); F = (F & CF) | SZP[C]; WZ = BC + 1; 	} /* IN   C,(C)       */
+OP(ed,49) { OUT(BC, C);	WZ = BC + 1;							} /* OUT  (C),C       */
 OP(ed,4a) { ADC16( bc );										} /* ADC  HL,BC       */
 OP(ed,4b) { EA = ARG16(); RM16( EA, &Z80.bc ); WZ = EA + 1;		} /* LD   BC,(w)      */
 OP(ed,4c) { NEG;												} /* NEG              */
@@ -3041,8 +3162,8 @@ OP(ed,4d) { RETI;												} /* RETI             */
 OP(ed,4e) { IM = 0;												} /* IM   0           */
 OP(ed,4f) { LD_R_A;												} /* LD   R,A         */
 
-OP(ed,50) { D = IN(BC); F = (F & CF) | SZP[D];					} /* IN   D,(C)       */
-OP(ed,51) { OUT(BC, D);											} /* OUT  (C),D       */
+OP(ed,50) { D = IN(BC); F = (F & CF) | SZP[D]; WZ = BC + 1; 	} /* IN   D,(C)       */
+OP(ed,51) { OUT(BC, D);	WZ = BC + 1;							} /* OUT  (C),D       */
 OP(ed,52) { SBC16( de );										} /* SBC  HL,DE       */
 OP(ed,53) { EA = ARG16(); WM16( EA, &Z80.de ); WZ = EA + 1;		} /* LD   (w),DE      */
 OP(ed,54) { NEG;												} /* NEG              */
@@ -3050,8 +3171,8 @@ OP(ed,55) { RETN;												} /* RETN;            */
 OP(ed,56) { IM = 1;												} /* IM   1           */
 OP(ed,57) { LD_A_I;												} /* LD   A,I         */
 
-OP(ed,58) { E = IN(BC); F = (F & CF) | SZP[E];					} /* IN   E,(C)       */
-OP(ed,59) { OUT(BC, E);											} /* OUT  (C),E       */
+OP(ed,58) { E = IN(BC); F = (F & CF) | SZP[E]; WZ = BC + 1; 	} /* IN   E,(C)       */
+OP(ed,59) { OUT(BC, E);	WZ = BC + 1;							} /* OUT  (C),E       */
 OP(ed,5a) { ADC16( de );										} /* ADC  HL,DE       */
 OP(ed,5b) { EA = ARG16(); RM16( EA, &Z80.de ); WZ = EA + 1;		} /* LD   DE,(w)      */
 OP(ed,5c) { NEG;												} /* NEG              */
@@ -3059,8 +3180,8 @@ OP(ed,5d) { RETI;												} /* RETI             */
 OP(ed,5e) { IM = 2;												} /* IM   2           */
 OP(ed,5f) { LD_A_R;												} /* LD   A,R         */
 
-OP(ed,60) { H = IN(BC); F = (F & CF) | SZP[H];					} /* IN   H,(C)       */
-OP(ed,61) { OUT(BC, H);											} /* OUT  (C),H       */
+OP(ed,60) { H = IN(BC); F = (F & CF) | SZP[H]; WZ = BC + 1; 	} /* IN   H,(C)       */
+OP(ed,61) { OUT(BC, H);	WZ = BC + 1;							} /* OUT  (C),H       */
 OP(ed,62) { SBC16( hl );										} /* SBC  HL,HL       */
 OP(ed,63) { EA = ARG16(); WM16( EA, &Z80.hl ); WZ = EA + 1;		} /* LD   (w),HL      */
 OP(ed,64) { NEG;												} /* NEG              */
@@ -3068,8 +3189,8 @@ OP(ed,65) { RETN;												} /* RETN;            */
 OP(ed,66) { IM = 0;												} /* IM   0           */
 OP(ed,67) { RRD;												} /* RRD  (HL)        */
 
-OP(ed,68) { L = IN(BC); F = (F & CF) | SZP[L];					} /* IN   L,(C)       */
-OP(ed,69) { OUT(BC, L);											} /* OUT  (C),L       */
+OP(ed,68) { L = IN(BC); F = (F & CF) | SZP[L]; WZ = BC + 1; 	} /* IN   L,(C)       */
+OP(ed,69) { OUT(BC, L);	WZ = BC + 1;							} /* OUT  (C),L       */
 OP(ed,6a) { ADC16( hl );										} /* ADC  HL,HL       */
 OP(ed,6b) { EA = ARG16(); RM16( EA, &Z80.hl ); WZ = EA + 1;		} /* LD   HL,(w)      */
 OP(ed,6c) { NEG;												} /* NEG              */
@@ -3077,8 +3198,8 @@ OP(ed,6d) { RETI;												} /* RETI             */
 OP(ed,6e) { IM = 0;												} /* IM   0           */
 OP(ed,6f) { RLD;												} /* RLD  (HL)        */
 
-OP(ed,70) { UINT8 res = IN(BC); F = (F & CF) | SZP[res];		} /* IN   0,(C)       */
-OP(ed,71) { OUT(BC, 0);											} /* OUT  (C),0       */
+OP(ed,70) { UINT8 res = IN(BC); F = (F & CF) | SZP[res]; WZ = BC + 1;	} /* IN   0,(C)       */
+OP(ed,71) { OUT(BC, 0);	WZ = BC + 1;							} /* OUT  (C),0       */
 OP(ed,72) { SBC16( sp );										} /* SBC  HL,SP       */
 OP(ed,73) { EA = ARG16(); WM16( EA, &Z80.sp ); WZ = EA + 1;		} /* LD   (w),SP      */
 OP(ed,74) { NEG;												} /* NEG              */
@@ -3087,7 +3208,7 @@ OP(ed,76) { IM = 1;												} /* IM   1           */
 OP(ed,77) { illegal_2();										} /* DB   ED,77       */
 
 OP(ed,78) { A = IN(BC); F = (F & CF) | SZP[A]; WZ = BC + 1;		} /* IN   E,(C)       */
-OP(ed,79) { OUT(BC, A);WZ = BC + 1;								} /* OUT  (C),A       */
+OP(ed,79) { OUT(BC, A); WZ = BC + 1;							} /* OUT  (C),A       */
 OP(ed,7a) { ADC16( sp );										} /* ADC  HL,SP       */
 OP(ed,7b) { EA = ARG16(); RM16( EA, &Z80.sp ); WZ = EA + 1;		} /* LD   SP,(w)      */
 OP(ed,7c) { NEG;												} /* NEG              */
@@ -3541,7 +3662,7 @@ static void take_interrupt(void)
 {
 	int irq_vector = Z80Vector;
 
-	if (m_ula_variant != ULA_VARIANT_NONE && m_tstate_counter >= 32)
+	if (m_ula_variant != ULA_VARIANT_NONE && m_tstate_counter >= ((m_cycles_per_line == 228) ? 36 : 32))
 		return;
 
 	/* there isn't a valid previous program counter */
@@ -3576,7 +3697,7 @@ static void take_interrupt(void)
 	}
 
 //	LOG(("Z80 #%d single int. irq_vector $%02x\n", cpu_getactivecpu(), irq_vector));
-
+	R++;
 	/* Interrupt mode 2. Call [Z80.i:databyte] */
 	if( IM == 2 )
 	{
@@ -3585,6 +3706,7 @@ static void take_interrupt(void)
 		RM16( irq_vector, &Z80.pc );
 //		LOG(("Z80 #%d IM2 [$%04x] = $%04x\n",cpu_getactivecpu() , irq_vector, PCD));
 		/* CALL opcode timing */
+		//bprintf(0, _T("imm2: opcd: %d  exff: %d\n"),cc[Z80_TABLE_op][0xcd], cc[Z80_TABLE_ex][0xff]);
 		eat_cycles(CYCLES_ISR, cc[Z80_TABLE_op][0xcd] + cc[Z80_TABLE_ex][0xff]);
 	}
 	else
@@ -3595,6 +3717,7 @@ static void take_interrupt(void)
 		PUSH( pc );
 		PCD = 0x0038;
 		/* RST $38 + 'interrupt latency' cycles */
+		//bprintf(0, _T("imm1: opff: %d  exff: %d\n"),cc[Z80_TABLE_op][0xff], cc[Z80_TABLE_ex][0xff]);
 		eat_cycles(CYCLES_ISR, cc[Z80_TABLE_op][0xff] + cc[Z80_TABLE_ex][0xff]);
 	}
 	else
@@ -3603,6 +3726,7 @@ static void take_interrupt(void)
 		/* if neither of these were found we assume a 1 byte opcode */
 		/* was placed on the databus                                */
 //		LOG(("Z80 #%d IM0 $%04x\n",cpu_getactivecpu() , irq_vector));
+		//bprintf(0, _T("imm0: opff: %d  exff: %d\n"),cc[Z80_TABLE_op][0xff], cc[Z80_TABLE_ex][0xff]);
 		switch (irq_vector & 0xff0000)
 		{
 			case 0xcd0000:	/* call */
@@ -3620,7 +3744,7 @@ static void take_interrupt(void)
 				PUSH( pc );
 				PCD = irq_vector & 0x0038;
 				/* RST $xx + 2 cycles */
-				eat_cycles(CYCLES_ISR, cc[Z80_TABLE_op][PCD]);
+				eat_cycles(CYCLES_ISR, cc[Z80_TABLE_op][0xff]);
 				break;
 		}
 		/* 'interrupt latency' cycles */
@@ -3628,6 +3752,26 @@ static void take_interrupt(void)
 	}
 	WZ=PCD;	
 	change_pc(PCD);
+}
+
+void z80_set_cycle_tables_msx()
+{
+	cc[Z80_TABLE_op] = cc_op_msx;
+	cc[Z80_TABLE_cb] = cc_cb_msx;
+	cc[Z80_TABLE_ed] = cc_ed_msx;
+	cc[Z80_TABLE_xy] = cc_xy_msx;
+	cc[Z80_TABLE_xycb] = cc_xycb_msx;
+	cc[Z80_TABLE_ex] = cc_ex_msx;
+}
+
+void z80_set_cycle_tables(const UINT8 *op, const UINT8 *cb, const UINT8 *ed, const UINT8 *xy, const UINT8 *xycb, const UINT8 *ex)
+{
+	if (op) cc[Z80_TABLE_op] = op;
+	if (cb) cc[Z80_TABLE_cb] = cb;
+	if (ed) cc[Z80_TABLE_ed] = ed;
+	if (xy) cc[Z80_TABLE_xy] = xy;
+	if (xycb) cc[Z80_TABLE_xycb] = xycb;
+	if (ex) cc[Z80_TABLE_ex] = ex;
 }
 
 void Z80Init()
@@ -3750,7 +3894,9 @@ void Z80InitContention(int is_on_type, void (*rastercallback)(int))
 	int i;
 	const char *default_pattern = "00000000";
 	const char *ula_pattern 	= "65432100";
+	const char *ula_pattern_2a 	= "10765432";
 	const char *s128k_banks     = "1357";
+	const char *s128kpls2_banks = "4567";
 	m_raster_cb = (rastercallback) ? rastercallback : raster_dummy_callback;
 
 	memset(&m_scripts, 0, sizeof(m_scripts));
@@ -3761,6 +3907,14 @@ void Z80InitContention(int is_on_type, void (*rastercallback)(int))
 			m_ula_variant = ULA_VARIANT_SINCLAIR;
 			m_ula_delay_sequence = ula_pattern;
 			m_contended_banks = s128k_banks; // 128k
+			m_cycles_contention_start = 14361; //128k (48k is 14335)
+			m_cycles_per_line = 228;
+			m_cycles_per_frame = 70908; //228*311
+			break;
+		case 1282: // +2a (experimental)
+			m_ula_variant = ULA_VARIANT_AMSTRAD;
+			m_ula_delay_sequence = ula_pattern_2a;
+			m_contended_banks = s128kpls2_banks; // 128k
 			m_cycles_contention_start = 14361; //128k (48k is 14335)
 			m_cycles_per_line = 228;
 			m_cycles_per_frame = 70908; //228*311
@@ -3782,6 +3936,9 @@ void Z80InitContention(int is_on_type, void (*rastercallback)(int))
 			m_cycles_per_frame = 0;
 			break;
 	}
+
+	// create ULA delay LUT
+	make_ula_delay_lut();
 
 	for(i=0; i<MAX_CM_SCRIPTS; i++)
 	{
@@ -3852,6 +4009,7 @@ void Z80Reset()
 	Z80.nmi_pending = FALSE;
 	Z80.irq_state = Z80_CLEAR_LINE;
 	Z80.after_ei = FALSE;
+	Z80.after_retn = FALSE;
 	IX = IY = 0xffff; /* IX and IY are FFFF after a reset! */
 	IFF1 = 0;
 	IFF2 = 0;
@@ -3916,6 +4074,13 @@ int Z80Execute(int cycles)
 			take_interrupt();
 		Z80.after_ei = FALSE;
 
+		if (Z80.after_retn)
+		{
+			// https://floooh.github.io/2021/12/17/cycle-stepped-z80.html#the-ei-di-and-retiretn-instructions
+			IFF1 = IFF2; // happens during fetch of next opcode
+			Z80.after_retn = FALSE;
+		}
+
 		PRVPC = PCD;
 //		CALL_DEBUGGER(PCD);
 		R++;
@@ -3926,10 +4091,6 @@ int Z80Execute(int cycles)
 			capture_opcode_history_start((UINT16)BC,(UINT16)(I << 8));
 			EXEC_INLINE(op,ROP());
 			capture_opcode_history_finish();
-
-			// Elimiates sprite flicker on various games (E.g. Marauder and
-			// Stormlord) and makes Firefly playable.
-			m_raster_cb(m_tstate_counter);
 		}
 	} while( Z80.ICount > 0 && !Z80.end_run );
 
@@ -3952,6 +4113,11 @@ void Z80StopExecute()
 INT32 z80TotalCycles()
 {
 	return Z80.cycles_left - Z80.ICount;
+}
+
+INT32 z80TstateCounter() // for spectrum ula
+{
+	return m_tstate_counter;
 }
 
 #if 0
@@ -4156,9 +4322,19 @@ void ActiveZ80SetHL(int hl)
 	Z80.hl.w.l = hl;
 }
 
+int ActiveZ80GetLastOp()
+{
+	return Z80lastop;
+}
+
 int ActiveZ80GetI()
 {
 	return Z80.i;
+}
+
+int ActiveZ80GetR()
+{
+	return Z80.r;
 }
 
 int ActiveZ80GetIX()
@@ -4209,7 +4385,7 @@ int ActiveZ80GetVector()
 /**************************************************************************
  * Contended Memory Functions                                 [geecab 2018]
  **************************************************************************/
-void capture_opcode_history_start(UINT16 reg_bc, UINT16 reg_ir)
+static void capture_opcode_history_start(UINT16 reg_bc, UINT16 reg_ir)
 {
 	m_opcode_history.rw_count = 0;
 	m_opcode_history.tstate_start = m_tstate_counter;
@@ -4231,7 +4407,7 @@ void capture_opcode_history_start(UINT16 reg_bc, UINT16 reg_ir)
 	m_opcode_history.capturing = true;
 }
 
-void capture_opcode_history_finish()
+static void capture_opcode_history_finish()
 {
 	int i;
 	bool success = true;
@@ -4287,7 +4463,7 @@ void capture_opcode_history_finish()
 }
 
 
-bool find_script()
+static bool find_script()
 {
 	if(m_opcode_history.script == NULL)
 	{
@@ -4360,14 +4536,16 @@ bool find_script()
 }
 
 
-void run_script()
+static UINT8 run_script()
 {
-	if(!m_opcode_history.capturing || m_ula_variant == ULA_VARIANT_NONE) return;
+	UINT8 retval = 0xff;
+
+	if(!m_opcode_history.capturing || m_ula_variant == ULA_VARIANT_NONE) return retval;
 
 	if(!find_script())
 	{
 		//Stop here. We don't know what script this opcode uses (yet).
-		return;
+		return retval;
 	}
 
 	for(; m_opcode_history.element < m_opcode_history.breakdown->number_of_elements; m_opcode_history.element++)
@@ -4379,7 +4557,7 @@ void run_script()
 		if(se->rw_ix >= m_opcode_history.rw_count)
 		{
 			//Stop here. We don't have the rwinfo stored that will be required to process this script element (yet).
-			return;
+			return retval;
 		}
 
 		//Check if this is an optional element.
@@ -4387,14 +4565,15 @@ void run_script()
 		{
 			//Stop here. This is an optional script element and we are not sure (yet)
 	                //if this opcode will need to go down the optional path.
-			return;
+			return retval;
 		}
 
 
 		if(se->type == CMSE_TYPE_IO_PORT) //***Process PORT contention***
 		{
+			//bprintf(0, _T("port i/o CMSE_TYPE_IO_PORT\n"));
 			bool high_byte = false;
-			bool low_bit = false;
+			bool nlow_bit = false;
 
 			rw = &(m_opcode_history.rw[se->rw_ix]);
 			rw->flags |= RWINFO_PROCESSED;
@@ -4412,7 +4591,17 @@ void run_script()
 					m_opcode_history.rw[se->rw_ix].addr,
 					m_opcode_history.rw[se->rw_ix].val);
 #endif //DEBUG_CM
+
 				eat_cycles(CYCLES_UNCONTENDED, 4);
+
+				// IO: OUT x, x
+				if (rw->flags & RWINFO_WRITE) {
+					Z80IOWrite(rw->addr, rw->val);
+				}
+				// IO: IN x
+				if ((rw->flags & RWINFO_WRITE) == 0) {
+					retval = Z80IORead(rw->addr);
+				}
 			}
 			else //ULA_VARIANT_SINCLAIR
 			{
@@ -4425,15 +4614,9 @@ void run_script()
 				Yes         |  Reset  | C:1, C:3
 				Yes         |   Set   | C:1, C:1, C:1, C:1
 				*/
-				if ((rw->addr >= 0x4000) && (rw->addr <= 0x7fff))
-				{
-					high_byte  = true;
-				}
 
-				if(rw->addr & 0x0001)
-				{
-					low_bit = true;
-				}
+				high_byte = get_memory_is_contended(rw->addr); // "High port contention 2" (128K, fusetest)
+				nlow_bit = (rw->addr & 0x0001) == 0;
 
 #ifdef DEBUG_CM
 				printf("  IO  TState=%d ULA=%d - Addr=%04X (HiByte=%d LoBit=%d)\n",
@@ -4441,41 +4624,45 @@ void run_script()
 						get_ula_delay(),
 						rw->addr,
 						high_byte,
-						low_bit);
+						nlow_bit);
 #endif //DEBUG_CM
 
-				if((high_byte == false) && (low_bit == false))
-				{
-					//N:1, C:3
-					eat_cycles(CYCLES_UNCONTENDED, 1);
+				// early
+				if (high_byte) {
 					eat_cycles(CYCLES_CONTENDED, get_ula_delay());
-					eat_cycles(CYCLES_UNCONTENDED, 3);
 				}
-				else if((high_byte == false) && (low_bit == true))
-				{
-					//N:4
-					eat_cycles(CYCLES_UNCONTENDED, 4);
+				eat_cycles(CYCLES_UNCONTENDED, 1);
+				// !early
+
+				// IO: OUT x, x
+				if (rw->flags & RWINFO_WRITE) {
+					Z80IOWrite(rw->addr, rw->val);
 				}
-				else if((high_byte == true) && (low_bit == false))
-				{
-					//C:1, C:3
+
+				// late
+				if (nlow_bit) {
 					eat_cycles(CYCLES_CONTENDED, get_ula_delay());
-					eat_cycles(CYCLES_UNCONTENDED, 1);
-					eat_cycles(CYCLES_CONTENDED, get_ula_delay());
-					eat_cycles(CYCLES_UNCONTENDED, 3);
+					eat_cycles(CYCLES_UNCONTENDED, 2);
+				} else {
+					if (high_byte) {
+						eat_cycles(CYCLES_CONTENDED, get_ula_delay());
+						eat_cycles(CYCLES_UNCONTENDED, 1);
+						eat_cycles(CYCLES_CONTENDED, get_ula_delay());
+						eat_cycles(CYCLES_UNCONTENDED, 1);
+						eat_cycles(CYCLES_CONTENDED, get_ula_delay());
+					} else {
+						eat_cycles(CYCLES_UNCONTENDED, 2);
+					}
 				}
-				else //((high_byte == true) && (low_bit == true))
-				{
-					//C:1, C:1, C:1, C:1
-					eat_cycles(CYCLES_CONTENDED, get_ula_delay());
-					eat_cycles(CYCLES_UNCONTENDED, 1);
-					eat_cycles(CYCLES_CONTENDED, get_ula_delay());
-					eat_cycles(CYCLES_UNCONTENDED, 1);
-					eat_cycles(CYCLES_CONTENDED, get_ula_delay());
-					eat_cycles(CYCLES_UNCONTENDED, 1);
-					eat_cycles(CYCLES_CONTENDED, get_ula_delay());
-					eat_cycles(CYCLES_UNCONTENDED, 1);
+				// !late
+
+				// IO: IN x
+				if ((rw->flags & RWINFO_WRITE) == 0) {
+					retval = Z80IORead(rw->addr);
 				}
+
+				// lastly..
+				eat_cycles(CYCLES_UNCONTENDED, 1);
 			}
 		}
 		else if(se->type == CMSE_TYPE_MEMORY) //***Process Memory Address Contention***
@@ -4552,10 +4739,11 @@ void run_script()
 			//assert_always(false, "Uknown element type in contented memory script");
 		}
 	}
+	return retval;
 }
 
 
-void parse_script(const char *script, CM_SCRIPT_BREAKDOWN *breakdown)
+static void parse_script(const char *script, CM_SCRIPT_BREAKDOWN *breakdown)
 {
 	enum CMSE_STATE
 	{
@@ -4753,8 +4941,13 @@ void parse_script(const char *script, CM_SCRIPT_BREAKDOWN *breakdown)
 	breakdown->inst_cycles_total = *cycles_mandatory + *cycles_optional;
 }
 
-
-int get_ula_delay()
+#if 1
+static int get_ula_delay()
+{
+	return m_ula_delay_lut[m_tstate_counter];
+}
+#else
+static int get_ula_delay()
 {
 	if(m_tstate_counter >= m_cycles_contention_start)
 	{
@@ -4769,15 +4962,52 @@ int get_ula_delay()
 
 	return 0;
 }
+#endif
 
-
-int get_memory_access_delay(UINT16 pc_address)
+static int get_ula_delay_algo(int tstate)
 {
-	if((pc_address >= 0x4000) && (pc_address <=0x7fff))
+	if(tstate >= m_cycles_contention_start)
+	{
+		int base = tstate - m_cycles_contention_start;
+		int y_pos = base/m_cycles_per_line;
+		int x_pos = base%m_cycles_per_line;
+		if ((y_pos < 192) && (x_pos < 128))
+		{
+			return m_ula_delay_sequence[x_pos%8]-'0';
+		}
+	}
+
+	return 0;
+}
+
+static void make_ula_delay_lut()
+{
+	if (m_ula_variant == ULA_VARIANT_NONE) return;
+
+	memset(&m_ula_delay_lut, 0, sizeof(m_ula_delay_lut));
+
+	for (int i = 0; i <= m_cycles_per_frame; i++)
+	{
+		m_ula_delay_lut[i] = get_ula_delay_algo(i);
+	}
+}
+
+static int get_memory_access_delay(UINT16 pc_address)
+{
+	if (get_memory_is_contended(pc_address))
 	{
 		return get_ula_delay();
 	}
-	else if((pc_address >= 0xc000) && (pc_address <=0xffff))
+	return 0;
+}
+
+static int get_memory_is_contended(UINT16 pc_address)
+{
+	if((pc_address >= 0x4000) && (pc_address <= 0x7fff))
+	{
+		return 1;
+	}
+	else if((pc_address >= 0xc000) && (pc_address <= 0xffff))
 	{
 		if(m_selected_bank > 0)
 		{
@@ -4786,7 +5016,7 @@ int get_memory_access_delay(UINT16 pc_address)
 			{
 				if(m_selected_bank == (m_contended_banks[i]-'0'))
 				{
-					return get_ula_delay();
+					return 1;
 				}
 			}
 		}
@@ -4795,7 +5025,7 @@ int get_memory_access_delay(UINT16 pc_address)
 	return 0;
 }
 
-void eat_cycles(int type, int cycles)
+static void eat_cycles(int type, int cycles)
 {
 	// When this function is called and type CYCLES_CONTENDED or CYCLES_UNCONTENDED is set,
 	// it means the run_script function is processing the opcode history and that cycles are
@@ -4829,18 +5059,28 @@ void eat_cycles(int type, int cycles)
 
 	Z80.ICount -= cycles;
 	m_tstate_counter += cycles;
+
 	if(m_tstate_counter >= m_cycles_per_frame) {
-		//bprintf(0, _T("z80.cpp: spec frame eof %d\n"), m_tstate_counter);
+		m_raster_cb(m_cycles_per_frame); // end frame
+		m_raster_cb(-1); // notify start next frame
+//		bprintf(0, _T("z80.cpp: spec frame eof %d\n"), m_tstate_counter);
 		m_tstate_counter -= m_cycles_per_frame;
 	}
 }
 
 
-void store_rwinfo(UINT16 addr, UINT8 val, UINT16 flags, const char *dbg)
+static UINT8 store_rwinfo(UINT16 addr, UINT8 val, UINT16 flags, const char *dbg)
 {
 	RWINFO *rw;
+	UINT8 retval = 0xff;
 
-	if(!m_opcode_history.capturing || m_ula_variant == ULA_VARIANT_NONE) return;
+	if(!m_opcode_history.capturing && m_ula_variant != ULA_VARIANT_NONE) {
+		if (m_tstate_counter >= ((m_cycles_per_line == 228) ? 36 : 32)) { // interrupt not contended, logging during irq is not useful
+			bprintf(0, _T("not capturing?  tstate  %d  PC:  %x  addr/val/flags:  %x  %x  %x  (%S)\n"), m_tstate_counter, PCD, addr, val, flags, dbg);
+		}
+	}
+
+	if(!m_opcode_history.capturing || m_ula_variant == ULA_VARIANT_NONE) return 0;
 
 	if(m_opcode_history.rw_count >= MAX_RWINFO)
 	{
@@ -4856,19 +5096,18 @@ void store_rwinfo(UINT16 addr, UINT8 val, UINT16 flags, const char *dbg)
 	rw->dbg = dbg;
 	m_opcode_history.rw_count++;
 
-	run_script();
-
 	//Originally, the intention was to update the screen raster each time
 	//any tstates were eaten (I.e. call the raster_cb from inside the
 	//eat_cycles function) which worked well but wasn't efficient.
 	//So below is the opimisation, it is based on the fact that the screen
 	//raster only needs to be updated immediately *before* a border or screen colour
-	//attribute write occurs.
+	//attribute write occurs.  (update before run_script() increments cycles -dink)
 	if(rw->flags & RWINFO_WRITE)
 	{
 		if(rw->flags & RWINFO_IO_PORT)
 		{
-			if((addr & 0xff) == 0xfe) //Border change
+			//if((addr & 0xff) == 0xfe) //Border change *breaks with fpga8all*
+			if (~addr & 1) //Border change
 			{
 				m_raster_cb(m_tstate_counter);
 			}
@@ -4876,11 +5115,18 @@ void store_rwinfo(UINT16 addr, UINT8 val, UINT16 flags, const char *dbg)
 		else if(rw->flags & RWINFO_MEMORY)
 		{
 			// Screen or attribute change (48K and 128K)
-			if((addr >= 0x4000) && (addr <= 0x5AFF))
+			if((addr >= 0x4000) && (addr <= 0x5AFF)) {
 				m_raster_cb(m_tstate_counter);
+			}
 			// Screen or attribute change (128K models - bank 5)
 			else if( (m_selected_bank == 5) && ((addr >= 0xC000) && (addr <= 0xDAFF)) )
+			{
 				m_raster_cb(m_tstate_counter);
+			}
 		}
 	}
+
+	retval = run_script();
+
+	return retval;
 }

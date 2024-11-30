@@ -64,6 +64,25 @@ static struct BurnRomInfo dogyuuntRomDesc[] = {
 STD_ROM_PICK(dogyuunt)
 STD_ROM_FN(dogyuunt)
 
+// found on a standard TP-022-1 PCB, main CPU ROM had a MR sticker.
+// It's a little closer to the location test than to the released versions (i.e region configuration).
+// maybe a newer location test version, instead.
+
+static struct BurnRomInfo dogyuunbRomDesc[] = {
+	{ "mr.u64",       0x080000, 0x4dc258dc, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
+
+	{ "tp022_3.w92",  0x100000, 0x191b595f, BRF_GRA },           //  1 GP9001 #1 Tile data
+	{ "tp022_4.w93",  0x100000, 0xd58d29ca, BRF_GRA },           //  2
+
+	{ "tp022_5.w16",  0x200000, 0xd4c1db45, BRF_GRA },           //  3 GP9001 #2 Tile data
+	{ "tp022_6.w17",  0x200000, 0xd48dc74f, BRF_GRA },           //  4
+
+	{ "tp022_2.w30",  0x040000, 0x043271b3, BRF_SND },           //  5 ADPCM data
+};
+
+STD_ROM_PICK(dogyuunb)
+STD_ROM_FN(dogyuunb)
+
 static struct BurnInputInfo dogyuunInputList[] = {
 	{"P1 Coin",			BIT_DIGITAL,	DrvButton + 3,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvButton + 5,	"p1 start"	},
@@ -143,7 +162,7 @@ static struct BurnDIPInfo dogyuunDIPList[] = {
 	{0x16,	0x00, 0x0F, 0x03, NULL},
 	{0x14,	0x02, 0x30,	0x20, "3 coins 1 play"},
 	{0x16,	0x00, 0x0F, 0x03, NULL},
-	{0x14,	0x02, 0x30,	0x30, "3 coins 1 play"},
+	{0x14,	0x02, 0x30,	0x30, "4 coins 1 play"},
 	{0x16,	0x00, 0x0F, 0x03, NULL},
 	{0,		0xFE, 0,	4,	  "Coin B"},
 	{0x14,	0x02, 0xC0,	0x00, "1 coin 2 plays"},
@@ -768,7 +787,7 @@ struct BurnDriver BurnDrvDogyuun = {
 
 struct BurnDriver BurnDrvDogyuunk = {
 	"dogyuuna", "dogyuun", NULL, NULL, "1992",
-	"Dogyuun (Licensed to Unite Trading For Korea)\0", NULL, "Toaplan", "Dual Toaplan GP9001 based",
+	"Dogyuun (older set)\0", NULL, "Toaplan", "Dual Toaplan GP9001 based",
 	L"Dogyuun (Licensed to Unite Trading For Korea)\0Dogyuun \u30C9\u30AD\u30E5\u30FC\u30F3\uFF01\uFF01\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
 	NULL, dogyuunkRomInfo, dogyuunkRomName, NULL, NULL, NULL, NULL, dogyuunInputInfo, dogyuunkDIPInfo,
@@ -778,10 +797,20 @@ struct BurnDriver BurnDrvDogyuunk = {
 
 struct BurnDriver BurnDrvDogyuunt = {
 	"dogyuunt", "dogyuun", NULL, NULL, "1992",
-	"Dogyuun (test location version)\0", NULL, "Toaplan", "Dual Toaplan GP9001 based",
+	"Dogyuun (10/9/1992 location test)\0", NULL, "Toaplan", "Dual Toaplan GP9001 based",
 	L"Dogyuun (test location version)\0Dogyuun \u30C9\u30AD\u30E5\u30FC\u30F3\uFF01\uFF01\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
 	NULL, dogyuuntRomInfo, dogyuuntRomName, NULL, NULL, NULL, NULL, dogyuunInputInfo, dogyuuntDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
+	240, 320, 3, 4
+};
+
+struct BurnDriver BurnDrvDogyuunb = {
+	"dogyuunb", "dogyuun", NULL, NULL, "1992",
+	"Dogyuun (oldest set)\0", NULL, "Toaplan", "Dual Toaplan GP9001 based",
+	L"Dogyuun (oldest set)\0Dogyuun \u30C9\u30AD\u30E5\u30FC\u30F3\uFF01\uFF01\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
+	NULL, dogyuunbRomInfo, dogyuunbRomName, NULL, NULL, NULL, NULL, dogyuunInputInfo, dogyuuntDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };

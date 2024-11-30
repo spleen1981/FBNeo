@@ -43,15 +43,15 @@ static INT32 DrvRearHorizScrollLo;
 static INT32 DrvRearHorizScrollHi;
 static INT32 DrvSampleAddress;
 
-static INT32 nCyclesDone[2], nCyclesTotal[2];
-static INT32 nCyclesSegment;
+static INT32 nCyclesTotal[2];
+static INT32 nExtraCycles[2];
 
 static UINT8 DrvHasYM2203 = 0;
 static UINT8 DrvKikcubicDraw = 0;
 
 #define VECTOR_INIT		0
-#define YM2151_ASSERT		1
-#define YM2151_CLEAR		2
+#define YM2151_ASSERT	1
+#define YM2151_CLEAR	2
 #define Z80_ASSERT		3
 #define Z80_CLEAR		4
 
@@ -919,13 +919,18 @@ static void DrvSetVector(INT32 Status)
 	}
 	
 	if (DrvIrqVector == 0xff) {
-//		ZetSetVector(DrvIrqVector);
+		ZetSetVector(DrvIrqVector);
 		ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 	} else {
 		ZetSetVector(DrvIrqVector);
 		ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
-		nCyclesDone[1] += ZetRun(1000);
 	}
+}
+
+static void bank_switch(INT32 data)
+{
+	DrvRomBank = data & 0x07;
+	ZetMapMemory(DrvZ80Rom1 + 0x10000 + (DrvRomBank * 0x4000), 0x8000, 0xbfff, MAP_ROM);
 }
 
 static INT32 DrvDoReset()
@@ -941,7 +946,7 @@ static INT32 DrvDoReset()
 		BurnYM2203Reset();
 	} else {
 		BurnYM2151Reset();
-	}	
+	}
 	
 	DACReset();
 	
@@ -954,6 +959,10 @@ static INT32 DrvDoReset()
 	DrvRearHorizScrollLo = 0;
 	DrvRearHorizScrollHi = 0;
 	DrvSampleAddress = 0;
+
+	memset(nExtraCycles, 0, sizeof(nExtraCycles));
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -1105,11 +1114,9 @@ static void __fastcall VigilanteZ80PortWrite1(UINT16 a, UINT8 d)
 	switch (a) {
 		case 0x00: {
 			DrvSoundLatch = d;
-			ZetClose();
-			ZetOpen(1);
+			ZetCPUPush(1);
 			DrvSetVector(Z80_ASSERT);
-			ZetClose();
-			ZetOpen(0);
+			ZetCPUPop();
 			return;
 		}
 		
@@ -1119,9 +1126,7 @@ static void __fastcall VigilanteZ80PortWrite1(UINT16 a, UINT8 d)
 		}
 		
 		case 0x04: {
-			DrvRomBank = d & 0x07;
-			ZetMapArea(0x8000, 0xbfff, 0, DrvZ80Rom1 + 0x10000 + (DrvRomBank * 0x4000));
-			ZetMapArea(0x8000, 0xbfff, 2, DrvZ80Rom1 + 0x10000 + (DrvRomBank * 0x4000));
+			bank_switch(d);
 			return;
 		}
 		
@@ -1237,20 +1242,16 @@ static void __fastcall KikcubicZ80PortWrite1(UINT16 a, UINT8 d)
 		}
 		
 		case 0x04: {
-			DrvRomBank = d & 0x07;
-			ZetMapArea(0x8000, 0xbfff, 0, DrvZ80Rom1 + 0x10000 + (DrvRomBank * 0x4000));
-			ZetMapArea(0x8000, 0xbfff, 2, DrvZ80Rom1 + 0x10000 + (DrvRomBank * 0x4000));
+			bank_switch(d);
 			return;
 		}
 		
 		case 0x06: {
 			if (d == 0x20) return; // ???
 			DrvSoundLatch = d;
-			ZetClose();
-			ZetOpen(1);
+			ZetCPUPush(1);
 			DrvSetVector(Z80_ASSERT);
-			ZetClose();
-			ZetOpen(0);
+			ZetCPUPop();
 			return;
 		}
 		
@@ -1472,7 +1473,7 @@ static INT32 DrvInit()
 {
 	INT32 nRet = 0, nLen;
 
-	BurnSetRefreshRate(55.0);
+	BurnSetRefreshRate(56.34);
 
 	// Allocate and Blank all required memory
 	Mem = NULL;
@@ -1560,11 +1561,12 @@ static INT32 DrvInit()
 	ZetMapArea(0xf000, 0xffff, 2, DrvZ80Ram2             );
 	ZetClose();
 
-	nCyclesTotal[0] = 3579645 / 55;
+	nCyclesTotal[0] = 3579645 / 55;   // 3579_6_45??? -dink
 	nCyclesTotal[1] = 3579645 / 55;
 	
 	GenericTilesInit();
-	BurnYM2151Init(3579645);
+	BurnYM2151InitBuffered(3579645, 1, NULL, 0);
+	BurnTimerAttachZet(3579645);
 	BurnYM2151SetIrqHandler(&VigilantYM2151IrqHandler);	
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.55, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.55, BURN_SND_ROUTE_RIGHT);
@@ -1580,7 +1582,7 @@ static INT32 DrvcInit()
 {
 	INT32 nRet = 0, nLen;
 
-	BurnSetRefreshRate(55.0);
+	BurnSetRefreshRate(56.34);
 
 	// Allocate and Blank all required memory
 	Mem = NULL;
@@ -1671,7 +1673,8 @@ static INT32 DrvcInit()
 	nCyclesTotal[1] = 3579645 / 55;
 	
 	GenericTilesInit();
-	BurnYM2151Init(3579645);
+	BurnYM2151InitBuffered(3579645, 1, NULL, 0);
+	BurnTimerAttachZet(3579645);
 	BurnYM2151SetIrqHandler(&VigilantYM2151IrqHandler);	
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.55, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.55, BURN_SND_ROUTE_RIGHT);
@@ -1687,7 +1690,7 @@ static INT32 DrvbInit()
 {
 	INT32 nRet = 0, nLen;
 
-	BurnSetRefreshRate(55.0);
+	BurnSetRefreshRate(56.34);
 
 	// Allocate and Blank all required memory
 	Mem = NULL;
@@ -1773,7 +1776,8 @@ static INT32 DrvbInit()
 	nCyclesTotal[1] = 3579645 / 55;
 	
 	GenericTilesInit();
-	BurnYM2151Init(3579645);
+	BurnYM2151InitBuffered(3579645, 1, NULL, 0);
+	BurnTimerAttachZet(3579645);
 	BurnYM2151SetIrqHandler(&VigilantYM2151IrqHandler);	
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.55, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.55, BURN_SND_ROUTE_RIGHT);
@@ -2005,7 +2009,8 @@ static INT32 KikcubicInit()
 	nCyclesTotal[1] = 3579645 / 55;
 	
 	GenericTilesInit();
-	BurnYM2151Init(3579645);
+	BurnYM2151InitBuffered(3579645, 1, NULL, 0);
+	BurnTimerAttachZet(3579645);
 	BurnYM2151SetIrqHandler(&VigilantYM2151IrqHandler);	
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.55, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.55, BURN_SND_ROUTE_RIGHT);
@@ -2276,76 +2281,42 @@ static INT32 KikcubicDraw()
 static INT32 DrvFrame()
 {
 	INT32 nInterleave = 256; // dac needs 128 NMIs
-	INT32 nSoundBufferPos = 0;
-	
+
 	if (DrvReset) DrvDoReset();
 
 	DrvMakeInputs();
 
-	nCyclesDone[0] = nCyclesDone[1] = 0;
-	
-	ZetNewFrame();
-	
-	for (INT32 i = 0; i < nInterleave; i++) {
-		INT32 nCurrentCPU, nNext;
+	INT32 nCyclesDone[2] = { nExtraCycles[0], nExtraCycles[1] };
 
-		nCurrentCPU = 0;
-		ZetOpen(nCurrentCPU);
-		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
-		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		nCyclesDone[nCurrentCPU] += ZetRun(nCyclesSegment);
+	ZetNewFrame();
+
+	for (INT32 i = 0; i < nInterleave; i++) {
+		ZetOpen(0);
+		CPU_RUN(0, Zet);
 		if (i == (nInterleave - 1)) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
 		ZetClose();
 
-		nCurrentCPU = 1;
-		ZetOpen(nCurrentCPU);
-		if (!DrvHasYM2203) {
-			nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
-			nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-			nCyclesDone[nCurrentCPU] += ZetRun(nCyclesSegment);
-		} else {
-			BurnTimerUpdate(i * (nCyclesTotal[nCurrentCPU] / nInterleave));
-		}
-		if (i & 1) {
-			ZetNmi();
-		}
-		ZetClose();
-		
-		if (pBurnSoundOut && !DrvHasYM2203) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			ZetOpen(1);
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			ZetClose();
-			nSoundBufferPos += nSegmentLength;
-		}
-	}
-	
-	if (DrvHasYM2203) {
 		ZetOpen(1);
-		BurnTimerEndFrame(nCyclesTotal[1]);
+		CPU_RUN_TIMER(1);
+		if (i & 1) ZetNmi();
 		ZetClose();
 	}
-	
+
+	ZetOpen(1);
 	if (pBurnSoundOut && !DrvHasYM2203) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		
-		if (nSegmentLength) {
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			ZetOpen(1);
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			ZetClose();			
-		}
+		BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
 		DACUpdate(pBurnSoundOut, nBurnSoundLen);
 	}
-	
+
 	if (DrvHasYM2203 && pBurnSoundOut) {
-		ZetOpen(1);
 		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
-		ZetClose();
 		DACUpdate(pBurnSoundOut, nBurnSoundLen);
 	}
-	
+	ZetClose();
+
+	nExtraCycles[0] = nCyclesDone[0] - nCyclesTotal[0];
+	nExtraCycles[1] = nCyclesDone[1] - nCyclesTotal[1];
+
 	if (pBurnDraw) {
 		if (DrvKikcubicDraw) {
 			KikcubicDraw();
@@ -2382,14 +2353,10 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		}
 		DACScan(nAction, pnMin);
 
-		// Scan critical driver variables
-		SCAN_VAR(nCyclesDone);
-		SCAN_VAR(nCyclesSegment);
 		SCAN_VAR(DrvRomBank);
 		SCAN_VAR(DrvSoundLatch);
-		SCAN_VAR(DrvDip);
-		SCAN_VAR(DrvInput);
 		SCAN_VAR(DrvIrqVector);
+
 		SCAN_VAR(DrvRearColour);
 		SCAN_VAR(DrvRearDisable);
 		SCAN_VAR(DrvHorizScrollLo);
@@ -2397,12 +2364,13 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(DrvRearHorizScrollLo);
 		SCAN_VAR(DrvRearHorizScrollHi);
 		SCAN_VAR(DrvSampleAddress);
+
+		SCAN_VAR(nExtraCycles);
 	}
 	
 	if (nAction & ACB_WRITE) {
 		ZetOpen(0);
-		ZetMapArea(0x8000, 0xbfff, 0, DrvZ80Rom1 + 0x10000 + (DrvRomBank * 0x4000));
-		ZetMapArea(0x8000, 0xbfff, 2, DrvZ80Rom1 + 0x10000 + (DrvRomBank * 0x4000));
+		bank_switch(DrvRomBank);
 		ZetClose();
 	}
 
@@ -2419,7 +2387,7 @@ struct BurnDriver BurnDrvVigilant = {
 	"vigilant", NULL, NULL, NULL, "1988",
 	"Vigilante (World, Rev E)\0", NULL, "Irem", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
 	NULL, DrvRomInfo, DrvRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 544, 256, 256, 4, 3
@@ -2429,7 +2397,7 @@ struct BurnDriver BurnDrvVigilanta = {
 	"vigilanta", "vigilant", NULL, NULL, "1988",
 	"Vigilante (World, Rev A)\0", NULL, "Irem", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
 	NULL, VigilantaRomInfo, VigilantaRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvcInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 544, 256, 256, 4, 3
@@ -2439,7 +2407,7 @@ struct BurnDriver BurnDrvVigilantb = {
 	"vigilantb", "vigilant", NULL, NULL, "1988",
 	"Vigilante (US, Rev B)\0", NULL, "Irem (Data East License)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
 	NULL, VigilantbRomInfo, VigilantbRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvcInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 544, 256, 256, 4, 3
@@ -2449,7 +2417,7 @@ struct BurnDriver BurnDrvVigilantc = {
 	"vigilantc", "vigilant", NULL, NULL, "1988",
 	"Vigilante (World, Rev C)\0", NULL, "Irem", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
 	NULL, Drv1RomInfo, Drv1RomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvcInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 544, 256, 256, 4, 3
@@ -2459,7 +2427,7 @@ struct BurnDriver BurnDrvVigilanto = {
 	"vigilanto", "vigilant", NULL, NULL, "1988",
 	"Vigilante (US)\0", NULL, "Irem (Data East USA License)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
 	NULL, DrvuRomInfo, DrvuRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvcInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 544, 256, 256, 4, 3
@@ -2469,7 +2437,7 @@ struct BurnDriver BurnDrvVigilantg = {
 	"vigilantg", "vigilant", NULL, NULL, "1988",
 	"Vigilante (US, Rev G)\0", NULL, "Irem (Data East USA License)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
 	NULL, Drvu2RomInfo, Drvu2RomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 544, 256, 256, 4, 3
@@ -2479,7 +2447,7 @@ struct BurnDriver BurnDrvVigilantd = {
 	"vigilantd", "vigilant", NULL, NULL, "1988",
 	"Vigilante (Japan, Rev D)\0", NULL, "Irem", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
 	NULL, DrvjRomInfo, DrvjRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvcInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 544, 256, 256, 4, 3
@@ -2489,7 +2457,7 @@ struct BurnDriver BurnDrvVigilantbl = {
 	"vigilantbl", "vigilant", NULL, NULL, "1988",
 	"Vigilante (bootleg)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
 	NULL, DrvbRomInfo, DrvbRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
 	DrvbInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 544, 256, 256, 4, 3
@@ -2499,7 +2467,7 @@ struct BurnDriver BurnDrvKikcubic = {
 	"kikcubic", NULL, NULL, NULL, "1988",
 	"Meikyu Jima (Japan)\0", NULL, "Irem", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_IREM_MISC, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_MAZE, 0,
 	NULL, KikcubicRomInfo, KikcubicRomName, NULL, NULL, NULL, NULL, KikcubicInputInfo, KikcubicDIPInfo,
 	KikcubicInit, DrvExit, DrvFrame, KikcubicDraw, DrvScan,
 	NULL, 544, 384, 256, 4, 3
@@ -2509,7 +2477,7 @@ struct BurnDriver BurnDrvKikcubicb = {
 	"kikcubicb", "kikcubic", NULL, NULL, "1988",
 	"Kickle Cubele\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_IREM_MISC, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_MAZE, 0,
 	NULL, KikcubicbRomInfo, KikcubicbRomName, NULL, NULL, NULL, NULL, KikcubicInputInfo, KikcubicDIPInfo,
 	KikcubicInit, DrvExit, DrvFrame, KikcubicDraw, DrvScan,
 	NULL, 544, 384, 256, 4, 3
@@ -2519,7 +2487,7 @@ struct BurnDriver BurnDrvBuccanrs = {
 	"buccanrs", NULL, NULL, NULL, "1989",
 	"Buccaneers (set 1)\0", NULL, "Duintronic", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
 	NULL, BuccanrsRomInfo, BuccanrsRomName, NULL, NULL, NULL, NULL, BuccanrsInputInfo, BuccanrsDIPInfo,
 	BuccanrsInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 544, 256, 256, 4, 3
@@ -2529,7 +2497,7 @@ struct BurnDriver BurnDrvBuccanrsa = {
 	"buccanrsa", "buccanrs", NULL, NULL, "1989",
 	"Buccaneers (set 2)\0", NULL, "Duintronic", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
 	NULL, BuccanrsaRomInfo, BuccanrsaRomName, NULL, NULL, NULL, NULL, BuccanrsaInputInfo, BuccanrsaDIPInfo,
 	BuccanrsInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 544, 256, 256, 4, 3
@@ -2539,7 +2507,7 @@ struct BurnDriver BurnDrvBuccanrsb = {
 	"buccanrsb", "buccanrs", NULL, NULL, "1989",
 	"Buccaneers (set 3, harder)\0", NULL, "Duintronic", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_MISC, GBF_SCRFIGHT, 0,
 	NULL, BuccanrsbRomInfo, BuccanrsbRomName, NULL, NULL, NULL, NULL, BuccanrsInputInfo, BuccanrsDIPInfo,
 	BuccanrsInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 544, 256, 256, 4, 3

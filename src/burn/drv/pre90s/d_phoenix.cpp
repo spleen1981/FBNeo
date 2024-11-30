@@ -25,7 +25,6 @@
 
 #endif
 
-#include "tms36xx.h"
 #include "phoenixsound.h"
 #include "pleiadssound.h"
 
@@ -62,88 +61,88 @@ static UINT8 DrvDips[3];
 static UINT8 DrvReset;
 
 static struct BurnInputInfo PhoenixInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 fire 2"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Phoenix)
 
 static struct BurnInputInfo Phoenix3InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Phoenix3)
 
 static struct BurnInputInfo CondorInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Condor)
 
 static struct BurnInputInfo PleiadsInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
 	{"P1 Button",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 fire 1"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 right"	},
 	{"P2 Button",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Pleiads)
@@ -242,6 +241,40 @@ static struct BurnDIPInfo PleiadceDIPList[]=
 };
 
 STDDIPINFO(Pleiadce)
+
+static struct BurnDIPInfo CityattaDIPList[]=
+{
+	{0x0c, 0xff, 0xff, 0x60, NULL			},
+	{0x0e, 0xff, 0xff, 0x00, NULL			},
+
+	{0   , 0xfe, 0   ,    4, "Lives"		},
+	{0x0c, 0x01, 0x03, 0x00, "3"			},
+	{0x0c, 0x01, 0x03, 0x01, "4"			},
+	{0x0c, 0x01, 0x03, 0x02, "5"			},
+	{0x0c, 0x01, 0x03, 0x03, "6"			},
+
+	{0   , 0xfe, 0   ,    2, "Unknwon"		},
+	{0x0c, 0x01, 0x04, 0x00, "On"			},
+	{0x0c, 0x01, 0x04, 0x04, "Off"			},
+
+	{0   , 0xfe, 0   ,    2, "Bonus Life"	},
+	{0x0c, 0x01, 0x08, 0x00, "3K"			},
+	{0x0c, 0x01, 0x08, 0x04, "5K"			},
+	
+	{0   , 0xfe, 0   ,    2, "Coinage"		},
+	{0x0c, 0x01, 0x10, 0x10, "2 Coins 1 Credits"	},
+	{0x0c, 0x01, 0x10, 0x00, "1 Coin  1 Credits"	},
+
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"	},
+	{0x0c, 0x01, 0x40, 0x00, "Off"			},
+	{0x0c, 0x01, 0x40, 0x40, "On"			},
+
+	{0   , 0xfe, 0   ,    2, "Cabinet"		},
+	{0x0e, 0x01, 0x01, 0x00, "Upright"		},
+	{0x0e, 0x01, 0x01, 0x01, "Cocktail"		},
+};
+
+STDDIPINFO(Cityatta)
 
 static struct BurnDIPInfo CondorDIPList[]=
 {
@@ -581,6 +614,10 @@ static INT32 DrvDoReset()
 	palette_bank = 0;
 	cocktail_mode = 0;
 
+
+	HiscoreReset();
+
+
 	return 0;
 }
 
@@ -854,11 +891,14 @@ static INT32 DrvFrame()
 	i8080Close();
 
 	if (pBurnSoundOut) {
-		if (phoenixmode)
+		if (phoenixmode) {
 			phoenix_sound_update(pBurnSoundOut, nBurnSoundLen);
+		}
 
-		if (pleiads)
+		if (pleiads) {
 			pleiads_sound_update(pBurnSoundOut, nBurnSoundLen);
+		}
+		BurnSoundDCFilter();
 	}
 
 	return 0;
@@ -882,7 +922,13 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		i8080Scan(nAction);
 
-		tms36xx_scan(nAction, pnMin);
+		if (phoenixmode) {
+			phoenix_sound_scan(nAction, pnMin);
+		}
+
+		if (pleiads) {
+			pleiads_sound_scan(nAction, pnMin);
+		}
 
 		SCAN_VAR(scrollx);
 		SCAN_VAR(ram_bank);
@@ -926,9 +972,9 @@ STD_ROM_FN(phoenix)
 
 struct BurnDriver BurnDrvPhoenix = {
 	"phoenix", NULL, NULL, NULL, "1980",
-	"Phoenix (Amstar)\0", NULL, "Amstar", "Miscellaneous",
+	"Phoenix (Amstar, set 1)\0", NULL, "Amstar", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixRomInfo, phoenixRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -963,7 +1009,7 @@ struct BurnDriver BurnDrvPhoenix2 = {
 	"phoenix2", "phoenix", NULL, NULL, "1980",
 	"Phoenix (Amstar, set 2)\0", NULL, "Amstar", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenix2RomInfo, phoenix2RomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -998,7 +1044,7 @@ struct BurnDriver BurnDrvPhoenixa = {
 	"phoenixa", "phoenix", NULL, NULL, "1980",
 	"Phoenix (Centuri, set 1)\0", NULL, "Amstar (Centuri license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixaRomInfo, phoenixaRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixaDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1034,7 +1080,7 @@ struct BurnDriver BurnDrvPhoenixb = {
 	"phoenixb", "phoenix", NULL, NULL, "1980",
 	"Phoenix (Centuri, set 2)\0", NULL, "Amstar (Centuri license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixbRomInfo, phoenixbRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixaDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1070,7 +1116,7 @@ struct BurnDriver BurnDrvPhoenixdal = {
 	"phoenixdal", "phoenix", NULL, NULL, "1980",
 	"Phoenix (D&L bootleg)\0", NULL, "bootleg (D&L)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixdalRomInfo, phoenixdalRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1106,7 +1152,7 @@ struct BurnDriver BurnDrvPhoenixt = {
 	"phoenixt", "phoenix", NULL, NULL, "1980",
 	"Phoenix (Taito)\0", NULL, "Amstar (Taito license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixtRomInfo, phoenixtRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1142,7 +1188,7 @@ struct BurnDriver BurnDrvPhoenixj = {
 	"phoenixj", "phoenix", NULL, NULL, "1980",
 	"Phoenix (Taito Japan)\0", NULL, "Amstar (Taito Japan license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixjRomInfo, phoenixjRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1178,14 +1224,14 @@ struct BurnDriver BurnDrvPhoenix3 = {
 	"phoenix3", "phoenix", NULL, NULL, "1980",
 	"Phoenix (T.P.N. bootleg)\0", NULL, "bootleg (T.P.N.)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenix3RomInfo, phoenix3RomName, NULL, NULL, NULL, NULL, Phoenix3InputInfo, Phoenix3DIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
 };
 
 
-// Phoenix (Irecsa / G.G.I Corp, set 1)
+// Phoenix (Irecsa / G.G.I. Corporation)
 
 static struct BurnRomInfo phoenixcRomDesc[] = {
 	{ "phoenix.45",		0x0800, 0x5b8c55a8, 1 | BRF_PRG | BRF_ESS }, //  0 i8085 Code
@@ -1212,16 +1258,16 @@ STD_ROM_FN(phoenixc)
 
 struct BurnDriver BurnDrvPhoenixc = {
 	"phoenixc", "phoenix", NULL, NULL, "1981",
-	"Phoenix (Irecsa / G.G.I Corp, set 1)\0", NULL, "bootleg? (Irecsa / G.G.I Corp)", "Miscellaneous",
+	"Phoenix (Irecsa / G.G.I. Corporation)\0", NULL, "bootleg? (Irecsa / G.G.I. Corporation)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixcRomInfo, phoenixcRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
 };
 
 
-// Phoenix (Irecsa / G.G.I Corp, set 2)
+// Phoenix (G.G.I. Corporation, set 1)
 // verified main and ROMs PCBs and 2 PROMs
 
 static struct BurnRomInfo phoenixc2RomDesc[] = {
@@ -1253,16 +1299,16 @@ STD_ROM_FN(phoenixc2)
 
 struct BurnDriver BurnDrvPhoenixc2 = {
 	"phoenixc2", "phoenix", NULL, NULL, "1981",
-	"Phoenix (Irecsa / G.G.I Corp, set 2)\0", NULL, "bootleg? (Irecsa / G.G.I Corp)", "Miscellaneous",
+	"Phoenix (G.G.I. Corporation, set 1)\0", NULL, "bootleg (G.G.I. Corporation)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixc2RomInfo, phoenixc2RomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
 };
 
 
-// Phoenix (Irecsa / G.G.I Corp, set 3)
+// Phoenix (G.G.I. Corporation, set 2)
 // verified main and ROMs PCBs and 2 PROMs
 
 static struct BurnRomInfo phoenixc3RomDesc[] = {
@@ -1290,16 +1336,16 @@ STD_ROM_FN(phoenixc3)
 
 struct BurnDriver BurnDrvPhoenixc3 = {
 	"phoenixc3", "phoenix", NULL, NULL, "1981",
-	"Phoenix (Irecsa / G.G.I Corp, set 3)\0", NULL, "bootleg? (Irecsa / G.G.I Corp)", "Miscellaneous",
+	"Phoenix (G.G.I. Corporation, set 2)\0", NULL, "bootleg (G.G.I. Corporation)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixc3RomInfo, phoenixc3RomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
 };
 
 
-// Phoenix (Irecsa / G.G.I Corp, set 4)
+// Phoenix (G.G.I. Corporation, set 3)
 // verified main and ROMs PCBs and 2 PROMs
 
 static struct BurnRomInfo phoenixc4RomDesc[] = {
@@ -1326,9 +1372,9 @@ STD_ROM_FN(phoenixc4)
 
 struct BurnDriver BurnDrvPhoenixc4 = {
 	"phoenixc4", "phoenix", NULL, NULL, "1981",
-	"Phoenix (Irecsa / G.G.I Corp, set 4)\0", NULL, "bootleg? (Irecsa / G.G.I Corp)", "Miscellaneous",
+	"Phoenix (G.G.I. Corporation, set 3)\0", NULL, "bootleg (G.G.I. Corporation)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixc4RomInfo, phoenixc4RomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
 	SinglePromInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1365,7 +1411,7 @@ struct BurnDriver BurnDrvPhoenixgu = {
 	"phoenixgu", "phoenix", NULL, NULL, "1981",
 	"Phoenix (G. Universal Video bootleg)\0", NULL, "bootleg? (G. Universal Video)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixguRomInfo, phoenixguRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1402,7 +1448,7 @@ struct BurnDriver BurnDrvPhoenixha = {
 	"phoenixha", "phoenix", NULL, NULL, "1981",
 	"Phoenix (Hellomat Automaten bootleg)\0", NULL, "bootleg (Hellomat Automaten)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixhaRomInfo, phoenixhaRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1440,7 +1486,7 @@ struct BurnDriver BurnDrvPhoenixi = {
 	"phoenixi", "phoenix", NULL, NULL, "1981",
 	"Phoenix (IDI bootleg)\0", NULL, "bootleg (IDI)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixiRomInfo, phoenixiRomName, NULL, NULL, NULL, NULL, CondorInputInfo, CondorDIPInfo,
 	SinglePromInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1474,10 +1520,10 @@ STD_ROM_PICK(fenixn)
 STD_ROM_FN(fenixn)
 
 struct BurnDriver BurnDrvFenixn = {
-	"fenixn", "phoenix", NULL, NULL, "1981",
+	"fenixn", "phoenix", NULL, NULL, "1980",
 	"Fenix (Niemer bootleg of Phoenix)\0", NULL, "bootleg (Niemer)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, fenixnRomInfo, fenixnRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1513,7 +1559,7 @@ struct BurnDriver BurnDrvCondor = {
 	"condor", "phoenix", NULL, NULL, "1981",
 	"Condor (Sidam bootleg of Phoenix)\0", NULL, "bootleg (Sidam)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, condorRomInfo, condorRomName, NULL, NULL, NULL, NULL, CondorInputInfo, CondorDIPInfo,
 	CondorInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1548,7 +1594,7 @@ struct BurnDriver BurnDrvCondorn = {
 	"condorn", "phoenix", NULL, NULL, "1981",
 	"Condor (S C Novar bootleg of Phoenix)\0", NULL, "bootleg (S C Novar)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, condornRomInfo, condornRomName, NULL, NULL, NULL, NULL, CondorInputInfo, CondorDIPInfo,
 	SinglePromInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1582,9 +1628,9 @@ STD_ROM_FN(falcon)
 
 struct BurnDriver BurnDrvFalcon = {
 	"falcon", "phoenix", NULL, NULL, "1980",
-	"Falcon (bootleg of Phoenix) (8085A CPU)\0", NULL, "bootleg (BGV Ltd.)", "Miscellaneous",
+	"Falcon (bootleg of Phoenix) (8085A CPU)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, falconRomInfo, falconRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1620,7 +1666,7 @@ struct BurnDriver BurnDrvVautour = {
 	"vautour", "phoenix", NULL, NULL, "1980",
 	"Vautour (bootleg of Phoenix) (8085A CPU)\0", NULL, "bootleg (Jeutel)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, vautourRomInfo, vautourRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1655,7 +1701,7 @@ struct BurnDriver BurnDrvVautourza = {
 	"vautourza", "phoenix", NULL, NULL, "1980",
 	"Vautour (bootleg of Phoenix) (Z80 CPU, single PROM)\0", NULL, "bootleg (Jeutel)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, vautourzaRomInfo, vautourzaRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1689,9 +1735,9 @@ STD_ROM_FN(falconz)
 
 struct BurnDriver BurnDrvFalconz = {
 	"falconz", "phoenix", NULL, NULL, "1980",
-	"Falcon (bootleg of Phoenix) (Z80 CPU)\0", NULL, "bootleg", "Miscellaneous",
+	"Falcon (bootleg of Phoenix) (Z80 CPU)\0", NULL, "bootleg (Digimatic)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, falconzRomInfo, falconzRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, FalconzDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1727,14 +1773,14 @@ struct BurnDriver BurnDrvVautourz = {
 	"vautourz", "phoenix", NULL, NULL, "1980",
 	"Vautour (bootleg of Phoenix) (Z80 CPU)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, vautourzRomInfo, vautourzRomName, NULL, NULL, NULL, NULL, CondorInputInfo, CondorDIPInfo,
 	CondorInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
 };
 
 
-// Fenix (bootleg of Phoenix)
+// Fenix (Orio bootleg of Phoenix)
 // verified single PCB, single PROM
 
 static struct BurnRomInfo fenixRomDesc[] = {
@@ -1762,9 +1808,9 @@ STD_ROM_FN(fenix)
 
 struct BurnDriver BurnDrvFenix = {
 	"fenix", "phoenix", NULL, NULL, "1980",
-	"Fenix (bootleg of Phoenix)\0", NULL, "bootleg", "Miscellaneous",
+	"Fenix (Orio bootleg of Phoenix)\0", NULL, "bootleg (Orio)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, fenixRomInfo, fenixRomName, NULL, NULL, NULL, NULL, CondorInputInfo, CondorDIPInfo,
 	CondorInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1800,7 +1846,7 @@ struct BurnDriver BurnDrvAvefenix = {
 	"avefenix", "phoenix", NULL, NULL, "1980",
 	"Ave Fenix (Electrogame, Spanish bootleg of Phoenix)\0", NULL, "bootleg (Video Game)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, avefenixRomInfo, avefenixRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1833,10 +1879,10 @@ STD_ROM_PICK(avefenixrf)
 STD_ROM_FN(avefenixrf)
 
 struct BurnDriver BurnDrvAvefenixrf = {
-	"avefenixrf", "phoenix", NULL, NULL, "1981",
+	"avefenixrf", "phoenix", NULL, NULL, "1980",
 	"Ave Fenix (Recreativos Franco, Spanish bootleg of Phoenix)\0", NULL, "bootleg (Recreativos Franco S.A.)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, avefenixrfRomInfo, avefenixrfRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1870,16 +1916,16 @@ STD_ROM_FN(avefenixl)
 
 struct BurnDriver BurnDrvAvefenixl = {
 	"avefenixl", "phoenix", NULL, NULL, "1980",
-	"Ave Fenix (Laguna, Spanish bootleg of Phoenix)\0", NULL, "bootleg", "Miscellaneous",
+	"Ave Fenix (Laguna, Spanish bootleg of Phoenix)\0", NULL, "bootleg (Laguna)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, avefenixlRomInfo, avefenixlRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
 };
 
 
-// Griffon (bootleg of Phoenix)
+// Griffon (Videotron bootleg of Phoenix)
 // verified single PCB, single PROM
 
 static struct BurnRomInfo griffonRomDesc[] = {
@@ -1906,9 +1952,9 @@ STD_ROM_FN(griffon)
 
 struct BurnDriver BurnDrvGriffon = {
 	"griffon", "phoenix", NULL, NULL, "1980",
-	"Griffon (bootleg of Phoenix)\0", NULL, "bootleg (Videotron)", "Miscellaneous",
+	"Griffon (Videotron bootleg of Phoenix)\0", NULL, "bootleg (Videotron)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, griffonRomInfo, griffonRomName, NULL, NULL, NULL, NULL, CondorInputInfo, CondorDIPInfo,
 	SinglePromInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1941,10 +1987,10 @@ STD_ROM_PICK(nextfase)
 STD_ROM_FN(nextfase)
 
 struct BurnDriver BurnDrvNextfase = {
-	"nextfase", "phoenix", NULL, NULL, "1980",
+	"nextfase", "phoenix", NULL, NULL, "1981",
 	"Next Fase (bootleg of Phoenix)\0", NULL, "bootleg (Petaco S.A.)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, nextfaseRomInfo, nextfaseRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, NextfaseDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1981,7 +2027,7 @@ struct BurnDriver BurnDrvPhoenixs = {
 	"phoenixs", "phoenix", NULL, NULL, "1981",
 	"Phoenix (Sonic, Spanish bootleg)\0", NULL, "bootleg (Sonic)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixsRomInfo, phoenixsRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -1991,23 +2037,23 @@ struct BurnDriver BurnDrvPhoenixs = {
 // Phoenix (Assa, Spanish bootleg)
 
 static struct BurnRomInfo phoenixassRomDesc[] = {
-	{ "ic45.bin",		0x0800, 0x5b8c55a8, 1 | BRF_PRG | BRF_ESS }, //  0 i8085 Code
-	{ "ic46.bin",		0x0800, 0xdbc942fa, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "ic47.bin",		0x0800, 0xcbbb8839, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "ic48.bin",		0x0800, 0x1e2e2fc7, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "ic49.bin",		0x0800, 0x1a1ce0d0, 1 | BRF_PRG | BRF_ESS }, //  4
-	{ "ic50.bin",		0x0800, 0xac5e9ec1, 1 | BRF_PRG | BRF_ESS }, //  5
-	{ "ic51.bin",		0x0800, 0x2eab35b4, 1 | BRF_PRG | BRF_ESS }, //  6
-	{ "ic52.bin",		0x0800, 0x15a02d87, 1 | BRF_PRG | BRF_ESS }, //  7
+	{ "00-811.ic45",	0x0800, 0x5b8c55a8, 1 | BRF_PRG | BRF_ESS }, //  0 i8085 Code
+	{ "01-811.ic46",	0x0800, 0xdbc942fa, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "02-811.ic47",	0x0800, 0xcbbb8839, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "03-811.ic48",	0x0800, 0x1e2e2fc7, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "04-811.ic49",	0x0800, 0x1a1ce0d0, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "05-811.ic50",	0x0800, 0xac5e9ec1, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "06-811.ic51",	0x0800, 0x2eab35b4, 1 | BRF_PRG | BRF_ESS }, //  6
+	{ "07-811.ic52",	0x0800, 0x15a02d87, 1 | BRF_PRG | BRF_ESS }, //  7
 
-	{ "ic23.bin",		0x0800, 0x3c7e623f, 2 | BRF_GRA },           //  8 Background Tiles
-	{ "ic24.bin",		0x0800, 0x59916d3b, 2 | BRF_GRA },           //  9
+	{ "10-811.ic23",	0x0800, 0x3c7e623f, 2 | BRF_GRA },           //  8 Background Tiles
+	{ "11-811.ic24",	0x0800, 0x59916d3b, 2 | BRF_GRA },           //  9
 
-	{ "ic39.bin",		0x0800, 0xbb0525ed, 3 | BRF_GRA },           // 10 Foreground Tiles
-	{ "ic40.bin",		0x0800, 0x4178aa4f, 3 | BRF_GRA },           // 11
+	{ "08-811.ic39",	0x0800, 0xbb0525ed, 3 | BRF_GRA },           // 10 Foreground Tiles
+	{ "09-811.ic40",	0x0800, 0x4178aa4f, 3 | BRF_GRA },           // 11
 
-	{ "prom.41",		0x0100, 0x7c9f2e00, 4 | BRF_GRA },           // 12 Color Proms
-	{ "prom.40",		0x0100, 0xe176b768, 4 | BRF_GRA },           // 13
+	{ "dm74s287n.ic41",	0x0100, 0x7c9f2e00, 4 | BRF_GRA },           // 12 Color Proms
+	{ "dm74s287n.ic40",	0x0100, 0xe176b768, 4 | BRF_GRA },           // 13
 };
 
 STD_ROM_PICK(phoenixass)
@@ -2017,7 +2063,7 @@ struct BurnDriver BurnDrvPhoenixass = {
 	"phoenixass", "phoenix", NULL, NULL, "1981",
 	"Phoenix (Assa, Spanish bootleg)\0", NULL, "bootleg (Assa)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixassRomInfo, phoenixassRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixDIPInfo,
 	PhoenixInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	208, 256, 3, 4
@@ -2053,7 +2099,7 @@ struct BurnDriver BurnDrvPleiads = {
 	"pleiads", NULL, NULL, NULL, "1981",
 	"Pleiads (Tehkan)\0", NULL, "Tehkan", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, pleiadsRomInfo, pleiadsRomName, NULL, NULL, NULL, NULL, PleiadsInputInfo, PleiadsDIPInfo,
 	PleiadsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	208, 256, 3, 4
@@ -2089,7 +2135,7 @@ struct BurnDriver BurnDrvPleiadsb2 = {
 	"pleiadsb2", "pleiads", NULL, NULL, "1981",
 	"Pleiads (bootleg set 2)\0", NULL, "bootleg (ESG)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, pleiadsb2RomInfo, pleiadsb2RomName, NULL, NULL, NULL, NULL, PleiadsInputInfo, PleiadsDIPInfo,
 	PleiadsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	208, 256, 3, 4
@@ -2125,7 +2171,7 @@ struct BurnDriver BurnDrvPleiadbl = {
 	"pleiadbl", "pleiads", NULL, NULL, "1981",
 	"Pleiads (bootleg set 1)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, pleiadblRomInfo, pleiadblRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PleiadblDIPInfo,
 	PleiadsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	208, 256, 3, 4
@@ -2161,7 +2207,7 @@ struct BurnDriver BurnDrvPleiadce = {
 	"pleiadce", "pleiads", NULL, NULL, "1981",
 	"Pleiads (Centuri)\0", NULL, "Tehkan (Centuri license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, pleiadceRomInfo, pleiadceRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PleiadceDIPInfo,
 	PleiadsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	208, 256, 3, 4
@@ -2195,9 +2241,9 @@ STD_ROM_FN(pleiadsi)
 
 struct BurnDriver BurnDrvPleiadsi = {
 	"pleiadsi", "pleiads", NULL, NULL, "1981",
-	"Pleiads (Irecsa)\0", NULL, "bootleg? (Irecsa)", "Miscellaneous",
+	"Pleiads (Irecsa)\0", NULL, "bootleg (Irecsa)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, pleiadsiRomInfo, pleiadsiRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PleiadceDIPInfo,
 	PleiadsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	208, 256, 3, 4
@@ -2231,16 +2277,16 @@ STD_ROM_FN(pleiadsn)
 
 struct BurnDriver BurnDrvPleiadsn = {
 	"pleiadsn", "pleiads", NULL, NULL, "1981",
-	"Pleiads (Niemer S.A.)\0", NULL, "Niemer S.A.", "Miscellaneous",
+	"Pleiads (Niemer S.A.)\0", NULL, "bootleg (Niemer S.A.)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, pleiadsnRomInfo, pleiadsnRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PleiadceDIPInfo,
 	PleiadsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	208, 256, 3, 4
 };
 
 
-// Pleiads (Spanish bootleg)
+// Pleiads (Famaresa, Spanish bootleg)
 
 static struct BurnRomInfo pleiadssRomDesc[] = {
 	{ "pl45.bin",		0x0800, 0xe2528599, 1 | BRF_PRG | BRF_ESS }, //  0 i8085 Code
@@ -2267,10 +2313,47 @@ STD_ROM_FN(pleiadss)
 
 struct BurnDriver BurnDrvPleiadss = {
 	"pleiadss", "pleiads", NULL, NULL, "1981",
-	"Pleiads (Spanish bootleg)\0", NULL, "bootleg", "Miscellaneous",
+	"Pleiads (Famaresa, Spanish bootleg)\0", NULL, "bootleg (Famaresa)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, pleiadssRomInfo, pleiadssRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PleiadceDIPInfo,
+	PleiadsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
+	208, 256, 3, 4
+};
+
+// City Attack (Petaco S.A., bootleg of Pleiads)
+/* PCB silkscreened as "H-P6 NO.085318"
+   On screen game title shows just "Attack", but the cabinet, manual and legal registry name (number A/20/00241) is "City Attack" */
+   
+static struct BurnRomInfo cityattaRomDesc[] = {
+	{ "1-2716.bin",		0x0800, 0xc013515f, 1 | BRF_PRG | BRF_ESS }, //  0 i8085 Code
+	{ "2-2716.bin",		0x0800, 0xb254217c, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "3-2716.bin",		0x0800, 0x87e700bb, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "4-2716.bin",		0x0800, 0xbcda59ae, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "5-2716.bin",		0x0800, 0x49c629bc, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "6-2716.bin",		0x0800, 0xf1a8a00d, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "7-2716.bin",		0x0800, 0xb5f07fbc, 1 | BRF_PRG | BRF_ESS }, //  6
+	{ "8-2716.bin",		0x0800, 0xb1b5a8a6, 1 | BRF_PRG | BRF_ESS }, //  7
+
+	{ "11-2716.bin",	0x0800, 0x6694a80f, 2 | BRF_GRA },           //  8 Background Tiles
+	{ "12-2716.bin",	0x0800, 0x5188fc29, 2 | BRF_GRA },           //  9
+
+	{ "10-2716.bin",	0x0800, 0x85866607, 3 | BRF_GRA },           // 10 Foreground Tiles
+	{ "9-2716.bin",		0x0800, 0xa841d511, 3 | BRF_GRA },           // 11
+
+	{ "ic41a-7611.bin",	0x0100, 0xe38eeb83, 4 | BRF_GRA },           // 12 Color Proms
+	{ "ic40a-7611.bin",	0x0100, 0x7a1bcb1e, 4 | BRF_GRA },           // 13
+};
+
+STD_ROM_PICK(cityatta)
+STD_ROM_FN(cityatta)
+
+struct BurnDriver BurnDrvCityatta = {
+	"cityatta", "pleiads", NULL, NULL, "1981",
+	"City Attack (Petaco S.A., bootleg of Pleiads)\0", NULL, "bootleg (Petaco S.A.)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	NULL, cityattaRomInfo, cityattaRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, CityattaDIPInfo,
 	PleiadsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	208, 256, 3, 4
 };
@@ -2305,7 +2388,7 @@ struct BurnDriver BurnDrvCapitol = {
 	"capitol", "pleiads", NULL, NULL, "1981",
 	"Capitol\0", NULL, "bootleg? (Universal Video Spiel)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, capitolRomInfo, capitolRomName, NULL, NULL, NULL, NULL, PleiadsInputInfo, PleiadsDIPInfo,
 	PleiadsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	208, 256, 3, 4

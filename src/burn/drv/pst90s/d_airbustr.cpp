@@ -416,6 +416,8 @@ static INT32 DrvDoReset(INT32 full_reset)
 
 	nExtraCycles[0] = nExtraCycles[1] = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -500,12 +502,7 @@ static INT32 DrvInit()
 {
 	is_bootleg = BurnDrvGetFlags() & BDF_BOOTLEG;
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x000000,  0, 1)) return 1;
@@ -615,7 +612,7 @@ static INT32 DrvExit()
 
 	BurnYM2203Exit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -661,11 +658,13 @@ static INT32 DrvDraw()
 {
 	DrvRecalcPalette();
 
-	draw_layer(0, 3, 6, 2, 5);
-	draw_layer(1, 1, 8, 0, 7);
+	BurnTransferClear();
+
+	if (nBurnLayer & 1) draw_layer(0, 3, 6, 2, 5);
+	if (nBurnLayer & 2) draw_layer(1, 1, 8, 0, 7);
 
 	pandora_flipscreen = *flipscreen;
-	pandora_update(pTransDraw);
+	if (nBurnLayer & 4) pandora_update(pTransDraw);
 
 	BurnTransferCopy(DrvPalette);
 
@@ -700,7 +699,7 @@ static INT32 DrvFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++) {
 		ZetOpen(0);
-		nCyclesDone[0] += ZetRun(((i + 1) * nCyclesTotal[0] / nInterleave) - nCyclesDone[0]);
+		CPU_RUN(0, Zet);
 		if (i == 240) {
 			ZetSetVector(0xff);
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
@@ -712,7 +711,7 @@ static INT32 DrvFrame()
 		ZetClose();
 
 		ZetOpen(1);
-		nCyclesDone[1] += ZetRun(((i + 1) * nCyclesTotal[1] / nInterleave) - nCyclesDone[1]);
+		CPU_RUN(1, Zet);
 		if (i == 240) {
 			ZetSetVector(0xfd);
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
@@ -720,16 +719,20 @@ static INT32 DrvFrame()
 		ZetClose();
 
 		ZetOpen(2);
-		BurnTimerUpdate((i + 1) * nCyclesTotal[2] / nInterleave);
+		CPU_RUN_TIMER(2);
 		if (i == 240) {
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
+
+			if (pBurnDraw) {
+				BurnDrvRedraw();
+			}
+
+			pandora_buffer_sprites();
 		}
 		ZetClose();
 	}
 
 	ZetOpen(2);
-	BurnTimerEndFrame(nCyclesTotal[2]);
-
 	if (pBurnSoundOut) {
 		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
 		MSM6295Render(pBurnSoundOut, nBurnSoundLen);
@@ -738,12 +741,6 @@ static INT32 DrvFrame()
 
 	nExtraCycles[0] = nCyclesDone[0] - nCyclesTotal[0];
 	nExtraCycles[1] = nCyclesDone[1] - nCyclesTotal[1];
-	
-	if (pBurnDraw) {
-		BurnDrvRedraw();
-	}
-
-	pandora_buffer_sprites();
 
 	return 0;
 }
@@ -758,7 +755,6 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
-
 		ba.Data	  = AllRam;
 		ba.nLen	  = RamEnd - AllRam;
 		ba.szName = "All Ram";
@@ -816,7 +812,7 @@ struct BurnDriver BurnDrvAirbustr = {
 	"airbustr", NULL, NULL, NULL, "1990",
 	"Air Buster: Trouble Specialty Raid Unit (World)\0", NULL, "Kaneko (Namco license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_KANEKO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KANEKO_MISC, GBF_HORSHOOT, 0,
 	NULL, airbustrRomInfo, airbustrRomName, NULL, NULL, NULL, NULL, AirbustrInputInfo, AirbustrDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, NULL, 0x0300,
 	256, 224, 4, 3
@@ -849,7 +845,7 @@ struct BurnDriver BurnDrvAirbustrj = {
 	"airbustrj", "airbustr", NULL, NULL, "1990",
 	"Air Buster: Trouble Specialty Raid Unit (Japan)\0", NULL, "Kaneko (Namco license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KANEKO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KANEKO_MISC, GBF_HORSHOOT, 0,
 	NULL, airbustrjRomInfo, airbustrjRomName, NULL, NULL, NULL, NULL, AirbustrInputInfo, AirbustjDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, NULL, 0x0300,
 	256, 224, 4, 3
@@ -887,7 +883,7 @@ struct BurnDriver BurnDrvAirbustrb = {
 	"airbustrb", "airbustr", NULL, NULL, "1990",
 	"Air Buster: Trouble Specialty Raid Unit (bootleg)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_KANEKO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KANEKO_MISC, GBF_HORSHOOT, 0,
 	NULL, airbustrbRomInfo, airbustrbRomName, NULL, NULL, NULL, NULL, AirbustrInputInfo, AirbustjDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, NULL, 0x0300,
 	256, 224, 4, 3

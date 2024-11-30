@@ -56,6 +56,7 @@ void RF5C68PCMUpdate_internal(INT16* left, INT16 *right, INT32 length);
 
 static void UpdateStream(INT32 samples_len)
 {
+	if (!pBurnSoundOut) return;
     if (samples_len > nBurnSoundLen) samples_len = nBurnSoundLen;
 
 	INT64 nSamplesNeeded = ((((((our_freq * 1000) / nBurnFPS) * samples_len) / nBurnSoundLen)) / 10) + 1;
@@ -194,7 +195,7 @@ void RF5C68PCMInit(INT32 clock, INT32 (*pCPUCyclesCB)(), INT32 nCpuMHZ, INT32 nA
 	soundbuf_l = (INT16*)BurnMalloc(our_freq * sizeof(INT16));
 	soundbuf_r = (INT16*)BurnMalloc(our_freq * sizeof(INT16));
 
-	nSampleSize = (UINT64)((UINT64)our_freq * (1 << 16)) / nBurnSoundRate;
+	if (nBurnSoundRate) nSampleSize = (UINT64)((UINT64)our_freq * (1 << 16)) / nBurnSoundRate;
 	nPosition = 0;
 	nFractionalPosition = 0;
 

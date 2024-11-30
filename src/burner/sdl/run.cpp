@@ -21,6 +21,10 @@ bool        bAppShowFPS = 0;
 static int  nFastSpeed = 6;
 static bool bscreenshot = 0;
 
+// SlowMo T.A. feature
+int nSlowMo = 0;
+static int flippy = 0; // free running RunFrame() counter
+
 UINT32 messageFrames = 0;
 char lastMessage[MESSAGE_MAX_LENGTH];
 
@@ -30,8 +34,9 @@ static Uint32 starting_stick;
 extern SDL_Renderer* sdlRenderer;
 extern void ingame_gui_start(SDL_Renderer* renderer);
 /// Save States
-static char* szSDLSavePath = NULL;
 static char Windowtitle[512];
+
+extern void AdjustImageSize();		// vid_sdl2.cpp
 #endif
 
 int bDrvSaveAll = 0;
@@ -42,18 +47,10 @@ int StatedAuto(int bSave)
 	static TCHAR szName[MAX_PATH] = _T("");
 	int nRet;
 
-#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)	
-	if (szSDLSavePath == NULL)
-	{
-		szSDLSavePath = SDL_GetPrefPath("fbneo", "states");
-	}
-
-	snprintf(szName, MAX_PATH, "%s%s.fs", szSDLSavePath, BurnDrvGetText(DRV_NAME));
-
+#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)
+	_stprintf(szName, _T("%s%s.fs"), szAppEEPROMPath, BurnDrvGetText(DRV_NAME));
 #else
-
 	_stprintf(szName, _T("config/games/%s.fs"), BurnDrvGetText(DRV_NAME));
-
 #endif
 
 	if (bSave == 0)
@@ -141,6 +138,12 @@ static int RunFrame(int bDraw, int bPause)
 		return 1;
 	}
 
+	// SlowMo stuff
+	flippy++;
+	nSlowMo = macroSystemSlowMo[0] + macroSystemSlowMo[1] * 2 + macroSystemSlowMo[2] * 3 + macroSystemSlowMo[3] * 4 + macroSystemSlowMo[4] * 5;
+	if ((nSlowMo == 1) && ((flippy % 4) == 0)) return 0;		// 75% speed
+	else if ((nSlowMo > 1) && (nSlowMo < 6) && (flippy % ((nSlowMo - 1) * 2)) < (((nSlowMo - 1) * 2) - 1)) return 0;		// 50% and less
+
 	if (bPause)
 	{
 		InputMake(false);
@@ -156,10 +159,20 @@ static int RunFrame(int bDraw, int bPause)
 	if (bDraw)
 	{
 		nFramesRendered++;
-		if (VidFrame())
-		{
-		 	AudBlankSound();
+
+		if (!bRunAhead || bAppDoFast) {     // Run-Ahead feature 				-dink aug 02, 2021
+			if (VidFrame()) {				// Do one frame w/o RunAhead or if FFWD is pressed.
+				AudBlankSound();
+			}
+		} else {
+			pBurnDraw = NULL;               // Do one frame w/RunAhead
+			BurnDrvFrame();
+			StateRunAheadSave();
+			pBurnSoundOut = NULL;
+			VidFrame();
+			StateRunAheadLoad();
 		}
+
 		VidPaint(0);                                              // paint the screen (no need to validate)
 	}
 	else
@@ -466,6 +479,7 @@ int RunMessageLoop()
 					if (event.key.keysym.mod & KMOD_ALT) 
 					{
 						SetFullscreen(!GetFullscreen());
+						AdjustImageSize();
 					}
 					break;
 #endif

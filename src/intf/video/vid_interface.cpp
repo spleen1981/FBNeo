@@ -116,6 +116,7 @@ double dVidCubicC = 0.5;						//
 INT32 bVidDX9Bilinear = 1;							// 1 = enable bi-linear filtering (D3D9 Alt blitter)
 INT32 bVidHardwareVertex = 0;			// 1 = use hardware vertex processing
 INT32 bVidMotionBlur = 0;				// 1 = motion blur
+INT32 nVidDX9HardFX = 0; 						// index of HardFX effect (0 = None)
 
 wchar_t HorScreen[32] = L"";
 wchar_t VerScreen[32] = L"";
@@ -145,11 +146,8 @@ INT32 nVidImageDepth = 0;							// Memory buffer bits per pixel
 UINT32 (__cdecl *VidHighCol) (INT32 r, INT32 g, INT32 b, INT32 i);
 static bool bVidRecalcPalette;
 												// Translation to native Bpp for games flagged with BDF_16BIT_ONLY
-static void VidDoFrameCallback();
-void (*pVidTransCallback)(void) = NULL;         // Callback for video driver, after BurnDrvFrame() / BurnDrvRedraw() (see win32/vid_d3d.cpp:vidFrame() for example)
 static UINT8* pVidTransImage = NULL;
 static UINT32* pVidTransPalette = NULL;
-static INT32 bSkipNextFrame = 0;
 
 TCHAR szPlaceHolder[MAX_PATH] = _T("");
 
@@ -230,7 +228,8 @@ INT32 VidInit()
 
 				pVidTransPalette = (UINT32*)malloc(32768 * sizeof(UINT32));
 				pVidTransImage = (UINT8*)malloc(nVidImageWidth * nVidImageHeight * sizeof(INT16));
-				pVidTransCallback = VidDoFrameCallback;
+
+				//bprintf(0, _T("allocate pVidTransImage %d x %d\n"), nVidImageWidth, nVidImageHeight);
 
 				BurnHighCol = HighCol15;
 
@@ -328,9 +327,6 @@ INT32 VidExit()
 			free(pVidTransImage);
 			pVidTransImage = NULL;
 		}
-		if (pVidTransCallback) {
-			pVidTransCallback = NULL;
-		}
 
 		return nRet;
 	} else {
@@ -338,8 +334,10 @@ INT32 VidExit()
 	}
 }
 
-static void VidDoFrameCallback()
+static void VidDoTransTopVidImage()
 {
+		if (!pVidImage) return;
+
 		UINT16* pSrc = (UINT16*)pVidTransImage;
 		UINT8* pDest = pVidImage;
 
@@ -388,18 +386,8 @@ static INT32 VidDoFrame(bool bRedraw)
 
 		nRet = pVidOut[nVidActive]->Frame(bRedraw);
 
-		if (bSkipNextFrame) {
-			// if ReInitialise(); is called from the machine's reset function, it will crash below.  This prevents that from happening. (Megadrive)
-			bSkipNextFrame = 0;
-			return 0;
-		}
-
 		pBurnDraw = NULL;
 		nBurnPitch = 0;
-
-		if (!pVidTransCallback) {
-			VidDoFrameCallback();
-		}
 	} else {
 		pBurnDraw = pVidImage;
 		nBurnPitch = nVidImagePitch;
@@ -413,13 +401,45 @@ static INT32 VidDoFrame(bool bRedraw)
 	return nRet;
 }
 
+INT32 VidFrameCallback(bool bRedraw)        // Called from blitter  (VidFrame() -> VidDoFrame() -> Blitter -> this.)
+{
+	if (bDrvOkay) {
+		if (bRedraw) {						// Redraw current frame
+			if (BurnDrvRedraw()) {
+				BurnDrvFrame();				// No redraw function provided, advance one frame
+			}
+		} else {
+			BurnDrvFrame();					// Run one frame and draw the screen
+		}
+
+		if (BurnDrvGetFlags() & BDF_16BIT_ONLY) {
+			VidDoTransTopVidImage();
+		}
+
+#if defined (BUILD_WIN32) || defined (INCLUDE_LUA_SUPPORT)
+		FBA_LuaGui((unsigned char*)pVidImage, nVidImageWidth, nVidImageHeight, nVidImageBPP, nVidImagePitch);
+#endif
+	}
+
+	return 0;
+}
+
 INT32 VidReInitialise()
 {
+	// On Windows at least, calling ReInitialise() posts a semaphore to re-init
+	// the blitter at the end of the frame.  Then it calls this function.
+
 	if (pVidTransImage) {
+		// this will be later allocated to the correct size after the blitter re-initializes.
+
+		// Note; does this make any sense?  nVidImageWidth, nVidImageHeight is set in the blitter init.
+		// If the game's resolution changes, this will just free/malloc the old resolution.
+
 		free(pVidTransImage);
 		pVidTransImage = (UINT8*)malloc(nVidImageWidth * nVidImageHeight * sizeof(INT16));
 	}
-	bSkipNextFrame = 1;
+
+	pVidImage = NULL; // Invalidate pVidImage* until blitter is reinitted. (pBurnDraw points to it on active video-frames)
 
 	return 0;
 }

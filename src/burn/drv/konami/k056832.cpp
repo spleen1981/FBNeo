@@ -47,6 +47,11 @@ static UINT8 *linemap_primap = NULL;
 
 static void (*m_callback)(INT32 layer, INT32 *code, INT32 *color, INT32 *flags);
 
+UINT16 K056832GetVram(INT32 address)
+{
+	return K056832VideoRAM[address];
+}
+
 void K056832Reset()
 {
 	memset (K056832VideoRAM, 0, 0x2000 * 0x11 * 2);
@@ -396,7 +401,7 @@ UINT8 K056832HalfRamReadByte(UINT32 offset)
 void K056832RamWriteWord(UINT32 offset, UINT16 data)
 {
 	offset = (offset & 0x1fff) / 2;
-
+//	if (data == 0xda02) { bprintf(0, _T("fog @ %x  %x\n"), m_selected_page_x4096 + (offset), data); }
 	K056832VideoRAM[m_selected_page_x4096 + (offset)] = BURN_ENDIAN_SWAP_INT16(data);
 }
 
@@ -542,14 +547,14 @@ static void draw_layer_internal(INT32 layer, INT32 pageIndex, INT32 *clip, INT32
 		{ // speed-up
 			// y is calculated in the tile blitter (see "// blitter" below)
 			// but we need to check clipping here in order to not need 8ghz to
-			// do linescrolling. (see: martial masters, 2nd attract game)
+			// do linescrolling. (see: martial champ., 2nd attract game)
 			// in order to clip, we need to pre-calculate y+top and bottom of
 			// the tile here.
 			//
 			// TOCHECK:  (if anything here is changed!)
 			//   Xexex level 4, watch the top and bottom of the screen while
 			// scrolling up and down in the level.
-			//   Martial Masters, 2nd attract-mode game - watch cpu usage.
+			//   Martial Champ., 2nd attract-mode game - watch cpu usage.
 			INT32 syyh;
 			INT32 syyl;
 			if (tilemap_flip & 2) {
@@ -1063,31 +1068,25 @@ void K056832Scan(INT32 nAction)
 	}
 
 	if (nAction & ACB_DRIVER_DATA) {
-		for (INT32 i = 0; i < 0x20; i++) {
-			SCAN_VAR(k056832Regs[i]);
-			SCAN_VAR(k056832Regsb[i]);
-		}
+		SCAN_VAR(k056832Regs);
+		SCAN_VAR(k056832Regsb);
 
-		for (INT32 i = 0; i < 16; i++) {
-			SCAN_VAR(m_layer_assoc_with_page[i]);
-		}
+		SCAN_VAR(m_layer_assoc_with_page);
 
-		for (INT32 i = 0; i < 8; i++) {
-			SCAN_VAR(m_layer_tile_mode[i]);
-			SCAN_VAR(m_lsram_page[i][0]);
-			SCAN_VAR(m_lsram_page[i][1]);
-		}
-
-		SCAN_VAR(m_use_ext_linescroll); // ?
-		SCAN_VAR(m_layer_association); // ?
+		SCAN_VAR(m_use_ext_linescroll);
+		SCAN_VAR(m_layer_association);
 		SCAN_VAR(m_active_layer);
+		SCAN_VAR(m_layer_assoc_with_page);
 		SCAN_VAR(m_selected_page);
 		SCAN_VAR(m_selected_page_x4096);
+		SCAN_VAR(m_lsram_page);
 		SCAN_VAR(m_default_layer_association);
 		SCAN_VAR(m_uses_tile_banks);
 		SCAN_VAR(m_cur_tile_bank);
+		SCAN_VAR(m_layer_tile_mode);
+		SCAN_VAR(m_page_tile_mode);
+
 		SCAN_VAR(m_cur_gfx_banks);
-		SCAN_VAR(m_num_gfx_banks);
 		SCAN_VAR(tilemap_flip);
 		SCAN_VAR(m_rom_half);
 	}

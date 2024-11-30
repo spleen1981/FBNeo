@@ -312,7 +312,7 @@ static INT32 DrvFrame()
 	SekNewFrame();
 
 	nCyclesTotal[0] = (INT32)((INT64)16000000 * nBurnCPUSpeedAdjust / (0x0100 * CAVE_REFRESHRATE));
-	nCyclesDone[0] = 0;
+	nCyclesDone[0] = nCyclesExtra;
 
 	// this vbl timing gives 2 frames response time
 	nCyclesVBlank = nCyclesTotal[0] - 1300; //(INT32)((nCyclesTotal[0] * CAVE_VBLANK_LINES) / 271.5);
@@ -354,8 +354,7 @@ static INT32 DrvFrame()
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment - nCyclesExtra);
-		nCyclesExtra = 0;
+		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 
 		nCurrentCPU = -1;
 	}
@@ -371,7 +370,7 @@ static INT32 DrvFrame()
 		}
 	}
 
-	nCyclesExtra = SekTotalCycles() - nCyclesTotal[0];
+	nCyclesExtra = nCyclesDone[0] - nCyclesTotal[0];
 	SekClose();
 
 	if (pBurnDraw != NULL) {
@@ -481,12 +480,9 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(nSoundIRQ);
 		SCAN_VAR(nUnknownIRQ);
 		SCAN_VAR(bVBlank);
+		SCAN_VAR(nCyclesExtra);
 
 		CaveScanGraphics();
-	}
-
-	if (nAction & ACB_WRITE) {
-		CaveRecalcPalette = 1;
 	}
 
 	return 0;
@@ -639,8 +635,8 @@ STD_ROM_FN(ddonpacha)
 
 struct BurnDriver BurnDrvDoDonpachi = {
 	"ddonpach", NULL, NULL, NULL, "1997",
-	"DoDonPachi (International, master ver. 97/02/05)\0", NULL, "Atlus / Cave", "Cave",
-	L"\u6012\u9996\u9818\u8702 DoDonPachi (International, master ver. 97/02/05)\0", NULL, NULL, NULL,
+	"DoDonPachi (World, 1997 2/ 5 Master Ver.)\0", NULL, "Cave (Atlus license)", "Cave",
+	L"\u6012\u9996\u9818\u8702 DoDonPachi (World, 1997 2/ 5 Master Ver.)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY, GBF_VERSHOOT, FBF_DONPACHI,
 	NULL, ddonpachRomInfo, ddonpachRomName, NULL, NULL, NULL, NULL, ddonpachInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
@@ -649,8 +645,8 @@ struct BurnDriver BurnDrvDoDonpachi = {
 
 struct BurnDriver BurnDrvDoDonpachiJ = {
 	"ddonpachj", "ddonpach", NULL, NULL, "1997",
-	"DoDonPachi (Japan, master ver. 97/02/05)\0", NULL, "Atlus / Cave", "Cave",
-	L"\u6012\u9996\u9818\u8702 DoDonPachi (Japan, master ver. 97/02/05)\0", NULL, NULL, NULL,
+	"DoDonPachi (Japan, 1997 2/ 5 Master Ver.)\0", NULL, "Cave (Atlus license)", "Cave",
+	L"\u6012\u9996\u9818\u8702 DoDonPachi (Japan, 1997 2/ 5 Master Ver.)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY, GBF_VERSHOOT, FBF_DONPACHI,
 	NULL, ddonpachjRomInfo, ddonpachjRomName, NULL, NULL, NULL, NULL, ddonpachInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
@@ -659,8 +655,8 @@ struct BurnDriver BurnDrvDoDonpachiJ = {
 
 struct BurnDriver BurnDrvDoDonpachia = {
 	"ddonpacha", "ddonpach", NULL, NULL, "2012",
-	"DoDonPachi (Arrange Mode version 1.1, hack by Trap15)\0", NULL, "hack / Trap15", "Cave",
-	L"\u6012\u9996\u9818\u8702 DoDonPachi (Arrange Mode version 1.1, hack by Trap15)\0", NULL, NULL, NULL,
+	"DoDonPachi (2012/02/12 Arrange Ver. 1.1) (hack)\0", NULL, "hack (trap15)", "Cave",
+	L"\u6012\u9996\u9818\u8702 DoDonPachi (2012/02/12 Arrange Ver. 1.1) (hack)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY, GBF_VERSHOOT, FBF_DONPACHI,
 	NULL, ddonpachaRomInfo, ddonpachaRomName, NULL, NULL, NULL, NULL, ddonpachInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,

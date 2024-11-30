@@ -4,6 +4,7 @@
 #include "tiles_generic.h"
 #include "nec_intf.h"
 #include "z80_intf.h"
+#include "burn_gun.h" // for dial (wheels runner)
 #include "burn_ym2151.h"
 #include "burn_ym3526.h"
 #include "sn76496.h"
@@ -38,48 +39,53 @@ static UINT8 DrvDips[2];
 static UINT8 DrvInputs[4];
 static UINT8 DrvReset;
 
+static INT16 Analog[2];
+
 static INT32 game_select = 0;
 
 static struct BurnInputInfo FantlandInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"	},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"	},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 4,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 4,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Fantland)
 
+#define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 static struct BurnInputInfo WheelrunInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvFake + 0,	"p1 left"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvFake + 0,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvFake + 1,	"p1 right"	},
+	A("P1 Wheel", 		BIT_ANALOG_REL, &Analog[0],		"p1 x-axis"),
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 1"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 coin"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvFake + 2,	"p2 left"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 coin"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvFake + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvFake + 3,	"p2 right"	},
+	A("P2 Wheel", 		BIT_ANALOG_REL, &Analog[1],		"p2 x-axis"),
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Wheelrun)
@@ -190,42 +196,43 @@ STDDIPINFO(Galaxygn)
 
 static struct BurnDIPInfo WheelrunDIPList[]=
 {
-	{0x09, 0xff, 0xff, 0xff, NULL			},
-	{0x0a, 0xff, 0xff, 0xdf, NULL			},
+	DIP_OFFSET(0x0b)
+	{0x00, 0xff, 0xff, 0xff, NULL			},
+	{0x01, 0xff, 0xff, 0xdf, NULL			},
 
 	{0   , 0xfe, 0   ,    8, "Coinage"		},
-	{0x09, 0x01, 0x07, 0x01, "4 Coins 1 Credits"	},
-	{0x09, 0x01, 0x07, 0x02, "3 Coins 1 Credits"	},
-	{0x09, 0x01, 0x07, 0x03, "2 Coins 1 Credits"	},
-	{0x09, 0x01, 0x07, 0x07, "1 Coin  1 Credits"	},
-	{0x09, 0x01, 0x07, 0x06, "1 Coin  2 Credits"	},
-	{0x09, 0x01, 0x07, 0x05, "1 Coin  3 Credits"	},
-	{0x09, 0x01, 0x07, 0x04, "1 Coin  4 Credits"	},
-	{0x09, 0x01, 0x07, 0x00, "Free Play"		},
+	{0x00, 0x01, 0x07, 0x01, "4 Coins 1 Credits"	},
+	{0x00, 0x01, 0x07, 0x02, "3 Coins 1 Credits"	},
+	{0x00, 0x01, 0x07, 0x03, "2 Coins 1 Credits"	},
+	{0x00, 0x01, 0x07, 0x07, "1 Coin  1 Credits"	},
+	{0x00, 0x01, 0x07, 0x06, "1 Coin  2 Credits"	},
+	{0x00, 0x01, 0x07, 0x05, "1 Coin  3 Credits"	},
+	{0x00, 0x01, 0x07, 0x04, "1 Coin  4 Credits"	},
+	{0x00, 0x01, 0x07, 0x00, "Free Play"		},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x09, 0x01, 0x08, 0x00, "Off"			},
-	{0x09, 0x01, 0x08, 0x08, "On"			},
+	{0x00, 0x01, 0x08, 0x00, "Off"			},
+	{0x00, 0x01, 0x08, 0x08, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Allow Continue"	},
-	{0x09, 0x01, 0x10, 0x00, "No"			},
-	{0x09, 0x01, 0x10, 0x10, "Yes"			},
+	{0x00, 0x01, 0x10, 0x00, "No"			},
+	{0x00, 0x01, 0x10, 0x10, "Yes"			},
 
 	{0   , 0xfe, 0   ,    4, "Difficulty"		},
-	{0x09, 0x01, 0x60, 0x60, "Normal"		},
-	{0x09, 0x01, 0x60, 0x40, "Hard"			},
-	{0x09, 0x01, 0x60, 0x20, "Harder"		},
-	{0x09, 0x01, 0x60, 0x00, "Hardest"		},
+	{0x00, 0x01, 0x60, 0x60, "Normal"		},
+	{0x00, 0x01, 0x60, 0x40, "Hard"			},
+	{0x00, 0x01, 0x60, 0x20, "Harder"		},
+	{0x00, 0x01, 0x60, 0x00, "Hardest"		},
 
 	{0   , 0xfe, 0   ,    8, "Wheel Sensitivity"	},
-	{0x0a, 0x01, 0xff, 0x7f, "0"			},
-	{0x0a, 0x01, 0xff, 0xbf, "1"			},
-	{0x0a, 0x01, 0xff, 0xdf, "2"			},
-	{0x0a, 0x01, 0xff, 0xef, "3"			},
-	{0x0a, 0x01, 0xff, 0xf7, "4"			},
-	{0x0a, 0x01, 0xff, 0xfb, "5"			},
-	{0x0a, 0x01, 0xff, 0xfd, "6"			},
-	{0x0a, 0x01, 0xff, 0xfe, "7"			},
+	{0x01, 0x01, 0xff, 0x7f, "0"			},
+	{0x01, 0x01, 0xff, 0xbf, "1"			},
+	{0x01, 0x01, 0xff, 0xdf, "2"			},
+	{0x01, 0x01, 0xff, 0xef, "3"			},
+	{0x01, 0x01, 0xff, 0xf7, "4"			},
+	{0x01, 0x01, 0xff, 0xfb, "5"			},
+	{0x01, 0x01, 0xff, 0xfd, "6"			},
+	{0x01, 0x01, 0xff, 0xfe, "7"			},
 };
 
 STDDIPINFO(Wheelrun)
@@ -355,14 +362,7 @@ static void DrvYM2151IrqHandler(INT32 nStatus)
 {
 	if (VezGetActive() == -1) return;
 
-	if (nStatus) VezSetIRQLineAndVector(0, 0x80/4, CPU_IRQSTATUS_AUTO);
-	// Galaxygn soundcpu will eventually crash with the traditional method, below...
-	//VezSetIRQLineAndVector(0, 0x80/4, (nStatus) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
-}
-
-static INT32 DrvDACSync()
-{
-	return (INT32)(float)(nBurnSoundLen * (VezTotalCycles() / (8000000.0000 / (nBurnFPS / 100.0000))));
+	VezSetIRQLineAndVector(0, 0x80/4, (nStatus) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 }
 
 static INT32 SynchroniseStream(INT32 nSoundRate)
@@ -385,6 +385,7 @@ static INT32 DrvDoReset()
 		DACReset();
 		BurnYM2151Reset();
 		VezClose();
+		HiscoreReset();
 	}
 	else if (game_select == 2)
 	{
@@ -395,8 +396,11 @@ static INT32 DrvDoReset()
 		SN76496Reset();
 	}
 
+
 	soundlatch = 0;
 	nmi_enable = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -454,12 +458,7 @@ static INT32 FantlandInit()
 {
 	game_select = 0;
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvI8086ROM + 0x00000,  0, 2)) return 1;
@@ -514,11 +513,12 @@ static INT32 FantlandInit()
 	VezSetReadPort(fantland_sound_read_port);
 	VezClose();
 
-	BurnYM2151Init(3000000);
+	BurnYM2151InitBuffered(3000000, 1, NULL, 0);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.55, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.55, BURN_SND_ROUTE_RIGHT);
+	BurnTimerAttachVez(8000000);
 
-	DACInit(0, 0, 1, DrvDACSync);
+	DACInit(0, 0, 1, VezTotalCycles, 8000000);
 	DACSetRoute(0, 0.65, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
@@ -532,12 +532,7 @@ static INT32 GalaxygnInit()
 {
 	game_select = 1;
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvI8086ROM + 0x10000,  0, 1)) return 1;
@@ -602,12 +597,13 @@ static INT32 GalaxygnInit()
 	VezSetReadPort(fantland_sound_read_port);
 	VezClose();
 
-	BurnYM2151Init(3000000);
+	BurnYM2151InitBuffered(3000000, 1, NULL, 0);
 	BurnYM2151SetIrqHandler(&DrvYM2151IrqHandler);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.55, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.55, BURN_SND_ROUTE_RIGHT);
+	BurnTimerAttachVez(8000000);
 
-	DACInit(0, 0, 1, DrvDACSync);
+	DACInit(0, 0, 1, VezTotalCycles, 8000000);
 	DACSetRoute(0, 0.65, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
@@ -621,12 +617,7 @@ static INT32 WheelrunInit()
 {
 	game_select = 2;
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvI8086ROM + 0x30000,  0, 1)) return 1;
@@ -672,7 +663,7 @@ static INT32 WheelrunInit()
 	ZetClose();
 
 	BurnYM3526Init(3500000, &DrvYM3526IrqHandler, &SynchroniseStream, 0);
-	BurnTimerAttachYM3526(&ZetConfig, 9000000);
+	BurnTimerAttach(&ZetConfig, 9000000);
 	BurnYM3526SetRoute(BURN_SND_YM3526_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	SN76489AInit(0, 3500000, 1);
@@ -680,6 +671,8 @@ static INT32 WheelrunInit()
 
 	SN76489AInit(1, 3500000, 1);
 	SN76496SetRoute(1, 0.60, BURN_SND_ROUTE_BOTH);
+
+	BurnTrackballInit(1);
 
 	GenericTilesInit();
 
@@ -698,12 +691,13 @@ static INT32 DrvExit()
 		BurnYM2151Exit();
 		DACExit();
 	} else if (game_select == 2) {
+		BurnTrackballExit();
 		ZetExit();
 		BurnYM3526Exit();
 		SN76496Exit();
 	}
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	game_select = 0;
 
@@ -791,19 +785,7 @@ static void draw_sprites()
 
 		code %= 0x6000; // largest graphics size (fantland)
 
-		if (flipy) {
-			if (flipx) {
-				Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, x, y, color, 6, 0, 0, DrvGfxROM);
-			} else {
-				Render16x16Tile_Mask_FlipY_Clip(pTransDraw, code, x, y, color, 6, 0, 0, DrvGfxROM);
-			}
-		} else {
-			if (flipx) {
-				Render16x16Tile_Mask_FlipX_Clip(pTransDraw, code, x, y, color, 6, 0, 0, DrvGfxROM);
-			} else {
-				Render16x16Tile_Mask_Clip(pTransDraw, code, x, y, color, 6, 0, 0, DrvGfxROM);
-			}
-		}
+		Draw16x16MaskTile(pTransDraw, code, x, y, flipx, flipy, color, 6, 0, 0, DrvGfxROM);
 	}
 }
 
@@ -842,44 +824,27 @@ static INT32 FantlandFrame()
 		DrvInputs[3] = DrvDips[1];
 	}
 
-	INT32 nSoundBufferPos = 0;
 	INT32 nInterleave = 133; // periodic int for sound cpu (dac)
 	INT32 nCyclesTotal[2] = { 8000000 / 60, 8000000 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
-	INT32 nSegment = 0;
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		VezOpen(0);
-		nSegment = (i + 1) * nCyclesTotal[0] / nInterleave;
-		nCyclesDone[0] += VezRun(nSegment - nCyclesDone[0]);
+		CPU_RUN(0, Vez);
 		if (i == (nInterleave - 1) && nmi_enable) VezSetIRQLineAndVector(0x20, 0xff, CPU_IRQSTATUS_AUTO);
 		VezClose();
 
 		VezOpen(1);
-		nSegment = (i + 1) * nCyclesTotal[1] / nInterleave;
-		nCyclesDone[1] += VezRun(nSegment - nCyclesDone[1]);
+		CPU_RUN_TIMER(1);
 		if (game_select == 0) VezSetIRQLineAndVector(0, 0x80/4, CPU_IRQSTATUS_AUTO);
-
-		if (pBurnSoundOut) {
-			nSegment = nBurnSoundLen / nInterleave;
-			BurnYM2151Render(pBurnSoundOut + (nSoundBufferPos << 1), nSegment);
-			nSoundBufferPos += nSegment;
-		}
 		VezClose();
 	}
 
-	VezOpen(1);
-
 	if (pBurnSoundOut) {
-		nSegment = nBurnSoundLen - nSoundBufferPos;
-		if (nSegment > 0) {
-			BurnYM2151Render(pBurnSoundOut + (nSoundBufferPos << 1), nSegment);
-		}
+		BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
 		DACUpdate(pBurnSoundOut, nBurnSoundLen);
 	}
-
-	VezClose();
 
 	if (pBurnDraw) {
 		DrvDraw();
@@ -888,6 +853,25 @@ static INT32 FantlandFrame()
 	return 0;
 }
 
+static INT32 wheel_target[2];
+static INT32 wheel_adder[2];
+
+static void wheel_tick(INT32 player)
+{
+	wheel_target[player] = (INT8)BurnTrackballRead(0, player) / 2 + 0x04;
+	if (wheel_target[player] > 7) wheel_target[player] = 7;
+	else if (wheel_target[player] < 1) wheel_target[player] = 1;
+	BurnTrackballReadReset(0, player);
+
+	if (wheel_adder[player] > wheel_target[player])
+		wheel_adder[player]--;
+	else if (wheel_adder[player] < wheel_target[player])
+		wheel_adder[player]++;
+	else wheel_adder[player] = wheel_target[player]; // derp!
+
+	DrvInputs[player] &= ~0x70;
+	DrvInputs[player] |= wheel_target[player] << 4;
+}
 
 static INT32 WheelrunFrame()
 {
@@ -911,12 +895,12 @@ static INT32 WheelrunFrame()
 		DrvInputs[0] &= ~0x70;
 		DrvInputs[1] &= ~0x70;
 
-		UINT8 nWheel = ((DrvFake[0] ? 5 : 0) | (DrvFake[1] ? 3 : 0)) << 4;
-		if (nWheel == 0) nWheel = 0x40;
-		DrvInputs[0] |= nWheel;
-		nWheel = ((DrvFake[2] ? 5 : 0) | (DrvFake[3] ? 3 : 0)) << 4;
-		if (nWheel == 0) nWheel = 0x40;
-		DrvInputs[1] |= nWheel;
+		BurnTrackballConfig(0, AXIS_REVERSED, AXIS_REVERSED);
+		BurnTrackballFrame(0, Analog[0], Analog[1], 1, 0xf);
+		BurnTrackballUDLR(0, DrvFake[2], DrvFake[3], DrvFake[0], DrvFake[1]);
+		BurnTrackballUpdate(0);
+		wheel_tick(0);
+		wheel_tick(1);
 	}
 
 	INT32 nInterleave = 10;
@@ -928,21 +912,19 @@ static INT32 WheelrunFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += VezRun(nCyclesTotal[0] / nInterleave);
+		CPU_RUN(0, Vez);
 		if (i == (nInterleave - 1) && nmi_enable) VezSetIRQLineAndVector(0x20, 0, CPU_IRQSTATUS_AUTO);
 
-		BurnTimerUpdateYM3526((i + 1) * (nCyclesTotal[1] / nInterleave));
+		CPU_RUN_TIMER(1);
 	}
 
-	BurnTimerEndFrameYM3526(nCyclesTotal[1]);
+	ZetClose();
+	VezClose();
 
 	if (pBurnSoundOut) {
 		BurnYM3526Update(pBurnSoundOut, nBurnSoundLen);
         SN76496Update(pBurnSoundOut, nBurnSoundLen);
 	}
-
-	ZetClose();
-	VezClose();
 
 	if (pBurnDraw) {
 		DrvDraw();
@@ -980,6 +962,11 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		if (game_select == 2)
 		{
 			ZetScan(nAction);
+
+			BurnTrackballScan();
+
+			SCAN_VAR(wheel_adder);
+			SCAN_VAR(wheel_target);
 
 			ZetOpen(0);
 			BurnYM3526Scan(nAction, pnMin);
@@ -1026,7 +1013,7 @@ struct BurnDriver BurnDrvFantland = {
 	"fantland", NULL, NULL, NULL, "19??",
 	"Fantasy Land (set 1)\0", NULL, "Electronic Devices Italy", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, fantlandRomInfo, fantlandRomName, NULL, NULL, NULL, NULL, FantlandInputInfo, FantlandDIPInfo,
 	FantlandInit, DrvExit, FantlandFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	352, 256, 4, 3
@@ -1063,7 +1050,7 @@ struct BurnDriver BurnDrvFantlanda = {
 	"fantlanda", "fantland", NULL, NULL, "19??",
 	"Fantasy Land (set 2)\0", NULL, "Electronic Devices Italy", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, fantlandaRomInfo, fantlandaRomName, NULL, NULL, NULL, NULL, FantlandInputInfo, FantlandDIPInfo,
 	FantlandInit, DrvExit, FantlandFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	352, 256, 4, 3
@@ -1113,9 +1100,9 @@ STD_ROM_FN(galaxygn)
 
 struct BurnDriver BurnDrvGalaxygn = {
 	"galaxygn", NULL, NULL, NULL, "1989",
-	"Galaxy Gunners\0", "No Sound.", "Electronic Devices Italy", "Miscellaneous",
+	"Galaxy Gunners\0", "Imperfect sound", "Electronic Devices Italy", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, galaxygnRomInfo, galaxygnRomName, NULL, NULL, NULL, NULL, FantlandInputInfo, GalaxygnDIPInfo,
 	GalaxygnInit, DrvExit, FantlandFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 352, 3, 4
@@ -1172,5 +1159,3 @@ struct BurnDriver BurnDrvWheelrun = {
 	WheelrunInit, DrvExit, WheelrunFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 224, 4, 3
 };
-
-

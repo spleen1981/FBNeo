@@ -4,7 +4,7 @@
 #include "burner.h"
 #include "inp_keys.h"
 
-#include <InitGuid.h>
+#include <initguid.h>
 
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
@@ -17,7 +17,7 @@
 #include "dinput_core.h"
 
 #define MAX_KEYBOARD	(1)
-#define MAX_GAMEPAD		(8)
+#define MAX_GAMEPAD		(32)
 #define MAX_JOYAXIS		(8)
 #define MAX_MOUSE		(4)
 #define MAX_MOUSEAXIS	(3)
@@ -479,9 +479,21 @@ static BOOL CALLBACK mouseEnumCallback(LPCDIDEVICEINSTANCE, LPVOID);
 	// Check a subcode (the 80xx bit in 8001, 8102 etc) for a mouse input code
 	int checkMouseState(mouseData* mouse, unsigned int subCode)
 	{
-		if (subCode < 0x80) {							// Undefined
+		if (subCode < 0x80) {                           // Mouse Axis as Buttons
+			const int DEADZONE = 1;
+			const int DEADZONEWHEEL = 0;
+
+			switch (subCode) {
+				case 0x00: return mouse->dims.lX < -DEADZONE;		// Left
+				case 0x01: return mouse->dims.lX > DEADZONE;		// Right
+				case 0x02: return mouse->dims.lY < -DEADZONE;		// Up
+				case 0x03: return mouse->dims.lY > DEADZONE;		// Down
+				case 0x04: return (mouse->dims.lZ / WHEEL_DELTA) < -DEADZONEWHEEL;
+				case 0x05: return (mouse->dims.lZ / WHEEL_DELTA) > DEADZONEWHEEL;
+			}
 			return 0;
 		}
+
 		if (subCode < 0x80 + mouse->dwButtons) {		// mouse buttons
 			return (mouse->dims.rgbButtons[subCode & 0x7F] & 0x80) ? 1 : 0;
 		}

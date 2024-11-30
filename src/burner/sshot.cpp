@@ -153,8 +153,14 @@ INT32 MakeScreenShot()
     tmTime = localtime(&currentTime);
 	png_convert_from_time_t(&png_time_now, currentTime);
 
+#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)
+	SSHOT_DIRECTORY = SDL_GetPrefPath("fbneo", "screenshots");
+#endif
 	// construct our filename -> "romname-mm-dd-hms.png"
     sprintf(szSShotName,"%s%s-%.2d-%.2d-%.2d%.2d%.2d.png", SSHOT_DIRECTORY, BurnDrvGetTextA(DRV_NAME), tmTime->tm_mon + 1, tmTime->tm_mday, tmTime->tm_hour, tmTime->tm_min, tmTime->tm_sec);
+#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)
+	SDL_free(SSHOT_DIRECTORY);
+#endif
 
 	ff = fopen(szSShotName, "wb");
 	if (ff == NULL) {

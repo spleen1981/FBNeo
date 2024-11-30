@@ -1,6 +1,6 @@
 // (also appears in k054539.cpp, d_spectrum.cpp c/o dink)
 // direct form II(transposed) biquadradic filter, needed for delay(echo) effect's filter taps -dink
-enum { FILT_HIGHPASS = 0, FILT_LOWPASS = 1, FILT_LOWSHELF = 2, FILT_HIGHSHELF = 3, FILT_PEAK = 4, FILT_NOTCH = 5 };
+enum { FILT_HIGHPASS = 0, FILT_LOWPASS = 1, FILT_LOWSHELF = 2, FILT_HIGHSHELF = 3, FILT_PEAK = 4, FILT_NOTCH = 5, FILT_BANDPASS };
 
 struct BIQ {
 	double a0;
@@ -20,6 +20,30 @@ struct BIQ {
 		z1 = input * a1 + z2 - b1 * output;
 		z2 = input * a2 - b2 * output;
 		return (float)output;
+	}
+
+	void filter_buffer(INT16 *buffer, INT32 buflen) {
+		for (INT32 i = 0; i < buflen; i++) {
+			INT32 m = filter(buffer[i]);
+			buffer[i] = BURN_SND_CLIP(m);
+		}
+	}
+
+	void filter_buffer_mono_stereo_stream(INT16 *buffer, INT32 buflen) {
+		for (INT32 i = 0; i < buflen; i++) {
+			const INT32 a = i * 2 + 0;
+			INT32 m = filter(buffer[a]);
+			buffer[a] = BURN_SND_CLIP(m);
+		}
+	}
+
+	void filter_buffer_2x_mono(INT16 *buffer, INT32 buflen) {
+		for (INT32 i = 0; i < buflen; i++) {
+			const INT32 a = i * 2 + 0;
+			INT32 m = filter(buffer[a]);
+			buffer[a] = BURN_SND_CLIP(m);
+			buffer[a+1] = buffer[a];
+		}
 	}
 
 	void reset() {
@@ -56,6 +80,16 @@ struct BIQ {
 					a0 = k * k * norm;
 					a1 = 2 * a0;
 					a2 = a0;
+					b1 = 2 * (k * k - 1) * norm;
+					b2 = (1 - k / q + k * k) * norm;
+				}
+				break;
+			case FILT_BANDPASS:
+				{
+					norm = 1 / (1 + k / q + k * k);
+					a0 = k / q * norm;
+					a1 = 0;
+					a2 = -a0;
 					b1 = 2 * (k * k - 1) * norm;
 					b2 = (1 - k / q + k * k) * norm;
 				}

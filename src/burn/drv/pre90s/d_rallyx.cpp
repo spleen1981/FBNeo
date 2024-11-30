@@ -44,6 +44,7 @@ static UINT8 DrvCPUIRQVector;
 static UINT8 xScroll;
 static UINT8 yScroll;
 static UINT8 DrvLastBang;
+
 static INT32 rallyx = 0;
 static INT32 junglermode = 0; // jungler, locomtn, tactician, commsega use this
 static INT32 junglerinputs = 0; // jungler has different dips than the others.
@@ -1949,7 +1950,7 @@ static INT32 JunglerFrame()
 
 	JunglerMakeInputs();
 
-	INT32 nInterleave = 256;
+	INT32 nInterleave = 256*2;
 	INT32 nCyclesTotal[2] = { (18432000 / 6) / 60, (14318180 / 8) / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
@@ -1970,6 +1971,7 @@ static INT32 JunglerFrame()
 
 	if (pBurnSoundOut) {
 		TimepltSndUpdate(pBurnSoundOut, nBurnSoundLen);
+		BurnSoundDCFilter();
 	}
 
 	if (pBurnDraw) DrvDrawJungler();
@@ -1998,7 +2000,6 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		if (junglermode) {
 			TimepltSndScan(nAction, pnMin);
-			SCAN_VAR(last_sound_irq);
 		}
 
 		if (rallyx) {
@@ -2159,7 +2160,7 @@ struct BurnDriver BurnDrvTactcian2 = {
 	"tactcian2", "tactcian", NULL, NULL, "1981",
 	"Tactician (set 2)\0", NULL, "Konami (Sega license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, tactcian2RomInfo, tactcian2RomName, NULL, NULL, NULL, NULL, TactcianInputInfo, TactcianDIPInfo,
 	TactcianDrvInit, DrvExit, JunglerFrame, DrvDrawJungler, DrvScan,
 	NULL, 324, 224, 288, 3, 4
@@ -2199,7 +2200,7 @@ struct BurnDriver BurnDrvLocomotn = {
 	"locomotn", NULL, NULL, NULL, "1982",
 	"Loco-Motion\0", NULL, "Konami (Centuri license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PUZZLE, 0,
 	NULL, locomotnRomInfo, locomotnRomName, NULL, NULL, NULL, NULL, LocomotnInputInfo, LocomotnDIPInfo,
 	LocomotnDrvInit, DrvExit, JunglerFrame, DrvDrawJungler, DrvScan,
 	NULL, 324, 224, 256, 3, 4
@@ -2239,7 +2240,7 @@ struct BurnDriver BurnDrvGutangtn = {
 	"gutangtn", "locomotn", NULL, NULL, "1982",
 	"Guttang Gottong\0", NULL, "Konami (Sega license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PUZZLE, 0,
 	NULL, gutangtnRomInfo, gutangtnRomName, NULL, NULL, NULL, NULL, LocomotnInputInfo, LocomotnDIPInfo,
 	GutangtnDrvInit, DrvExit, JunglerFrame, DrvDrawJungler, DrvScan,
 	NULL, 324, 224, 256, 3, 4
@@ -2280,7 +2281,7 @@ struct BurnDriver BurnDrvCottong = {
 	"cottong", "locomotn", NULL, NULL, "1982",
 	"Cotocoto Cottong\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PUZZLE, 0,
 	NULL, cottongRomInfo, cottongRomName, NULL, NULL, NULL, NULL, LocomotnInputInfo, LocomotnDIPInfo,
 	CottongDrvInit, DrvExit, JunglerFrame, DrvDrawJungler, DrvScan,
 	NULL, 324, 224, 256, 3, 4
@@ -2320,7 +2321,7 @@ struct BurnDriver BurnDrvLocoboot = {
 	"locoboot", "locomotn", NULL, NULL, "1982",
 	"Loco-Motion (bootleg)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PUZZLE, 0,
 	NULL, locobootRomInfo, locobootRomName, NULL, NULL, NULL, NULL, LocomotnInputInfo, LocomotnDIPInfo,
 	LocobootDrvInit, DrvExit, JunglerFrame, DrvDrawJungler, DrvScan,
 	NULL, 324, 224, 256, 3, 4
@@ -2362,7 +2363,7 @@ struct BurnDriver BurnDrvCommsega = {
 	"commsega", NULL, NULL, NULL, "1983",
 	"Commando (Sega)\0", NULL, "Sega", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, commsegaRomInfo, commsegaRomName, NULL, NULL, NULL, NULL, CommsegaInputInfo, CommsegaDIPInfo,
 	CommsegaDrvInit, DrvExit, JunglerFrame, DrvDrawJungler, DrvScan,
 	NULL, 324, 224, 256, 3, 4

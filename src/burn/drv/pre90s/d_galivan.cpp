@@ -5,7 +5,6 @@
 #include "z80_intf.h"
 #include "dac.h"
 #include "burn_ym3526.h"
-#include "flt_rc.h"
 #include "nb1414m4_8bit.h"
 
 static UINT8 *AllMem;
@@ -29,8 +28,6 @@ static UINT8 *DrvSprBuf;
 static UINT32 *DrvPalette;
 static UINT8  DrvRecalc;
 
-static INT16 *hpfiltbuffer;
-
 static UINT8 sprite_priority;
 static UINT16 scrollx;
 static UINT16 scrolly;
@@ -49,363 +46,393 @@ static UINT8 DrvReset;
 
 static INT32 game_mode;
 
-static struct BurnInputInfo DrvInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
+static struct BurnInputInfo GalivanInputList[] = {
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvInputs + 3,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvInputs + 4,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvJoy3 + 5,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
+	{"Service Mode",	BIT_DIGITAL,	DrvJoy3 + 5,	"diag"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvInputs + 3,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvInputs + 4,	"dip"		},
 };
 
-STDINPUTINFO(Drv)
+STDINPUTINFO(Galivan)
 
-static struct BurnInputInfo ninjemakInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
+static struct BurnInputInfo DangarInputList[] = {
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvInputs + 3,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvInputs + 4,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDip + 0,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvInputs + 3,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvInputs + 4,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvJoy3 + 5,	"dip"		},
+};
+
+STDINPUTINFO(Dangar)
+
+static struct BurnInputInfo ninjemakInputList[] = {
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 start"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
+	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 3"	},
+
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
+	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 3"	},
+
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvInputs + 3,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvInputs + 4,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDip + 0,		"dip"		},
 };
 
 STDINPUTINFO(ninjemak)
 
 static struct BurnDIPInfo GalivanDIPList[]=
 {
-	{0x14, 0xff, 0xff, 0xdf, NULL			},
-	{0x15, 0xff, 0xff, 0xff, NULL			},
-	{0x16, 0xff, 0xff, 0x00, NULL			},
+	DIP_OFFSET(0x15)
+	{0x00, 0xff, 0xff, 0xdf, NULL			},
+	{0x01, 0xff, 0xff, 0xff, NULL			},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
-	{0x14, 0x01, 0x03, 0x03, "3"			},
-	{0x14, 0x01, 0x03, 0x02, "4"			},
-	{0x14, 0x01, 0x03, 0x01, "5"			},
-	{0x14, 0x01, 0x03, 0x00, "6"			},
+	{0x00, 0x01, 0x03, 0x03, "3"			},
+	{0x00, 0x01, 0x03, 0x02, "4"			},
+	{0x00, 0x01, 0x03, 0x01, "5"			},
+	{0x00, 0x01, 0x03, 0x00, "6"			},
 
 	{0   , 0xfe, 0   ,    4, "Bonus Life"		},
-	{0x14, 0x01, 0x0c, 0x0c, "20k and every 60k"	},
-	{0x14, 0x01, 0x0c, 0x08, "50k and every 60k"	},
-	{0x14, 0x01, 0x0c, 0x04, "20k and every 90k"	},
-	{0x14, 0x01, 0x0c, 0x00, "50k and every 90k"	},
+	{0x00, 0x01, 0x0c, 0x0c, "20k and every 60k"	},
+	{0x00, 0x01, 0x0c, 0x08, "50k and every 60k"	},
+	{0x00, 0x01, 0x0c, 0x04, "20k and every 90k"	},
+	{0x00, 0x01, 0x0c, 0x00, "50k and every 90k"	},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x14, 0x01, 0x10, 0x00, "Off"			},
-	{0x14, 0x01, 0x10, 0x10, "On"			},
+	{0x00, 0x01, 0x10, 0x00, "Off"			},
+	{0x00, 0x01, 0x10, 0x10, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Cabinet"		},
-	{0x14, 0x01, 0x20, 0x00, "Upright"		},
-	{0x14, 0x01, 0x20, 0x20, "Cocktail"		},
+	{0x00, 0x01, 0x20, 0x00, "Upright"		},
+	{0x00, 0x01, 0x20, 0x20, "Cocktail"		},
 
 	{0   , 0xfe, 0   ,    2, "Power Invulnerability (Cheat)"},
-	{0x14, 0x01, 0x40, 0x40, "Off"			},
-	{0x14, 0x01, 0x40, 0x00, "On"			},
+	{0x00, 0x01, 0x40, 0x40, "Off"			},
+	{0x00, 0x01, 0x40, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Life Invulnerability (Cheat)"	},
-	{0x14, 0x01, 0x80, 0x80, "Off"			},
-	{0x14, 0x01, 0x80, 0x00, "On"			},
+	{0x00, 0x01, 0x80, 0x80, "Off"			},
+	{0x00, 0x01, 0x80, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    4, "Coin A"		},
-	{0x15, 0x01, 0x03, 0x01, "2 Coins 1 Credits"	},
-	{0x15, 0x01, 0x03, 0x03, "1 Coin  1 Credits"	},
-	{0x15, 0x01, 0x03, 0x02, "1 Coin  2 Credits"	},
-	{0x15, 0x01, 0x03, 0x00, "Free Play"		},
+	{0x01, 0x01, 0x03, 0x01, "2 Coins 1 Credits"	},
+	{0x01, 0x01, 0x03, 0x03, "1 Coin  1 Credits"	},
+	{0x01, 0x01, 0x03, 0x02, "1 Coin  2 Credits"	},
+	{0x01, 0x01, 0x03, 0x00, "Free Play"		},
 
 	{0   , 0xfe, 0   ,    4, "Coin B"		},
-	{0x15, 0x01, 0x0c, 0x00, "3 Coins 1 Credits"	},
-	{0x15, 0x01, 0x0c, 0x04, "2 Coins 3 Credits"	},
-	{0x15, 0x01, 0x0c, 0x0c, "1 Coin  3 Credits"	},
-	{0x15, 0x01, 0x0c, 0x08, "1 Coin  6 Credits"	},
+	{0x01, 0x01, 0x0c, 0x00, "3 Coins 1 Credits"	},
+	{0x01, 0x01, 0x0c, 0x04, "2 Coins 3 Credits"	},
+	{0x01, 0x01, 0x0c, 0x0c, "1 Coin  3 Credits"	},
+	{0x01, 0x01, 0x0c, 0x08, "1 Coin  6 Credits"	},
 
 	{0   , 0xfe, 0   ,    2, "Difficulty"		},
-	{0x15, 0x01, 0x10, 0x10, "Easy"			},
-	{0x15, 0x01, 0x10, 0x00, "Hard"			},
+	{0x01, 0x01, 0x10, 0x10, "Easy"			},
+	{0x01, 0x01, 0x10, 0x00, "Hard"			},
 
 	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
-	{0x15, 0x01, 0x20, 0x20, "Off"			},
-	{0x15, 0x01, 0x20, 0x00, "On"			},
-
-	{0   , 0xfe, 0   ,    2, "Service Mode"	},
-	{0x16, 0x01, 0x01, 0x00, "Off"			},
-	{0x16, 0x01, 0x01, 0x01, "On (reset after turning off)"			},
+	{0x01, 0x01, 0x20, 0x20, "Off"			},
+	{0x01, 0x01, 0x20, 0x00, "On"			},
 };
 
 STDDIPINFO(Galivan)
 
 static struct BurnDIPInfo DangarDIPList[]=
 {
-	{0x14, 0xff, 0xff, 0x9f, NULL			},
-	{0x15, 0xff, 0xff, 0x7f, NULL			},
-	{0x16, 0xff, 0xff, 0x00, NULL			},
+	DIP_OFFSET(0x14)
+	{0x00, 0xff, 0xff, 0x9f, NULL			},
+	{0x01, 0xff, 0xff, 0x7f, NULL			},
+	{0x02, 0xff, 0xff, 0x00, NULL			},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
-	{0x14, 0x01, 0x03, 0x03, "3"			},
-	{0x14, 0x01, 0x03, 0x02, "4"			},
-	{0x14, 0x01, 0x03, 0x01, "5"			},
-	{0x14, 0x01, 0x03, 0x00, "6"			},
+	{0x00, 0x01, 0x03, 0x03, "3"			},
+	{0x00, 0x01, 0x03, 0x02, "4"			},
+	{0x00, 0x01, 0x03, 0x01, "5"			},
+	{0x00, 0x01, 0x03, 0x00, "6"			},
 
 	{0   , 0xfe, 0   ,    4, "Bonus Life"		},
-	{0x14, 0x01, 0x0c, 0x0c, "20k and every 60k"	},
-	{0x14, 0x01, 0x0c, 0x08, "50k and every 60k"	},
-	{0x14, 0x01, 0x0c, 0x04, "20k and every 90k"	},
-	{0x14, 0x01, 0x0c, 0x00, "50k and every 90k"	},
+	{0x00, 0x01, 0x0c, 0x0c, "20k and every 60k"	},
+	{0x00, 0x01, 0x0c, 0x08, "50k and every 60k"	},
+	{0x00, 0x01, 0x0c, 0x04, "20k and every 90k"	},
+	{0x00, 0x01, 0x0c, 0x00, "50k and every 90k"	},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x14, 0x01, 0x10, 0x00, "Off"			},
-	{0x14, 0x01, 0x10, 0x10, "On"			},
+	{0x00, 0x01, 0x10, 0x00, "Off"			},
+	{0x00, 0x01, 0x10, 0x10, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Cabinet"		},
-	{0x14, 0x01, 0x20, 0x00, "Upright"		},
-	{0x14, 0x01, 0x20, 0x20, "Cocktail"		},
+	{0x00, 0x01, 0x20, 0x00, "Upright"		},
+	{0x00, 0x01, 0x20, 0x20, "Cocktail"		},
 
 	{0   , 0xfe, 0   ,    2, "Alternate Enemies"	},
-	{0x14, 0x01, 0x80, 0x80, "Off"			},
-	{0x14, 0x01, 0x80, 0x00, "On"			},
+	{0x00, 0x01, 0x80, 0x80, "Off"			},
+	{0x00, 0x01, 0x80, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    4, "Coin A"		},
-	{0x15, 0x01, 0x03, 0x01, "2 Coins 1 Credits"	},
-	{0x15, 0x01, 0x03, 0x03, "1 Coin  1 Credits"	},
-	{0x15, 0x01, 0x03, 0x02, "1 Coin  2 Credits"	},
-	{0x15, 0x01, 0x03, 0x00, "Free Play"		},
+	{0x01, 0x01, 0x03, 0x01, "2 Coins 1 Credits"	},
+	{0x01, 0x01, 0x03, 0x03, "1 Coin  1 Credits"	},
+	{0x01, 0x01, 0x03, 0x02, "1 Coin  2 Credits"	},
+	{0x01, 0x01, 0x03, 0x00, "Free Play"		},
 
 	{0   , 0xfe, 0   ,    4, "Coin B"		},
-	{0x15, 0x01, 0x0c, 0x04, "2 Coins 1 Credits"	},
-	{0x15, 0x01, 0x0c, 0x0c, "1 Coin  1 Credits"	},
-	{0x15, 0x01, 0x0c, 0x00, "2 Coins 3 Credits"	},
-	{0x15, 0x01, 0x0c, 0x08, "1 Coin  2 Credits"	},
+	{0x01, 0x01, 0x0c, 0x04, "2 Coins 1 Credits"	},
+	{0x01, 0x01, 0x0c, 0x0c, "1 Coin  1 Credits"	},
+	{0x01, 0x01, 0x0c, 0x00, "2 Coins 3 Credits"	},
+	{0x01, 0x01, 0x0c, 0x08, "1 Coin  2 Credits"	},
 
 	{0   , 0xfe, 0   ,    2, "Difficulty"		},
-	{0x15, 0x01, 0x10, 0x10, "Easy"			},
-	{0x15, 0x01, 0x10, 0x00, "Hard"			},
+	{0x01, 0x01, 0x10, 0x10, "Easy"			},
+	{0x01, 0x01, 0x10, 0x00, "Hard"			},
 
 	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
-	{0x15, 0x01, 0x20, 0x20, "Off"			},
-	{0x15, 0x01, 0x20, 0x00, "On"			},
+	{0x01, 0x01, 0x20, 0x20, "Off"			},
+	{0x01, 0x01, 0x20, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    4, "Allow Continue"	},
-	{0x15, 0x01, 0xc0, 0xc0, "No"			},
-	{0x15, 0x01, 0xc0, 0x80, "3 Times"		},
-	{0x15, 0x01, 0xc0, 0x40, "5 Times"		},
-	{0x15, 0x01, 0xc0, 0x00, "99 Times"		},
+	{0x01, 0x01, 0xc0, 0xc0, "No"			},
+	{0x01, 0x01, 0xc0, 0x80, "3 Times"		},
+	{0x01, 0x01, 0xc0, 0x40, "5 Times"		},
+	{0x01, 0x01, 0xc0, 0x00, "99 Times"		},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"	},
-	{0x16, 0x01, 0x01, 0x00, "Off"			},
-	{0x16, 0x01, 0x01, 0x01, "On"			},
+	{0x02, 0x01, 0x01, 0x00, "Off"			},
+	{0x02, 0x01, 0x01, 0x01, "On"			},
 };
 
 STDDIPINFO(Dangar)
 
 static struct BurnDIPInfo DangarbDIPList[] =
 {
-	{0x14, 0xff, 0xff, 0x9f, NULL			},
-	{0x15, 0xff, 0xff, 0xff, NULL			},
-	{0x16, 0xff, 0xff, 0x00, NULL			},
+	DIP_OFFSET(0x14)
+	{0x00, 0xff, 0xff, 0x9f, NULL			},
+	{0x01, 0xff, 0xff, 0xff, NULL			},
+	{0x02, 0xff, 0xff, 0x00, NULL			},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
-	{0x14, 0x01, 0x03, 0x00, "2"			},
-	{0x14, 0x01, 0x03, 0x03, "3"			},
-	{0x14, 0x01, 0x03, 0x02, "4"			},
-	{0x14, 0x01, 0x03, 0x01, "5"			},
+	{0x00, 0x01, 0x03, 0x00, "2"			},
+	{0x00, 0x01, 0x03, 0x03, "3"			},
+	{0x00, 0x01, 0x03, 0x02, "4"			},
+	{0x00, 0x01, 0x03, 0x01, "5"			},
 
 	{0   , 0xfe, 0   ,    4, "Bonus Life"		},
-	{0x14, 0x01, 0x0c, 0x0c, "20k and every 60k"	},
-	{0x14, 0x01, 0x0c, 0x08, "50k and every 60k"	},
-	{0x14, 0x01, 0x0c, 0x04, "20k and every 90k"	},
-	{0x14, 0x01, 0x0c, 0x00, "50k and every 90k"	},
+	{0x00, 0x01, 0x0c, 0x0c, "20k and every 60k"	},
+	{0x00, 0x01, 0x0c, 0x08, "50k and every 60k"	},
+	{0x00, 0x01, 0x0c, 0x04, "20k and every 90k"	},
+	{0x00, 0x01, 0x0c, 0x00, "50k and every 90k"	},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x14, 0x01, 0x10, 0x00, "Off"			},
-	{0x14, 0x01, 0x10, 0x10, "On"			},
+	{0x00, 0x01, 0x10, 0x00, "Off"			},
+	{0x00, 0x01, 0x10, 0x10, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Cabinet"		},
-	{0x14, 0x01, 0x20, 0x00, "Upright"		},
-	{0x14, 0x01, 0x20, 0x20, "Cocktail"		},
+	{0x00, 0x01, 0x20, 0x00, "Upright"		},
+	{0x00, 0x01, 0x20, 0x20, "Cocktail"		},
 
 	{0   , 0xfe, 0   ,    2, "Alternate Enemies"	},
-	{0x14, 0x01, 0x80, 0x80, "Off"			},
-	{0x14, 0x01, 0x80, 0x00, "On"			},
+	{0x00, 0x01, 0x80, 0x80, "Off"			},
+	{0x00, 0x01, 0x80, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    4, "Coin A"		},
-	{0x15, 0x01, 0x03, 0x01, "2 Coins 1 Credits"	},
-	{0x15, 0x01, 0x03, 0x03, "1 Coin  1 Credits"	},
-	{0x15, 0x01, 0x03, 0x02, "1 Coin  2 Credits"	},
-	{0x15, 0x01, 0x03, 0x00, "Free Play"		},
+	{0x01, 0x01, 0x03, 0x01, "2 Coins 1 Credits"	},
+	{0x01, 0x01, 0x03, 0x03, "1 Coin  1 Credits"	},
+	{0x01, 0x01, 0x03, 0x02, "1 Coin  2 Credits"	},
+	{0x01, 0x01, 0x03, 0x00, "Free Play"		},
 
 	{0   , 0xfe, 0   ,    4, "Coin B"		},
-	{0x15, 0x01, 0x0c, 0x04, "2 Coins 1 Credits"	},
-	{0x15, 0x01, 0x0c, 0x0c, "1 Coin  1 Credits"	},
-	{0x15, 0x01, 0x0c, 0x00, "2 Coins 3 Credits"	},
-	{0x15, 0x01, 0x0c, 0x08, "1 Coin  2 Credits"	},
+	{0x01, 0x01, 0x0c, 0x04, "2 Coins 1 Credits"	},
+	{0x01, 0x01, 0x0c, 0x0c, "1 Coin  1 Credits"	},
+	{0x01, 0x01, 0x0c, 0x00, "2 Coins 3 Credits"	},
+	{0x01, 0x01, 0x0c, 0x08, "1 Coin  2 Credits"	},
 
 	{0   , 0xfe, 0   ,    2, "Difficulty"		},
-	{0x15, 0x01, 0x10, 0x10, "Easy"			},
-	{0x15, 0x01, 0x10, 0x00, "Hard"			},
+	{0x01, 0x01, 0x10, 0x10, "Easy"			},
+	{0x01, 0x01, 0x10, 0x00, "Hard"			},
 
 	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
-	{0x15, 0x01, 0x20, 0x20, "Off"			},
-	{0x15, 0x01, 0x20, 0x00, "On"			},
+	{0x01, 0x01, 0x20, 0x20, "Off"			},
+	{0x01, 0x01, 0x20, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Complete Invulnerability (Cheat)"		},
-	{0x15, 0x01, 0x40, 0x40, "Off"			},
-	{0x15, 0x01, 0x40, 0x00, "On"			},
+	{0x01, 0x01, 0x40, 0x40, "Off"			},
+	{0x01, 0x01, 0x40, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Base Ship Invulnerability (Cheat)"		},
-	{0x15, 0x01, 0x80, 0x80, "Off"			},
-	{0x15, 0x01, 0x80, 0x00, "On"			},
+	{0x01, 0x01, 0x80, 0x80, "Off"			},
+	{0x01, 0x01, 0x80, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"	},
-	{0x16, 0x01, 0x01, 0x00, "Off"			},
-	{0x16, 0x01, 0x01, 0x01, "On"			},
+	{0x02, 0x01, 0x01, 0x00, "Off"			},
+	{0x02, 0x01, 0x01, 0x01, "On"			},
 };
 
 STDDIPINFO(Dangarb)
 
 static struct BurnDIPInfo NinjemakDIPList[]=
 {
-	{0x14, 0xff, 0xff, 0xff, NULL			},
-	{0x15, 0xff, 0xff, 0x7c, NULL			},
-	{0x16, 0xff, 0xff, 0x02, NULL			},
+	DIP_OFFSET(0x14)
+	{0x00, 0xff, 0xff, 0xff, NULL			},
+	{0x01, 0xff, 0xff, 0x7c, NULL			},
+	{0x02, 0xff, 0xff, 0x02, NULL			},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
-	{0x14, 0x01, 0x03, 0x03, "3"			},
-	{0x14, 0x01, 0x03, 0x02, "4"			},
-	{0x14, 0x01, 0x03, 0x01, "5"			},
-	{0x14, 0x01, 0x03, 0x00, "6"			},
+	{0x00, 0x01, 0x03, 0x03, "3"			},
+	{0x00, 0x01, 0x03, 0x02, "4"			},
+	{0x00, 0x01, 0x03, 0x01, "5"			},
+	{0x00, 0x01, 0x03, 0x00, "6"			},
 
 	{0   , 0xfe, 0   ,    4, "Bonus Life"		},
-	{0x14, 0x01, 0x0c, 0x0c, "20k and every 60k"	},
-	{0x14, 0x01, 0x0c, 0x08, "50k and every 60k"	},
-	{0x14, 0x01, 0x0c, 0x04, "20k and every 90k"	},
-	{0x14, 0x01, 0x0c, 0x00, "50k and every 90k"	},
+	{0x00, 0x01, 0x0c, 0x0c, "20k and every 60k"	},
+	{0x00, 0x01, 0x0c, 0x08, "50k and every 60k"	},
+	{0x00, 0x01, 0x0c, 0x04, "20k and every 90k"	},
+	{0x00, 0x01, 0x0c, 0x00, "50k and every 90k"	},
 
 	{0   , 0xfe, 0   ,    4, "Coin A"		},
-	{0x14, 0x01, 0x30, 0x10, "2 Coins 1 Credits"	},
-	{0x14, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
-	{0x14, 0x01, 0x30, 0x20, "1 Coin  2 Credits"	},
-	{0x14, 0x01, 0x30, 0x00, "Free Play"		},
+	{0x00, 0x01, 0x30, 0x10, "2 Coins 1 Credits"	},
+	{0x00, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
+	{0x00, 0x01, 0x30, 0x20, "1 Coin  2 Credits"	},
+	{0x00, 0x01, 0x30, 0x00, "Free Play"		},
 
 	{0   , 0xfe, 0   ,    4, "Coin B"		},
-	{0x14, 0x01, 0xc0, 0x40, "2 Coins 1 Credits"	},
-	{0x14, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
-	{0x14, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"	},
-	{0x14, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"	},
+	{0x00, 0x01, 0xc0, 0x40, "2 Coins 1 Credits"	},
+	{0x00, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
+	{0x00, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"	},
+	{0x00, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"	},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x15, 0x01, 0x01, 0x01, "Off"			},
-	{0x15, 0x01, 0x01, 0x00, "On"			},
+	{0x01, 0x01, 0x01, 0x01, "Off"			},
+	{0x01, 0x01, 0x01, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Cabinet"		},
-	{0x15, 0x01, 0x02, 0x00, "Upright"		},
-	{0x15, 0x01, 0x02, 0x02, "Cocktail"		},
+	{0x01, 0x01, 0x02, 0x00, "Upright"		},
+	{0x01, 0x01, 0x02, 0x02, "Cocktail"		},
 
 	{0   , 0xfe, 0   ,    2, "Difficulty"		},
-	{0x15, 0x01, 0x04, 0x04, "Easy"			},
-	{0x15, 0x01, 0x04, 0x00, "Hard"			},
+	{0x01, 0x01, 0x04, 0x04, "Easy"			},
+	{0x01, 0x01, 0x04, 0x00, "Hard"			},
 
 	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
-	{0x15, 0x01, 0x20, 0x20, "Off"			},
-	{0x15, 0x01, 0x20, 0x00, "On"			},
+	{0x01, 0x01, 0x20, 0x20, "Off"			},
+	{0x01, 0x01, 0x20, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    4, "Allow Continue"	},
-	{0x15, 0x01, 0xc0, 0xc0, "No"			},
-	{0x15, 0x01, 0xc0, 0x80, "3 Times"		},
-	{0x15, 0x01, 0xc0, 0x40, "5 Times"		},
-	{0x15, 0x01, 0xc0, 0x00, "99 Times"		},
+	{0x01, 0x01, 0xc0, 0xc0, "No"			},
+	{0x01, 0x01, 0xc0, 0x80, "3 Times"		},
+	{0x01, 0x01, 0xc0, 0x40, "5 Times"		},
+	{0x01, 0x01, 0xc0, 0x00, "99 Times"		},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"	},
-	{0x16, 0x01, 0x02, 0x02, "Off"			},
-	{0x16, 0x01, 0x02, 0x00, "On"			},
+	{0x02, 0x01, 0x02, 0x02, "Off"			},
+	{0x02, 0x01, 0x02, 0x00, "On"			},
 };
 
 STDDIPINFO(Ninjemak)
 
 static struct BurnDIPInfo YoumaDIPList[] =
 {
-	{0x14, 0xff, 0xff, 0xff, NULL			},
-	{0x15, 0xff, 0xff, 0x7c, NULL			},
-	{0x16, 0xff, 0xff, 0x02, NULL			},
+	DIP_OFFSET(0x14)
+	{0x00, 0xff, 0xff, 0xff, NULL			},
+	{0x01, 0xff, 0xff, 0x7c, NULL			},
+	{0x02, 0xff, 0xff, 0x02, NULL			},
 
 	{0   , 0xfe, 0   ,    4, "Lives"		},
-	{0x14, 0x01, 0x03, 0x03, "3"			},
-	{0x14, 0x01, 0x03, 0x02, "4"			},
-	{0x14, 0x01, 0x03, 0x01, "5"			},
-	{0x14, 0x01, 0x03, 0x00, "6"			},
+	{0x00, 0x01, 0x03, 0x03, "3"			},
+	{0x00, 0x01, 0x03, 0x02, "4"			},
+	{0x00, 0x01, 0x03, 0x01, "5"			},
+	{0x00, 0x01, 0x03, 0x00, "6"			},
 
 	{0   , 0xfe, 0   ,    4, "Bonus Life"		},
-	{0x14, 0x01, 0x0c, 0x0c, "20k and every 60k"	},
-	{0x14, 0x01, 0x0c, 0x08, "50k and every 60k"	},
-	{0x14, 0x01, 0x0c, 0x04, "20k and every 90k"	},
-	{0x14, 0x01, 0x0c, 0x00, "50k and every 90k"	},
+	{0x00, 0x01, 0x0c, 0x0c, "20k and every 60k"	},
+	{0x00, 0x01, 0x0c, 0x08, "50k and every 60k"	},
+	{0x00, 0x01, 0x0c, 0x04, "20k and every 90k"	},
+	{0x00, 0x01, 0x0c, 0x00, "50k and every 90k"	},
 
 	{0   , 0xfe, 0   ,    4, "Coin A"		},
-	{0x14, 0x01, 0x30, 0x10, "2 Coins 1 Credits"	},
-	{0x14, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
-	{0x14, 0x01, 0x30, 0x20, "1 Coin  2 Credits"	},
-	{0x14, 0x01, 0x30, 0x00, "Free Play"		},
+	{0x00, 0x01, 0x30, 0x10, "2 Coins 1 Credits"	},
+	{0x00, 0x01, 0x30, 0x30, "1 Coin  1 Credits"	},
+	{0x00, 0x01, 0x30, 0x20, "1 Coin  2 Credits"	},
+	{0x00, 0x01, 0x30, 0x00, "Free Play"		},
 
 	{0   , 0xfe, 0   ,    4, "Coin B"		},
-	{0x14, 0x01, 0xc0, 0x40, "2 Coins 1 Credits"	},
-	{0x14, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
-	{0x14, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"	},
-	{0x14, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"	},
+	{0x00, 0x01, 0xc0, 0x40, "2 Coins 1 Credits"	},
+	{0x00, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"	},
+	{0x00, 0x01, 0xc0, 0x00, "2 Coins 3 Credits"	},
+	{0x00, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"	},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x15, 0x01, 0x01, 0x01, "Off"			},
-	{0x15, 0x01, 0x01, 0x00, "On"			},
+	{0x01, 0x01, 0x01, 0x01, "Off"			},
+	{0x01, 0x01, 0x01, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Cabinet"		},
-	{0x15, 0x01, 0x02, 0x00, "Upright"		},
-	{0x15, 0x01, 0x02, 0x02, "Cocktail"		},
+	{0x01, 0x01, 0x02, 0x00, "Upright"		},
+	{0x01, 0x01, 0x02, 0x02, "Cocktail"		},
 
 	{0   , 0xfe, 0   ,    2, "Difficulty"		},
-	{0x15, 0x01, 0x04, 0x04, "Easy"			},
-	{0x15, 0x01, 0x04, 0x00, "Hard"			},
+	{0x01, 0x01, 0x04, 0x04, "Easy"			},
+	{0x01, 0x01, 0x04, 0x00, "Hard"			},
 
 	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
-	{0x15, 0x01, 0x20, 0x20, "Off"			},
-	{0x15, 0x01, 0x20, 0x00, "On"			},
+	{0x01, 0x01, 0x20, 0x20, "Off"			},
+	{0x01, 0x01, 0x20, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"	},
-	{0x16, 0x01, 0x02, 0x02, "Off"			},
-	{0x16, 0x01, 0x02, 0x00, "On"			},
+	{0x02, 0x01, 0x02, 0x02, "Off"			},
+	{0x02, 0x01, 0x02, 0x00, "On"			},
 };
 
 STDDIPINFO(Youma)
@@ -542,11 +569,6 @@ static UINT8 __fastcall galivan_sound_read_port(UINT16 port)
 	return 0;
 }
 
-static INT32 DrvSyncDAC()
-{
-	return (INT32)(float)(nBurnSoundLen * (ZetTotalCycles() / (4000000.000 / (nBurnFPS / 100.000))));
-}
-
 inline static INT32 DrvYM3526SynchroniseStream(INT32 nSoundRate)
 {
 	return (INT64)ZetTotalCycles() * nSoundRate / 4000000;
@@ -566,6 +588,7 @@ static INT32 DrvDoReset()
 	ZetClose();
 
 	BurnYM3526Reset();
+	DACReset();
 
 	sprite_priority = 0;
 	scrollx = 0;
@@ -576,6 +599,8 @@ static INT32 DrvDoReset()
 	display_tx_disable = 0;
 
 	nb_1414m4_init8b();
+	
+	HiscoreReset();
 
 	return 0;
 }
@@ -659,12 +684,7 @@ static void DrvNibbleExpand(UINT8 *rom, INT32 len)
 
 static INT32 DrvInit(INT32 game)
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	BurnSetRefreshRate(59.94);
 
@@ -758,21 +778,16 @@ static INT32 DrvInit(INT32 game)
 	ZetSetInHandler(galivan_sound_read_port);
 	ZetClose();
 
-	// dac0 -> dac1 -> dc-offset removal (hp filter) -> ym3526 -> OUT
-
+	// dac0 -> dac1 -> dc-offset removal -> ym3526 -> OUT
 	BurnYM3526Init(4000000, NULL, &DrvYM3526SynchroniseStream, 1);
-	BurnTimerAttachYM3526(&ZetConfig, 4000000);
+	BurnTimerAttach(&ZetConfig, 4000000);
 	BurnYM3526SetRoute(BURN_SND_YM3526_ROUTE, 0.85, BURN_SND_ROUTE_BOTH);
 
-	DACInit(0, 0, 0, DrvSyncDAC);
-	DACInit(1, 0, 0, DrvSyncDAC);
+	DACInit(0, 0, 0, ZetTotalCycles, 4000000);
+	DACInit(1, 0, 0, ZetTotalCycles, 4000000);
 	DACSetRoute(0, 0.80, BURN_SND_ROUTE_BOTH);
 	DACSetRoute(1, 0.80, BURN_SND_ROUTE_BOTH);
-
-	// #0 takes dac #0,1 and highpasses it a little to get rid of the dc offset.
-	filter_rc_init(0, FLT_RC_HIGHPASS, 3846, 0, 0, CAP_N(0x310), 0);
-	filter_rc_set_src_stereo(0);
-	hpfiltbuffer = (INT16*)BurnMalloc(nBurnSoundLen*8); // for #0
+	DACDCBlock(1);
 
 	GenericTilesInit();
 
@@ -789,12 +804,8 @@ static INT32 DrvExit()
 
 	BurnYM3526Exit();
 	DACExit();
-	filter_rc_exit();
 
-	BurnFree(AllMem);
-
-	BurnFree(hpfiltbuffer);
-	hpfiltbuffer = NULL;
+	BurnFreeMemIndex();
 
 	nb1414_blit_data8b = NULL;
 
@@ -896,19 +907,7 @@ static void draw_sprites(INT32 mode)
 			flipy = !flipy;
 		}
 
-		if (flipy) {
-			if (flipx) {
-				Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, sx, sy - 16, color+(0x200/0x10), 4, 0xf, 0, DrvGfxROM2);
-			} else {
-				Render16x16Tile_Mask_FlipY_Clip(pTransDraw, code, sx, sy - 16, color+(0x200/0x10), 4, 0xf, 0, DrvGfxROM2);
-			}
-		} else {
-			if (flipx) {
-				Render16x16Tile_Mask_FlipX_Clip(pTransDraw, code, sx, sy - 16, color+(0x200/0x10), 4, 0xf, 0, DrvGfxROM2);
-			} else {
-				Render16x16Tile_Mask_Clip(pTransDraw, code, sx, sy - 16, color+(0x200/0x10), 4, 0xf, 0, DrvGfxROM2);
-			}
-		}
+		Draw16x16MaskTile(pTransDraw, code, sx, sy - 16, flipx, flipy, color+(0x200/0x10), 4, 0xf, 0, DrvGfxROM2);
 	}
 }
 
@@ -951,6 +950,9 @@ static INT32 DrvFrame()
 			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
 			DrvInputs[2] ^= (DrvJoy3[i] & 1) << i;
 		}
+
+		ProcessJoystick(&DrvInputs[0], 0, 0,1,2,3, INPUT_CLEAROPPOSITES | INPUT_ISACTIVELOW);
+		ProcessJoystick(&DrvInputs[1], 0, 0,1,2,3, INPUT_CLEAROPPOSITES | INPUT_ISACTIVELOW);
 	}
 
 	INT32 nInterleave = 130; // sound irqs
@@ -960,33 +962,19 @@ static INT32 DrvFrame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		ZetOpen(0);
-		INT32 nSegment = nCyclesTotal[0] / nInterleave;
-		nCyclesDone[0] += ZetRun(nSegment);
+		CPU_RUN(0, Zet);
 		if (i == (nInterleave - 1)) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
 
 		ZetOpen(1);
-		nSegment = nCyclesTotal[1] / nInterleave;
-		BurnTimerUpdateYM3526((i + 1) * (nCyclesTotal[1] / nInterleave));
-
+		CPU_RUN_TIMER(1);
 		ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
 	}
 
-	ZetOpen(1);
-	BurnTimerEndFrameYM3526(nCyclesTotal[1]);
-	ZetClose();
-
 	if (pBurnSoundOut) {
-		ZetOpen(1);
-
 		DACUpdate(pBurnSoundOut, nBurnSoundLen);
-		filter_rc_update(0, pBurnSoundOut, hpfiltbuffer, nBurnSoundLen);
-		memmove(pBurnSoundOut, hpfiltbuffer, nBurnSoundLen*4);
-
 		BurnYM3526Update(pBurnSoundOut, nBurnSoundLen);
-
-		ZetClose();
 	}
 
 	if (pBurnDraw) {
@@ -1084,8 +1072,8 @@ struct BurnDriver BurnDrvGalivan = {
 	"galivan", NULL, NULL, NULL, "1985",
 	"Cosmo Police Galivan (12/26/1985)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
-	NULL, galivanRomInfo, galivanRomName, NULL, NULL, NULL, NULL, DrvInputInfo, GalivanDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, galivanRomInfo, galivanRomName, NULL, NULL, NULL, NULL, GalivanInputInfo, GalivanDIPInfo,
 	galivanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1180,
 	224, 256, 3, 4
 };
@@ -1129,8 +1117,8 @@ struct BurnDriver BurnDrvGalivan2 = {
 	"galivan2", "galivan", NULL, NULL, "1985",
 	"Cosmo Police Galivan (12/16/1985)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
-	NULL, galivan2RomInfo, galivan2RomName, NULL, NULL, NULL, NULL, DrvInputInfo, GalivanDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, galivan2RomInfo, galivan2RomName, NULL, NULL, NULL, NULL, GalivanInputInfo, GalivanDIPInfo,
 	galivanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1180,
 	224, 256, 3, 4
 };
@@ -1174,14 +1162,14 @@ struct BurnDriver BurnDrvGalivan3 = {
 	"galivan3", "galivan", NULL, NULL, "1985",
 	"Cosmo Police Galivan (12/11/1985)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
-	NULL, galivan3RomInfo, galivan3RomName, NULL, NULL, NULL, NULL, DrvInputInfo, GalivanDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, galivan3RomInfo, galivan3RomName, NULL, NULL, NULL, NULL, GalivanInputInfo, GalivanDIPInfo,
 	galivanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1180,
 	224, 256, 3, 4
 };
 
 
-// Ufo Robo Dangar (4/07/1987)
+// Ufo Robo Dangar (4/09/1987)
 
 static struct BurnRomInfo dangarRomDesc[] = {
 	{ "8.1b",			0x8000, 0xfe4a3fd6, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
@@ -1217,10 +1205,10 @@ STD_ROM_FN(dangar)
 
 struct BurnDriver BurnDrvDangar = {
 	"dangar", NULL, NULL, NULL, "1986",
-	"Ufo Robo Dangar (4/07/1987)\0", NULL, "Nichibutsu", "Miscellaneous",
+	"Ufo Robo Dangar (4/09/1987)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, dangarRomInfo, dangarRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DangarDIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	NULL, dangarRomInfo, dangarRomName, NULL, NULL, NULL, NULL, DangarInputInfo, DangarDIPInfo,
 	galivanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1180,
 	224, 256, 3, 4
 };
@@ -1264,14 +1252,14 @@ struct BurnDriver BurnDrvDangara = {
 	"dangara", "dangar", NULL, NULL, "1986",
 	"Ufo Robo Dangar (12/1/1986)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, dangaraRomInfo, dangaraRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DangarDIPInfo, // dangar2
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	NULL, dangaraRomInfo, dangaraRomName, NULL, NULL, NULL, NULL, DangarInputInfo, DangarDIPInfo, // dangar2
 	galivanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1180,
 	224, 256, 3, 4
 };
 
 
-// Ufo Robo Dangar (9/26/1986)
+// Ufo Robo Dangar (9/26/1986, bootleg set 1)
 
 static struct BurnRomInfo dangarbRomDesc[] = {
 	{ "16.1b",			0x8000, 0x743fa2d4, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
@@ -1307,10 +1295,10 @@ STD_ROM_FN(dangarb)
 
 struct BurnDriver BurnDrvDangarb = {
 	"dangarb", "dangar", NULL, NULL, "1986",
-	"Ufo Robo Dangar (9/26/1986)\0", NULL, "Nichibutsu", "Miscellaneous",
+	"Ufo Robo Dangar (9/26/1986, bootleg set 1)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, dangarbRomInfo, dangarbRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DangarbDIPInfo, // Dangar2
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	NULL, dangarbRomInfo, dangarbRomName, NULL, NULL, NULL, NULL, DangarInputInfo, DangarbDIPInfo, // Dangar2
 	galivanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1180,
 	224, 256, 3, 4
 };
@@ -1357,14 +1345,14 @@ struct BurnDriver BurnDrvDangarj = {
 	"dangarj", "dangar", NULL, NULL, "1986",
 	"Ufo Robo Dangar (9/26/1986, Japan)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, dangarjRomInfo, dangarjRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DangarbDIPInfo, // Dangar2
+	BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	NULL, dangarjRomInfo, dangarjRomName, NULL, NULL, NULL, NULL, DangarInputInfo, DangarbDIPInfo, // Dangar2
 	galivanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1180,
 	224, 256, 3, 4
 };
 
 
-// Ufo Robo Dangar (bootleg)
+// Ufo Robo Dangar (9/26/1986, bootleg set 2)
 
 static struct BurnRomInfo dangarbtRomDesc[] = {
 	{ "8",				0x8000, 0x8136fd10, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
@@ -1400,10 +1388,10 @@ STD_ROM_FN(dangarbt)
 
 struct BurnDriver BurnDrvDangarbt = {
 	"dangarbt", "dangar", NULL, NULL, "1986",
-	"Ufo Robo Dangar (bootleg)\0", NULL, "Nichibutsu", "Miscellaneous",
+	"Ufo Robo Dangar (9/26/1986, bootleg set 2)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
-	NULL, dangarbtRomInfo, dangarbtRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DangarbDIPInfo, // Dangar2
+	NULL, dangarbtRomInfo, dangarbtRomName, NULL, NULL, NULL, NULL, DangarInputInfo, DangarbDIPInfo, // Dangar2
 	galivanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1180,
 	224, 256, 3, 4
 };
@@ -1456,7 +1444,7 @@ struct BurnDriver BurnDrvNinjemak = {
 	"ninjemak", NULL, NULL, NULL, "1986",
 	"Ninja Emaki (US)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, ninjemakRomInfo, ninjemakRomName, NULL, NULL, NULL, NULL, ninjemakInputInfo, NinjemakDIPInfo,
 	ninjemakInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1180,
 	224, 256, 3, 4
@@ -1505,7 +1493,7 @@ struct BurnDriver BurnDrvYouma = {
 	"youma", "ninjemak", NULL, NULL, "1986",
 	"Youma Ninpou Chou (Japan)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, youmaRomInfo, youmaRomName, NULL, NULL, NULL, NULL, ninjemakInputInfo, YoumaDIPInfo,
 	ninjemakInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1180,
 	224, 256, 3, 4
@@ -1554,7 +1542,7 @@ struct BurnDriver BurnDrvYouma2 = {
 	"youma2", "ninjemak", NULL, NULL, "1986",
 	"Youma Ninpou Chou (Japan, alt)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, youma2RomInfo, youma2RomName, NULL, NULL, NULL, NULL, ninjemakInputInfo, YoumaDIPInfo,
 	ninjemakInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1180,
 	224, 256, 3, 4
@@ -1601,7 +1589,7 @@ struct BurnDriverD BurnDrvYoumab = {
 	"youmab", "ninjemak", NULL, NULL, "1986",
 	"Youma Ninpou Chou (Game Electronics bootleg, set 1)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	0 | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	0 | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, youmabRomInfo, youmabRomName, NULL, NULL, NULL, NULL, ninjemakInputInfo, YoumaDIPInfo,
 	ninjemakInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1180,
 	224, 256, 3, 4
@@ -1648,7 +1636,7 @@ struct BurnDriverD BurnDrvYoumab2 = {
 	"youmab2", "ninjemak", NULL, NULL, "1986",
 	"Youma Ninpou Chou (Game Electronics bootleg, set 2)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	0 | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	0 | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, youmab2RomInfo, youmab2RomName, NULL, NULL, NULL, NULL, ninjemakInputInfo, YoumaDIPInfo,
 	ninjemakInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1180,
 	224, 256, 3, 4

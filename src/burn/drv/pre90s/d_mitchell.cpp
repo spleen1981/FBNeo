@@ -1,4 +1,4 @@
-// FB Alpha Mitchell driver module
+// FB Neo Mitchell driver module
 // Based on MAME driver by Nicola Salmoria
 
 #include "tiles_generic.h"
@@ -183,20 +183,20 @@ static struct BurnInputInfo PkladiesInputList[] =
 	{"Start 1"           , BIT_DIGITAL  , DrvInputPort1  + 2, "p1 start"  },
 	{"Start 2"           , BIT_DIGITAL  , DrvInputPort7  + 2, "p2 start"  },
 
-	{"P1 A"              , BIT_DIGITAL  , DrvInputPort1  + 7, "mah a"     },
-	{"P1 B"              , BIT_DIGITAL  , DrvInputPort2  + 7, "mah b"     },
-	{"P1 C"              , BIT_DIGITAL  , DrvInputPort4  + 7, "mah c"     },
-	{"P1 D"              , BIT_DIGITAL  , DrvInputPort5  + 7, "mah d"     },
-	{"P1 E"              , BIT_DIGITAL  , DrvInputPort1  + 6, "mah e"     },
+	{"P1 A"              , BIT_DIGITAL  , DrvInputPort1  + 7, "p1 fire 4" },
+	{"P1 B"              , BIT_DIGITAL  , DrvInputPort2  + 7, "p1 fire 5" },
+	{"P1 C"              , BIT_DIGITAL  , DrvInputPort4  + 7, "p1 fire 6" },
+	{"P1 D"              , BIT_DIGITAL  , DrvInputPort5  + 7, "p1 fire 7" },
+	{"P1 E"              , BIT_DIGITAL  , DrvInputPort1  + 6, "p1 fire 8" },
 	{"P1 Deal"           , BIT_DIGITAL  , DrvInputPort1  + 5, "p1 fire 1" },
 	{"P1 Cancel"         , BIT_DIGITAL  , DrvInputPort2  + 5, "p1 fire 2" },
 	{"P1 Flip"           , BIT_DIGITAL  , DrvInputPort4  + 5, "p1 fire 3" },
 	
-	{"P2 A"              , BIT_DIGITAL  , DrvInputPort7  + 7, "mah a"     },
-	{"P2 B"              , BIT_DIGITAL  , DrvInputPort8  + 7, "mah b"     },
-	{"P2 C"              , BIT_DIGITAL  , DrvInputPort9  + 7, "mah c"     },
-	{"P2 D"              , BIT_DIGITAL  , DrvInputPort10 + 7, "mah d"     },
-	{"P2 E"              , BIT_DIGITAL  , DrvInputPort7  + 6, "mah e"     },
+	{"P2 A"              , BIT_DIGITAL  , DrvInputPort7  + 7, "p2 fire 4" },
+	{"P2 B"              , BIT_DIGITAL  , DrvInputPort8  + 7, "p2 fire 5" },
+	{"P2 C"              , BIT_DIGITAL  , DrvInputPort9  + 7, "p2 fire 6" },
+	{"P2 D"              , BIT_DIGITAL  , DrvInputPort10 + 7, "p2 fire 7" },
+	{"P2 E"              , BIT_DIGITAL  , DrvInputPort7  + 6, "p2 fire 8" },
 	{"P2 Deal"           , BIT_DIGITAL  , DrvInputPort7  + 5, "p2 fire 1" },
 	{"P2 Cancel"         , BIT_DIGITAL  , DrvInputPort8  + 5, "p2 fire 2" },
 	{"P2 Flip"           , BIT_DIGITAL  , DrvInputPort9  + 5, "p2 fire 3" },
@@ -595,23 +595,42 @@ STD_ROM_PICK(Pkladiesla)
 STD_ROM_FN(Pkladiesla)
 
 static struct BurnRomInfo DokabenRomDesc[] = {
-	{ "db06.11h",      0x08000, 0x413e0886, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
-	{ "db07.13h",      0x20000, 0x8bdcf49e, BRF_ESS | BRF_PRG }, //	 1
-	{ "db08.14h",      0x20000, 0x1643bdd9, BRF_ESS | BRF_PRG }, //	 2
+	{ "db_06.11h",     0x08000, 0x413e0886, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
+	{ "db_07.13h",     0x20000, 0x8bdcf49e, BRF_ESS | BRF_PRG }, //	 1
+	{ "db_08.14h",     0x20000, 0x1643bdd9, BRF_ESS | BRF_PRG }, //	 2
 	
-	{ "db02.1e",       0x20000, 0x9aa8470c, BRF_GRA },	     //  3	Characters
-	{ "db03.2e",       0x20000, 0x3324e43d, BRF_GRA },	     //  4
-	{ "db04.1g",       0x20000, 0xc0c5b6c2, BRF_GRA },	     //  5
-	{ "db05.2g",       0x20000, 0xd2ab25f2, BRF_GRA },	     //  6
+	{ "db_02.1e",      0x20000, 0x9aa8470c, BRF_GRA },	     //  3	Characters
+	{ "db_03.2e",      0x20000, 0x3324e43d, BRF_GRA },	     //  4
+	{ "db_04.1g",      0x20000, 0xc0c5b6c2, BRF_GRA },	     //  5
+	{ "db_05.2g",      0x20000, 0xd2ab25f2, BRF_GRA },	     //  6
 	
-	{ "db10.2k",       0x20000, 0x9e70f7ae, BRF_GRA },	     //  7	Sprites
-	{ "db09.1k",       0x20000, 0x2d9263f7, BRF_GRA },	     //  8
+	{ "db_10.2k",      0x20000, 0x9e70f7ae, BRF_GRA },	     //  7	Sprites
+	{ "db_09.1k",      0x20000, 0x2d9263f7, BRF_GRA },	     //  8
 	
-	{ "db01.1d",       0x20000, 0x62fa6b81, BRF_SND },	     //  9	Samples
+	{ "db_01.1d",      0x20000, 0x62fa6b81, BRF_SND },	     //  9	Samples
 };
 
 STD_ROM_PICK(Dokaben)
 STD_ROM_FN(Dokaben)
+
+static struct BurnRomInfo Dokaben2RomDesc[] = {
+	{ "d2_06.11h",     0x08000, 0x9adcc38c, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
+	{ "d2_07.13h",     0x20000, 0x43076e32, BRF_ESS | BRF_PRG }, //	 1
+	{ "d2_08.14h",     0x20000, 0xcb9deb7a, BRF_ESS | BRF_PRG }, //	 2
+	
+	{ "d2_02.1e",      0x20000, 0x5dd7b941, BRF_GRA },	     //  3	Characters
+	{ "d2_03.2e",      0x20000, 0xb615e696, BRF_GRA },	     //  4
+	{ "d2_04.1g",      0x20000, 0x56b35605, BRF_GRA },	     //  5
+	{ "d2_05.2g",      0x20000, 0xce98ff74, BRF_GRA },	     //  6
+	
+	{ "d2_10.2k",      0x20000, 0x9b9bfb5f, BRF_GRA },	     //  7	Sprites
+	{ "d2_09.1k",      0x20000, 0x84de2e1d, BRF_GRA },	     //  8
+	
+	{ "db_01.1d",      0x20000, 0x62fa6b81, BRF_SND },	     //  9	Samples
+};
+
+STD_ROM_PICK(Dokaben2)
+STD_ROM_FN(Dokaben2)
 
 static struct BurnRomInfo PangRomDesc[] = {
 	{ "pwe_06.11h",    0x08000, 0x68be52cd, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
@@ -653,15 +672,15 @@ static struct BurnRomInfo PompingwRomDesc[] = {
 	{ "pwj_06.11h",    0x08000, 0x4a0a6426, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
 	{ "pwj_07.13h",    0x20000, 0xa9402420, BRF_ESS | BRF_PRG }, //	 1
 	
-	{ "pw_02.1e",      0x20000, 0x4b5992e4, BRF_GRA },	     //  2	Characters
-	{ "pw_03.2e",      0x20000, 0x79a8ed08, BRF_GRA },	     //  3
+	{ "pwj_02.1e",     0x20000, 0x4b5992e4, BRF_GRA },	     //  2	Characters
+	{ "pwj_03.2e",     0x20000, 0x79a8ed08, BRF_GRA },	     //  3
 	{ "pwj_04.1g",     0x20000, 0x01e49081, BRF_GRA },	     //  4
-	{ "pw_05.2g",      0x20000, 0x2fb3db6c, BRF_GRA },	     //  5
+	{ "pwj_05.2g",     0x20000, 0x2fb3db6c, BRF_GRA },	     //  5
 	
-	{ "pw_10.2k",      0x20000, 0xfdba4f6e, BRF_GRA },	     //  6	Sprites
-	{ "pw_9.1k",       0x20000, 0x39f47a63, BRF_GRA },	     //  7
+	{ "pwj_10.2k",     0x20000, 0x83a81c02, BRF_GRA },	     //  6	Sprites
+	{ "pwj_9.1k",      0x20000, 0x6b628232, BRF_GRA },	     //  7
 	
-	{ "pw_01.1d",       0x20000, 0xc52e5b8e, BRF_SND },	     //  8	Samples
+	{ "pwj_01.1d",     0x20000, 0xc52e5b8e, BRF_SND },	     //  8	Samples
 };
 
 STD_ROM_PICK(Pompingw)
@@ -897,41 +916,62 @@ STD_ROM_PICK(Mstworld)
 STD_ROM_FN(Mstworld)
 
 static struct BurnRomInfo MarukinRomDesc[] = {
-	{ "mg3-01.9d",     0x08000, 0x04357973, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
-	{ "mg3-02.10d",    0x20000, 0x50d08da0, BRF_ESS | BRF_PRG }, //	 1
-	
-	{ "mg3-a.3k",      0x80000, 0x420f1de7, BRF_GRA },	     //  2	Characters
-	{ "mg3-b.4k",      0x80000, 0xd8de13fa, BRF_GRA },	     //  3
-	{ "mg3-c.6k",      0x80000, 0xfbeb66e8, BRF_GRA },	     //  4
-	{ "mg3-d.7k",      0x80000, 0x8f6bd831, BRF_GRA },	     //  5
-	
-	{ "mg3-05.2g",     0x20000, 0x7a738d2d, BRF_GRA },	     //  6	Sprites
-	{ "mg3-04.1g",     0x20000, 0x56f30515, BRF_GRA },	     //  7
-	
-	{ "mg3-e.1d",      0x80000, 0x106c2fa9, BRF_SND },	     //  8	Samples
+	{ "mg3-01b.9d",		0x08000, 0x529d4389, BRF_ESS | BRF_PRG }, //  0 Z80 #1 Program Code
+	{ "mg3-02b.10d",	0x20000, 0xe8a8f14e, BRF_ESS | BRF_PRG }, //  1
+
+	{ "mg3-a.3k",		0x80000, 0x420f1de7, BRF_GRA },           //  2 Characters
+	{ "mg3-b.4k",		0x80000, 0xd8de13fa, BRF_GRA },           //  3
+	{ "mg3-c.6k",		0x80000, 0xfbeb66e8, BRF_GRA },           //  4
+	{ "mg3-d.7k",		0x80000, 0x8f6bd831, BRF_GRA },           //  5
+
+	{ "mg3-05.2g",		0x20000, 0x7a738d2d, BRF_GRA },           //  6 Sprites
+	{ "mg3-04.1g",		0x20000, 0x56f30515, BRF_GRA },           //  7
+
+	{ "mg3-e.1d",		0x80000, 0x106c2fa9, BRF_SND },           //  8 Samples / banked
+
+	{ "mj3c.10f",		0x00117, 0xf59ba8d2, BRF_OPT },           //  9 PLDs / pal16l8bcn
+	{ "mj3p.14k",		0x00117, 0x2c87be87, BRF_OPT },           // 10
 };
 
 STD_ROM_PICK(Marukin)
 STD_ROM_FN(Marukin)
 
+static struct BurnRomInfo MarukinaRomDesc[] = {
+	{ "mg3-01.9d",		0x08000, 0x04357973, BRF_ESS | BRF_PRG }, //  0 Z80 #1 Program Code
+	{ "mg3-02.10d",		0x20000, 0x50d08da0, BRF_ESS | BRF_PRG }, //  1
+	
+	{ "mg3-a.3k",		0x80000, 0x420f1de7, BRF_GRA },           //  2 Characters
+	{ "mg3-b.4k",		0x80000, 0xd8de13fa, BRF_GRA },           //  3
+	{ "mg3-c.6k",		0x80000, 0xfbeb66e8, BRF_GRA },           //  4
+	{ "mg3-d.7k",		0x80000, 0x8f6bd831, BRF_GRA },           //  5
+	
+	{ "mg3-05.2g",		0x20000, 0x7a738d2d, BRF_GRA },           //  6 Sprites
+	{ "mg3-04.1g",		0x20000, 0x56f30515, BRF_GRA },           //  7
+	
+	{ "mg3-e.1d",		0x80000, 0x106c2fa9, BRF_SND },           //  8 Samples
+};
+
+STD_ROM_PICK(Marukina)
+STD_ROM_FN(Marukina)
+
 static struct BurnRomInfo Qtono1RomDesc[] = {
-	{ "q3-05.rom",     0x08000, 0x1dd0a344, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
-	{ "q3-06.rom",     0x20000, 0xbd6a2110, BRF_ESS | BRF_PRG }, //	 1
-	{ "q3-07.rom",     0x20000, 0x61e53c4f, BRF_ESS | BRF_PRG }, //	 2
+	{ "q3-05.rom",		0x08000, 0x1dd0a344, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
+	{ "q3-06.rom",		0x20000, 0xbd6a2110, BRF_ESS | BRF_PRG }, //  1
+	{ "q3-07.rom",		0x20000, 0x61e53c4f, BRF_ESS | BRF_PRG }, //  2
 	
-	{ "q3-08.rom",     0x20000, 0x1533b978, BRF_GRA },	     //  3	Characters
-	{ "q3-09.rom",     0x20000, 0xa32db2f2, BRF_GRA },	     //  4
-	{ "q3-10.rom",     0x20000, 0xed681aa8, BRF_GRA },	     //  5
-	{ "q3-11.rom",     0x20000, 0x38b2fd10, BRF_GRA },	     //  6
-	{ "q3-18.rom",     0x20000, 0x9e4292ac, BRF_GRA },	     //  7
-	{ "q3-19.rom",     0x20000, 0xb7f6d40f, BRF_GRA },	     //  8
-	{ "q3-20.rom",     0x20000, 0x6cd7f38d, BRF_GRA },	     //  9
-	{ "q3-21.rom",     0x20000, 0xb4aa6b4b, BRF_GRA },	     //  10
+	{ "q3-08.rom",		0x20000, 0x1533b978, BRF_GRA },           //  3	Characters
+	{ "q3-09.rom",		0x20000, 0xa32db2f2, BRF_GRA },           //  4
+	{ "q3-10.rom",		0x20000, 0xed681aa8, BRF_GRA },           //  5
+	{ "q3-11.rom",		0x20000, 0x38b2fd10, BRF_GRA },           //  6
+	{ "q3-18.rom",		0x20000, 0x9e4292ac, BRF_GRA },           //  7
+	{ "q3-19.rom",		0x20000, 0xb7f6d40f, BRF_GRA },           //  8
+	{ "q3-20.rom",		0x20000, 0x6cd7f38d, BRF_GRA },           //  9
+	{ "q3-21.rom",		0x20000, 0xb4aa6b4b, BRF_GRA },           // 10
 	
-	{ "q3-16.rom",     0x20000, 0x863d6836, BRF_GRA },	     //  11	Sprites
-	{ "q3-17.rom",     0x20000, 0x459bf59c, BRF_GRA },	     //  12
+	{ "q3-16.rom",		0x20000, 0x863d6836, BRF_GRA },           // 11	Sprites
+	{ "q3-17.rom",		0x20000, 0x459bf59c, BRF_GRA },           // 12
 	
-	{ "q3-01.rom",     0x20000, 0x6c1be591, BRF_SND },	     //  13	Samples
+	{ "q3-01.rom",		0x20000, 0x6c1be591, BRF_SND },           // 13	Samples
 };
 
 STD_ROM_PICK(Qtono1)
@@ -2552,7 +2592,18 @@ static INT32 Qtono1Init()
 	qtono1_decode();
 	
 	MitchellMachineInit();
-	
+
+	if (!EEPROMAvailable()) {
+		// the game doesn't work properly until p2 start is pressed ?
+		// setting the default eeprom get around this issue
+		const UINT8 qtono1_default_eeprom[32]=
+		{
+			0x50,0x41,0x53,0x53,0x00,0x00,0x02,0x00,0x1f,0x0d,0xff,0x00,0x00,0x00,0x00,0x00,
+			0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+		};
+		EEPROMFill(qtono1_default_eeprom, 0, 32);
+	}
+
 	DrvDoReset();
 
 	return 0;
@@ -3191,6 +3242,16 @@ struct BurnDriver BurnDrvPkladiesla = {
 	NULL, 0x800, 384, 240, 4, 3
 };
 
+struct BurnDriver BurnDrvDokaben2 = {
+	"dokaben2", NULL, NULL, NULL, "1989",
+	"Dokaben 2 (Japan)\0", NULL, "Capcom", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
+	NULL, Dokaben2RomInfo, Dokaben2RomName, NULL, NULL, NULL, NULL, PangInputInfo, NULL,
+	DokabenInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
+	NULL, 0x800, 384, 240, 4, 3
+};
+
 struct BurnDriver BurnDrvDokaben = {
 	"dokaben", NULL, NULL, NULL, "1989",
 	"Dokaben (Japan)\0", NULL, "Capcom", "Miscellaneous",
@@ -3343,10 +3404,20 @@ struct BurnDriver BurnDrvMstworld = {
 
 struct BurnDriver BurnDrvMarukin = {
 	"marukin", NULL, NULL, NULL, "1990",
-	"Super Marukin-Ban (Japan 901017)\0", NULL, "Yuga", "Miscellaneous",
+	"Super Marukin-Ban (Japan 911128)\0", NULL, "Yuga", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
 	NULL, MarukinRomInfo, MarukinRomName, NULL, NULL, NULL, NULL, MarukinInputInfo, NULL,
+	MarukinInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
+	NULL, 0x800, 384, 240, 4, 3
+};
+
+struct BurnDriver BurnDrvMarukina = {
+	"marukina", "marukin", NULL, NULL, "1990",
+	"Super Marukin-Ban (Japan 901017)\0", NULL, "Yuga", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
+	NULL, MarukinaRomInfo, MarukinaRomName, NULL, NULL, NULL, NULL, MarukinInputInfo, NULL,
 	MarukinInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 0x800, 384, 240, 4, 3
 };

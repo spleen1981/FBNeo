@@ -36,8 +36,8 @@ INT32 nHasZet = -1;
 cpu_core_config ZetConfig =
 {
 	"Z80",
-	ZetOpen,
-	ZetClose,
+	ZetCPUPush, //ZetOpen,
+	ZetCPUPop, //ZetClose,
 	ZetCheatRead,
 	ZetCheatWriteROM,
 	ZetGetActive,
@@ -48,6 +48,8 @@ cpu_core_config ZetConfig =
 	ZetRun,
 	ZetRunEnd,
 	ZetReset,
+	ZetScan,
+	ZetExit,
 	0x10000,
 	0
 };
@@ -341,7 +343,7 @@ struct z80pstack {
 static z80pstack pstack[MAX_PSTACK];
 static INT32 pstacknum = 0;
 
-static void ZetCPUPush(INT32 nCPU)
+void ZetCPUPush(INT32 nCPU)
 {
 	z80pstack *p = &pstack[pstacknum++];
 
@@ -359,7 +361,7 @@ static void ZetCPUPush(INT32 nCPU)
 	}
 }
 
-static void ZetCPUPop()
+void ZetCPUPop()
 {
 	z80pstack *p = &pstack[--pstacknum];
 
@@ -427,6 +429,20 @@ void ZetRunEnd()
 #endif
 
 	Z80StopExecute();
+}
+
+void ZetRunEnd(INT32 nCPU)
+{
+#if defined FBNEO_DEBUG
+	if (!DebugCPU_ZetInitted) bprintf(PRINT_ERROR, _T("ZetRunEnd called without init\n"));
+	if (nOpenedCPU == -1) bprintf(PRINT_ERROR, _T("ZetRunEnd called when no CPU open\n"));
+#endif
+
+	ZetCPUPush(nCPU);
+
+	Z80StopExecute();
+
+	ZetCPUPop();
 }
 
 // This function will make an area callback ZetRead/ZetWrite
@@ -933,8 +949,9 @@ void ZetSetHALT(INT32 nStatus)
 #endif
 
 	if (nOpenedCPU < 0) return;
-	
+
 	ZetCPUContext[nOpenedCPU]->BusReq = nStatus;
+	if (nStatus) ZetRunEnd(); // end current timeslice since we're halted
 }
 
 void ZetSetHALT(INT32 nCPU, INT32 nStatus)

@@ -12,6 +12,8 @@ UINT8 TC0100SCNCharLayerUpdate[TC0100SCN_MAX_CHIPS];
 UINT8 TC0100SCNCharLayerGranularity;
 UINT8 TC0100SCNCharRamUpdate[TC0100SCN_MAX_CHIPS];
 INT32 TC0100SCNDblWidth[TC0100SCN_MAX_CHIPS];
+INT32 TC0100SCNFlipXOffset;
+INT32 TC0100SCNFlipYOffset;
 static UINT8 *TC0100SCNChars[TC0100SCN_MAX_CHIPS];
 static INT32 BgScrollX[TC0100SCN_MAX_CHIPS];
 static INT32 BgScrollY[TC0100SCN_MAX_CHIPS];
@@ -34,6 +36,26 @@ static INT32 TC0100SCNPaletteOffset[TC0100SCN_MAX_CHIPS];
 static UINT16 *pTC0100SCNBgTempDraw[TC0100SCN_MAX_CHIPS] = { NULL, };
 static UINT16 *pTC0100SCNFgTempDraw[TC0100SCN_MAX_CHIPS] = { NULL, };
 static INT32 TC0100SCNNum = 0;
+
+// TOFIX/NOTE: this is temporary, find real source of problem someday -dink july 2021
+static INT32 liquid_kludge = 0;
+
+void TC0100SCNLiquidKludge()
+{
+	liquid_kludge = 23 - 8;
+}
+
+void TC0100SCNSetFlippedOffsets(INT32 XOffs, INT32 YOffs)
+{
+	// affects all layers except X on char (TC: bonzeadv 2p coctail)
+	TC0100SCNFlipXOffset = XOffs;
+	TC0100SCNFlipYOffset = YOffs;
+}
+
+INT32 TC0100SCNGetFlipped(INT32 Chip)
+{
+	return TC0100SCNFlip[Chip];
+}
 
 #define PLOTPIXEL(x, po) if (pTileData[x]) {pPixel[x] = nPalette | pTileData[x] | po;}
 #define PLOTPIXEL_FLIPX(x, a, po) if (pTileData[a]) {pPixel[x] = nPalette | pTileData[a] | po;}
@@ -216,19 +238,24 @@ void TC0100SCNRenderBgLayer(INT32 Chip, INT32 Opaque, UINT8 *pSrc, INT32 Priorit
 					x = (Columns * 8) - 8 - x;
 					yFlip = !yFlip;
 					y = 512 - 8 - y;
+
+					x += TC0100SCNFlipXOffset;
+					y += TC0100SCNFlipYOffset;
 				}
 
-				if (xFlip) {
-					if (yFlip) {
-						RenderTile_FlipXY(pTC0100SCNBgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
+				if (x >= 0 && x <= WidthMask && y >= 0 && y <= HeightMask) {
+					if (xFlip) {
+						if (yFlip) {
+							RenderTile_FlipXY(pTC0100SCNBgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
+						} else {
+							RenderTile_FlipX(pTC0100SCNBgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
+						}
 					} else {
-						RenderTile_FlipX(pTC0100SCNBgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
-					}
-				} else {
-					if (yFlip) {
-						RenderTile_FlipY(pTC0100SCNBgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
-					} else {
-						RenderTile(pTC0100SCNBgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
+						if (yFlip) {
+							RenderTile_FlipY(pTC0100SCNBgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
+						} else {
+							RenderTile(pTC0100SCNBgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
+						}
 					}
 				}
 
@@ -246,7 +273,7 @@ void TC0100SCNRenderBgLayer(INT32 Chip, INT32 Opaque, UINT8 *pSrc, INT32 Priorit
 	if (TC0100SCNFlip[Chip]) ySrc = (256 + 16 - ySrc) & HeightMask;
 
 	for (y = 0; y < TC0100SCNClipHeight[Chip]; y++) {
-		xSrc = (BgScrollX[Chip] - BURN_ENDIAN_SWAP_INT16(ScrollRam[(y + dyScroll) & 0x1ff]) + dxScroll + TC0100SCNClipStartX[Chip]) & WidthMask;
+		xSrc = (BgScrollX[Chip] - BURN_ENDIAN_SWAP_INT16(ScrollRam[(y + dyScroll + liquid_kludge) & 0x1ff]) + dxScroll + TC0100SCNClipStartX[Chip]) & WidthMask;
 		if(TC0100SCNFlip[Chip]) xSrc = (256 - 58 - xSrc) & WidthMask;
 		if (TC0100SCNFlipScreenX[Chip]) xSrc = (256 - 64 - xSrc) & WidthMask;
 
@@ -313,19 +340,24 @@ void TC0100SCNRenderFgLayer(INT32 Chip, INT32 Opaque, UINT8 *pSrc, INT32 Priorit
 					x = (Columns * 8) - 8 - x;
 					yFlip = !yFlip;
 					y = 512 - 8 -y;
+
+					x += TC0100SCNFlipXOffset;
+					y += TC0100SCNFlipYOffset;
 				}
 
-				if (xFlip) {
-					if (yFlip) {
-						RenderTile_FlipXY(pTC0100SCNFgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
+				if (x >= 0 && x <= WidthMask && y >= 0 && y <= HeightMask) {
+					if (xFlip) {
+						if (yFlip) {
+							RenderTile_FlipXY(pTC0100SCNFgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
+						} else {
+							RenderTile_FlipX(pTC0100SCNFgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
+						}
 					} else {
-						RenderTile_FlipX(pTC0100SCNFgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
-					}
-				} else {
-					if (yFlip) {
-						RenderTile_FlipY(pTC0100SCNFgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
-					} else {
-						RenderTile(pTC0100SCNFgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
+						if (yFlip) {
+							RenderTile_FlipY(pTC0100SCNFgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
+						} else {
+							RenderTile(pTC0100SCNFgTempDraw[Chip], Code, x, y, Colour, TC0100SCNColourDepth[Chip], TC0100SCNPaletteOffset[Chip], Columns * 8, pSrc);
+						}
 					}
 				}
 
@@ -418,6 +450,9 @@ void TC0100SCNRenderCharLayer(INT32 Chip, INT32 Priority)
 				x = TC0100SCNClipWidth[Chip] - x;  // hmmm.... -dink
 				yFlip = !yFlip;
 				y = TC0100SCNClipHeight[Chip] + 8 - y;
+
+				//x += TC0100SCNFlipXOffset; // bonze adv, 2p coctail - x char layer isn't offset like the other layers
+				y += TC0100SCNFlipYOffset;
 			}
 
 			if (!TC0100SCNDblWidth[Chip]) {
@@ -530,12 +565,17 @@ void TC0100SCNInit(INT32 Chip, INT32 nNumTiles, INT32 xOffset, INT32 yOffset, IN
 	TC0100SCNCharLayerUpdate[Chip] = 1;
 	TC0100SCNCharRamUpdate[Chip] = 1;
 
+	TC0100SCNFlipXOffset = 0;
+	TC0100SCNFlipYOffset = 0;
+
 	TC0100SCNCharLayerGranularity = 2; // 2 everything else, 4 underfire
 
 	if (!TC0100SCNClipWidth[Chip] || !TC0100SCNClipHeight[Chip]) bprintf(PRINT_IMPORTANT, _T("TC0100SCNInit called before GenericTilesInit\n"));
 
 	TaitoIC_TC0100SCNInUse = 1;
 	TC0100SCNNum++;
+
+	liquid_kludge = 0;
 }
 
 void TC0100SCNSetColourDepth(INT32 Chip, INT32 ColourDepth)
@@ -607,6 +647,8 @@ void TC0100SCNExit()
 	}
 
 	TC0100SCNNum = 0;
+
+	liquid_kludge = 0;
 }
 
 void TC0100SCNScan(INT32 nAction)
@@ -638,7 +680,15 @@ void TC0100SCNScan(INT32 nAction)
 		SCAN_VAR(TC0100SCNFlip);
 		SCAN_VAR(TC0100SCNGfxBank);
 		SCAN_VAR(TC0100SCNDblWidth);
-		if (nAction & ACB_WRITE) {
+
+		if (nAction & ACB_RUNAHEAD) {
+			SCAN_VAR(TC0100SCNBgLayerUpdate);
+			SCAN_VAR(TC0100SCNFgLayerUpdate);
+			SCAN_VAR(TC0100SCNCharLayerUpdate);
+			SCAN_VAR(TC0100SCNCharRamUpdate);
+		}
+
+		if (nAction & ACB_WRITE && ~nAction & ACB_RUNAHEAD) {
 			for (INT32 i = 0;i < TC0100SCNNum; i++) {
 				// re-draw the the screen after loading the savestate
 				TC0100SCNBgLayerUpdate[i] = 1;

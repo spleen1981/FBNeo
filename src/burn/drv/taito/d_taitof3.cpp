@@ -5,12 +5,10 @@
     version .00001d ;)
 
 	- known issues and workarounds -
-	scfinals & scfinalso coin inputs do not work, therefore a kludge is used.
+	1: *FIXED* scfinals & scfinalso coin inputs do not work, therefore a kludge is used.
 	  -> if a coin is pressed, it instead presses the service coin :)
 	  -> scfinals also displays a weird/corrupt version string in service mode(!!)
-
-	- todo -
-	kirameki sound banking
+	  note: this was a 68ec020 cpu-core interface bug in handling odd 32bit reads/writes
 */
 
 //#define USE_CPU_SPEEDHACKS
@@ -40,8 +38,10 @@ static UINT16 DrvInputs[5];
 static INT16 DrvAxis[2];
 static UINT8 previous_coin;
 
-static INT32 sound_cpu_in_reset = 0;
 static INT32 watchdog;
+static INT32 nCyclesExtra;
+
+static UINT8 *Brightness_LUT;
 
 INT32 f3_game = 0;
 
@@ -224,6 +224,21 @@ static struct BurnDIPInfo F3DIPList[]=
 
 STDDIPINFO(F3)
 
+static struct BurnDIPInfo GunlockDIPList[]=
+{
+	{0x2e, 0xff, 0xff, 0x00, NULL },
+
+	{0   , 0xfe, 0   , 2   , "Music Tempo (must restart!)" },
+	{0x2e, 0x01, 0x02, 0x00, "Normal / Fast" },
+	{0x2e, 0x01, 0x02, 0x02, "Slow / Mellow" },
+
+	{0   , 0xfe, 0   , 2   , "GammaBrightness hack" },
+	{0x2e, 0x01, 0x04, 0x04, "On" },
+	{0x2e, 0x01, 0x04, 0x00, "Off" },
+};
+
+STDDIPINFO(Gunlock)
+
 static struct BurnDIPInfo F3AnalogDIPList[]=
 {
 	{0x30, 0xff, 0xff, 0x00, NULL },
@@ -280,7 +295,7 @@ static void control_w(INT32 offset, UINT32 d, INT32 b)
 
 		case 0x1c:
 		{
-			if (BurnDrvGetFlags() & BDF_BOOTLEG) {
+			if (DebugSnd_MSM6295Initted) {
 				if ((offset & 3) == 3) { MSM6295Write(0, d); return; }
 			//	bprintf (0, _T("Sound Command: %x, %x %d\n"), offset & 0x1f, d, b); 
 				if ((offset & 3) == 0) { } // banking
@@ -290,10 +305,19 @@ static void control_w(INT32 offset, UINT32 d, INT32 b)
 	}
 }
 
+static void kirameki_snd_bankswitch(INT32 offset)
+{
+	if (f3_game == KIRAMEKI) {
+		offset = ((offset / 2) & 0x1e) + 1;
+		offset -= (offset > 7) ? 8 : 0;
+		TaitoF3SetBankKirameki(offset);
+	}
+}
+
 static void __fastcall f3_main_write_long(UINT32 a, UINT32 d)
 {
 	if ((a & 0xffff80) == 0x300000) {
-		// sound_bankswitch_w
+		kirameki_snd_bankswitch(a & 0x7f);
 		return;
 	}
 
@@ -303,13 +327,12 @@ static void __fastcall f3_main_write_long(UINT32 a, UINT32 d)
 	}
 
 	if ((a & 0xfffffc) == 0xc80000) {
-		sound_cpu_in_reset = 0;
+		SekSetRESETLine(1, 0);
 		return;
 	}
 
 	if ((a & 0xfffffc) == 0xc80100) {
-		SekReset(1);
-		sound_cpu_in_reset = 1;
+		SekSetRESETLine(1, 1);
 		return;
 	}
 }
@@ -317,7 +340,7 @@ static void __fastcall f3_main_write_long(UINT32 a, UINT32 d)
 static void __fastcall f3_main_write_word(UINT32 a, UINT16 d)
 {
 	if ((a & 0xffff80) == 0x300000) {
-		// sound bankswitch
+		kirameki_snd_bankswitch(a & 0x7f);
 		return;
 	}
 
@@ -332,13 +355,12 @@ static void __fastcall f3_main_write_word(UINT32 a, UINT16 d)
 	}
 
 	if ((a & 0xfffffc) == 0xc80000) {
-		sound_cpu_in_reset = 0;
+		SekSetRESETLine(1, 0);
 		return;
 	}
 
 	if ((a & 0xfffffc) == 0xc80100) {
-		SekReset(1);
-		sound_cpu_in_reset = 1;
+		SekSetRESETLine(1, 1);
 		return;
 	}
 }
@@ -346,7 +368,7 @@ static void __fastcall f3_main_write_word(UINT32 a, UINT16 d)
 static void __fastcall f3_main_write_byte(UINT32 a, UINT8 d)
 {
 	if ((a & 0xffff80) == 0x300000) {
-		// sound bankswitch
+		kirameki_snd_bankswitch(a & 0x7f);
 		return;
 	}
 
@@ -356,13 +378,12 @@ static void __fastcall f3_main_write_byte(UINT32 a, UINT8 d)
 	}
 
 	if ((a & 0xfffffc) == 0xc80000) {
-		sound_cpu_in_reset = 0;
+		SekSetRESETLine(1, 0);
 		return;
 	}
 
 	if ((a & 0xfffffc) == 0xc80100) {
-		SekReset(1);
-		sound_cpu_in_reset = 1;
+		SekSetRESETLine(1, 1);
 		return;
 	}
 }
@@ -504,13 +525,13 @@ static void DrvPivotExpand(UINT16 offset)
 static void __fastcall f3_VRAM_write_long(UINT32 a, UINT32 d)
 {
 	if ((a & 0xffe000) == 0x61c000) {
-		*((UINT32*)(TaitoVideoRam + (a & 0x1ffc))) = BURN_ENDIAN_SWAP_INT32((d << 16) | (d >> 16));
+		*((UINT32*)(TaitoVideoRam + (a & 0x1fff))) = BURN_ENDIAN_SWAP_INT32((d << 16) | (d >> 16));
 		dirty_tile_count[9] = 1;
 		return;
 	}
 
 	if ((a & 0xffe000) == 0x61e000) {
-		*((UINT32*)(DrvVRAMRAM + (a & 0x1ffc))) = BURN_ENDIAN_SWAP_INT32((d << 16) | (d >> 16));
+		*((UINT32*)(DrvVRAMRAM + (a & 0x1fff))) = BURN_ENDIAN_SWAP_INT32((d << 16) | (d >> 16));
 		DrvVRAMExpand(a);
 		return;
 	}
@@ -519,13 +540,13 @@ static void __fastcall f3_VRAM_write_long(UINT32 a, UINT32 d)
 static void __fastcall f3_VRAM_write_word(UINT32 a, UINT16 d)
 {
 	if ((a & 0xffe000) == 0x61c000) {
-		*((UINT16*)(TaitoVideoRam + (a & 0x1ffe))) = BURN_ENDIAN_SWAP_INT16(d);
+		*((UINT16*)(TaitoVideoRam + (a & 0x1fff))) = BURN_ENDIAN_SWAP_INT16(d);
 		dirty_tile_count[9] = 1;
 		return;
 	}
 
 	if ((a & 0xffe000) == 0x61e000) {
-		*((UINT16*)(DrvVRAMRAM + (a & 0x1ffe))) = BURN_ENDIAN_SWAP_INT16(d);
+		*((UINT16*)(DrvVRAMRAM + (a & 0x1fff))) = BURN_ENDIAN_SWAP_INT16(d);
 		DrvVRAMExpand(a);
 		return;
 	}
@@ -677,17 +698,49 @@ static void f3_reset_dirtybuffer()
 	memset (dirty_tile_count, 1, 10);
 }
 
+static void calc_brightness_gamma_lut()
+{ // this is specifically for gunlock/rayforce
+	INT32 brightness = 0x64; // 100 = no attenuation
+	float gamma = 1.00; // 1.00 = no gamma
+
+	if ((TaitoDip[0] & 4) && f3_game == GUNLOCK) {
+		gamma = 0.53;
+		bprintf(0, _T("gunlock-gamma-hack is On (%.2f)\n"), gamma);
+	}
+
+	gamma = 1/gamma;
+
+	for (INT32 col = 0; col < 0x100; col++) {
+		float er;
+		INT32 mcol = col;
+
+		// apply brightness
+		mcol = col * brightness / 100;
+		if (mcol < 0) mcol = 0;
+		if (mcol > 255) mcol = 255;
+
+		// apply gamma
+		er = (float)mcol / 255.0;
+		er = pow(er, gamma);
+		mcol = (UINT8)(er * 255.0);
+
+		Brightness_LUT[col] = mcol;
+	}
+}
+
 static INT32 DrvDoReset(INT32 full_reset)
 {
 	if (full_reset) {
 		memset (TaitoRamStart, 0, TaitoRamEnd - TaitoRamStart);
 	}
 
+	calc_brightness_gamma_lut();
+
 	SekOpen(0);
 	SekReset();
 	SekClose();
 
-	if (BurnDrvGetFlags() & BDF_BOOTLEG) {
+	if (DebugSnd_MSM6295Initted) {
 		MSM6295Reset(0);
 	} else {
 		TaitoF3SoundReset();
@@ -698,19 +751,6 @@ static INT32 DrvDoReset(INT32 full_reset)
 	if (EEPROMAvailable() == 0) {
 		if (TaitoDefaultEEProm[0] != 0) {
 			EEPROMFill((const UINT8*)TaitoDefaultEEProm, 0, 128);
-		} else if (f3_game == RECALH || f3_game == GSEEKER ) {
-			static const UINT8 recalh_eeprom[128] =	{
-				0x85,0x54,0x00,0x00,0x30,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xf3,0x35,
-				0x00,0x01,0x86,0xa0,0x00,0x13,0x04,0x13,0x00,0x00,0xc3,0x50,0x00,0x19,0x00,0x0a,
-				0x00,0x00,0x4e,0x20,0x00,0x03,0x18,0x0d,0x00,0x00,0x27,0x10,0x00,0x05,0x14,0x18,
-				0x00,0x00,0x13,0x88,0x00,0x00,0x12,0x27,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-				0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff
-			};
-
-			EEPROMFill(recalh_eeprom, 0, 128);
 		} else if (f3_game == ARKRETRN) {
 			static const UINT8 arkretrn_eeprom[128] = {
 				0x54,0x41,0x49,0x54,0x4f,0x03,0x00,0x07,0xa1,0xe8,0xe0,0x01,0x11,0x12,0x30,0x00,
@@ -800,9 +840,12 @@ static INT32 DrvDoReset(INT32 full_reset)
 		f3_palette_landmakr_onreset();
 	}
 
-	sound_cpu_in_reset = 1;
 	watchdog = 0;
 	previous_coin = 0;
+
+	nCyclesExtra = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -842,6 +885,8 @@ static INT32 MemIndex()
 
 	TaitoCharsB			= Next; Next += 0x0004000;
 	TaitoCharsPivot		= Next; Next += 0x0020000;
+
+	Brightness_LUT      = Next; Next += 0x100;
 
 	TaitoRamStart		= Next;
 
@@ -1019,6 +1064,8 @@ static INT32 TaitoF3GetRoms(bool bLoad)
 	UINT8 *sprites = TaitoSpritesA;
 	UINT8 *tiles = TaitoChars;
 	UINT8 *samples = TaitoES5505Rom + ((TaitoF3ES5506RomSize == 0x1000000) ? 0x400000 : 0);
+
+	if (f3_game == KIRAMEKI) samples = TaitoES5505Rom;
 
 	INT32 prevsize = 0;
 	INT32 prevtype = 0;
@@ -1338,7 +1385,7 @@ static INT32 DrvExit()
 	SekExit();
 	TaitoF3SoundExit();
 
-	if (BurnDrvGetFlags() & BDF_BOOTLEG) {
+	if (DebugSnd_MSM6295Initted) {
 		MSM6295Exit(0);
 	}
 
@@ -1406,9 +1453,9 @@ static void f3_24bit_palette_update(UINT16 offset)
 {
 	UINT32 x = BURN_ENDIAN_SWAP_INT32(*((UINT32*)(TaitoPaletteRam + (offset & ~3))));
 
-	UINT8 r = x;
-	UINT8 g = x >> 24;
-	UINT8 b = x >> 16;
+	UINT8 r = Brightness_LUT[(x >>  0) & 0xff];
+	UINT8 g = Brightness_LUT[(x >> 24) & 0xff];
+	UINT8 b = Brightness_LUT[(x >> 16) & 0xff];
 
 	TaitoPalette[offset/4] = BURN_ENDIAN_SWAP_INT32(r*0x10000+g*0x100+b); //BurnHighCol(r,g,b, 0);
 }
@@ -1441,6 +1488,22 @@ static INT32 DrvDraw()
 	return 0;
 }
 
+static inline void DrvClearOpposites(UINT16* nJoystickInputs)
+{
+	if ((*nJoystickInputs & 0x03) == 0x00) {
+		*nJoystickInputs |= 0x03;
+	}
+	if ((*nJoystickInputs & 0x0c) == 0x00) {
+		*nJoystickInputs |= 0x0c;
+	}
+	if ((*nJoystickInputs & 0x30) == 0x00) {
+		*nJoystickInputs |= 0x30;
+	}
+	if ((*nJoystickInputs & 0xc0) == 0x00) {
+		*nJoystickInputs |= 0xc0;
+	}
+}
+
 static INT32 DrvFrame()
 {
 	watchdog++;
@@ -1470,6 +1533,10 @@ static INT32 DrvFrame()
 			DrvInputs[4] ^= (DrvJoy5[i] & 1) << i;
 		}
 
+		// Clear Opposites
+		DrvClearOpposites(&DrvInputs[1]);
+		DrvClearOpposites(&DrvInputs[3]);
+
 		DrvInputs[1] &= ~0xff00;
 		DrvInputs[4] = (DrvInputs[4] & ~2) | ((DrvSrv[0]) ? 0x00 : 0x02);
 
@@ -1487,30 +1554,26 @@ static INT32 DrvFrame()
 	}
 
 	INT32 nInterleave = 256;
-	nTaitoCyclesTotal[0] = 16000000 / 60; // do not touch!
-	nTaitoCyclesDone[0] = nTaitoCyclesDone[1] = 0;
+	INT32 nCyclesTotal[1] = { 16000000 / 60 }; // do not touch!
+	INT32 nCyclesDone[1] = { nCyclesExtra };
 
 	SekNewFrame();
 
 	for (INT32 i = 0; i < nInterleave; i++) {
-		INT32 nCurrentCPU, nNext;
-
-		nCurrentCPU = 0;
 		SekOpen(0);
-		nNext = (i + 1) * nTaitoCyclesTotal[nCurrentCPU] / nInterleave;
-		nTaitoCyclesSegment = nNext - nTaitoCyclesDone[nCurrentCPU];
-		nTaitoCyclesDone[nCurrentCPU] += SekRun(nTaitoCyclesSegment);
+		CPU_RUN(0, Sek);
 		if (i == 255) SekSetIRQLine(2, CPU_IRQSTATUS_AUTO);
 		if (i == 7) SekSetIRQLine(3, CPU_IRQSTATUS_AUTO);
 		SekClose();
 
-		if ((BurnDrvGetFlags() & BDF_BOOTLEG) == 0) {
-			if (sound_cpu_in_reset == 0)
-				TaitoF3CpuUpdate(nInterleave, i);
+		if (DebugSnd_MSM6295Initted == 0) {
+			TaitoF3CpuUpdate(nInterleave, i);
 		}
 	}
 
-	if (BurnDrvGetFlags() & BDF_BOOTLEG) {
+	nCyclesExtra = nCyclesDone[0] - nCyclesTotal[0];
+
+	if (DebugSnd_MSM6295Initted) {
 		if (pBurnSoundOut) {
 			MSM6295Render(0, pBurnSoundOut, nBurnSoundLen);
 		}
@@ -1641,10 +1704,14 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 	if (nAction & ACB_DRIVER_DATA) {
 		SekScan(nAction);
 		TaitoF3SoundScan(nAction, pnMin);
-		SCAN_VAR(sound_cpu_in_reset);
+
 		if (f3_game == ARKRETRN) BurnTrackballScan();
 
-		if (nAction & ACB_WRITE) {
+		EEPROMScan(nAction, pnMin);
+
+		SCAN_VAR(nCyclesExtra);
+
+		if (nAction & ACB_WRITE && ~nAction & ACB_RUNAHEAD) {
 			for (INT32 i = 0; i < 0x2000; i+=4) {
 				DrvVRAMExpand(i);
 			}
@@ -1697,7 +1764,7 @@ struct BurnDriver BurnDrvRingrage = {
 	"ringrage", NULL, NULL, NULL, "1992",
 	"Ring Rage (Ver 2.3O 1992/08/09)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
 	NULL, ringrageRomInfo, ringrageRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	ringrageInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -1734,7 +1801,7 @@ struct BurnDriver BurnDrvRingrageu = {
 	"ringrageu", "ringrage", NULL, NULL, "1992",
 	"Ring Rage (Ver 2.3A 1992/08/09)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
 	NULL, ringrageuRomInfo, ringrageuRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	ringrageInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -1771,7 +1838,7 @@ struct BurnDriver BurnDrvRingragej = {
 	"ringragej", "ringrage", NULL, NULL, "1992",
 	"Ring Rage (Ver 2.3J 1992/08/09)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
 	NULL, ringragejRomInfo, ringragejRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	ringrageInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -1824,7 +1891,7 @@ struct BurnDriver BurnDrvArabianm = {
 	"arabianm", NULL, NULL, NULL, "1992",
 	"Arabian Magic (Ver 1.0O 1992/07/06)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
 	NULL, arabianmRomInfo, arabianmRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	arabianmInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -1871,7 +1938,7 @@ struct BurnDriver BurnDrvArabianmj = {
 	"arabianmj", "arabianm", NULL, NULL, "1992",
 	"Arabian Magic (Ver 1.0J 1992/07/06)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
 	NULL, arabianmjRomInfo, arabianmjRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	arabianmInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -1918,7 +1985,7 @@ struct BurnDriver BurnDrvArabianmu = {
 	"arabianmu", "arabianm", NULL, NULL, "1992",
 	"Arabian Magic (Ver 1.0A 1992/07/06)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
 	NULL, arabianmuRomInfo, arabianmuRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	arabianmInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -1958,7 +2025,7 @@ struct BurnDriver BurnDrvRidingf = {
 	"ridingf", NULL, NULL, NULL, "1992",
 	"Riding Fight (Ver 1.0O)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_RACING, 0,
 	NULL, ridingfRomInfo, ridingfRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	ridingfInit, DrvExit, DrvFrame, DrvDraw224B, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -1993,7 +2060,7 @@ struct BurnDriver BurnDrvRidingfj = {
 	"ridingfj", "ridingf", NULL, NULL, "1992",
 	"Riding Fight (Ver 1.0J)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_RACING, 0,
 	NULL, ridingfjRomInfo, ridingfjRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	ridingfInit, DrvExit, DrvFrame, DrvDraw224B, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -2028,7 +2095,7 @@ struct BurnDriver BurnDrvRidingfu = {
 	"ridingfu", "ridingf", NULL, NULL, "1992",
 	"Riding Fight (Ver 1.0A)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_RACING, 0,
 	NULL, ridingfuRomInfo, ridingfuRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	ridingfInit, DrvExit, DrvFrame, DrvDraw224B, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -2057,6 +2124,8 @@ static struct BurnRomInfo gseekerRomDesc[] = {
 
 	{ "d40_01.rom",		0x200000, 0xee312e95, TAITO_ES5505_BYTESWAP },    // 12 Ensoniq Samples
 	{ "d40_02.rom",		0x100000, 0xed894fe1, TAITO_ES5505_BYTESWAP },    // 13
+	
+	{ "gseeker.nv",		0x000080, 0x3e24cc80, TAITO_DEFAULT_EEPROM },     // 14 eeprom
 };
 
 STD_ROM_PICK(gseeker)
@@ -2071,7 +2140,7 @@ struct BurnDriver BurnDrvGseeker = {
 	"gseeker", NULL, NULL, NULL, "1992",
 	"Grid Seeker: Project Storm Hammer (Ver 1.3O)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, gseekerRomInfo, gseekerRomName, NULL, NULL, NULL, NULL, F3InputInfo, gseekerDIPInfo,
 	gseekerInit, DrvExit, DrvFrame, DrvDraw224B, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	224, 320, 3, 4
@@ -2099,6 +2168,8 @@ static struct BurnRomInfo gseekerjRomDesc[] = {
 
 	{ "d40_01.rom",		0x200000, 0xee312e95, TAITO_ES5505_BYTESWAP },    // 12 Ensoniq Samples
 	{ "d40_02.rom",		0x100000, 0xed894fe1, TAITO_ES5505_BYTESWAP },    // 13
+	
+	{ "gseeker.nv",		0x000080, 0x3e24cc80, TAITO_DEFAULT_EEPROM },     // 14 eeprom
 };
 
 STD_ROM_PICK(gseekerj)
@@ -2108,7 +2179,7 @@ struct BurnDriver BurnDrvGseekerj = {
 	"gseekerj", "gseeker", NULL, NULL, "1992",
 	"Grid Seeker: Project Storm Hammer (Ver 1.3J)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, gseekerjRomInfo, gseekerjRomName, NULL, NULL, NULL, NULL, F3InputInfo, gseekerDIPInfo,
 	gseekerInit, DrvExit, DrvFrame, DrvDraw224B, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	224, 320, 3, 4
@@ -2136,6 +2207,8 @@ static struct BurnRomInfo gseekeruRomDesc[] = {
 
 	{ "d40_01.rom",		0x200000, 0xee312e95, TAITO_ES5505_BYTESWAP },    // 12 Ensoniq Samples
 	{ "d40_02.rom",		0x100000, 0xed894fe1, TAITO_ES5505_BYTESWAP },    // 13
+	
+	{ "gseeker.nv",		0x000080, 0x3e24cc80, TAITO_DEFAULT_EEPROM },     // 14 eeprom
 };
 
 STD_ROM_PICK(gseekeru)
@@ -2145,14 +2218,14 @@ struct BurnDriver BurnDrvGseekeru = {
 	"gseekeru", "gseeker", NULL, NULL, "1992",
 	"Grid Seeker: Project Storm Hammer (Ver 1.3A)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, gseekeruRomInfo, gseekeruRomName, NULL, NULL, NULL, NULL, F3InputInfo, gseekerDIPInfo,
 	gseekerInit, DrvExit, DrvFrame, DrvDraw224B, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	224, 320, 3, 4
 };
 
 
-// Command War - Super Special Battle & War Game (Ver 0.0J) (Prototype)
+// Command War - Super Special Battle & War Game (Ver 0.0J, prototype)
 
 static struct BurnRomInfo commandwRomDesc[] = {
 	{ "cw_mpr3.bin",	0x040000, 0x636944fc, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
@@ -2188,7 +2261,7 @@ static INT32 commandwInit()
 
 struct BurnDriver BurnDrvCommandw = {
 	"commandw", NULL, NULL, NULL, "1992",
-	"Command War - Super Special Battle & War Game (Ver 0.0J) (Prototype)\0", NULL, "Taito Corporation", "Taito F3 System",
+	"Command War - Super Special Battle & War Game (Ver 0.0J, prototype)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_PROTOTYPE, 2, HARDWARE_TAITO_MISC, GBF_STRATEGY, 0,
 	NULL, commandwRomInfo, commandwRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
@@ -2235,7 +2308,7 @@ struct BurnDriver BurnDrvCupfinal = {
 	"cupfinal", NULL, NULL, NULL, "1993",
 	"Taito Cup Finals (Ver 1.0O 1993/02/28)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
 	NULL, cupfinalRomInfo, cupfinalRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	cupfinalInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -2275,7 +2348,7 @@ struct BurnDriver BurnDrvHthero93 = {
 	"hthero93", "cupfinal", NULL, NULL, "1993",
 	"Hat Trick Hero '93 (Ver 1.0J 1993/02/28)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
 	NULL, hthero93RomInfo, hthero93RomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	cupfinalInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -2326,7 +2399,7 @@ struct BurnDriver BurnDrvHthero93u = {
 	"hthero93u", "cupfinal", NULL, NULL, "1993",
 	"Hat Trick Hero '93 (Ver 1.0A 1993/02/28)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
 	NULL, hthero93uRomInfo, hthero93uRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	cupfinalInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -2371,7 +2444,7 @@ struct BurnDriver BurnDrvTrstar = {
 	"trstar", NULL, NULL, NULL, "1993",
 	"Top Ranking Stars (Ver 2.1O 1993/05/21) (New Version)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
 	NULL, trstarRomInfo, trstarRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	trstarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -2411,7 +2484,7 @@ struct BurnDriver BurnDrvTrstarj = {
 	"trstarj", "trstar", NULL, NULL, "1993",
 	"Top Ranking Stars (Ver 2.1J 1993/05/21) (New Version)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
 	NULL, trstarjRomInfo, trstarjRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	trstarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -2451,7 +2524,7 @@ struct BurnDriver BurnDrvPrmtmfgt = {
 	"prmtmfgt", "trstar", NULL, NULL, "1993",
 	"Prime Time Fighter (Ver 2.1A 1993/05/21) (New Version)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
 	NULL, prmtmfgtRomInfo, prmtmfgtRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	trstarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -2491,7 +2564,7 @@ struct BurnDriver BurnDrvTrstaro = {
 	"trstaro", "trstar", NULL, NULL, "1993",
 	"Top Ranking Stars (Ver 2.1O 1993/05/21) (Old Version)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
 	NULL, trstaroRomInfo, trstaroRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	trstarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -2531,7 +2604,7 @@ struct BurnDriver BurnDrvTrstaroj = {
 	"trstaroj", "trstar", NULL, NULL, "1993",
 	"Top Ranking Stars (Ver 2.1J 1993/05/21) (Old Version)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
 	NULL, trstarojRomInfo, trstarojRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	trstarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -2571,7 +2644,7 @@ struct BurnDriver BurnDrvPrmtmfgto = {
 	"prmtmfgto", "trstar", NULL, NULL, "1993",
 	"Prime Time Fighter (Ver 2.1A 1993/05/21) (Old Version)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
 	NULL, prmtmfgtoRomInfo, prmtmfgtoRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	trstarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -2613,9 +2686,57 @@ struct BurnDriver BurnDrvGunlock = {
 	"gunlock", NULL, NULL, NULL, "1993",
 	"Gunlock (Ver 2.3O 1994/01/20)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
-	NULL, gunlockRomInfo, gunlockRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	NULL, gunlockRomInfo, gunlockRomName, NULL, NULL, NULL, NULL, F3InputInfo, GunlockDIPInfo,
 	gunlockInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
+	224, 320, 3, 4
+};
+
+
+// Gunlock (Ver 2.0O 1993/12/15)
+
+static struct BurnRomInfo gunlockoRomDesc[] = {
+	{ "ic24.ic24",		0x040000, 0xc6a89434, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
+	{ "ic26.ic26",		0x040000, 0x0d1dd41d, TAITO_68KROM1_BYTESWAP32 }, //  1
+	{ "ic37.ic37",		0x040000, 0x94bc17fe, TAITO_68KROM1_BYTESWAP32 }, //  2
+	{ "ic35.ic35",		0x040000, 0xca47e1cd, TAITO_68KROM1_BYTESWAP32 }, //  3
+
+	{ "lobj0-l.ic33",	0x080000, 0x5fde6dbb, TAITO_SPRITESA_BYTESWAP },  //  4 Sprites
+	{ "lobj0-m.ic25",	0x080000, 0xd308db27, TAITO_SPRITESA_BYTESWAP },  //  5
+	{ "lobj1-l.ic32",	0x080000, 0x83d76f4b, TAITO_SPRITESA_BYTESWAP },  //  6
+	{ "lobj1-m.ic24",	0x080000, 0x5034a854, TAITO_SPRITESA_BYTESWAP },  //  7
+	{ "lobj0-h.ic16",	0x080000, 0x8899db2e, TAITO_SPRITESA },           //  8
+	{ "lobj1-h.ic15",	0x080000, 0x0607fd85, TAITO_SPRITESA },           //  9
+
+	{ "scr0-0.ic40",	0x080000, 0x1c429d92, TAITO_CHARS_BYTESWAP32 },    // 10 Layer Tiles
+	{ "scr0-2.ic38",	0x080000, 0xe023c0f0, TAITO_CHARS_BYTESWAP32 },    // 11
+	{ "scr0-1.ic46",	0x080000, 0x5f0cb8bf, TAITO_CHARS_BYTESWAP32 },    // 12
+	{ "scr0-3.ic44",	0x080000, 0x37bbdbb9, TAITO_CHARS_BYTESWAP32 },    // 13
+	{ "scr0-4.ic36",	0x080000, 0x4f073d71, TAITO_CHARS_BYTESWAP  },     // 14
+
+	{ "d66-23.ic10",	0x040000, 0x57fb7c49, TAITO_68KROM2_BYTESWAP },   // 10 68k Code
+	{ "d66-22.ic23",	0x040000, 0x83dd7f9b, TAITO_68KROM2_BYTESWAP },   // 11
+
+	{ "snd0.ic8",		0x080000, 0x6a468f69, TAITO_ES5505_BYTESWAP },    // 12 Ensoniq Samples
+	{ "snd1.ic7",		0x080000, 0x332827b5, TAITO_ES5505_BYTESWAP },    // 13
+	{ "snd2.ic6",		0x080000, 0xb5e737dd, TAITO_ES5505_BYTESWAP },    // 14
+	{ "snd3.ic5",		0x080000, 0x2ed54463, TAITO_ES5505_BYTESWAP },    // 15
+	{ "snd4.ic4",		0x080000, 0x1026ca37, TAITO_ES5505_BYTESWAP },    // 16
+	{ "snd5.ic3",		0x080000, 0xa916ac40, TAITO_ES5505_BYTESWAP },    // 17
+	{ "snd6.ic2",		0x080000, 0x26312451, TAITO_ES5505_BYTESWAP },    // 18
+	{ "snd7.ic1",		0x080000, 0x2edaa9dc, TAITO_ES5505_BYTESWAP },    // 19
+};
+
+STD_ROM_PICK(gunlocko)
+STD_ROM_FN(gunlocko)
+
+struct BurnDriver BurnDrvGunlocko = {
+	"gunlocko", "gunlock", NULL, NULL, "1993",
+	"Gunlock (Ver 2.0O 1993/12/15)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	NULL, gunlockoRomInfo, gunlockoRomName, NULL, NULL, NULL, NULL, F3InputInfo, GunlockDIPInfo,
+	gunlockInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	224, 320, 3, 4
 };
 
@@ -2648,10 +2769,10 @@ STD_ROM_FN(rayforce)
 
 struct BurnDriver BurnDrvRayforce = {
 	"rayforce", "gunlock", NULL, NULL, "1993",
-	"Ray Force (Ver 2.3A 1994/01/20)\0", NULL, "Taito Corporation", "Taito F3 System",
+	"Ray Force (Ver 2.3A 1994/01/20)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
-	NULL, rayforceRomInfo, rayforceRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	NULL, rayforceRomInfo, rayforceRomName, NULL, NULL, NULL, NULL, F3InputInfo, GunlockDIPInfo,
 	gunlockInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	224, 320, 3, 4
 };
@@ -2687,8 +2808,8 @@ struct BurnDriver BurnDrvRayforcej = {
 	"rayforcej", "gunlock", NULL, NULL, "1993",
 	"Ray Force (Ver 2.3J 1994/01/20)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
-	NULL, rayforcejRomInfo, rayforcejRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	NULL, rayforcejRomInfo, rayforcejRomName, NULL, NULL, NULL, NULL, F3InputInfo, GunlockDIPInfo,
 	gunlockInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	224, 320, 3, 4
 };
@@ -2746,7 +2867,7 @@ struct BurnDriver BurnDrvScfinals = {
 	"scfinals", NULL, NULL, NULL, "1993",
 	"Super Cup Finals (Ver 2.2O 1994/01/13, single PCB)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
 	NULL, scfinalsRomInfo, scfinalsRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	scfinalsInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -2789,7 +2910,7 @@ struct BurnDriver BurnDrvScfinalso = {
 	"scfinalso", "scfinals", NULL, NULL, "1993",
 	"Super Cup Finals (Ver 2.1O 1993/11/19, single PCB)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
 	NULL, scfinalsoRomInfo, scfinalsoRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	scfinalsInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -2832,7 +2953,7 @@ struct BurnDriver BurnDrvScfinalsoc = {
 	"scfinalsoc", "scfinals", NULL, NULL, "1993",
 	"Super Cup Finals (Ver 2.1O 1993/11/19, F3 Cartridge)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
 	NULL, scfinalsocRomInfo, scfinalsocRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	scfinalsInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -2877,7 +2998,7 @@ struct BurnDriver BurnDrvLightbr = {
 	"lightbr", NULL, NULL, NULL, "1993",
 	"Light Bringer (Ver 2.2O 1994/04/08)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
 	NULL, lightbrRomInfo, lightbrRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	lightbrInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -2917,7 +3038,7 @@ struct BurnDriver BurnDrvDungeonm = {
 	"dungeonm", "lightbr", NULL, NULL, "1993",
 	"Dungeon Magic (Ver 2.1O 1994/02/18)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
 	NULL, dungeonmRomInfo, dungeonmRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	lightbrInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -2957,7 +3078,7 @@ struct BurnDriver BurnDrvDungeonmu = {
 	"dungeonmu", "lightbr", NULL, NULL, "1993",
 	"Dungeon Magic (Ver 2.1A 1994/02/18)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
 	NULL, dungeonmuRomInfo, dungeonmuRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	lightbrInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -2997,7 +3118,7 @@ struct BurnDriver BurnDrvLightbrj = {
 	"lightbrj", "lightbr", NULL, NULL, "1993",
 	"Light Bringer (Ver 2.1J 1994/02/18)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
 	NULL, lightbrjRomInfo, lightbrjRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	lightbrInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -3084,7 +3205,7 @@ struct BurnDriver BurnDrvHthero94 = {
 };
 
 
-// Recalhorn (Ver 1.42J 1994/5/11) (Prototype)
+// Recalhorn (Ver 1.42J 1994/5/11, prototype)
 
 static struct BurnRomInfo recalhRomDesc[] = {
 	{ "rh_mpr3.bin",	0x080000, 0x65202dd4, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
@@ -3103,6 +3224,8 @@ static struct BurnRomInfo recalhRomDesc[] = {
 
 	{ "rh_snd0.bin",	0x200000, 0x386f5e1b, TAITO_ES5505_BYTESWAP },    // 10 Ensoniq Samples
 	{ "rh_snd1.bin",	0x100000, 0xed894fe1, TAITO_ES5505_BYTESWAP },    // 11
+
+	{ "recalh.nv",		0x000080, 0x3e24cc80, TAITO_DEFAULT_EEPROM },     // 12 eeprom
 };
 
 STD_ROM_PICK(recalh)
@@ -3115,7 +3238,7 @@ static INT32 recalhInit()
 
 struct BurnDriver BurnDrvRecalh = {
 	"recalh", NULL, NULL, NULL, "1994",
-	"Recalhorn (Ver 1.42J 1994/5/11) (Prototype)\0", NULL, "Taito Corporation", "Taito F3 System",
+	"Recalhorn (Ver 1.42J 1994/5/11, prototype)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_PROTOTYPE, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, recalhRomInfo, recalhRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
@@ -3279,7 +3402,7 @@ struct BurnDriver BurnDrvGblchmp = {
 };
 
 
-// Dan-Ku-Ga (Ver 0.0J 1994/12/13) (Prototype)
+// Dan-Ku-Ga (Ver 0.0J 1994/12/13, prototype)
 
 static struct BurnRomInfo dankugaRomDesc[] = {
 	{ "dkg_mpr3.20",	0x080000, 0xee1531ca, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
@@ -3320,7 +3443,7 @@ STD_ROM_FN(dankuga)
 
 struct BurnDriver BurnDrvDankuga = {
 	"dankuga", NULL, NULL, NULL, "1994",
-	"Dan-Ku-Ga (Ver 0.0J 1994/12/13) (Prototype)\0", "Missing graphics are normal in this prototype", "Taito Corporation", "Taito F3 System",
+	"Dan-Ku-Ga (Ver 0.0J 1994/12/13, prototype)\0", "Missing graphics are normal in this prototype", "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_PROTOTYPE, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
 	NULL, dankugaRomInfo, dankugaRomName, NULL, NULL, NULL, NULL, KnInputInfo, KnDIPInfo,
@@ -3364,7 +3487,7 @@ struct BurnDriver BurnDrvDariusg = {
 	"dariusg", NULL, NULL, NULL, "1994",
 	"Darius Gaiden - Silver Hawk (Ver 2.5O 1994/09/19)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
 	NULL, dariusgRomInfo, dariusgRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	dariusgInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -3401,7 +3524,7 @@ struct BurnDriver BurnDrvDariusgj = {
 	"dariusgj", "dariusg", NULL, NULL, "1994",
 	"Darius Gaiden - Silver Hawk (Ver 2.5J 1994/09/19)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
 	NULL, dariusgjRomInfo, dariusgjRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	dariusgInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -3438,7 +3561,7 @@ struct BurnDriver BurnDrvDariusgu = {
 	"dariusgu", "dariusg", NULL, NULL, "1994",
 	"Darius Gaiden - Silver Hawk (Ver 2.5A 1994/09/19)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
 	NULL, dariusguRomInfo, dariusguRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	dariusgInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -3475,7 +3598,7 @@ struct BurnDriver BurnDrvDariusgx = {
 	"dariusgx", NULL, NULL, NULL, "1994",
 	"Darius Gaiden - Silver Hawk Extra Version (Ver 2.7J 1995/03/06) (Official Hack)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
 	NULL, dariusgxRomInfo, dariusgxRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	dariusgInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -3521,7 +3644,7 @@ struct BurnDriver BurnDrvBublbob2 = {
 	"bublbob2", NULL, NULL, NULL, "1994",
 	"Bubble Bobble II (Ver 2.6O 1994/12/16)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, bublbob2RomInfo, bublbob2RomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	bublbob2Init, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -3558,7 +3681,7 @@ struct BurnDriver BurnDrvBublbob2o = {
 	"bublbob2o", "bublbob2", NULL, NULL, "1994",
 	"Bubble Bobble II (Ver 2.5O 1994/10/05)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, bublbob2oRomInfo, bublbob2oRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	bublbob2Init, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -3595,7 +3718,7 @@ struct BurnDriver BurnDrvBubsymphe = {
 	"bubsymphe", "bublbob2", NULL, NULL, "1994",
 	"Bubble Symphony (Ver 2.5O 1994/10/05)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, bubsympheRomInfo, bubsympheRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	bublbob2Init, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -3638,7 +3761,7 @@ struct BurnDriver BurnDrvBubsymphj = {
 	"bubsymphj", "bublbob2", NULL, NULL, "1994",
 	"Bubble Symphony (Ver 2.5J 1994/10/05)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, bubsymphjRomInfo, bubsymphjRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	bublbob2Init, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -3699,7 +3822,7 @@ struct BurnDriver BurnDrvBublbob2p = {
 	"bublbob2p", "bublbob2", NULL, NULL, "1994",
 	"Bubble Bobble II (Ver 0.0J 1993/12/13, prototype)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, bublbob2pRomInfo, bublbob2pRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	bublbob2pInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -3974,8 +4097,46 @@ struct BurnDriverD BurnDrvBubsymphb = {
 	"bubsymphb", "bublbob2", NULL, NULL, "1994",
 	"Bubble Symphony (bootleg with OKI6295)\0", NULL, "bootleg", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, bubsymphbRomInfo, bubsymphbRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
+	bubsymphbInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
+	320, 224, 4, 3
+};
+
+
+// Seoul Symphony (Bubble Symphony bootleg with OKI6295)
+// extremely similar to bubsymphb (i.e. the only differences in the program ROMs are copyright removals). 2 PCB set: 70121 MAIN + ROM board
+
+static struct BurnRomInfo bubsymphbaRomDesc[] = {
+	{ "2-27c2000.bin",	0x40000, 0xb26728fa, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
+	{ "3-27c2000.bin",	0x40000, 0xd7406de1, TAITO_68KROM1_BYTESWAP32 }, //  1
+	{ "4-27c2000.bin",	0x40000, 0x5a45a291, TAITO_68KROM1_BYTESWAP32 }, //  2
+	{ "5-27c2000.bin",	0x40000, 0xaad3806b, TAITO_68KROM1_BYTESWAP32 }, //  3
+
+	{ "8-27c4000.bin",	0x80000, 0x22d7eeb5, TAITO_SPRITESA },           //  4 Sprites
+	{ "9-27c4000.bin",	0x80000, 0xb8f7b1c6, TAITO_SPRITESA },           //  5
+	{ "10-27c4000.bin",	0x80000, 0xd4981f73, TAITO_SPRITESA },           //  6
+	{ "7-27c4000.bin",	0x80000, 0xc1c35f7b, TAITO_SPRITESA },           //  7
+	{ "6-27c4000.bin",	0x80000, 0x35a60e28, TAITO_SPRITESA },           //  8
+
+	{ "13-27c4000.bin",	0x80000, 0x5d87b202, TAITO_CHARS },              //  9 Layer Tiles
+	{ "12-27c4000.bin",	0x80000, 0x95add6ec, TAITO_CHARS },              // 10
+	{ "11-27c4000.bin",	0x80000, 0x69f814b1, TAITO_CHARS },              // 11
+	{ "14-27c4000.bin",	0x80000, 0x8be51e5a, TAITO_CHARS },              // 12
+	{ "15-27c4000.bin",	0x80000, 0x45b3cf43, TAITO_CHARS },              // 13
+
+	{ "1-27c4000.bin",	0x80000, 0x26bdc617, TAITO_MSM6295 },            // 14 oki
+};
+
+STD_ROM_PICK(bubsymphba)
+STD_ROM_FN(bubsymphba)
+
+struct BurnDriverD BurnDrvBubsymphba = {
+	"bubsymphba", "bublbob2", NULL, NULL, "1994",
+	"Seoul Symphony (Bubble Symphony bootleg with OKI6295)\0", NULL, "bootleg (SOFTV)", "Taito F3 System",
+	NULL, NULL, NULL, NULL,
+	BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	NULL, bubsymphbaRomInfo, bubsymphbaRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	bubsymphbInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
 };
@@ -4011,7 +4172,7 @@ struct BurnDriver BurnDrvBubsymphu = {
 	"bubsymphu", "bublbob2", NULL, NULL, "1994",
 	"Bubble Symphony (Ver 2.5A 1994/10/05)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, bubsymphuRomInfo, bubsymphuRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	bublbob2Init, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -4053,7 +4214,7 @@ struct BurnDriver BurnDrvSpcinvdj = {
 	"spcinvdj", "spacedx", NULL, NULL, "1994",
 	"Space Invaders DX (Ver 2.6J 1994/09/14) (F3 Version)\0", "Graphics issues in Cellophane mode - use parent!", "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, spcinvdjRomInfo, spcinvdjRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	spcinvdjInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -4101,7 +4262,7 @@ struct BurnDriver BurnDrvPwrgoal = {
 	"pwrgoal", NULL, NULL, NULL, "1994",
 	"Taito Power Goal (Ver 2.5O 1994/11/03)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
 	NULL, pwrgoalRomInfo, pwrgoalRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pwrgoalInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -4144,7 +4305,7 @@ struct BurnDriver BurnDrvHthero95 = {
 	"hthero95", "pwrgoal", NULL, NULL, "1994",
 	"Hat Trick Hero '95 (Ver 2.5J 1994/11/03)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
 	NULL, hthero95RomInfo, hthero95RomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pwrgoalInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -4187,7 +4348,7 @@ struct BurnDriver BurnDrvHthero95u = {
 	"hthero95u", "pwrgoal", NULL, NULL, "1994",
 	"Hat Trick Hero '95 (Ver 2.5A 1994/11/03)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
 	NULL, hthero95uRomInfo, hthero95uRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pwrgoalInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -4230,7 +4391,7 @@ struct BurnDriver BurnDrvHthero95a = {
 	"hthero95a", "pwrgoal", NULL, NULL, "1994",
 	"Hat Trick Hero '95 (Ver 2.6Asia 1994/11/17)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSFOOTBALL, 0,
 	NULL, hthero95aRomInfo, hthero95aRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pwrgoalInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -4318,7 +4479,7 @@ struct BurnDriver BurnDrvSpcinv95 = {
 	"spcinv95", NULL, NULL, NULL, "1995",
 	"Space Invaders '95: The Attack Of Lunar Loonies (Ver 2.5O 1995/06/14)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, spcinv95RomInfo, spcinv95RomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	spcinv95Init, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	224, 320, 3, 4
@@ -4361,7 +4522,7 @@ struct BurnDriver BurnDrvSpcinv95u = {
 	"spcinv95u", "spcinv95", NULL, NULL, "1995",
 	"Space Invaders '95: The Attack Of Lunar Loonies (Ver 2.5A 1995/06/14)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, spcinv95uRomInfo, spcinv95uRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	spcinv95Init, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	224, 320, 3, 4
@@ -4398,7 +4559,7 @@ struct BurnDriver BurnDrvAkkanvdr = {
 	"akkanvdr", "spcinv95", NULL, NULL, "1995",
 	"Akkanbeder (Ver 2.5J 1995/06/14)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, akkanvdrRomInfo, akkanvdrRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	spcinv95Init, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	224, 320, 3, 4
@@ -4448,7 +4609,7 @@ struct BurnDriver BurnDrvElvactr = {
 	"elvactr", NULL, NULL, NULL, "1994",
 	"Elevator Action Returns (Ver 2.2O 1995/02/20)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, elvactrRomInfo, elvactrRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	elvactrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -4485,7 +4646,7 @@ struct BurnDriver BurnDrvElvactrj = {
 	"elvactrj", "elvactr", NULL, NULL, "1994",
 	"Elevator Action Returns (Ver 2.2J 1995/02/20)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, elvactrjRomInfo, elvactrjRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	elvactrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -4522,14 +4683,14 @@ struct BurnDriver BurnDrvElvact2u = {
 	"elvact2u", "elvactr", NULL, NULL, "1994",
 	"Elevator Action II (Ver 2.2A 1995/02/20)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, elvact2uRomInfo, elvact2uRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	elvactrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
 };
 
 
-// Twin Qix (Ver 1.0A 1995/01/17) (Prototype)
+// Twin Qix (Ver 1.0A 1995/01/17, prototype)
 
 static struct BurnRomInfo twinqixRomDesc[] = {
 	{ "mpr0-3.b60",		0x40000, 0x1a63d0de, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
@@ -4574,10 +4735,58 @@ static INT32 twinqixInit()
 
 struct BurnDriver BurnDrvTwinqix = {
 	"twinqix", NULL, NULL, NULL, "1995",
-	"Twin Qix (Ver 1.0A 1995/01/17) (Prototype)\0", NULL, "Taito America Corporation", "Taito F3 System",
+	"Twin Qix (Ver 1.0A 1995/01/17, prototype)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_PROTOTYPE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_PROTOTYPE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, twinqixRomInfo, twinqixRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
+	twinqixInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
+	320, 224, 4, 3
+};
+
+// Twin Qix Japan Hack (Ver 1.0A 1995/01/17) (Prototype)
+
+static struct BurnRomInfo twinqixjhRomDesc[] = {
+	{ "mpr0-3.b60",		0x40000, 0x1a63d0de, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
+	{ "mpr0-2.b61",		0x40000, 0x45a70987, TAITO_68KROM1_BYTESWAP32 }, //  1
+	{ "mpr0-1.b62",		0x40000, 0x531f9447, TAITO_68KROM1_BYTESWAP32 }, //  2
+	{ "jh_mpr0-0.b63",	0x40000, 0x3dcd1dab, TAITO_68KROM1_BYTESWAP32 }, //  3
+
+	{ "obj0-0.a08",		0x80000, 0xc6ea845c, TAITO_SPRITESA_BYTESWAP },  //  4 Sprites
+	{ "obj0-1.a20",		0x80000, 0x8c12b7fb, TAITO_SPRITESA_BYTESWAP },  //  5
+
+	{ "scr0-0.b07",		0x80000, 0x9a1b9b34, TAITO_CHARS_BYTESWAP32 },   //  6 Layer Tiles
+	{ "scr0-2.b05",		0x80000, 0xcac6854b, TAITO_CHARS_BYTESWAP32 },   //  7
+	{ "scr0-1.b06",		0x80000, 0xe9bef879, TAITO_CHARS_BYTESWAP32 },   //  8
+	{ "scr0-3.b04",		0x80000, 0xce063034, TAITO_CHARS_BYTESWAP32 },   //  9
+	{ "scr0-4.b03",		0x80000, 0xd32280fe, TAITO_CHARS_BYTESWAP },     // 10
+	{ "scr0-5.b02",		0x80000, 0xfdd1a85b, TAITO_CHARS_BYTESWAP },     // 11
+
+	{ "spr0-1.b66",		0x40000, 0x4b20e99d, TAITO_68KROM2_BYTESWAP },   // 12 68k Code
+	{ "spr0-0.b65",		0x40000, 0x2569eb30, TAITO_68KROM2_BYTESWAP },   // 13
+
+	{ "snd-0.b43",		0x80000, 0xad5405a9, TAITO_ES5505_BYTESWAP },    // 14 Ensoniq Samples
+	{ "snd-1.b44",		0x80000, 0x274864af, TAITO_ES5505_BYTESWAP },    // 15
+	{ "snd-14.b10",		0x80000, 0x26312451, TAITO_ES5505_BYTESWAP },    // 16
+	{ "snd-15.b11",		0x80000, 0x2edaa9dc, TAITO_ES5505_BYTESWAP },    // 17
+
+	{ "pal20l10a.a12",	0x0cc, 0x00000000, 0 | BRF_NODUMP },       		   // 18 plds
+	{ "pal20l10a.a24",	0x0cc, 0x00000000, 0 | BRF_NODUMP },       		   // 19
+	{ "pal16l8b.b24",	0x104, 0x0b73a7d1, 0 },                    // 20
+	{ "pal16l8b.b57",	0x104, 0x74b4d8be, 0 },                    // 21
+	{ "pal16l8b.b58",	0x104, 0x17e2c9b8, 0 },                    // 22
+	{ "pal16l8b.b59",	0x104, 0xdc0db200, 0 },                    // 23
+	{ "pal16l8b.b64",	0x104, 0x3aed3d98, 0 },                    // 24
+};
+
+STD_ROM_PICK(twinqixjh)
+STD_ROM_FN(twinqixjh)
+
+struct BurnDriver BurnDrvTwinqixjh = {
+	"twinqixjh", "twinqix", NULL, NULL, "1995",
+	"Twin Qix Japan (Ver 1.0A 1995/01/17) (Hack)\0", NULL, "hack", "Taito F3 System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_PROTOTYPE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	NULL, twinqixjhRomInfo, twinqixjhRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	twinqixInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
 };
@@ -4680,7 +4889,7 @@ struct BurnDriver BurnDrvPbobble2 = {
 	"pbobble2", NULL, NULL, NULL, "1995",
 	"Puzzle Bobble 2 (Ver 2.3O 1995/07/31)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, pbobble2RomInfo, pbobble2RomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pbobble23OInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -4716,7 +4925,7 @@ struct BurnDriver BurnDrvPbobble2o = {
 	"pbobble2o", "pbobble2", NULL, NULL, "1995",
 	"Puzzle Bobble 2 (Ver 2.2O 1995/07/20)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, pbobble2oRomInfo, pbobble2oRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pbobble2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -4752,7 +4961,7 @@ struct BurnDriver BurnDrvPbobble2j = {
 	"pbobble2j", "pbobble2", NULL, NULL, "1995",
 	"Puzzle Bobble 2 (Ver 2.2J 1995/07/20)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, pbobble2jRomInfo, pbobble2jRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pbobble2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -4788,7 +4997,7 @@ struct BurnDriver BurnDrvPbobble2u = {
 	"pbobble2u", "pbobble2", NULL, NULL, "1995",
 	"Bust-A-Move Again (Ver 2.3A 1995/07/31)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, pbobble2uRomInfo, pbobble2uRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pbobble2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -4830,7 +5039,7 @@ struct BurnDriver BurnDrvPbobble2x = {
 	"pbobble2x", "pbobble2", NULL, NULL, "1995",
 	"Puzzle Bobble 2X (Ver 2.2J 1995/11/11)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, pbobble2xRomInfo, pbobble2xRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pbobble2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -4872,7 +5081,7 @@ struct BurnDriver BurnDrvGekiridn = {
 	"gekiridn", NULL, NULL, NULL, "1995",
 	"Gekirindan (Ver 2.3O 1995/09/21)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, gekiridnRomInfo, gekiridnRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	gekiridnInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	232, 320, 3, 4
@@ -4909,7 +5118,7 @@ struct BurnDriver BurnDrvGekiridnj = {
 	"gekiridnj", "gekiridn", NULL, NULL, "1995",
 	"Gekirindan (Ver 2.3J 1995/09/21)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, gekiridnjRomInfo, gekiridnjRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	gekiridnInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	232, 320, 3, 4
@@ -4965,7 +5174,7 @@ struct BurnDriver BurnDrvTcobra2 = {
 	"tcobra2", NULL, NULL, NULL, "1995",
 	"Twin Cobra II (Ver 2.1O 1995/11/30)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, tcobra2RomInfo, tcobra2RomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	tcobra2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	232, 320, 3, 4
@@ -5010,7 +5219,7 @@ struct BurnDriver BurnDrvTcobra2u = {
 	"tcobra2u", "tcobra2", NULL, NULL, "1995",
 	"Twin Cobra II (Ver 2.1A 1995/11/30)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, tcobra2uRomInfo, tcobra2uRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	tcobra2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	232, 320, 3, 4
@@ -5055,7 +5264,7 @@ struct BurnDriver BurnDrvKtiger2 = {
 	"ktiger2", "tcobra2", NULL, NULL, "1995",
 	"Kyukyoku Tiger II (Ver 2.1J 1995/11/30)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, ktiger2RomInfo, ktiger2RomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	tcobra2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	232, 320, 3, 4
@@ -5098,7 +5307,7 @@ struct BurnDriver BurnDrvBubblem = {
 	"bubblem", NULL, NULL, NULL, "1995",
 	"Bubble Memories: The Story Of Bubble Bobble III (Ver 2.4O 1996/02/15)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, bubblemRomInfo, bubblemRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	bubblemInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -5136,7 +5345,7 @@ struct BurnDriver BurnDrvBubblemu = {
 	"bubblemu", "bubblem", NULL, NULL, "1995",
 	"Bubble Memories: The Story Of Bubble Bobble III (Ver 2.5A 1996/02/21)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, bubblemuRomInfo, bubblemuRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	bubblemInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -5174,7 +5383,7 @@ struct BurnDriver BurnDrvBubblemj = {
 	"bubblemj", "bubblem", NULL, NULL, "1995",
 	"Bubble Memories: The Story Of Bubble Bobble III (Ver 2.3J 1996/02/07)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, bubblemjRomInfo, bubblemjRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	bubblemInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
@@ -5214,8 +5423,43 @@ struct BurnDriver BurnDrvCleopatr = {
 	"cleopatr", NULL, NULL, NULL, "1996",
 	"Cleopatra Fortune (Ver 2.1J 1996/09/05)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, cleopatrRomInfo, cleopatrRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
+	cleopatrInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
+	320, 224, 4, 3
+};
+
+
+// Cleopatra Fortune (Ver 2.1O 1996/09/05, bootleg)
+
+static struct BurnRomInfo cleopatroRomDesc[] = {
+	{ "ic20.bin",		0x20000, 0x80dfc893, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
+	{ "ic19.bin",		0x20000, 0x666e8ca6, TAITO_68KROM1_BYTESWAP32 }, //  1
+	{ "ic18.bin",		0x20000, 0x9f2d4f69, TAITO_68KROM1_BYTESWAP32 }, //  2
+	{ "ic17.bin",		0x20000, 0xf892f60e, TAITO_68KROM1_BYTESWAP32 }, //  3
+
+	{ "e28-02.bin",		0x80000, 0xb20d47cb, TAITO_SPRITESA_BYTESWAP },  //  4 Sprites
+	{ "e28-01.bin",		0x80000, 0x4440e659, TAITO_SPRITESA_BYTESWAP },  //  5
+
+	{ "e28-06.bin",		0x100000, 0x21d0c454, TAITO_CHARS_BYTESWAP },     //  6 Layer Tiles
+	{ "e28-05.bin",		0x100000, 0x2870dbbc, TAITO_CHARS_BYTESWAP },     //  7
+	{ "e28-04.bin",		0x100000, 0x57aef029, TAITO_CHARS },              //  8
+
+	{ "e28-11.bin",		0x20000, 0x01a06950, TAITO_68KROM2_BYTESWAP },   //  9 68k Code
+	{ "e28-12.bin",		0x20000, 0xdc19260f, TAITO_68KROM2_BYTESWAP },   // 10
+
+	{ "e28-03.bin",		0x200000, 0x15c7989d, TAITO_ES5505_BYTESWAP },    // 11 Ensoniq Samples
+};
+
+STD_ROM_PICK(cleopatro)
+STD_ROM_FN(cleopatro)
+
+struct BurnDriver BurnDrvCleopatro = {
+	"cleopatro", "cleopatr", NULL, NULL, "1996",
+	"Cleopatra Fortune (Ver 2.1O 1996/09/05, bootleg)\0", NULL, "bootleg", "Taito F3 System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	NULL, cleopatroRomInfo, cleopatroRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	cleopatrInit, DrvExit, DrvFrame, DrvDraw224A_Flipped, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
 };
@@ -5256,7 +5500,7 @@ struct BurnDriver BurnDrvPbobble3 = {
 	"pbobble3", NULL, NULL, NULL, "1996",
 	"Puzzle Bobble 3 (Ver 2.1O 1996/09/27)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, pbobble3RomInfo, pbobble3RomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pbobble3Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -5293,7 +5537,7 @@ struct BurnDriver BurnDrvPbobble3u = {
 	"pbobble3u", "pbobble3", NULL, NULL, "1996",
 	"Puzzle Bobble 3 (Ver 2.1A 1996/09/27)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, pbobble3uRomInfo, pbobble3uRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pbobble3Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -5336,8 +5580,57 @@ struct BurnDriver BurnDrvPbobble3j = {
 	"pbobble3j", "pbobble3", NULL, NULL, "1996",
 	"Puzzle Bobble 3 (Ver 2.1J 1996/09/27)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, pbobble3jRomInfo, pbobble3jRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
+	pbobble3Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
+	320, 232, 4, 3
+};
+
+// -----------------------------------------------------------------------------------------
+// Puzzle Bobble 3 Recarbonated
+// -----------------------------------------------------------------------------------------
+// Hold DOWN to swap between current piece and preview piece (with sound)
+// Aiming guide will become visible when the shot timer warning is displayed
+// Button 2 does a 1px 'nudge' to the left (with sound)
+// Button 3 does a 1px 'nudge' to the right (with sound)
+// Double tap UP to send cursor back to neutral (with sound)
+// hold Button 2 + Double tap LEFT to send cursor to far left (with sound)
+// hold Button 3 + Double tap RIGHT to send cursor to far right (with sound)
+// coins not subtracted by use
+// menu selection automatically selects Player vs Player [this mod is only for 2 player VS]
+// char select timer increased
+// -----------------------------------------------------------------------------------------
+
+static struct BurnRomInfo pbobble3rcRomDesc[] = {
+	{ "e29-12.rom",		0x080000, 0xc22eda63, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
+	{ "e29-11.rom",		0x080000, 0x531e2891, TAITO_68KROM1_BYTESWAP32 }, //  1
+	{ "e29-10.rom",		0x080000, 0xba599730, TAITO_68KROM1_BYTESWAP32 }, //  2
+	{ "e29-16.rom",		0x080000, 0x412e7ca4, TAITO_68KROM1_BYTESWAP32 }, //  3
+
+	{ "e29-02.rom",		0x100000, 0x437391d3, TAITO_SPRITESA_BYTESWAP },  //  4 Sprites
+	{ "e29-01.rom",		0x100000, 0x52547c77, TAITO_SPRITESA_BYTESWAP },  //  5
+
+	{ "e29-08.rom",		0x100000, 0x7040a3d5, TAITO_CHARS_BYTESWAP },     //  6 Layer Tiles
+	{ "e29-07.rom",		0x100000, 0xfca2ea9b, TAITO_CHARS_BYTESWAP },     //  7
+	{ "e29-06.rom",		0x100000, 0xc16184f8, TAITO_CHARS },              //  8
+
+	{ "e29-13.rom",		0x040000, 0x1ef551ef, TAITO_68KROM2_BYTESWAP },   //  9 68k Code
+	{ "e29-14.rom",		0x040000, 0x7ee7e688, TAITO_68KROM2_BYTESWAP },   // 10
+
+	{ "e29-03.rom",		0x200000, 0xa4371658, TAITO_ES5505_BYTESWAP },    // 11 Ensoniq Samples
+	{ "e29-04.rom",		0x200000, 0xd1f42457, TAITO_ES5505_BYTESWAP },    // 12
+	{ "e29-05.rom",		0x200000, 0xe33c1234, TAITO_ES5505_BYTESWAP },    // 13
+};
+
+STD_ROM_PICK(pbobble3rc)
+STD_ROM_FN(pbobble3rc)
+
+struct BurnDriver BurnDrvPbobble3rc = {
+	"pbobble3rc", "pbobble3", NULL, NULL, "2022",
+	"Puzzle Bobble 3 Recarbonated\0", NULL, "Bank Bank", "Taito F3 System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	NULL, pbobble3rcRomInfo, pbobble3rcRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pbobble3Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
 };
@@ -5383,7 +5676,7 @@ struct BurnDriver BurnDrvArkretrn = {
 	"arkretrn", NULL, NULL, NULL, "1997",
 	"Arkanoid Returns (Ver 2.02O 1997/02/10)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_BREAKOUT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_BREAKOUT, 0,
 	NULL, arkretrnRomInfo, arkretrnRomName, NULL, NULL, NULL, NULL, F3AnalogInputInfo, F3AnalogDIPInfo,
 	arkretrnInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -5425,7 +5718,7 @@ struct BurnDriver BurnDrvArkretrnu = {
 	"arkretrnu", "arkretrn", NULL, NULL, "1997",
 	"Arkanoid Returns (Ver 2.02A 1997/02/10)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_BREAKOUT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_BREAKOUT, 0,
 	NULL, arkretrnuRomInfo, arkretrnuRomName, NULL, NULL, NULL, NULL, F3AnalogInputInfo, F3AnalogDIPInfo,
 	arkretrnInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -5467,7 +5760,7 @@ struct BurnDriver BurnDrvArkretrnj = {
 	"arkretrnj", "arkretrn", NULL, NULL, "1997",
 	"Arkanoid Returns (Ver 2.02J 1997/02/10)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_BREAKOUT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_BREAKOUT, 0,
 	NULL, arkretrnjRomInfo, arkretrnjRomName, NULL, NULL, NULL, NULL, F3AnalogInputInfo, F3AnalogDIPInfo,
 	arkretrnInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -5516,7 +5809,7 @@ static INT32 kiramekiInit()
 
 struct BurnDriver BurnDrvKirameki = {
 	"kirameki", NULL, NULL, NULL, "1997",
-	"Kirameki Star Road (Ver 2.10J 1997/08/29)\0", "No sound", "Taito Corporation", "Taito F3 System",
+	"Kirameki Star Road (Ver 2.10J 1997/08/29)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_QUIZ, 0,
 	NULL, kiramekiRomInfo, kiramekiRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
@@ -5570,7 +5863,7 @@ struct BurnDriver BurnDrvPuchicar = {
 	"puchicar", NULL, NULL, NULL, "1997",
 	"Puchi Carat (Ver 2.02O 1997/10/29)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, puchicarRomInfo, puchicarRomName, NULL, NULL, NULL, NULL, F3AnalogInputInfo, F3AnalogDIPInfo,
 	puchicarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -5617,7 +5910,7 @@ struct BurnDriver BurnDrvPuchicarj = {
 	"puchicarj", "puchicar", NULL, NULL, "1997",
 	"Puchi Carat (Ver 2.02J 1997/10/29)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, puchicarjRomInfo, puchicarjRomName, NULL, NULL, NULL, NULL, F3AnalogInputInfo, F3AnalogDIPInfo,
 	puchicarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -5664,7 +5957,7 @@ struct BurnDriver BurnDrvPuchicaru = {
 	"puchicaru", "puchicar", NULL, NULL, "1997",
 	"Puchi Carat (Ver 2.04A 1997/11/08)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, puchicaruRomInfo, puchicaruRomName, NULL, NULL, NULL, NULL, F3AnalogInputInfo, F3AnalogDIPInfo,
 	puchicarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -5712,7 +6005,7 @@ struct BurnDriver BurnDrvPbobble4 = {
 	"pbobble4", NULL, NULL, NULL, "1997",
 	"Puzzle Bobble 4 (Ver 2.04O 1997/12/19)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, pbobble4RomInfo, pbobble4RomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pbobble4Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -5755,7 +6048,7 @@ struct BurnDriver BurnDrvPbobble4j = {
 	"pbobble4j", "pbobble4", NULL, NULL, "1997",
 	"Puzzle Bobble 4 (Ver 2.04J 1997/12/19)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, pbobble4jRomInfo, pbobble4jRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pbobble4Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -5798,7 +6091,7 @@ struct BurnDriver BurnDrvPbobble4u = {
 	"pbobble4u", "pbobble4", NULL, NULL, "1997",
 	"Puzzle Bobble 4 (Ver 2.04A 1997/12/19)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, pbobble4uRomInfo, pbobble4uRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	pbobble4Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -5846,7 +6139,7 @@ struct BurnDriver BurnDrvPopnpop = {
 	"popnpop", NULL, NULL, NULL, "1997",
 	"Pop'n Pop (Ver 2.07O 1998/02/09)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, popnpopRomInfo, popnpopRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	popnpopInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -5889,7 +6182,7 @@ struct BurnDriver BurnDrvPopnpopj = {
 	"popnpopj", "popnpop", NULL, NULL, "1997",
 	"Pop'n Pop (Ver 2.07J 1998/02/09)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, popnpopjRomInfo, popnpopjRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	popnpopInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -5932,7 +6225,7 @@ struct BurnDriver BurnDrvPopnpopu = {
 	"popnpopu", "popnpop", NULL, NULL, "1997",
 	"Pop'n Pop (Ver 2.07A 1998/02/09)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, popnpopuRomInfo, popnpopuRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	popnpopInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -5981,7 +6274,7 @@ struct BurnDriver BurnDrvLandmakr = {
 	"landmakr", NULL, NULL, NULL, "1998",
 	"Land Maker (Ver 2.02O 1998/06/02)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, landmakrRomInfo, landmakrRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	landmakrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -6025,14 +6318,14 @@ struct BurnDriver BurnDrvLandmakrj = {
 	"landmakrj", "landmakr", NULL, NULL, "1998",
 	"Land Maker (Ver 2.01J 1998/06/01)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, landmakrjRomInfo, landmakrjRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	landmakrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
 };
 
 
-// Land Maker (Ver 2.02O 1998/06/02) (Prototype)
+// Land Maker (Ver 2.02O 1998/06/02, prototype)
 
 static struct BurnRomInfo landmakrpRomDesc[] = {
 	{ "mpro-3.60",		0x80000, 0xf92eccd0, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
@@ -6103,10 +6396,55 @@ static INT32 landmakrpInit()
 
 struct BurnDriver BurnDrvLandmakrp = {
 	"landmakrp", "landmakr", NULL, NULL, "1998",
-	"Land Maker (Ver 2.02O 1998/06/02) (Prototype)\0", NULL, "Taito Corporation", "Taito F3 System",
+	"Land Maker (Ver 2.02O 1998/06/02, prototype)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, landmakrpRomInfo, landmakrpRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	landmakrpInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
+	320, 232, 4, 3
+};
+
+
+// Land Maker (English Translation Hack)
+// https://qcs.shsbs.xyz/share/ywy/land-maker-english-translation
+
+static struct BurnRomInfo landmakrheRomDesc[] = {
+	{ "e61-19he01.20",	0x080000, 0x585f410c, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
+	{ "e61-18he01.19",	0x080000, 0x58f9e498, TAITO_68KROM1_BYTESWAP32 }, //  1
+	{ "e61-17he01.18",	0x080000, 0x6e15a67b, TAITO_68KROM1_BYTESWAP32 }, //  2
+	{ "e61-16he01.17",	0x080000, 0x253c94b6, TAITO_68KROM1_BYTESWAP32 }, //  3
+
+	{ "e61-03.12",		0x200000, 0xe8abfc46, TAITO_SPRITESA_BYTESWAP },  //  4 Sprites
+	{ "e61-02.08",		0x200000, 0x1dc4a164, TAITO_SPRITESA_BYTESWAP },  //  5
+	{ "e61-01.04",		0x200000, 0x6cdd8311, TAITO_SPRITESA },           //  6
+
+	{ "e61-09he01.47",	0x200000, 0xbac13c54, TAITO_CHARS_BYTESWAP },     //  7 Layer Tiles
+	{ "e61-08he01.45",	0x200000, 0x52288694, TAITO_CHARS_BYTESWAP },     //  8
+	{ "e61-07he01.43",	0x200000, 0xf521c022, TAITO_CHARS },              //  9
+
+	{ "e61-14.32",		0x040000, 0x18961bbb, TAITO_68KROM2_BYTESWAP },   // 10 68k Code
+	{ "e61-15.33",		0x040000, 0x2c64557a, TAITO_68KROM2_BYTESWAP },   // 11
+
+	{ "e61-04.38",		0x200000, 0xc27aec0c, TAITO_ES5505_BYTESWAP },    // 12 Ensoniq Samples
+	{ "e61-05.39",		0x200000, 0x83920d9d, TAITO_ES5505_BYTESWAP },    // 13
+	{ "e61-06.40",		0x200000, 0x2e717bfe, TAITO_ES5505_BYTESWAP },    // 14
+	
+	{ "pal16l8a-d77-09.ic14",	0x104, 0xb371532b, 0 },             // 15 plds
+	{ "pal16l8a-d77-10.ic28",	0x104, 0x42f59227, 0 },             // 16
+	{ "palce16v8q-d77-11.ic37",	0x117, 0xeacc294e, 0 },             // 17
+	{ "palce16v8q-d77-12.ic48",	0x117, 0xe9920cfe, 0 },             // 18
+	{ "palce16v8q-d77-15.ic21",	0x117, 0x00000000, 0 | BRF_NODUMP },// 19
+};
+
+STD_ROM_PICK(landmakrhe)
+STD_ROM_FN(landmakrhe)
+
+struct BurnDriver BurnDrvLandmakrhe = {
+	"landmakrhe", "landmakr", NULL, NULL, "2023",
+	"Land Maker (English Translation Hack)\0", NULL, "hack (ywy)", "Taito F3 System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	NULL, landmakrheRomInfo, landmakrheRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
+	landmakrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
 };

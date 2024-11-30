@@ -620,6 +620,8 @@ static INT32 DrvDoReset()
 	mcu_address = 0;
 	mcu_latch = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -681,12 +683,7 @@ static INT32 DrvGfxDecode(INT32 swap)
 
 static INT32 DrvInit(INT32 game)
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	if (game == 0) // kiki
 	{
@@ -861,7 +858,7 @@ static INT32 DrvExit()
 
 	BurnYM2203Exit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	has_mcu = 0;
 	has_sub = 0;
@@ -1205,7 +1202,7 @@ static INT32 DrvFrame()
 		if (nSoundCPUHalted) {
 			CPU_IDLE_SYNCINT(1, Zet);
 		} else {
-			BurnTimerUpdate((nCyclesTotal[1] / nInterleave) * (i + 1));
+			CPU_RUN_TIMER(1);
 		}
 		if (i == 255) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
@@ -1238,15 +1235,10 @@ static INT32 DrvFrame()
 		}
 	}
 
-	ZetOpen(1);
-
-	BurnTimerEndFrame(nCyclesTotal[1]);
-
 	if (pBurnSoundOut) {
 		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
+		BurnSoundDCFilter(); // kicknrun intro, dc offset from ay
 	}
-
-	ZetClose();
 
 	nExtraCycles = nCyclesDone[0] - nCyclesTotal[0];
 
@@ -1355,7 +1347,7 @@ struct BurnDriver BurnDrvKikikai = {
 	"kikikai", NULL, NULL, NULL, "1986",
 	"KiKi KaiKai\0", NULL, "Taito Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
 	NULL, kikikaiRomInfo, kikikaiRomName, NULL, NULL, NULL, NULL, KikikaiInputInfo, KikikaiDIPInfo,
 	KikikaiInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x101,
 	224, 256, 3, 4
@@ -1394,7 +1386,7 @@ struct BurnDriver BurnDrvKnightb = {
 	"knightb", "kikikai", NULL, NULL, "1986",
 	"Knight Boy\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
 	NULL, knightbRomInfo, knightbRomName, NULL, NULL, NULL, NULL, KikikaiInputInfo, KikikaiDIPInfo,
 	KnightbInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x101,
 	224, 256, 3, 4
@@ -1435,7 +1427,7 @@ struct BurnDriver BurnDrvKicknrun = {
 	"kicknrun", NULL, NULL, NULL, "1986",
 	"Kick and Run (World)\0", NULL, "Taito Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
 	NULL, kicknrunRomInfo, kicknrunRomName, NULL, NULL, NULL, NULL, Mexico86InputInfo, Mexico86DIPInfo,
 	KicknrunInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x101,
 	256, 224, 4, 3
@@ -1471,7 +1463,7 @@ struct BurnDriver BurnDrvKicknrunu = {
 	"kicknrunu", "kicknrun", NULL, NULL, "1986",
 	"Kick and Run (US)\0", NULL, "Taito America Corp", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
 	NULL, kicknrunuRomInfo, kicknrunuRomName, NULL, NULL, NULL, NULL, Mexico86InputInfo, Mexico86DIPInfo,
 	KicknrunInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x101,
 	256, 224, 4, 3
@@ -1512,7 +1504,7 @@ struct BurnDriver BurnDrvMexico86 = {
 	"mexico86", "kicknrun", NULL, NULL, "1986",
 	"Mexico 86 (bootleg of Kick and Run) (set 1)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
 	NULL, mexico86RomInfo, mexico86RomName, NULL, NULL, NULL, NULL, Mexico86InputInfo, Mexico86DIPInfo,
 	Mexico86Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x101,
 	256, 224, 4, 3
@@ -1557,7 +1549,7 @@ struct BurnDriverD BurnDrvMexico86a = {
 	"mexico86a", "kicknrun", NULL, NULL, "1986",
 	"Mexico 86 (bootleg of Kick and Run) (set 2)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
+	BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
 	NULL, mexico86aRomInfo, mexico86aRomName, NULL, NULL, NULL, NULL, Mexico86InputInfo, Mexico86DIPInfo,
 	Mexico86Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x101,
 	256, 224, 4, 3

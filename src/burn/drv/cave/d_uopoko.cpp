@@ -15,7 +15,6 @@ static UINT8 *Ram01;
 static UINT8 *DefaultEEPROM = NULL;
 
 static UINT8 DrvReset = 0;
-static UINT8 bDrawScreen;
 static bool bVBlank;
 
 static INT8 nVideoIRQ;
@@ -28,6 +27,7 @@ static INT32 nCurrentCPU;
 static INT32 nCyclesDone[2];
 static INT32 nCyclesTotal[2];
 static INT32 nCyclesSegment;
+static INT32 nCyclesExtra;
 
 static struct BurnInputInfo uopokoInputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 8,	"p1 coin"},
@@ -263,6 +263,9 @@ static INT32 DrvDoReset()
 	nUnknownIRQ = 1;
 
 	nIRQPending = 0;
+	nCyclesExtra = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -272,17 +275,8 @@ static INT32 DrvDraw()
 	CavePalUpdate8Bit(0, 128);				// Update the palette
 	CaveClearScreen(CavePalette[0x7F00]);
 
-	if (bDrawScreen) {
-//		CaveGetBitmap();
+	CaveTileRender(1);					// Render tiles
 
-		CaveTileRender(1);					// Render tiles
-	}
-
-	return 0;
-}
-
-inline static INT32 CheckSleep(INT32)
-{
 	return 0;
 }
 
@@ -308,7 +302,7 @@ static INT32 DrvFrame()
 	SekNewFrame();
 
 	nCyclesTotal[0] = (INT32)((INT64)16000000 * nBurnCPUSpeedAdjust / (0x0100 * CAVE_REFRESHRATE));
-	nCyclesDone[0] = 0;
+	nCyclesDone[0] = nCyclesExtra;
 
 	nCyclesVBlank = nCyclesTotal[0] - (INT32)((nCyclesTotal[0] * CAVE_VBLANK_LINES) / 271.5);
 	bVBlank = false;
@@ -338,11 +332,7 @@ static INT32 DrvFrame()
 		if (!bVBlank && nNext > nCyclesVBlank) {
 			if (nCyclesDone[nCurrentCPU] < nCyclesVBlank) {
 				nCyclesSegment = nCyclesVBlank - nCyclesDone[nCurrentCPU];
-				if (!CheckSleep(nCurrentCPU)) {							// See if this CPU is busywaiting
-					nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-				} else {
-					nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-				}
+				nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 			}
 
 			if (pBurnDraw != NULL) {
@@ -355,11 +345,7 @@ static INT32 DrvFrame()
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		if (!CheckSleep(nCurrentCPU)) {									// See if this CPU is busywaiting
-			nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		} else {
-			nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-		}
+        nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 
 		nCurrentCPU = -1;
 	}
@@ -375,6 +361,7 @@ static INT32 DrvFrame()
 		}
 	}
 
+    nCyclesExtra = nCyclesDone[0] - nCyclesTotal[0];
 	SekClose();
 
 	return 0;
@@ -473,11 +460,9 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(nVideoIRQ);
 		SCAN_VAR(nSoundIRQ);
 		SCAN_VAR(nUnknownIRQ);
-		SCAN_VAR(bVBlank);
+		SCAN_VAR(nCyclesExtra);
 
 		CaveScanGraphics();
-
-		SCAN_VAR(DrvInput);
 	}
 
 	return 0;
@@ -542,8 +527,6 @@ static INT32 DrvInit()
 	YMZ280BSetRoute(BURN_SND_YMZ280B_YMZ280B_ROUTE_1, 0.55, BURN_SND_ROUTE_LEFT);
 	YMZ280BSetRoute(BURN_SND_YMZ280B_YMZ280B_ROUTE_2, 0.55, BURN_SND_ROUTE_RIGHT);
 
-	bDrawScreen = true;
-
 	DrvDoReset(); // Reset machine
 
 	return 0;
@@ -551,8 +534,8 @@ static INT32 DrvInit()
 
 // Rom information
 static struct BurnRomInfo uopokoRomDesc[] = {
-	{ "u26.int",      0x080000, 0xb445c9ac, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
-	{ "u25.int",      0x080000, 0xa1258482, BRF_ESS | BRF_PRG }, //  1
+	{ "u26.u26",      0x080000, 0xb445c9ac, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
+	{ "u25.u25",      0x080000, 0xa1258482, BRF_ESS | BRF_PRG }, //  1
 
 	{ "cave_cv-02_u33.u33", 	0x400000, 0x5d142ad2, BRF_GRA }, //  2 Sprite data
 
@@ -568,8 +551,8 @@ STD_ROM_PICK(uopoko)
 STD_ROM_FN(uopoko)
 
 static struct BurnRomInfo uopokojRomDesc[] = {
-	{ "u26.bin",      0x080000, 0xE7EEC050, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
-	{ "u25.bin",      0x080000, 0x68CB6211, BRF_ESS | BRF_PRG }, //  1
+	{ "u26j.u26",      0x080000, 0xE7EEC050, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
+	{ "u25j.u25",      0x080000, 0x68CB6211, BRF_ESS | BRF_PRG }, //  1
 
 	{ "cave_cv-02_u33.u33", 	0x400000, 0x5d142ad2, BRF_GRA }, //  2 Sprite data
 
@@ -585,20 +568,20 @@ STD_ROM_PICK(uopokoj)
 STD_ROM_FN(uopokoj)
 
 struct BurnDriver BurnDrvUoPoko = {
-	"uopoko", NULL, NULL, NULL, "1999",
-	"Puzzle Uo Poko (International, ver. 98/02/06)\0", NULL, "Cave / Jaleco", "Cave",
+	"uopoko", NULL, NULL, NULL, "1998",
+	"Puzzle Uo Poko (World)\0", NULL, "Cave (Jaleco license)", "Cave",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_ONLY, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY, GBF_PUZZLE, 0,
 	NULL, uopokoRomInfo, uopokoRomName, NULL, NULL, NULL, NULL, uopokoInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
 };
 
 struct BurnDriver BurnDrvUoPokoj = {
-	"uopokoj", "uopoko", NULL, NULL, "1999",
-	"Puzzle Uo Poko (Japan, ver. 98/02/06)\0", NULL, "Cave / Jaleco", "Cave",
-	L"\u30D1\u30BA\u30EB \u9B5A\u30DD\u30B3 \u3046\u304A\u307D\u3053 (Japan, ver. 98/02/06)\0Puzzle Uo Poko\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_ONLY, GBF_PUZZLE, 0,
+	"uopokoj", "uopoko", NULL, NULL, "1998",
+	"Puzzle Uo Poko (Japan)\0", NULL, "Cave (Jaleco license)", "Cave",
+	L"Puzzle Uo Poko\0\u30D1\u30BA\u30EB \u9B5A\u30DD\u30B3 \u3046\u304A\u307D\u3053 (Japan)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY, GBF_PUZZLE, 0,
 	NULL, uopokojRomInfo, uopokojRomName, NULL, NULL, NULL, NULL, uopokoInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3

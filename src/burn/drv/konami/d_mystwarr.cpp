@@ -2,6 +2,10 @@
 // based on MAME driver by R. Belmont, Phil Stroffolino, Acho A. Tang, Nicola Salmoria
 
 /*
+ 	Limitation:
+		mystwarr:
+			no runahead for this game, game needs to be synchronized to drvdraw().
+
 	known bugs:
 		mystwarr:
 			missing some sounds due to sound irq timing too slow. (wip)
@@ -25,11 +29,17 @@
 #include "burn_ym2151.h"
 #include "k054539.h"
 #include "eeprom.h"
+#include "dtimer.h"
 
 #if defined _MSC_VER
  #define _USE_MATH_DEFINES
  #include <cmath>
 #endif
+
+// Play Gaiapolis w/o the ROZ layer (for low-memory systems)
+// Monster Maulers is unplayable with this enabled, as most of the bosses are
+// made from this missing layer.
+#define NO_ROZLAYER 0
 
 static UINT8 *AllMem;
 static UINT8 *Drv68KROM;
@@ -80,7 +90,6 @@ static UINT8 DrvDips[2];
 
 static INT32 nExtraCycles[2];
 
-static INT32 sound_nmi_enable = 0;
 static UINT8 sound_control = 0;
 static UINT16 control_data = 0;
 static UINT8 mw_irq_control = 0;
@@ -325,6 +334,7 @@ static struct BurnInputInfo MartchmpInputList[] = {
 	{"Service 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"service"},
 	{"Service 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"service"},
 	{"Dip A",		    BIT_DIPSWITCH,	DrvDips + 0,	"dip"},
+	{"Dip B",		    BIT_DIPSWITCH,	DrvDips + 1,	"dip"},
 };
 
 STDINPUTINFO(Martchmp)
@@ -417,15 +427,21 @@ STDDIPINFO(Dadandrn)
 
 static struct BurnDIPInfo MartchmpDIPList[]=
 {
-	{0x26, 0xff, 0xff, 0xe0, NULL			},
+	DIP_OFFSET(0x26)
+	{0x00, 0xff, 0xff, 0xe0, NULL				},
+	{0x01, 0xff, 0xff, 0x00, NULL				},
 
 	{0   , 0xfe, 0   ,    2, "Sound Output"		},
-	{0x26, 0x01, 0x10, 0x10, "Mono"			},
-	{0x26, 0x01, 0x10, 0x00, "Stereo"		},
+	{0x00, 0x01, 0x10, 0x10, "Mono"				},
+	{0x00, 0x01, 0x10, 0x00, "Stereo"			},
 
 	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
-	{0x26, 0x01, 0x20, 0x20, "Off"			},
-	{0x26, 0x01, 0x20, 0x00, "On"			},
+	{0x00, 0x01, 0x20, 0x20, "Off"				},
+	{0x00, 0x01, 0x20, 0x00, "On"				},
+
+	{0   , 0xfe, 0   ,    2, "Speed Hacks"		},
+	{0x01, 0x01, 0x80, 0x00, "Off"				},
+	{0x01, 0x01, 0x80, 0x80, "On"				},
 };
 
 STDDIPINFO(Martchmp)
@@ -1216,6 +1232,11 @@ static void __fastcall martchmp_main_write_byte(UINT32 address, UINT8 data)
 	}
 
 	if ((address & 0xffffc0) == 0x40c000) {
+		if (DrvDips[1] & 0x80) { // Speed Hack (disable linescroll)
+			if ((address & 0x3f) == 0x0b && data == 0x03) {
+				data = 0xf3;
+			}
+		}
 		K056832ByteWrite(address & 0x3f, data);
 		return;
 	}
@@ -1829,7 +1850,6 @@ static INT32 DrvDoReset()
 	sprite_colorbase = 0;
 	cbparam = 0;
 	oinprion = 0;
-	sound_nmi_enable = 0;
 
 	superblend = 0; // for mystwarr alpha tile count
 	oldsuperblend = 0;
@@ -1961,8 +1981,22 @@ static void Metamrph_sprite_decode()
 	GfxDecode(0x10000, 4, 16, 16, Plane, XOffs, YOffs, 16*16*4, DrvGfxROM1, DrvGfxROMExp1);
 }
 
+static void sound_irq(INT32 param)
+{
+	if (sound_control & 0x10) {
+		ZetNmi();
+	}
+}
+
+static void sound_timer_init()
+{
+	K054539SetIRQCallback(0, sound_irq);
+}
+
 static INT32 MystwarrInit()
 {
+	BurnSetRefreshRate(59.185606);
+
 	nGame = 1;
 
 	GenericTilesInit();
@@ -2041,7 +2075,7 @@ static INT32 MystwarrInit()
 
 	EEPROMInit(&mystwarr_eeprom_interface);
 
-	K054539Init(0, 48000, DrvSndROM, 0x400000);
+	K054539Init(0, 18432000, DrvSndROM, 0x400000);
 	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 	K054539_set_gain(0, 0, 0.80);
@@ -2053,7 +2087,9 @@ static INT32 MystwarrInit()
 	K054539_set_gain(0, 6, 2.00);
 	K054539_set_gain(0, 7, 2.00);
 
-	K054539Init(1, 48000, DrvSndROM, 0x400000);
+	sound_timer_init();
+
+	K054539Init(1, 18432000, DrvSndROM, 0x400000);
 	K054539SetRoute(1, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	K054539SetRoute(1, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 	K054539_set_gain(1, 0, 0.50);
@@ -2072,6 +2108,8 @@ static INT32 MystwarrInit()
 
 static INT32 MetamrphInit()
 {
+	BurnSetRefreshRate(59.185606);
+
 	nGame = 2;
 
 	GenericTilesInit();
@@ -2153,30 +2191,32 @@ static INT32 MetamrphInit()
 
 	EEPROMInit(&mystwarr_eeprom_interface);
 
-	K054539Init(0, 48000, DrvSndROM, 0x400000);
-	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 1.70, BURN_SND_ROUTE_LEFT);
-	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 1.70, BURN_SND_ROUTE_RIGHT);
+	K054539Init(0, 18432000, DrvSndROM, 0x400000);
+	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 1.40, BURN_SND_ROUTE_LEFT);
+	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 1.40, BURN_SND_ROUTE_RIGHT);
 	K054539SetFlags(0, K054539_REVERSE_STEREO | K054539_UPDATE_AT_KEYON);
-	K054539_set_gain(0, 0, 0.98);
-	K054539_set_gain(0, 1, 0.98);
-	K054539_set_gain(0, 2, 0.98);
-	K054539_set_gain(0, 3, 0.98);  // drums, choir
-	K054539_set_gain(0, 4, 1.80);
-	K054539_set_gain(0, 5, 1.80);
-	K054539_set_gain(0, 6, 1.80);
-	K054539_set_gain(0, 7, 1.80); // voice horns flute
+	K054539_set_gain(0, 0, 0.98/2);  // kick drum
+	K054539_set_gain(0, 1, 0.98/2);  // cymbals, shaker
+	K054539_set_gain(0, 2, 0.98/2);  // snare
+	K054539_set_gain(0, 3, 0.98/2);  // drums, choir
+	K054539_set_gain(0, 4, 2.00/2);
+	K054539_set_gain(0, 5, 2.00/2);
+	K054539_set_gain(0, 6, 2.40/2); // coin up, "go!"
+	K054539_set_gain(0, 7, 2.40/2); // "awaken!", punch sfx, voice horns flute
 
-	K054539Init(1, 48000, DrvSndROM, 0x400000);
-	K054539SetRoute(1, BURN_SND_K054539_ROUTE_1, 1.70, BURN_SND_ROUTE_LEFT);
-	K054539SetRoute(1, BURN_SND_K054539_ROUTE_2, 1.70, BURN_SND_ROUTE_RIGHT);
-	K054539_set_gain(1, 0, 0.60); // horns, choir
-	K054539_set_gain(1, 1, 0.60);
-	K054539_set_gain(1, 2, 0.60);
-	K054539_set_gain(1, 3, 0.60);
-	K054539_set_gain(1, 4, 0.70);
-	K054539_set_gain(1, 5, 0.70);
-	K054539_set_gain(1, 6, 0.70);
-	K054539_set_gain(1, 7, 0.70);
+	sound_timer_init();
+
+	K054539Init(1, 18432000, DrvSndROM, 0x400000);
+	K054539SetRoute(1, BURN_SND_K054539_ROUTE_1, 1.40, BURN_SND_ROUTE_LEFT);
+	K054539SetRoute(1, BURN_SND_K054539_ROUTE_2, 1.40, BURN_SND_ROUTE_RIGHT);
+	K054539_set_gain(1, 0, 0.60/2); // horns, choir
+	K054539_set_gain(1, 1, 0.60/2);
+	K054539_set_gain(1, 2, 0.60/2);
+	K054539_set_gain(1, 3, 0.60/2);
+	K054539_set_gain(1, 4, 0.70/2);
+	K054539_set_gain(1, 5, 0.70/2);
+	K054539_set_gain(1, 6, 0.70/2);
+	K054539_set_gain(1, 7, 0.70/2);
 
 	DrvDoReset();
 
@@ -2185,6 +2225,8 @@ static INT32 MetamrphInit()
 
 static INT32 ViostormInit()
 {
+	BurnSetRefreshRate(59.185606);
+
 	nGame = 3;
 
 	GenericTilesInit();
@@ -2260,19 +2302,21 @@ static INT32 ViostormInit()
 
 	EEPROMInit(&mystwarr_eeprom_interface);
 
-	K054539Init(0, 48000, DrvSndROM, 0x400000);
+	K054539Init(0, 18432000, DrvSndROM, 0x400000);
 	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
-	K054539_set_gain(0, 0, 2.00);
+	/*K054539_set_gain(0, 0, 2.00);
 	K054539_set_gain(0, 1, 2.00);
 	K054539_set_gain(0, 2, 2.00);
-	K054539_set_gain(0, 3, 2.00);
+	K054539_set_gain(0, 3, 2.00);*/
 	K054539_set_gain(0, 4, 2.00);
 	K054539_set_gain(0, 5, 2.00);
 	K054539_set_gain(0, 6, 2.00);
 	K054539_set_gain(0, 7, 2.00);
 
-	K054539Init(1, 48000, DrvSndROM, 0x400000);
+	sound_timer_init();
+
+	K054539Init(1, 18432000, DrvSndROM, 0x400000);
 	K054539SetRoute(1, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	K054539SetRoute(1, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 
@@ -2283,6 +2327,8 @@ static INT32 ViostormInit()
 
 static INT32 MartchmpInit()
 {
+	BurnSetRefreshRate(59.185606);
+
 	nGame = 4;
 
 	GenericTilesInit();
@@ -2333,7 +2379,7 @@ static INT32 MartchmpInit()
 	K056832SetLayerOffsets(2,  2-4, 0);
 	K056832SetLayerOffsets(3,  3-4, 0);
 
-	K053247Init(DrvGfxROM1, DrvGfxROMExp1, 0x7fffff, martchmp_sprite_callback, 3);
+	K053247Init(DrvGfxROM1, DrvGfxROMExp1, 0x7fffff, martchmp_sprite_callback, 1);
 	K053247SetSpriteOffset((-23-58-9), (-16-23-14)+0xd);
 	K053247SetBpp(5);
 
@@ -2363,7 +2409,7 @@ static INT32 MartchmpInit()
 
 	EEPROMInit(&mystwarr_eeprom_interface);
 
-	K054539Init(0, 48000, DrvSndROM, 0x400000);
+	K054539Init(0, 18432000, DrvSndROM, 0x400000);
 	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 	K054539_set_gain(0, 0, 1.40);
@@ -2375,7 +2421,9 @@ static INT32 MartchmpInit()
 	K054539_set_gain(0, 6, 1.40);
 	K054539_set_gain(0, 7, 1.40);
 
-	K054539Init(1, 48000, DrvSndROM, 0x400000);
+	sound_timer_init();
+
+	K054539Init(1, 18432000, DrvSndROM, 0x400000);
 	K054539SetRoute(1, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	K054539SetRoute(1, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 
@@ -2398,7 +2446,9 @@ static void GaiapolisRozTilemapdraw()
 	UINT8 *dat1 = DrvGfxROM3;
 	UINT8 *dat2 = DrvGfxROM3 + 0x20000;
 	UINT8 *dat3 = DrvGfxROM3 + 0x60000;
-
+#if NO_ROZLAYER
+	return;
+#endif
 	K053936_external_bitmap = pMystwarrRozBitmap;
 
 	for (INT32 offs = 0; offs < 512 * 512; offs++)
@@ -2432,6 +2482,8 @@ static void GaiapolisRozTilemapdraw()
 
 static INT32 GaiapolisInit()
 {
+	BurnSetRefreshRate(59.185606);
+
 	nGame = 5;
 
 	GenericTilesInit();
@@ -2517,6 +2569,7 @@ static INT32 GaiapolisInit()
 	EEPROMInit(&gaiapolis_eeprom_interface);
 
 	{
+#if NO_ROZLAYER == 0
 		DrvGfxExpand(DrvGfxROM2	, 0x180000);
 		if ((pMystwarrRozBitmap = (UINT16*)BurnMalloc(((512 * 16) * 2) * (512 * 16) * 2)) == NULL) return 1;
 		GaiapolisRozTilemapdraw();
@@ -2524,9 +2577,10 @@ static INT32 GaiapolisInit()
 		m_k053936_0_ctrl = (UINT16*)DrvK053936Ctrl;
 		m_k053936_0_linectrl = (UINT16*)DrvK053936RAM;
 		K053936GP_set_offset(0, -44, -17);
+#endif
 	}
 
-	K054539Init(0, 48000, DrvSndROM, 0x400000);
+	K054539Init(0, 18432000, DrvSndROM, 0x400000);
 	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 	K054539_set_gain(0, 0, 0.80);
@@ -2538,7 +2592,9 @@ static INT32 GaiapolisInit()
 	K054539_set_gain(0, 6, 2.00);
 	K054539_set_gain(0, 7, 2.00);
 
-	K054539Init(1, 48000, DrvSndROM, 0x400000);
+	sound_timer_init();
+
+	K054539Init(1, 18432000, DrvSndROM, 0x400000);
 	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 	K054539_set_gain(1, 0, 0.50);
@@ -2560,7 +2616,9 @@ static void DadandrnRozTilemapdraw()
 {
 	UINT8 *dat1 = DrvGfxROM3;
 	UINT8 *dat2 = DrvGfxROM3 + 0x40000;
-
+#if NO_ROZLAYER
+	return;
+#endif
 	K053936_external_bitmap = pMystwarrRozBitmap;
 
 	for (INT32 offs = 0; offs < 512 * 512; offs++)
@@ -2586,6 +2644,8 @@ static void DadandrnRozTilemapdraw()
 
 static INT32 DadandrnInit()
 {
+	BurnSetRefreshRate(59.185606);
+
 	nGame = 6;
 
 	GenericTilesInit();
@@ -2675,15 +2735,17 @@ static INT32 DadandrnInit()
 	EEPROMInit(&mystwarr_eeprom_interface);
 
 	{
+#if NO_ROZLAYER == 0
 		if ((pMystwarrRozBitmap = (UINT16*)BurnMalloc(((512 * 16) * 2) * (512 * 16) * 2)) == NULL) return 1;
 		DadandrnRozTilemapdraw();
 
 		m_k053936_0_ctrl = (UINT16*)DrvK053936Ctrl;
 		m_k053936_0_linectrl = (UINT16*)DrvK053936RAM;
 		K053936GP_set_offset(0, -24-8, -17);
+#endif
 	}
 
-	K054539Init(0, 48000, DrvSndROM, 0x400000);
+	K054539Init(0, 18432000, DrvSndROM, 0x400000);
 	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 	K054539_set_gain(0, 0, 1.00);
@@ -2695,7 +2757,9 @@ static INT32 DadandrnInit()
 	K054539_set_gain(0, 6, 2.00);
 	K054539_set_gain(0, 7, 2.00);
 
-	K054539Init(1, 48000, DrvSndROM, 0x400000);
+	sound_timer_init();
+
+	K054539Init(1, 18432000, DrvSndROM, 0x400000);
 	K054539SetRoute(0, BURN_SND_K054539_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	K054539SetRoute(0, BURN_SND_K054539_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 	K054539_set_gain(1, 0, 1.00);
@@ -2717,8 +2781,6 @@ static INT32 DrvExit()
 	GenericTilesExit();
 
 	KonamiICExit();
-
-	konamigx_mixer_exit();
 
 	SekExit();
 	ZetExit();
@@ -2858,15 +2920,20 @@ static INT32 DrvFrame()
 		if (nGame == 1) DrvInputs[0] &= 0xff;
 	}
 
+//	extern int counter;
+//	K054539_set_gain(0, 2, (double)counter * 0.10);
+//	bprintf(0, _T("gain set to %f\n"),(double)counter * 0.10);
+
 	SekNewFrame();
 	ZetNewFrame();
+	timerNewFrame();
 
 	INT32 nInterleave = 256;
-	INT32 nCyclesTotal[2] = { (INT32)((double)16000000 / 59.185606 + 0.5), (INT32)((double)8000000 / 59.185606) };
+	INT32 nCyclesTotal[3] = { (INT32)((double)16000000 / 59.185606 + 0.5), (INT32)((double)8000000 / 59.185606), (INT32)((double)18432000 / 59.185606) };
 	if (nGame == 4) { // martchmp
 		nCyclesTotal[0] = 22000000 / 60; // fix flickers & gfx corruption at end of fight.  only affects martchmp.
 	}
-	INT32 nCyclesDone[2] = { nExtraCycles[0], nExtraCycles[1] };
+	INT32 nCyclesDone[3] = { nExtraCycles[0], nExtraCycles[1], 0 };
 	INT32 drawn = 0;
 
 	SekOpen(0);
@@ -2940,10 +3007,7 @@ static INT32 DrvFrame()
 
 		CPU_RUN(0, Sek);
 		CPU_RUN(1, Zet);
-
-		if (((i % (nInterleave / 8)) == ((nInterleave / 8) - 1)) || (nCurrentFrame&1 && i==0)) {// && sound_nmi_enable && sound_control) { // iq_132
-			ZetNmi();
-		}
+		CPU_RUN(2, timer);
 	}
 
 	if (pBurnSoundOut) {
@@ -2989,7 +3053,6 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		K054539Scan(nAction, pnMin);
 		KonamiICScan(nAction);
 
-		SCAN_VAR(sound_nmi_enable);
 		SCAN_VAR(sound_control);
 		SCAN_VAR(control_data);
 		SCAN_VAR(mw_irq_control);
@@ -3055,7 +3118,7 @@ struct BurnDriver BurnDrvMystwarr = {
 	"mystwarr", NULL, NULL, NULL, "1993",
 	"Mystic Warriors (ver EAA)\0", NULL, "Konami", "GX128",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, mystwarrRomInfo, mystwarrRomName, NULL, NULL, NULL, NULL, MystwarrInputInfo, MystwarrDIPInfo,
 	MystwarrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3
@@ -3096,7 +3159,7 @@ struct BurnDriver BurnDrvMystwarru = {
 	"mystwarru", "mystwarr", NULL, NULL, "1993",
 	"Mystic Warriors (ver UAA)\0", NULL, "Konami", "GX128",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, mystwarruRomInfo, mystwarruRomName, NULL, NULL, NULL, NULL, MystwarrInputInfo, MystwarrDIPInfo,
 	MystwarrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3
@@ -3137,7 +3200,7 @@ struct BurnDriver BurnDrvMystwarrj = {
 	"mystwarrj", "mystwarr", NULL, NULL, "1993",
 	"Mystic Warriors (ver JAA)\0", NULL, "Konami", "GX128",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, mystwarrjRomInfo, mystwarrjRomName, NULL, NULL, NULL, NULL, MystwarrInputInfo, MystwarrDIPInfo,
 	MystwarrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3
@@ -3178,7 +3241,7 @@ struct BurnDriver BurnDrvMystwarra = {
 	"mystwarra", "mystwarr", NULL, NULL, "1993",
 	"Mystic Warriors (ver AAB)\0", NULL, "Konami", "GX128",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, mystwarraRomInfo, mystwarraRomName, NULL, NULL, NULL, NULL, MystwarrInputInfo, MystwarrDIPInfo,
 	MystwarrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3
@@ -3219,7 +3282,7 @@ struct BurnDriver BurnDrvMystwarraa = {
 	"mystwarraa", "mystwarr", NULL, NULL, "1993",
 	"Mystic Warriors (ver AAA)\0", NULL, "Konami", "GX128",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_SCRFIGHT, 0,
 	NULL, mystwarraaRomInfo, mystwarraaRomName, NULL, NULL, NULL, NULL, MystwarrInputInfo, MystwarrDIPInfo,
 	MystwarrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x0800,
 	288, 224, 4, 3

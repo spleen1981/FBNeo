@@ -152,8 +152,7 @@ void midsat_init(UINT8 *rom)
 	pia_config(0, 0, &pia_0);
 	pia_config(1, 0, &pia_1);
 
-	tms5200_init(M6800TotalCycles, 3579545/4);
-    tms5220_set_frequency(640000);
+	tms5200_init(640000, M6800TotalCycles, 3579545/4);
     midsat_initialized = 1;
 }
 
@@ -193,9 +192,7 @@ INT32 midsatRun(INT32 cycles)
 
 void midsat_update(INT16 *samples, INT32 length)
 {
-    M6800Open(0);
     tms5220_update(samples, length);
-    M6800Close();
 }
 
 void midsat_scan(INT32 nAction, INT32 *pnMin)

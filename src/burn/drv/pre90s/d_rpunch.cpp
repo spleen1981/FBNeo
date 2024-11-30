@@ -1,6 +1,10 @@
 // FB Alpha Rabio Lepus / Super Volleyball driver module
 // Based on MAME driver by Aaron Giles
 
+// *FIXED* bad palette of tmap layer 0 @ game start (not present on pcb)
+// Note: svolley has a few glitches, it has a completely different PCB, though
+// configured similarly to rpunch - needs investigation.
+
 #include "tiles_generic.h"
 #include "m68000_intf.h"
 #include "z80_intf.h"
@@ -33,8 +37,10 @@ static UINT8 *sprite_offs;
 static UINT16 *DrvScrRegs;
 static UINT16 *DrvVidRegs;
 
-static UINT32  *DrvPalette;
+static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
+
+static INT32 nExtraCycles;
 
 static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
@@ -49,28 +55,28 @@ static INT32 crtc_timer;
 static INT32 game_select;
 
 static struct BurnInputInfo RpunchInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 4,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 4,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 5,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 0,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 0,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Rpunch)
@@ -286,13 +292,19 @@ static inline void palette_write(INT32 offset)
 	DrvPalette[offset/2] = BurnHighCol(r, g, b, 0);
 }
 
-void __fastcall rpunch_main_write_word(UINT32 address, UINT16 data)
+static void __fastcall rpunch_main_write_word(UINT32 address, UINT16 data)
 {
 	address &= 0x0fffff;
 
 	if ((address & 0x0ff800) == 0xa0000) {
 		*((UINT16*)(DrvPalRAM +(address & 0x7fe))) = data;
 		palette_write(address & 0x7fe);
+		return;
+	}
+
+	if ((address & 0x0fc000) == 0x80000) {
+		*((UINT16*)(DrvVidRAM + (address & 0x3ffe))) = data;
+		SekCyclesBurnRun(4 * 2); // 4 cyc/byte penalty writing to vram
 		return;
 	}
 
@@ -316,13 +328,19 @@ void __fastcall rpunch_main_write_word(UINT32 address, UINT16 data)
 	}
 }
 
-void __fastcall rpunch_main_write_byte(UINT32 address, UINT8 data)
+static void __fastcall rpunch_main_write_byte(UINT32 address, UINT8 data)
 {
 	address &= 0x0fffff;
 
 	if ((address & 0x0ff800) == 0xa0000) {
 		DrvPalRAM[(address & 0x7ff) ^ 1] = data;
 		palette_write(address & 0x7fe);
+		return;
+	}
+
+	if ((address & 0x0fc000) == 0x80000) {
+		DrvVidRAM[(address & 0x3fff) ^ 1] = data;
+		SekCyclesBurnRun(4 * 1);
 		return;
 	}
 
@@ -346,7 +364,7 @@ void __fastcall rpunch_main_write_byte(UINT32 address, UINT8 data)
 	}
 }
 
-UINT16 __fastcall rpunch_main_read_word(UINT32 address)
+static UINT16 __fastcall rpunch_main_read_word(UINT32 address)
 {
 	switch (address & 0x0fffff)
 	{
@@ -363,7 +381,7 @@ UINT16 __fastcall rpunch_main_read_word(UINT32 address)
 	return 0;
 }
 
-UINT8 __fastcall rpunch_main_read_byte(UINT32 address)
+static UINT8 __fastcall rpunch_main_read_byte(UINT32 address)
 {
 	switch (address & 0x0fffff)
 	{
@@ -394,7 +412,7 @@ static void sound_bankswitch(INT32 data)
 	}
 }
 
-void __fastcall rpunch_sound_write(UINT16 address, UINT8 data)
+static void __fastcall rpunch_sound_write(UINT16 address, UINT8 data)
 {
 	switch (address)
 	{
@@ -419,7 +437,7 @@ void __fastcall rpunch_sound_write(UINT16 address, UINT8 data)
 	}
 }
 
-UINT8 __fastcall rpunch_sound_read(UINT16 address)
+static UINT8 __fastcall rpunch_sound_read(UINT16 address)
 {
 	switch (address)
 	{
@@ -465,6 +483,11 @@ static INT32 DrvDoReset()
 	crtc_register = 0;
 	crtc_timer = 0;
 
+	nExtraCycles = 0;
+
+
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -509,9 +532,9 @@ static INT32 MemIndex()
 	return 0;
 }
 
-static void expand_graphics(UINT8 *gfx, INT32 len)
+static void expand_graphics(UINT8 *gfx, INT32 len, INT32 mirror_enable)
 {
-	memcpy (gfx + 0x60000, gfx + 0x40000, 0x20000); // mirror top bank
+	if (mirror_enable) memcpy (gfx + 0x60000, gfx + 0x40000, 0x20000); // mirror top bank
 
 	for (INT32 i = (len - 1) * 2; i >= 0; i-= 2)
 	{
@@ -523,11 +546,9 @@ static void expand_graphics(UINT8 *gfx, INT32 len)
 
 static INT32 DrvInit(INT32 (*pRomLoadCallback)(), INT32 game)
 {
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
+
+	game_select = game; // 0 rpunch/rabiolep, 1 svolley, 2 svolleyua
 
 	if (pRomLoadCallback) {
 		memset (DrvGfxROM0, 0xff, 0x80000);
@@ -536,12 +557,10 @@ static INT32 DrvInit(INT32 (*pRomLoadCallback)(), INT32 game)
 
 		if (pRomLoadCallback()) return 1;
 
-		expand_graphics(DrvGfxROM0, 0x80000);
-		expand_graphics(DrvGfxROM1, 0x80000);
-		expand_graphics(DrvGfxROM2, 0x80000);
+		expand_graphics(DrvGfxROM0, 0x80000, 1);
+		expand_graphics(DrvGfxROM1, 0x80000, 1);
+		expand_graphics(DrvGfxROM2, 0x80000, (game_select == 2 ? 0 : 1));
 	}
-
-	game_select = game;
 
 	SekInit(0, 0x68000);
 	SekOpen(0);
@@ -550,7 +569,8 @@ static INT32 DrvInit(INT32 (*pRomLoadCallback)(), INT32 game)
 	SekMapMemory(Drv68KROM,			0x000000, 0x03ffff, MAP_ROM);
 	SekMapMemory(DrvBMPRAM,			0x040000, 0x04ffff, MAP_RAM);
 	SekMapMemory(DrvSprRAM,			0x060000, 0x060fff, MAP_RAM);
-	SekMapMemory(DrvVidRAM,			0x080000, 0x083fff, MAP_RAM);
+	// rpunch / rabiolep: handle vram contended writes in handlers
+	SekMapMemory(DrvVidRAM,			0x080000, 0x083fff, (game_select == 0) ? MAP_ROM : MAP_RAM);
 	SekMapMemory(DrvPalRAM,			0x0a0000, 0x0a07ff, MAP_ROM);
 	SekMapMemory(Drv68KRAM,			0x0fc000, 0x0fffff, MAP_RAM);
 
@@ -562,18 +582,16 @@ static INT32 DrvInit(INT32 (*pRomLoadCallback)(), INT32 game)
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapArea(0x0000, 0xefff, 0, DrvZ80ROM);
-	ZetMapArea(0x0000, 0xefff, 2, DrvZ80ROM);
-	ZetMapArea(0xf800, 0xffff, 0, DrvZ80RAM);
-	ZetMapArea(0xf800, 0xffff, 1, DrvZ80RAM);
-	ZetMapArea(0xf800, 0xffff, 2, DrvZ80RAM);
+	ZetMapMemory(DrvZ80ROM, 0x0000, 0xefff, MAP_ROM);
+	ZetMapMemory(DrvZ80RAM, 0xf800, 0xffff, MAP_RAM);
 	ZetSetWriteHandler(rpunch_sound_write);
 	ZetSetReadHandler(rpunch_sound_read);
 	ZetClose();
 
-	BurnYM2151Init(4000000);
+	BurnYM2151InitBuffered(4000000, 1, NULL, 0);
 	BurnYM2151SetIrqHandler(&DrvYM2151IrqHandler);
 	BurnYM2151SetAllRoutes(0.50, BURN_SND_ROUTE_BOTH);
+	BurnTimerAttachZet(4000000);
 
 	UPD7759Init(0, UPD7759_STANDARD_CLOCK, DrvSndROM);
 	UPD7759SetRoute(0, 0.50, BURN_SND_ROUTE_BOTH);
@@ -596,8 +614,7 @@ static INT32 DrvExit()
 
 	GenericTilesExit();
 
-	BurnFree (AllMem);
-	AllMem = NULL;
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -681,19 +698,7 @@ static void draw_sprites(INT32 start, INT32 stop)
 		if (sx >= 304) sx -= 512;
 		if (sy >= 224) sy -= 512;
 
-		if (flipy) {
-			if (flipx) {
-				RenderCustomTile_Mask_FlipXY_Clip(pTransDraw, 16, 32, code, sx, sy, color, 4, 0xf, 0, DrvGfxROM2);
-			} else {
-				RenderCustomTile_Mask_FlipY_Clip(pTransDraw, 16, 32, code, sx, sy, color, 4, 0xf, 0, DrvGfxROM2);
-			}
-		} else {
-			if (flipx) {
-				RenderCustomTile_Mask_FlipX_Clip(pTransDraw, 16, 32, code, sx, sy, color, 4, 0xf, 0, DrvGfxROM2);
-			} else {
-				RenderCustomTile_Mask_Clip(pTransDraw, 16, 32, code, sx, sy, color, 4, 0xf, 0, DrvGfxROM2);
-			}
-		}
+		DrawCustomMaskTile(pTransDraw, 16, 32, code, sx, sy, flipx, flipy, color, 4, 0xf, 0, DrvGfxROM2);
 	}
 }
 
@@ -703,7 +708,6 @@ static INT32 DrvDraw()
 		for (INT32 i = 0; i < 0x800; i+=2) {
 			palette_write(i);
 		}
-
 		DrvRecalc = 0;
 	}
 
@@ -740,11 +744,9 @@ static INT32 DrvFrame()
 		}
 	}
 
-	INT32 nSegment;
 	INT32 nInterleave = 10;
-	INT32 nSoundBufferPos = 0;
 	INT32 nCyclesTotal[2] = { 8000000 / 60, 4000000 / 60 };
-	INT32 nCyclesDone[2] = { 0, 0 };
+	INT32 nCyclesDone[2] = { nExtraCycles, 0 };
 
 	SekOpen(0);
 	ZetOpen(0);
@@ -755,27 +757,20 @@ static INT32 DrvFrame()
 
 		if (crtc_timer == 2 && i == ((nInterleave / 2) - 1)) SekSetIRQLine(1, CPU_IRQSTATUS_AUTO);
 
-		CPU_RUN(1, Zet);
-
-		if (pBurnSoundOut) {
-			nSegment = nBurnSoundLen / nInterleave;
-			BurnYM2151Render(pBurnSoundOut + (nSoundBufferPos << 1), nSegment);
-			nSoundBufferPos += nSegment;
-		}
+		CPU_RUN_TIMER(1);
 	}
 
 	if (crtc_timer) SekSetIRQLine(1, CPU_IRQSTATUS_AUTO);
 
-	if (pBurnSoundOut) {
-		nSegment = nBurnSoundLen - nSoundBufferPos;
-		if (nSegment > 0) {
-			BurnYM2151Render(pBurnSoundOut + (nSoundBufferPos << 1), nSegment);
-		}
-		UPD7759Render(pBurnSoundOut, nBurnSoundLen);
-	}
-
 	ZetClose();
 	SekClose();
+
+	nExtraCycles = nCyclesDone[0] - nCyclesTotal[0];
+
+	if (pBurnSoundOut) {
+		BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
+		UPD7759Render(pBurnSoundOut, nBurnSoundLen);
+	}
 
 	if (pBurnDraw) {
 		DrvDraw();
@@ -809,6 +804,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		SCAN_VAR(crtc_register);
 		SCAN_VAR(crtc_timer);
+		SCAN_VAR(nExtraCycles);
 	}
 
 	if (nAction & ACB_WRITE) {
@@ -890,7 +886,7 @@ struct BurnDriver BurnDrvRabiolep = {
 	"rabiolep", NULL, NULL, NULL, "1987",
 	"Rabio Lepus (Japan)\0", NULL, "V-System Co.", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, rabiolepRomInfo, rabiolepRomName, NULL, NULL, NULL, NULL, RpunchInputInfo, RabiolepDIPInfo,
 	rpunchInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	288, 216, 4, 3
@@ -932,7 +928,7 @@ struct BurnDriver BurnDrvRpunch = {
 	"rpunch", "rabiolep", NULL, NULL, "1987",
 	"Rabbit Punch (US)\0", NULL, "V-System Co. (Bally/Midway/Sente license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, rpunchRomInfo, rpunchRomName, NULL, NULL, NULL, NULL, RpunchInputInfo, RpunchDIPInfo,
 	rpunchInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	288, 216, 4, 3
@@ -1018,7 +1014,7 @@ struct BurnDriver BurnDrvSvolley = {
 	"svolley", NULL, NULL, NULL, "1989",
 	"Super Volleyball (Japan)\0", NULL, "V-System Co.", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
 	NULL, svolleyRomInfo, svolleyRomName, NULL, NULL, NULL, NULL, RpunchInputInfo, SvolleyDIPInfo,
 	svolleyInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	288, 216, 4, 3
@@ -1106,14 +1102,14 @@ struct BurnDriver BurnDrvSvolleyk = {
 	"svolleyk", "svolley", NULL, NULL, "1989",
 	"Super Volleyball (Korea)\0", NULL, "V-System Co.", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
 	NULL, svolleykRomInfo, svolleykRomName, NULL, NULL, NULL, NULL, RpunchInputInfo, SvolleyDIPInfo,
 	svolleykInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	288, 216, 4, 3
 };
 
 
-// Super Volleyball (US)
+// Super Volleyball (US, Data East license)
 
 static struct BurnRomInfo svolleyuRomDesc[] = {
 	{ "svb-du8.137",	0x10000, 0xffd5d261, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
@@ -1151,10 +1147,83 @@ STD_ROM_FN(svolleyu)
 
 struct BurnDriver BurnDrvSvolleyu = {
 	"svolleyu", "svolley", NULL, NULL, "1989",
-	"Super Volleyball (US)\0", NULL, "V-System Co. (Data East license)", "Miscellaneous",
+	"Super Volleyball (US, Data East license)\0", NULL, "V-System Co. (Data East license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
 	NULL, svolleyuRomInfo, svolleyuRomName, NULL, NULL, NULL, NULL, RpunchInputInfo, SvolleyDIPInfo,
 	svolleyInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
+	288, 216, 4, 3
+};
+
+
+// Super Volleyball (US)
+
+static struct BurnRomInfo svolleyuaRomDesc[] = {
+	{ "h0.ic137",		0x10000, 0x58cfa5d7, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
+	{ "l0.ic136",		0x10000, 0xb1f5a54c, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "h1.ic127",		0x08000, 0x3c9721ff, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "l1.ic126",		0x08000, 0x55cfabce, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "1.ic112",		0x10000, 0x48b89688, 2 | BRF_PRG | BRF_ESS }, //  4 Z80 Code
+
+	{ "lh532099.ic46",	0x40000, 0x9428cc36, 3 | BRF_GRA },           //  5 Background Tiles
+	{ "7.ic35",			0x10000, 0x83b20b91, 3 | BRF_GRA },           //  6
+
+	{ "lh53200a.ic47",	0x40000, 0x75930468, 4 | BRF_GRA },           //  7 Foreground Tiles
+	{ "10.ic36",		0x10000, 0x414a6278, 4 | BRF_GRA },           //  8
+
+	{ "lh5320h7.ic51",	0x40000, 0x152ff5b6, 5 | BRF_GRA },           //  9 Sprite Tiles
+	{ "s0.ic18",		0x08000, 0x4d6c8f0c, 5 | BRF_GRA },           // 10
+	{ "s1.ic43",		0x08000, 0x9dd28b42, 5 | BRF_GRA },           // 11
+
+	{ "4.ic114",		0x10000, 0xc4effee6, 6 | BRF_SND },           // 12 UPD Samples
+	{ "3.ic123",		0x10000, 0x5a818eb4, 6 | BRF_SND },           // 13
+	{ "2.ic133",		0x10000, 0xf33f415f, 6 | BRF_SND },           // 14
+};
+
+STD_ROM_PICK(svolleyua)
+STD_ROM_FN(svolleyua)
+
+static INT32 svolleyuaRomLoadCallback()
+{
+	if (BurnLoadRom(Drv68KROM  + 0x000001,  0, 2)) return 1;
+	if (BurnLoadRom(Drv68KROM  + 0x000000,  1, 2)) return 1;
+	if (BurnLoadRom(Drv68KROM  + 0x020001,  2, 2)) return 1;
+	if (BurnLoadRom(Drv68KROM  + 0x020000,  3, 2)) return 1;
+
+	if (BurnLoadRom(DrvZ80ROM  + 0x000000,  4, 1)) return 1;
+
+	if (BurnLoadRom(DrvGfxROM0 + 0x000000,  5, 1)) return 1;
+	BurnByteswap(DrvGfxROM0, 0x40000);
+	if (BurnLoadRom(DrvGfxROM0 + 0x040000,  6, 1)) return 1;
+
+	if (BurnLoadRom(DrvGfxROM1 + 0x000000,  7, 1)) return 1;
+	BurnByteswap(DrvGfxROM1, 0x40000);
+	if (BurnLoadRom(DrvGfxROM1 + 0x040000,  8, 1)) return 1;
+
+	if (BurnLoadRom(DrvGfxROM2 + 0x000000,  9, 1)) return 1;
+	BurnByteswap(DrvGfxROM2, 0x40000);
+	if (BurnLoadRom(DrvGfxROM2 + 0x060001, 10, 2)) return 1;
+	if (BurnLoadRom(DrvGfxROM2 + 0x060000, 11, 2)) return 1;
+
+	if (BurnLoadRom(DrvSndROM  + 0x020000, 12, 1)) return 1;
+	if (BurnLoadRom(DrvSndROM  + 0x030000, 13, 1)) return 1;
+	if (BurnLoadRom(DrvSndROM  + 0x040000, 13, 1)) return 1;
+
+	return 0;
+}
+
+static INT32 svolleyuaInit()
+{
+	return DrvInit(svolleyuaRomLoadCallback, 2);
+}
+
+struct BurnDriver BurnDrvSvolleyua = {
+	"svolleyua", "svolley", NULL, NULL, "1989",
+	"Super Volleyball (US)\0", NULL, "V-System Co.", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
+	NULL, svolleyuaRomInfo, svolleyuaRomName, NULL, NULL, NULL, NULL, RpunchInputInfo, SvolleyDIPInfo,
+	svolleyuaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	288, 216, 4, 3
 };

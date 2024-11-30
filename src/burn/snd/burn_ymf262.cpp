@@ -37,7 +37,7 @@ static void YMF262Render(INT32 nSegmentLength)
 	if (!DebugSnd_YMF262Initted) bprintf(PRINT_ERROR, _T("YMF262Render called without init\n"));
 #endif
 
-	if (nYMF262Position >= nSegmentLength) {
+	if (nYMF262Position >= nSegmentLength || !pBurnSoundOut) {
 		return;
 	}
 
@@ -215,7 +215,7 @@ INT32 BurnYMF262Init(INT32 nClockFrequency, void (*IRQCallback)(INT32, INT32), I
 
 	nBurnYMF262SoundRate = nClockFrequency / 288; // hw rate based on input clock
 
-	nSampleSize = (UINT32)nBurnYMF262SoundRate * (1 << 16) / nBurnSoundRate;
+	if (nBurnSoundRate) nSampleSize = (UINT32)nBurnYMF262SoundRate * (1 << 16) / nBurnSoundRate;
 	bYMF262AddSignal = nAdd;
 
 	BurnTimerInit(&ymf262_timerover, NULL);
@@ -256,7 +256,7 @@ void BurnYMF262Scan(INT32 nAction, INT32* pnMin)
 	BurnTimerScan(nAction, pnMin);
 	ymf262_save_state(ymfchip, nAction);
 
-	if (nAction & ACB_WRITE) {
+	if (nAction & ACB_WRITE && ~nAction & ACB_RUNAHEAD) {
 		nYMF262Position = 0;
 		nFractionalPosition = 0;
 		memset(pBuffer, 0, 4096 * 2 * sizeof(INT16));

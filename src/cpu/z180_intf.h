@@ -1,10 +1,5 @@
 #include "z180.h"
 
-#ifndef FASTCALL
- #undef __fastcall
- #define __fastcall
-#endif
-
 void Z180SetWriteHandler(void (__fastcall *write)(UINT32, UINT8));
 void Z180SetReadHandler(UINT8 (__fastcall *read)(UINT32));
 void Z180SetFetchOpHandler(UINT8 (__fastcall *fetch)(UINT32));
@@ -23,7 +18,7 @@ INT32 Z180Idle(INT32 cycles);
 void Z180BurnCycles(INT32 cycles);
 void Z180SetIRQLine(INT32 irqline, INT32 state);
 void Z180Nmi();
-void Z180Scan(INT32 nAction);
+INT32 Z180Scan(INT32 nAction);
 
 INT32 Z180GetActive();
 void Z180Open(INT32);

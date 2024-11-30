@@ -291,6 +291,8 @@ static INT32 DrvDoReset()
 
 	deco16Reset();
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -680,7 +682,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 }
 
 
-// Backfire! (set 1)
+// Backfire! (Japan, set 1)
 
 static struct BurnRomInfo backfireRomDesc[] = {
 	{ "ra00-0.2j",		0x080000, 0x790da069, 1 | BRF_PRG | BRF_ESS }, //  0 Arm code (Encrypted)
@@ -715,16 +717,16 @@ static INT32 backfireInit()
 
 struct BurnDriver BurnDrvBackfire = {
 	"backfire", NULL, NULL, NULL, "1995",
-	"Backfire! (set 1)\0", NULL, "Data East Corporation", "DECO IC16",
+	"Backfire! (Japan, set 1)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_RACING, 0,
 	NULL, backfireRomInfo, backfireRomName, NULL, NULL, NULL, NULL, BackfireInputInfo, BackfireDIPInfo,
 	backfireInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	640, 240, 8, 3
 };
 
 
-// Backfire! (set 2)
+// Backfire! (Japan, set 2)
 
 static struct BurnRomInfo backfireaRomDesc[] = {
 	{ "rb-00h.h2",		0x080000, 0x60973046, 1 | BRF_PRG | BRF_ESS }, //  0 Arm code (Encrypted)
@@ -755,7 +757,7 @@ static INT32 backfireaInit()
 
 struct BurnDriverD BurnDrvBackfirea = {
 	"backfirea", "backfire", NULL, NULL, "1995",
-	"Backfire! (set 2)\0", "Set inputs to \"Joystick\" in test mode", "Data East Corporation", "DECO IC16",
+	"Backfire! (Japan, set 2)\0", "Set inputs to \"Joystick\" in test mode", "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_RACING, 0,
 	NULL, backfireaRomInfo, backfireaRomName, NULL, NULL, NULL, NULL, BackfireInputInfo, BackfireDIPInfo,

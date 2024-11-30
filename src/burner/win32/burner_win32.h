@@ -121,6 +121,7 @@ extern bool bMonitorAutoCheck;
 
 // Used for the load/save dialog in commdlg.h
 extern TCHAR szChoice[MAX_PATH];					// File chosen by the user
+extern TCHAR szRomdataName[MAX_PATH];
 extern OPENFILENAME ofn;
 
 // Used to convert strings when possibly needed
@@ -231,11 +232,15 @@ void NeoCDZRateChangeback();
 
 // burn_shift
 extern INT32 BurnShiftEnabled;
+// burn_gun
+extern bool bBurnGunDrawReticles;
 
 // run.cpp
 extern int bRunPause;
 extern int bAltPause;
 extern int bAlwaysDrawFrames;
+extern int nSlowMo;
+//extern INT32 bRunAhead;  // in burn.h! (partially platform agnostic feature)
 extern int kNetGame;
 int RunIdle();
 int RunFrame(int bDraw, int bPause);
@@ -263,9 +268,11 @@ void SetPauseMode(bool bPause);
 int ActivateChat();
 void DeActivateChat();
 int BurnerLoadDriver(TCHAR *szDriverName);
-int StartFromReset(TCHAR *szDriverName);
+int StartFromReset(TCHAR *szDriverName, bool bLoadSram);
 void PausedRedraw(void);
 INT32 is_netgame_or_recording();
+void ScrnInitLua();
+void ScrnExitLua();
 
 // menu.cpp
 #define UM_DISPLAYPOPUP (WM_USER + 0x0100)
@@ -295,6 +302,9 @@ int MenuCreate();
 void MenuDestroy();
 int SetMenuPriority();
 void MenuUpdate();
+void MenuUpdateVolume();
+void MenuUpdateSlowMo();
+
 void CreateArcaderesItem();
 void MenuEnableItems();
 bool MenuHandleKeyboard(MSG*);
@@ -340,6 +350,7 @@ HBITMAP ImageToBitmap(HWND hwnd, IMAGE* img);
 HBITMAP PNGLoadBitmap(HWND hWnd, FILE* fp, int nWidth, int nHeight, int nPreset);
 HBITMAP PNGLoadBitmapBuffer(HWND hWnd, unsigned char* buffer, int bufferLength, int nWidth, int nHeight, int nPreset);
 HBITMAP LoadBitmap(HWND hWnd, FILE* fp, int nWidth, int nHeight, int nPreset);
+int NeoCDList_CheckISO(TCHAR* pszFile, void (*pfEntryCallBack)(INT32, TCHAR*));
 
 // cona.cpp
 extern int nIniVersion;
@@ -465,6 +476,10 @@ void LoadFavorites();
 void AddFavorite_Ext(UINT8 addf);
 INT32 CheckFavorites(char *name);
 
+// luaconsole.cpp
+extern HWND LuaConsoleHWnd;
+void UpdateLuaConsole(const wchar_t* fname);
+
 // ---------------------------------------------------------------------------
 // Debugger
 
@@ -478,11 +493,11 @@ int DebugCreate();
 int PaletteViewerDialogCreate(HWND hParentWND);
 
 // ips_manager.cpp
-extern int nIpsSelectedLanguage;
-int GetIpsNumPatches();
+extern INT32 nIpsSelectedLanguage;
+INT32 GetIpsNumPatches();
 void LoadIpsActivePatches();
-int GetIpsNumActivePatches();
-int IpsManagerCreate(HWND hParentWND);
+INT32 GetIpsNumActivePatches();
+INT32 IpsManagerCreate(HWND hParentWND);
 void IpsPatchExit();
 
 // localise_download.cpp
