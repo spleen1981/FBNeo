@@ -79,7 +79,7 @@ static void set_bank(INT32 select)
 	}
 }
 
-static UINT8 __fastcall pacgal20_read(UINT32 address)
+static UINT8 pacgal20_read(UINT32 address)
 {
 	switch (address)
 	{
@@ -90,7 +90,7 @@ static UINT8 __fastcall pacgal20_read(UINT32 address)
 	return 0;
 }
 
-static void __fastcall pacgal20_write(UINT32 address, UINT8 data)
+static void pacgal20_write(UINT32 address, UINT8 data)
 {
 	if (address >= 0x45040 && address <= 0x4505f) {
 		NamcoSoundWrite(address & 0x1f, data);
@@ -114,7 +114,7 @@ static void __fastcall pacgal20_write(UINT32 address, UINT8 data)
 	}
 }
 
-static void __fastcall pacgal20_write_port(UINT32 address, UINT8 data)
+static void pacgal20_write_port(UINT32 address, UINT8 data)
 {
 	address &= 0xff;
 
@@ -169,7 +169,7 @@ static void __fastcall pacgal20_write_port(UINT32 address, UINT8 data)
 	}
 }
 		
-static UINT8 __fastcall pacgal20_read_port(UINT32 address)
+static UINT8 pacgal20_read_port(UINT32 address)
 {
 	address &= 0xff;
 

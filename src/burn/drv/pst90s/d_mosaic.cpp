@@ -177,7 +177,7 @@ static void gfire2_protection_write(UINT8 data)
 	if (jumptable[data >> 1]) prot_val = jumptable[data >> 1];
 }
 
-static void __fastcall mosaic_write_port(UINT32 port, UINT8 data)
+static void mosaic_write_port(UINT32 port, UINT8 data)
 {
 	port &= 0xff;
 	if (port < 0x40) return;
@@ -195,7 +195,7 @@ static void __fastcall mosaic_write_port(UINT32 port, UINT8 data)
 	}
 }
 
-static UINT8 __fastcall mosaic_read_port(UINT32 port)
+static UINT8 mosaic_read_port(UINT32 port)
 {
 	port &= 0xff;
 	if (port < 0x40) return 0;

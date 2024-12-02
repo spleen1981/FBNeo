@@ -32,13 +32,13 @@ INT32 DrvCps3Draw();
 
 // sound 
 
-UINT8 __fastcall cps3SndReadByte(UINT32 addr);
-UINT16 __fastcall cps3SndReadWord(UINT32 addr);
-UINT32 __fastcall cps3SndReadLong(UINT32 addr);
+UINT8 cps3SndReadByte(UINT32 addr);
+UINT16 cps3SndReadWord(UINT32 addr);
+UINT32 cps3SndReadLong(UINT32 addr);
 
-void __fastcall cps3SndWriteByte(UINT32 addr, UINT8 data);
-void __fastcall cps3SndWriteWord(UINT32 addr, UINT16 data);
-void __fastcall cps3SndWriteLong(UINT32 addr, UINT32 data);
+void cps3SndWriteByte(UINT32 addr, UINT8 data);
+void cps3SndWriteWord(UINT32 addr, UINT16 data);
+void cps3SndWriteLong(UINT32 addr, UINT32 data);
 
 INT32 cps3SndInit(UINT8 *);
 void cps3SndSetRoute(INT32 nIndex, double nVolume, INT32 nRouteDir);

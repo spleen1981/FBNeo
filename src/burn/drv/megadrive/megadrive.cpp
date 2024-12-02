@@ -419,8 +419,8 @@ static INT32 MemIndex()
 	return 0;
 }
 
-static UINT8 __fastcall MegadriveZ80ProgRead(UINT16 a); // forward
-static void __fastcall MegadriveZ80ProgWrite(UINT16 a, UINT8 d); // forward
+static UINT8 MegadriveZ80ProgRead(UINT16 a); // forward
+static void MegadriveZ80ProgWrite(UINT16 a, UINT8 d); // forward
 
 static void __fastcall Megadrive68K_Z80WriteByte(UINT32 address, UINT8 data)
 { // a00000 - a0ffff: 68k -> z80 bus interface
@@ -1625,7 +1625,7 @@ static void __fastcall MegadriveZ80PortWrite(UINT16 a, UINT8 d)
 	}
 }
 
-static UINT8 __fastcall MegadriveZ80ProgRead(UINT16 a)
+static UINT8 MegadriveZ80ProgRead(UINT16 a)
 {
 	if (a & 0x8000) {
 		z80_cycle_cnt += 3; // takes 3 extra cycles to read here
@@ -1646,7 +1646,7 @@ static UINT8 __fastcall MegadriveZ80ProgRead(UINT16 a)
 	return 0xff;
 }
 
-static void __fastcall MegadriveZ80ProgWrite(UINT16 a, UINT8 d)
+static void MegadriveZ80ProgWrite(UINT16 a, UINT8 d)
 {
 	if (a & 0x8000) {
 		UINT32 addr68k = (RamMisc->Bank68k << 15) | (a & 0x7fff);

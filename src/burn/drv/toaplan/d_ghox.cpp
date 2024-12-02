@@ -429,7 +429,7 @@ static void __fastcall ghoxWriteWord(UINT32 sekAddress, UINT16 wordValue)
 	}
 }
 
-static UINT8 __fastcall GhoxMCURead(UINT32 a)
+static UINT8 GhoxMCURead(UINT32 a)
 {
 	switch (a) {
 		case 0x80002: {
@@ -466,7 +466,7 @@ static UINT8 __fastcall GhoxMCURead(UINT32 a)
 	return 0;
 }
 
-static void __fastcall GhoxMCUWrite(UINT32 a, UINT8 d)
+static void GhoxMCUWrite(UINT32 a, UINT8 d)
 {
 	switch (a) {
 		case 0x8000e: {
