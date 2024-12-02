@@ -12,6 +12,8 @@ extern "C" {
 #define MAX_8910 5
 #define ALL_8910_CHANNELS -1
 
+extern INT32 nBurnSoundLen, nBurnSoundRate;
+
 struct AY8910interface
 {
 	INT32 num;	/* total number of 8910 in the machine */

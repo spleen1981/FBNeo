@@ -12,7 +12,8 @@
 ** Additional code & fixes by Eke-Eke for Genesis Plus GX
 **
 */
-
+#include "driver.h"
+extern "C" {
 extern void MDYM2612Init(void);
 extern void MDYM2612Exit(void);
 extern void MDYM2612Config(unsigned char dac_bits);
@@ -24,3 +25,4 @@ extern int MDYM2612LoadContext();
 extern int MDYM2612SaveContext();
 
 void BurnMD2612UpdateRequest();
+}

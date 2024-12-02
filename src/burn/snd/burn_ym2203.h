@@ -1,14 +1,12 @@
 // burn_ym2203.h
 #include "driver.h"
-#include "ay8910.h"
 extern "C" {
-
+ #include "ay8910.h"
  #include "fm.h"
 }
 #include "timer.h"
 
-extern "C"
-	void BurnYM2203UpdateRequest();
+extern "C" void BurnYM2203UpdateRequest();
 
 INT32 BurnYM2203Init(INT32 num, INT32 nClockFrequency, FM_IRQHANDLER IRQCallback, INT32 (*StreamCallback)(INT32), double (*GetTimeCallback)(), INT32 bAddSignal);
 INT32 BurnYM2203Init(INT32 num, INT32 nClockFrequency, FM_IRQHANDLER IRQCallback, INT32 bAddSignal);

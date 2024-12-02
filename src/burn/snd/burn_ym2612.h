@@ -5,7 +5,7 @@ extern "C" {
 }
 #include "timer.h"
 
-extern "C" void BurnYM2612UpdateRequest();
+extern void BurnYM2612UpdateRequest();
 
 INT32 BurnYM2612Init(INT32 num, INT32 nClockFrequency, FM_IRQHANDLER IRQCallback, INT32 (*StreamCallback)(INT32), double (*GetTimeCallback)(), INT32 bAddSignal);
 INT32 BurnYM2612Init(INT32 num, INT32 nClockFrequency, FM_IRQHANDLER IRQCallback, INT32 bAddSignal);

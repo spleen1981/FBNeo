@@ -1,10 +1,9 @@
 // burn_md2612.h
 #include "driver.h"
-//extern "C" {
+extern "C" {
  #include "ym2612.h"
-//}
-//extern "C"
-	void BurnMD2612UpdateRequest();
+}
+extern "C" void BurnMD2612UpdateRequest();
 
 INT32 BurnMD2612Init(INT32 num, INT32 bIsPal, INT32 (*StreamCallback)(INT32), INT32 bAddSignal);
 void BurnMD2612SetRoute(INT32 nChip, INT32 nIndex, double nVolume, INT32 nRouteDir);
