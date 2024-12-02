@@ -205,7 +205,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>NDEBUG;_XBOX;USE_SPEEDHACKS;INLINE=static __inline;MAME_INLINE=static __inline;NO_ASMCORE;NO_COMBO;NO_CHEATSEARCH;WORDS_BIGENDIAN;INCLUDE_LIB_PNGH;INCLUDE_7Z_SUPPORT</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src\burn;src\burn\snd;src\burn\devices;src\burn\drv\pre90s;src\burn\drv\pst90s;src\burn\drv\taito;src\burn\drv\dataeast;src\burn\drv\sega;src\burn\drv\konami;src\burn\drv\coleco;src\burn\drv\atari;src\burn\drv\irem;src\drv\sc1000;src\burner;src\burner\xbox;src\cpu;src\dep\generated;src\cpu\m6809;src\cpu\m6805;src\cpu\m6800;src\cpu\nec;src\cpu\hd6309;src\cpu\arm7;src\cpu\i8039;src\cpu\m68k;src\cpu\konami;src\cpu\c68k;src\cpu\m6502;src\cpu\z180;src\cpu\z80;src\cpu\sh2;src\cpu\pic16c5x;src\cpu\s2650;src\cpu\h6280;src\cpu\tms34010;src\cpu\mips3;src\cpu\i8051;src\cpu\e132xs;src\cpu\i8x41;src\cpu\tlcs900;src\cpu\tms32010;src\cpu\upd7725;src\cpu\upd7810;src\cpu\v60;src\cpu\f8;src\cpu\m377;src\dep\libs\zlib;src\dep\libs\libpng;src\dep\libs\lib7z;src\intf;src\intf\input;src\intf\cd;src\intf\audio;src\intf\video;src\intf\perfcount;src\intf\video\scalers;src\intf\video\xbox;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src\burn;src\burn\snd;src\burn\devices;src\burn\drv\pre90s;src\burn\drv\pst90s;src\burn\drv\taito;src\burn\drv\dataeast;src\burn\drv\sega;src\burn\drv\konami;src\burn\drv\coleco;src\burn\drv\atari;src\burn\drv\irem;src\burn\drv\sc1000;src\burn\drv\pce;src\burner;src\burner\xbox;src\cpu;src\dep\generated;src\cpu\m6809;src\cpu\m6805;src\cpu\m6800;src\cpu\nec;src\cpu\hd6309;src\cpu\arm7;src\cpu\i8039;src\cpu\m68k;src\cpu\konami;src\cpu\c68k;src\cpu\m6502;src\cpu\z180;src\cpu\z80;src\cpu\sh2;src\cpu\pic16c5x;src\cpu\s2650;src\cpu\h6280;src\cpu\tms34010;src\cpu\mips3;src\cpu\i8051;src\cpu\e132xs;src\cpu\i8x41;src\cpu\tlcs900;src\cpu\tms32010;src\cpu\upd7725;src\cpu\upd7810;src\cpu\v60;src\cpu\f8;src\cpu\m377;src\cpu\sh4;src\dep\libs\zlib;src\dep\libs\libpng;src\dep\libs\lib7z;src\intf;src\intf\input;src\intf\cd;src\intf\audio;src\intf\video;src\intf\perfcount;src\intf\video\scalers;src\intf\video\xbox;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <TrapIntegerDividesOptimization>true</TrapIntegerDividesOptimization>
@@ -262,12 +262,16 @@
     <ClCompile Include="src\burner\dynhuff.cpp" />
     <ClCompile Include="src\burner\gamc.cpp" />
     <ClCompile Include="src\burner\gami.cpp" />
+    <ClCompile Include="src\burner\inputbuf.cpp" />
     <ClCompile Include="src\burner\ioapi.c">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
     </ClCompile>
     <ClCompile Include="src\burner\misc.cpp" />
+    <ClCompile Include="src\burner\nvram.cpp" />
+    <ClCompile Include="src\burner\sdl\localise_gamelist.cpp" />
+    <ClCompile Include="src\burner\sdl\romdata.cpp" />
     <ClCompile Include="src\burner\sshot.cpp" />
     <ClCompile Include="src\burner\state.cpp" />
     <ClCompile Include="src\burner\statec.cpp" />
@@ -316,6 +320,7 @@
     <ClCompile Include="src\burn\cheat.cpp" />
     <ClCompile Include="src\burn\debug_track.cpp" />
     <ClCompile Include="src\burn\devices\6821pia.cpp" />
+    <ClCompile Include="src\burn\devices\6840ptm.cpp" />
     <ClCompile Include="src\burn\devices\8255ppi.cpp" />
     <ClCompile Include="src\burn\devices\8257dma.cpp" />
     <ClCompile Include="src\burn\devices\atariic.cpp" />
@@ -328,8 +333,10 @@
     <ClCompile Include="src\burn\devices\c169.cpp" />
     <ClCompile Include="src\burn\devices\decobsmt.cpp" />
     <ClCompile Include="src\burn\devices\ds2404.cpp" />
+    <ClCompile Include="src\burn\devices\dtimer.cpp" />
     <ClCompile Include="src\burn\devices\earom.cpp" />
     <ClCompile Include="src\burn\devices\eeprom.cpp" />
+    <ClCompile Include="src\burn\devices\epic12.cpp" />
     <ClCompile Include="src\burn\devices\gaelco_crypt.cpp" />
     <ClCompile Include="src\burn\devices\i4x00.cpp" />
     <ClCompile Include="src\burn\devices\intelfsh.cpp" />
@@ -340,6 +347,7 @@
     <ClCompile Include="src\burn\devices\mb87078.cpp" />
     <ClCompile Include="src\burn\devices\mermaid.cpp" />
     <ClCompile Include="src\burn\devices\midcsd.cpp" />
+    <ClCompile Include="src\burn\devices\midcvsd.cpp" />
     <ClCompile Include="src\burn\devices\midsat.cpp" />
     <ClCompile Include="src\burn\devices\midsg.cpp" />
     <ClCompile Include="src\burn\devices\midssio.cpp" />
@@ -351,11 +359,14 @@
     <ClCompile Include="src\burn\devices\nmk004.cpp" />
     <ClCompile Include="src\burn\devices\nmk112.cpp" />
     <ClCompile Include="src\burn\devices\pandora.cpp" />
+    <ClCompile Include="src\burn\devices\pic8259.cpp" />
     <ClCompile Include="src\burn\devices\poly.cpp" />
     <ClCompile Include="src\burn\devices\qs1000.cpp" />
     <ClCompile Include="src\burn\devices\resnet.cpp" />
+    <ClCompile Include="src\burn\devices\rtc9701.cpp" />
     <ClCompile Include="src\burn\devices\seibucop.cpp" />
     <ClCompile Include="src\burn\devices\seibusnd.cpp" />
+    <ClCompile Include="src\burn\devices\serflash.cpp" />
     <ClCompile Include="src\burn\devices\sknsspr.cpp" />
     <ClCompile Include="src\burn\devices\slapstic.cpp" />
     <ClCompile Include="src\burn\devices\st0020.cpp" />
@@ -377,6 +388,8 @@
     <ClCompile Include="src\burn\drv\atari\d_eprom.cpp" />
     <ClCompile Include="src\burn\drv\atari\d_gauntlet.cpp" />
     <ClCompile Include="src\burn\drv\atari\d_klax.cpp" />
+    <ClCompile Include="src\burn\drv\atari\d_marblmd2.cpp" />
+    <ClCompile Include="src\burn\drv\atari\d_missile.cpp" />
     <ClCompile Include="src\burn\drv\atari\d_offtwall.cpp" />
     <ClCompile Include="src\burn\drv\atari\d_rampart.cpp" />
     <ClCompile Include="src\burn\drv\atari\d_relief.cpp" />
@@ -415,6 +428,7 @@
     <ClCompile Include="src\burn\drv\cave\cave_palette.cpp" />
     <ClCompile Include="src\burn\drv\cave\cave_sprite.cpp" />
     <ClCompile Include="src\burn\drv\cave\cave_tile.cpp" />
+    <ClCompile Include="src\burn\drv\cave\d_cv1k.cpp" />
     <ClCompile Include="src\burn\drv\cave\d_dodonpachi.cpp" />
     <ClCompile Include="src\burn\drv\cave\d_donpachi.cpp" />
     <ClCompile Include="src\burn\drv\cave\d_esprade.cpp" />
@@ -445,6 +459,7 @@
     <ClCompile Include="src\burn\drv\dataeast\d_cbuster.cpp" />
     <ClCompile Include="src\burn\drv\dataeast\d_chanbara.cpp" />
     <ClCompile Include="src\burn\drv\dataeast\d_cninja.cpp" />
+    <ClCompile Include="src\burn\drv\dataeast\d_compgolf.cpp" />
     <ClCompile Include="src\burn\drv\dataeast\d_darkseal.cpp" />
     <ClCompile Include="src\burn\drv\dataeast\d_dassault.cpp" />
     <ClCompile Include="src\burn\drv\dataeast\d_dblewing.cpp" />
@@ -462,6 +477,7 @@
     <ClCompile Include="src\burn\drv\dataeast\d_lemmings.cpp" />
     <ClCompile Include="src\burn\drv\dataeast\d_liberate.cpp" />
     <ClCompile Include="src\burn\drv\dataeast\d_metlclsh.cpp" />
+    <ClCompile Include="src\burn\drv\dataeast\d_pcktgal.cpp" />
     <ClCompile Include="src\burn\drv\dataeast\d_pktgaldx.cpp" />
     <ClCompile Include="src\burn\drv\dataeast\d_progolf.cpp" />
     <ClCompile Include="src\burn\drv\dataeast\d_rohga.cpp" />
@@ -622,6 +638,7 @@
     <ClCompile Include="src\burn\drv\pre90s\d_1943.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_4enraya.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_aeroboto.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_akazukin.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_alinvade.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_alpha68k.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_alpha68k1.cpp" />
@@ -669,6 +686,7 @@
     <ClCompile Include="src\burn\drv\pre90s\d_copsnrob.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_cybertnk.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_dacholer.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_darkmist.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_dday.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_ddayjlc.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_ddragon.cpp" />
@@ -686,10 +704,13 @@
     <ClCompile Include="src\burn\drv\pre90s\d_espial.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_ettrivia.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_exedexes.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_exerion.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_exidy440.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_exprraid.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_exterm.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_fantland.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_fastfred.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_fcombat.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_firetrap.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_flipjack.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_flower.cpp" />
@@ -703,6 +724,8 @@
     <ClCompile Include="src\burn\drv\pre90s\d_ginganin.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_gng.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_goindol.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_gotya.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_gridlee.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_gunsmoke.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_headonb.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_higemaru.cpp" />
@@ -721,6 +744,7 @@
     <ClCompile Include="src\burn\drv\pre90s\d_ladybug.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_lasso.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_lastduel.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_lockon.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_lwings.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_madmotor.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_magmax.cpp" />
@@ -733,6 +757,7 @@
     <ClCompile Include="src\burn\drv\pre90s\d_matmania.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_mcr.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_mcr3.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_mcr68.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_megasys1.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_meijinsn.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_metlfrzr.cpp" />
@@ -776,6 +801,7 @@
     <ClCompile Include="src\burn\drv\pre90s\d_quantum.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_quizo.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_rallyx.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_redclash.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_renegade.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_route16.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_rpunch.cpp" />
@@ -785,6 +811,7 @@
     <ClCompile Include="src\burn\drv\pre90s\d_seicross.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_senjyo.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_sf.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_shangkid.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_shisen.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_sidearms.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_skyarmy.cpp" />
@@ -810,6 +837,7 @@
     <ClCompile Include="src\burn\drv\pre90s\d_tagteam.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_tail2nose.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_tankbust.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_taxidriv.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_tbowl.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_tceptor.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_tecmo.cpp" />
@@ -818,6 +846,7 @@
     <ClCompile Include="src\burn\drv\pre90s\d_thedeep.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_thepit.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_thief.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_tiamc1.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_tigeroad.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_timelimt.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_toki.cpp" />
@@ -842,7 +871,9 @@
     <ClCompile Include="src\burn\drv\pre90s\d_xain.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_xxmissio.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_xyonix.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_zaccaria.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_zodiack.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_zwackery.cpp" />
     <ClCompile Include="src\burn\drv\psikyo\d_psikyo.cpp" />
     <ClCompile Include="src\burn\drv\psikyo\d_psikyo4.cpp" />
     <ClCompile Include="src\burn\drv\psikyo\d_psikyosh.cpp" />
@@ -862,6 +893,7 @@
     <ClCompile Include="src\burn\drv\pst90s\d_blackt96.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_blmbycar.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_bloodbro.cpp" />
+    <ClCompile Include="src\burn\drv\pst90s\d_bloodbro_ms.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_btoads.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_cischeat.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_crospang.cpp" />
@@ -870,6 +902,7 @@
     <ClCompile Include="src\burn\drv\pst90s\d_dcon.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_ddragon3.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_deniam.cpp" />
+    <ClCompile Include="src\burn\drv\pst90s\d_discoboy.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_diverboy.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_dooyong.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_dreamwld.cpp" />
@@ -903,6 +936,7 @@
     <ClCompile Include="src\burn\drv\pst90s\d_jchan.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_kaneko16.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_kickgoal.cpp" />
+    <ClCompile Include="src\burn\drv\pst90s\d_ladyfrog.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_legionna.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_limenko.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_lordgun.cpp" />
@@ -933,6 +967,7 @@
     <ClCompile Include="src\burn\drv\pst90s\d_pirates.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_pkscram.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_playmark.cpp" />
+    <ClCompile Include="src\burn\drv\pst90s\d_powerbal.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_powerins.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_ppmast93.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_pushman.cpp" />
@@ -940,6 +975,7 @@
     <ClCompile Include="src\burn\drv\pst90s\d_raiden.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_raiden2.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_sandscrp.cpp" />
+    <ClCompile Include="src\burn\drv\pst90s\d_sderby.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_seibuspi.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_seta.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_seta2.cpp" />
@@ -958,11 +994,11 @@
     <ClCompile Include="src\burn\drv\pst90s\d_tecmosys.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_tetrisp2.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_thoop2.cpp" />
+    <ClCompile Include="src\burn\drv\pst90s\d_topdrive.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_tumbleb.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_unico.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_vamphalf.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_vegaeo.cpp" />
-    <ClCompile Include="src\burn\drv\pst90s\d_vmetal.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_welltris.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_wrally.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_wwfwfest.cpp" />
@@ -977,6 +1013,7 @@
     <ClCompile Include="src\burn\drv\sega\d_dotrikun.cpp" />
     <ClCompile Include="src\burn\drv\sega\d_hangon.cpp" />
     <ClCompile Include="src\burn\drv\sega\d_outrun.cpp" />
+    <ClCompile Include="src\burn\drv\sega\d_segac2.cpp" />
     <ClCompile Include="src\burn\drv\sega\d_segae.cpp" />
     <ClCompile Include="src\burn\drv\sega\d_segag80v.cpp" />
     <ClCompile Include="src\burn\drv\sega\d_segas32.cpp" />
@@ -1019,6 +1056,7 @@
     <ClCompile Include="src\burn\drv\taito\d_buggychl.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_chaknpop.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_crbaloon.cpp" />
+    <ClCompile Include="src\burn\drv\taito\d_cyclemb.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_darius2.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_darkmist.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_exzisus.cpp" />
@@ -1027,6 +1065,7 @@
     <ClCompile Include="src\burn\drv\taito\d_gladiatr.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_groundfx.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_gunbuster.cpp" />
+    <ClCompile Include="src\burn\drv\taito\d_halleys.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_jollyjgr.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_ksayakyu.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_lkage.cpp" />
@@ -1034,6 +1073,7 @@
     <ClCompile Include="src\burn\drv\taito\d_mexico86.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_minivdr.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_msisaac.cpp" />
+    <ClCompile Include="src\burn\drv\taito\d_nycaptor.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_othunder.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_qix.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_retofinv.cpp" />
@@ -1041,6 +1081,7 @@
     <ClCompile Include="src\burn\drv\taito\d_slapshot.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_ssrj.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_superchs.cpp" />
+    <ClCompile Include="src\burn\drv\taito\d_superqix.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_supridr.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_taitob.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_taitof2.cpp" />
@@ -1122,8 +1163,10 @@
     <ClCompile Include="src\burn\snd\c352.cpp" />
     <ClCompile Include="src\burn\snd\c6280.cpp" />
     <ClCompile Include="src\burn\snd\dac.cpp" />
+    <ClCompile Include="src\burn\snd\digitalk.cpp" />
     <ClCompile Include="src\burn\snd\es5506.cpp" />
     <ClCompile Include="src\burn\snd\es8712.cpp" />
+    <ClCompile Include="src\burn\snd\exidy440_snd.cpp" />
     <ClCompile Include="src\burn\snd\flower.cpp" />
     <ClCompile Include="src\burn\snd\flt_rc.cpp" />
     <ClCompile Include="src\burn\snd\fm.c">
@@ -1147,6 +1190,7 @@
     <ClCompile Include="src\burn\snd\k053260.cpp" />
     <ClCompile Include="src\burn\snd\k054539.cpp" />
     <ClCompile Include="src\burn\snd\llander.cpp" />
+    <ClCompile Include="src\burn\snd\mpeg_audio.cpp" />
     <ClCompile Include="src\burn\snd\msm5205.cpp" />
     <ClCompile Include="src\burn\snd\msm5232.cpp" />
     <ClCompile Include="src\burn\snd\msm6295.cpp" />
@@ -1168,6 +1212,7 @@
     <ClCompile Include="src\burn\snd\sp0250.cpp" />
     <ClCompile Include="src\burn\snd\sp0256.cpp" />
     <ClCompile Include="src\burn\snd\t6w28.cpp" />
+    <ClCompile Include="src\burn\snd\tiamc1_snd.cpp" />
     <ClCompile Include="src\burn\snd\tms36xx.cpp" />
     <ClCompile Include="src\burn\snd\tms5110.cpp" />
     <ClCompile Include="src\burn\snd\tms5220.cpp" />
@@ -1199,6 +1244,7 @@
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
     </ClCompile>
     <ClCompile Include="src\burn\snd\ymz280b.cpp" />
+    <ClCompile Include="src\burn\snd\ymz770.cpp" />
     <ClCompile Include="src\burn\tilemap_generic.cpp" />
     <ClCompile Include="src\burn\tiles_generic.cpp" />
     <ClCompile Include="src\burn\timer.cpp" />
@@ -1263,6 +1309,7 @@
     <ClCompile Include="src\cpu\s2650\s2650.cpp" />
     <ClCompile Include="src\cpu\s2650_intf.cpp" />
     <ClCompile Include="src\cpu\sh2\sh2.cpp" />
+    <ClCompile Include="src\cpu\sh4\sh4.cpp" />
     <ClCompile Include="src\cpu\tlcs900\tlcs900.cpp" />
     <ClCompile Include="src\cpu\tlcs90\tlcs90.cpp" />
     <ClCompile Include="src\cpu\tlcs90_intf.cpp" />

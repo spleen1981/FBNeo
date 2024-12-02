@@ -386,9 +386,6 @@
     <ClCompile Include="src\burner\xbox\inps.cpp">
       <Filter>Source Files\src\burner\xbox</Filter>
     </ClCompile>
-    <ClCompile Include="src\burner\xbox\ips_manager.cpp">
-      <Filter>Source Files\src\burner\xbox</Filter>
-    </ClCompile>
     <ClCompile Include="src\burner\xbox\support_paths.cpp">
       <Filter>Source Files\src\burner\xbox</Filter>
     </ClCompile>
@@ -1377,9 +1374,6 @@
       <Filter>Source Files\src\burn\drv\pst90s</Filter>
     </ClCompile>
     <ClCompile Include="src\burn\drv\pst90s\d_unico.cpp">
-      <Filter>Source Files\src\burn\drv\pst90s</Filter>
-    </ClCompile>
-    <ClCompile Include="src\burn\drv\pst90s\d_vmetal.cpp">
       <Filter>Source Files\src\burn\drv\pst90s</Filter>
     </ClCompile>
     <ClCompile Include="src\burn\drv\pst90s\d_welltris.cpp">
@@ -3221,9 +3215,6 @@
     <ClCompile Include="src\burner\xbox\replay.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\cpu\m68k\m68kfpu.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\burn\devices\ds2404.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -3315,6 +3306,156 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\cpu\tms34_intf.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\devices\6840ptm.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\devices\dtimer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\devices\epic12.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\devices\pic8259.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\devices\rtc9701.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\atari\d_marblmd2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\atari\d_missile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\cave\d_cv1k.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\dataeast\d_pcktgal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_akazukin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_darkmist.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_exerion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_exidy440.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_fcombat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_gotya.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_gridlee.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_lockon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_mcr68.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_redclash.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_shangkid.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_taxidriv.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_tiamc1.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_zaccaria.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pre90s\d_zwackery.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pst90s\d_bloodbro_ms.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pst90s\d_discoboy.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pst90s\d_ladyfrog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pst90s\d_powerbal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pst90s\d_sderby.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pst90s\d_topdrive.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\taito\d_cyclemb.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\taito\d_halleys.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\taito\d_nycaptor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\taito\d_superqix.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\snd\digitalk.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\snd\exidy440_snd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\snd\mpeg_audio.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\snd\tiamc1_snd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\snd\ymz770.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burner\inputbuf.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burner\nvram.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cpu\sh4\sh4.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\devices\midcvsd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burner\sdl\romdata.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\devices\serflash.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\sega\d_segac2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\dataeast\d_compgolf.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burner\sdl\localise_gamelist.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burner\xbox\ips_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cpu\m68k\m68kfpu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
