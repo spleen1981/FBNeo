@@ -8,13 +8,32 @@ static HWND hIpsDlg			= NULL;
 static HWND hParent			= NULL;
 static HWND hIpsList		= NULL;
 
-int nIpsSelectedLanguage		= 0;
+INT32 nIpsSelectedLanguage		= 0;
 static TCHAR szFullName[1024];
 static TCHAR szLanguages[NUM_LANGUAGES][32];
 static TCHAR szLanguageCodes[NUM_LANGUAGES][6];
- 
+
+unsigned int nIpsDrvDefine = 0, nIpsMemExpLen[SND2_ROM + 1] = { 0 }; //TODO
 
 TCHAR szIpsActivePatches[MAX_ACTIVE_PATCHES][MAX_PATH];
+
+void IpsApplyPatches(UINT8* base, char* rom_name, UINT32 crc, bool readonly)
+{
+	if (!bDoIpsPatch)
+		return;
+
+#if 0 //TODO
+	char ips_data[MAX_PATH];
+
+	INT32 nActivePatches = GetIpsNumActivePatches();
+
+	for (INT32 i = 0; i < nActivePatches; i++) {
+		memset(ips_data, 0, MAX_PATH);
+		TCHARToANSI(szIpsActivePatches[i], ips_data, sizeof(ips_data));
+		DoPatchGame(ips_data, rom_name, base, readonly);
+	}
+#endif
+}
  
 static TCHAR* GameIpsConfigName()
 {
