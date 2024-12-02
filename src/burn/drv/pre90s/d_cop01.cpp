@@ -6,6 +6,7 @@
 #include "ay8910.h"
 #include "burn_ym3526.h"
 #include "dac.h"
+#include "compat_funct.h"
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;

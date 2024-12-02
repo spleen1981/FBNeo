@@ -26,7 +26,7 @@ Redistributions may not be sold, nor may they be used in a commercial product or
  *         store queues
  *
  *****************************************************************************/
-
+#define _USE_MATH_DEFINES
 #include "burnint.h"
 #include "sh4_intf.h"
 #include <stddef.h>
