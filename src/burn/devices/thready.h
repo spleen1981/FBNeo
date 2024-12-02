@@ -33,7 +33,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #endif
-
+#undef THREADY
 #ifndef THREADY
 // system not windows and without pthreads
 #define THREADY THREADY_0THREAD
