@@ -1,4 +1,4 @@
-// FB Alpha Route 16 driver module
+// FB Neo Route 16 driver module
 // Based on MAME driver by Zsolt Vasvari
 
 // Todo: revise route16 protection
@@ -1018,7 +1018,7 @@ struct BurnDriver BurnDrvroute16c = {
 	"route16c", "route16", NULL, NULL, "1981",
 	"Route 16 (Centuri license, set 3, bootleg?)\0", NULL, "Tehkan / Sun Electronics (Centuri license)", "Route 16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, route16cRomInfo, route16cRomName, NULL, NULL, NULL, NULL, Route16InputInfo, Route16DIPInfo,
 	route16cInit, DrvExit, DrvFrame, Route16Draw, DrvScan, &DrvRecalc, 0x8,
 	256, 256, 3, 4
@@ -1505,5 +1505,5 @@ struct BurnDriver BurnDrvttmahjng = {
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MAHJONG, 0,
 	NULL, ttmahjngRomInfo, ttmahjngRomName, NULL, NULL, NULL, NULL, TtmahjngInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, TtmahjngDraw, DrvScan, &DrvRecalc, 0x8,
-	256, 256, 3, 4
+	256, 256, 4, 3
 };

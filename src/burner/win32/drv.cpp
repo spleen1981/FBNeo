@@ -7,12 +7,12 @@ int bDrvOkay = 0;						// 1 if the Driver has been initted okay, and it's okay t
 TCHAR szAppRomPaths[DIRS_MAX][MAX_PATH] = {
 	{ _T("") },
 	{ _T("") },
-	{ _T("") },
 	{ _T("roms/romdata/") },
 	{ _T("roms/channelf/") },
 	{ _T("roms/ngp/") },
 	{ _T("roms/nes/") },
 	{ _T("roms/fds/") },
+	{ _T("roms/snes/") },
 	{ _T("roms/spectrum/") },
 	{ _T("roms/msx/") },
 	{ _T("roms/sms/") },
@@ -73,11 +73,17 @@ static int DoLibInit()					// Do Init of Burn library driver
 	RomDataInit();
 
 	if (DrvBzipOpen()) {
+		RomDataExit();
 		return 1;
 	}
 
 	if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) != HARDWARE_SNK_MVS) {
-		if (!bQuietLoading) ProgressCreate();
+		if (!bQuietLoading) {
+			ProgressCreate();
+			if (BurnDrvGetTextA(DRV_SAMPLENAME) != NULL) { // has samples
+				BurnSetProgressRange(0.99); // Increase range for samples
+			}
+		}
 	}
 
 	nRet = BurnDrvInit();
@@ -127,7 +133,12 @@ int __cdecl DrvCartridgeAccess(BurnCartrigeCommand nCommand)
 {
 	switch (nCommand) {
 		case CART_INIT_START:
-			if (!bQuietLoading) ProgressCreate();
+			if (!bQuietLoading) {
+				ProgressCreate();
+				if (BurnDrvGetTextA(DRV_SAMPLENAME) != NULL) { // has samples
+					BurnSetProgressRange(0.99); // Increase range for samples
+				}
+			}
 			if (DrvBzipOpen()) {
 				return 1;
 			}
@@ -230,6 +241,12 @@ int DrvInit(int nDrvNum, bool bRestore)
 
 			FBAPopupAddText(PUF_TEXT_DEFAULT, MAKEINTRESOURCE(IDS_ERR_BURN_INIT), BurnDrvGetText(DRV_FULLNAME));
 			FBAPopupDisplay(PUF_TYPE_WARNING);
+
+			// When romdata loading fails, the data within the structure must be emptied to restore the original data content.
+			// The time to quit must be after the correct name of the game corresponding to Romdata has been displayed.
+			if (NULL != pDataRomDesc) {
+				RomDataExit();
+			}
 		}
 
 		NeoCDZRateChangeback();

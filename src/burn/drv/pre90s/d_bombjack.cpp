@@ -613,16 +613,16 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 }
 
 
-// Bomb Jack (set 1)
+// Bomb Jack
 
 static struct BurnRomInfo bombjackRomDesc[] = {
 	{ "09_j01b.bin",	0x2000, 0xc668dc30, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
 	{ "10_l01b.bin",	0x2000, 0x52a1e5fb, 1 | BRF_PRG | BRF_ESS }, //  1
 	{ "11_m01b.bin",	0x2000, 0xb68a062a, 1 | BRF_PRG | BRF_ESS }, //  2
 	{ "12_n01b.bin",	0x2000, 0x1d3ecee5, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "13.1r",		0x2000, 0x70e0244d, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "13.1r",			0x2000, 0x70e0244d, 1 | BRF_PRG | BRF_ESS }, //  4
 
-	{ "01_h03t.bin",	0x2000, 0x8407917d, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code
+	{ "01_h03t.3h",		0x2000, 0x8407917d, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code
 
 	{ "03_e08t.bin",	0x1000, 0x9f0470d5, 3 | BRF_GRA },           //  6 Characters
 	{ "04_h08t.bin",	0x1000, 0x81ec12e6, 3 | BRF_GRA },           //  7
@@ -644,7 +644,7 @@ STD_ROM_FN(bombjack)
 
 struct BurnDriver BurnDrvBombjack = {
 	"bombjack", NULL, NULL, NULL, "1984",
-	"Bomb Jack (set 1)\0", NULL, "Tehkan", "Miscellaneous",
+	"Bomb Jack\0", NULL, "Tehkan", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, bombjackRomInfo, bombjackRomName, NULL, NULL, NULL, NULL, BombjackInputInfo, BombjackDIPInfo,
@@ -653,7 +653,7 @@ struct BurnDriver BurnDrvBombjack = {
 };
 
 
-// Bomb Jack (set 2)
+// Bomb Jack (earlier)
 
 static struct BurnRomInfo bombjack2RomDesc[] = {
 	{ "09_j01b.bin",	0x2000, 0xc668dc30, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
@@ -684,7 +684,7 @@ STD_ROM_FN(bombjack2)
 
 struct BurnDriver BurnDrvBombjack2 = {
 	"bombjack2", "bombjack", NULL, NULL, "1984",
-	"Bomb Jack (set 2)\0", NULL, "Tehkan", "Miscellaneous",
+	"Bomb Jack (earlier)\0", NULL, "Tehkan", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, bombjack2RomInfo, bombjack2RomName, NULL, NULL, NULL, NULL, BombjackInputInfo, BombjackDIPInfo,
@@ -722,10 +722,50 @@ STD_ROM_FN(bombjackt)
 
 struct BurnDriver BurnDrvBombjackt = {
 	"bombjackt", "bombjack", NULL, NULL, "1984",
-	"Bomb Jack (Tecfri, Spain)\0", NULL, "Tehkan (Tecfri licence)", "Miscellaneous",
+	"Bomb Jack (Tecfri, Spain)\0", NULL, "Tehkan (Tecfri license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, bombjacktRomInfo, bombjacktRomName, NULL, NULL, NULL, NULL, BombjackInputInfo, BombjackDIPInfo,
 	BombjacktInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
+	224, 256, 3, 4
+};
+
+
+// Bomb Jack (bootleg)
+
+static struct BurnRomInfo bombjackblRomDesc[] = {
+	{ "09.bin",			0x2000, 0xc668dc30, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "10.bin",			0x2000, 0x52a1e5fb, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "11.bin",			0x2000, 0xb68a062a, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "12.bin",			0x2000, 0x0f4d0726, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "13.bin",			0x2000, 0x9740f99b, 1 | BRF_PRG | BRF_ESS }, //  4
+
+	{ "01.bin",			0x2000, 0x8407917d, 2 | BRF_PRG | BRF_ESS }, //  5 Z80 #1 Code
+
+	{ "03.bin",			0x1000, 0x9f0470d5, 3 | BRF_GRA },           //  6 Characters
+	{ "04.bin",			0x1000, 0x81ec12e6, 3 | BRF_GRA },           //  7
+	{ "05.bin",			0x1000, 0xe87ec8b1, 3 | BRF_GRA },           //  8
+
+	{ "06.bin",			0x2000, 0x51eebd89, 4 | BRF_GRA },           //  9 Tiles
+	{ "07.bin",			0x2000, 0x9dd98e9d, 4 | BRF_GRA },           // 10
+	{ "08.bin",			0x2000, 0x3155ee7d, 4 | BRF_GRA },           // 11
+
+	{ "16.bin",			0x2000, 0x94694097, 5 | BRF_GRA },           // 12 Sprites
+	{ "15.bin",			0x2000, 0x013f58f2, 5 | BRF_GRA },           // 13
+	{ "14.bin",			0x2000, 0x101c858d, 5 | BRF_GRA },           // 14
+
+	{ "02.bin",			0x1000, 0x398d4a02, 6 | BRF_GRA },           // 15 Tilemap data
+};
+
+STD_ROM_PICK(bombjackbl)
+STD_ROM_FN(bombjackbl)
+
+struct BurnDriver BurnDrvBombjackbl = {
+	"bombjackbl", "bombjack", NULL, NULL, "1985",
+	"Bomb Jack (bootleg)\0", NULL, "bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, bombjackblRomInfo, bombjackblRomName, NULL, NULL, NULL, NULL, BombjackInputInfo, BombjackDIPInfo,
+	BombjackInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	224, 256, 3, 4
 };

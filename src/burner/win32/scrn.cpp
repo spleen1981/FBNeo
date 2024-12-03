@@ -1,5 +1,6 @@
 // Screen Window
 #include "burner.h"
+#include <process.h>
 #include <shlobj.h>
 
 #define		HORIZONTAL_ORIENTED_RES		0
@@ -14,6 +15,36 @@ int OnInitMenuPopup(HWND, HMENU, UINT, BOOL);
 int OnUnInitMenuPopup(HWND, HMENU, UINT, BOOL);
 void DisplayPopupMenu(int nMenu);
 
+// experimental bezel, -dink 2024
+// problems to overcome:
+// 1: when screen is manually resized, bezel doesn't line-up properly
+// 2: when screen is maximized, sometimes doesn't line-up properly
+// possible fix: aspect-locking of the window size, kinda like how mame does
+// it.
+// 3: only compatible with "side" bezels with nothing on top/bottom.
+// note: only works with "Video -> Stretch -> Correct Aspect Ratio"!
+// 4: problems with the "Enhanced" blitter: not showing bezel or parts
+// go missing
+//
+//
+// on sizing of window
+//~
+// There are 2 ways a window can be sized
+//
+// ScrnSize(); autosizes the window when emulation begins, based on
+// the setting: "Video -> Window Size"
+//
+// OnSize() is called when window is manually sized. In order to fix
+// bezel line-up with OnSize, we must aspect-lock the window sizing.  This
+// means if we size (pull) the window horizontally, it needs to also grow
+// in the vertical position.
+// Double-clicking the titlebar, or clicking the Maximize button on titlebar
+// can also be problematic, sometimes creating a window that is too wide.
+
+static HBITMAP hBezelBitmap = NULL;
+static int nBezelCacheX = 0;
+static int nBezelCacheY = 0;
+
 RECT SystemWorkArea = { 0, 0, 640, 480 };				// Work area on the desktop
 int nWindowPosX = -1, nWindowPosY = -1;					// Window position
 
@@ -21,6 +52,7 @@ int bAutoPause = 1;
 
 bool bMenuEnabled = true;
 bool bHasFocus = false;
+int bKailleraServerDialogActive = 0;
 
 int nSavestateSlot = 1;
 
@@ -92,6 +124,30 @@ void SetPauseMode(bool bPause)
 	}
 }
 
+char* DecorateKailleraGameName(UINT32 nBurnDrv)
+{
+	char szFullName[256];
+	static char szKailleraName[256];
+	UINT32 nOldBurnDrv = nBurnDrvActive;
+
+	nBurnDrvActive = nBurnDrv;
+
+	const char* s1 = "", * s2 = "";
+
+	s1 = BurnDrvGetTextA(DRV_FULLNAME);
+	s2 = BurnDrvGetTextA(DRV_NAME);
+
+	UINT32 nLen = 127 - (strlen(" - ") + strlen(s2)) - 1;
+	strncpy(szFullName, s1, nLen);
+	szFullName[nLen] = '\0'; // must manually terminate string when strncpy() less characters than length of source
+	s1 = szFullName;
+
+	snprintf(szKailleraName, sizeof(szKailleraName), "%s - %s", s1, s2);
+
+	nBurnDrvActive = nOldBurnDrv;
+	return szKailleraName;
+}
+
 static char* CreateKailleraList()
 {
 	unsigned int nOldDrvSelect = nBurnDrvActive;
@@ -113,7 +169,7 @@ static char* CreateKailleraList()
 
 		for (nBurnDrvActive = 0; nBurnDrvActive < nBurnDrvCount; nBurnDrvActive++) {
 			if (CheckFavorites(BurnDrvGetTextA(DRV_NAME)) != -1) {
-				char* szDecoratedName = DecorateGameName(nBurnDrvActive);
+				char* szDecoratedName = DecorateKailleraGameName(nBurnDrvActive);
 
 				if (pName + strlen(szDecoratedName) >= pList + nSize) {
 					char* pNewList;
@@ -136,7 +192,7 @@ static char* CreateKailleraList()
 		// Add all the driver names to the list
 		for (nBurnDrvActive = 0; nBurnDrvActive < nBurnDrvCount; nBurnDrvActive++) {
 			if(BurnDrvGetFlags() & BDF_GAME_WORKING && gameAv[nBurnDrvActive]) {
-				char* szDecoratedName = DecorateGameName(nBurnDrvActive);
+				char* szDecoratedName = DecorateKailleraGameName(nBurnDrvActive);
 
 				if (pName + strlen(szDecoratedName) >= pList + nSize) {
 					char* pNewList;
@@ -202,59 +258,29 @@ INT32 is_netgame_or_recording() // returns: 1 = netgame, 2 = recording/playback
 
 static int WINAPI gameCallback(char* game, int player, int numplayers)
 {
-	bool bFound = false;
-	HWND hActive;
+#if 0
+	// we can't run emu-stuffs from new thread, especially while a game might
+	// be running.  or else -- trust.  explosions be lurking!
+#endif
 
-	for (nBurnDrvActive = 0; nBurnDrvActive < nBurnDrvCount; nBurnDrvActive++) {
+	strncpy(k_game_str, game, sizeof(k_game_str)-1);
 
-		char* szDecoratedName = DecorateGameName(nBurnDrvActive);
+	k_player_id = player;
+	k_numplayers = numplayers;
+//	bprintf(0, _T("end GameCallback() -> trigger kaillera game in main loop!\n"));
+	k_bLoadNetgame = 1;
 
-		if (!strcmp(szDecoratedName, game)) {
-			bFound = true;
-			break;
-		}
+	while (kNetGame == 0) {
+		// wait for message loop to pick up and initiate netplay loading
+		Sleep(1);
 	}
 
-	if (!bFound) {
-		Kaillera_End_Game();
-		return 1;
+	while (kNetGame) {
+		// now we wait here, to give kaillera client a thread to kill
+		// or we exit if the game is dropped or ends naturally.
+		Sleep(1000);
 	}
 
-	kNetGame = 1;
-	hActive = GetActiveWindow();
-
-	bCheatsAllowed = false;								// Disable cheats during netplay
-	AudSoundStop();										// Stop while we load roms
-	DrvInit(nBurnDrvActive, false);						// Init the game driver
-
-	// w/Kaillera: DrvInit() can't post it's restart message because we're not in the message loop yet.
-	// so we must MediaExit() / MediaInit() here.  -dink
-	MediaExit();
-	MediaInit();
-	AudSoundPlay();										// Restart sound
-	SetFocus(hScrnWnd);
-
-//	dprintf(_T(" ** OSD startnet text sent.\n"));
-
-	TCHAR szTemp1[256];
-	TCHAR szTemp2[256];
-	VidSAddChatMsg(FBALoadStringEx(hAppInst, IDS_NETPLAY_START, true), 0xFFFFFF, BurnDrvGetText(DRV_FULLNAME), 0xFFBFBF);
-	_sntprintf(szTemp1, 256, FBALoadStringEx(hAppInst, IDS_NETPLAY_START_YOU, true), player);
-	_sntprintf(szTemp2, 256, FBALoadStringEx(hAppInst, IDS_NETPLAY_START_TOTAL, true), numplayers);
-	VidSAddChatMsg(szTemp1, 0xFFFFFF, szTemp2, 0xFFBFBF);
-
-	RunMessageLoop();
-
-	DrvExit();
-	if (kNetGame) {
-		kNetGame = 0;
-		Kaillera_End_Game();
-	}
-	DeActivateChat();
-
-	bCheatsAllowed = true;								// reenable cheats netplay has ended
-
-	SetFocus(hActive);
 	return 0;
 }
 
@@ -272,11 +298,46 @@ static void WINAPI kDropCallback(char *nick, int playernb)
 	VidSAddChatMsg(szTemp, 0xFFFFFF, NULL, 0);
 }
 
+static char* kaillera_gameList = NULL;
+
+static unsigned __stdcall DoKailleraServerSelectThread(void *arg)
+{
+	bKailleraServerDialogActive = 1;
+	Kaillera_Select_Server_Dialog(NULL);
+	bKailleraServerDialogActive = 0;
+
+	// clean up
+	if (kaillera_gameList) {
+		free(kaillera_gameList);
+		kaillera_gameList = NULL;
+	}
+
+	End_Network();
+
+	k_bLoadNetgame = 2; // signal menu update
+
+	return 0;
+}
+
+static void KailleraServerSelect()
+{
+	HANDLE hThread = NULL;
+	unsigned ThreadID = 0;
+
+	bKailleraServerDialogActive = 0;
+
+	hThread = (HANDLE)_beginthreadex(NULL, 0, DoKailleraServerSelectThread, (void*)NULL, 0, &ThreadID);
+
+	while (bKailleraServerDialogActive == 0) { // wait for thread to start :)
+		Sleep(1);
+	}
+}
+
+
 static void DoNetGame()
 {
 	kailleraInfos ki;
 	char tmpver[128];
-	char* gameList;
 
 	if(bDrvOkay) {
 		DrvExit();
@@ -290,10 +351,10 @@ static void DoNetGame()
 	_snprintf(tmpver, 128, APP_TITLE " v%.20s", szAppBurnVer);
 #endif
 
-	gameList = CreateKailleraList();
+	kaillera_gameList = CreateKailleraList();
 
 	ki.appName = tmpver;
-	ki.gameList = gameList;
+	ki.gameList = kaillera_gameList;
 	ki.gameCallback = &gameCallback;
 	ki.chatReceivedCallback = &kChatCallback;
 	ki.clientDroppedCallback = &kDropCallback;
@@ -301,16 +362,7 @@ static void DoNetGame()
 
 	Kaillera_Set_Infos(&ki);
 
-	Kaillera_Select_Server_Dialog(NULL);
-
-	if (gameList) {
-		free(gameList);
-		gameList = NULL;
-	}
-
-	End_Network();
-
-	POST_INITIALISE_MESSAGE;
+	KailleraServerSelect();
 }
 
 int CreateDatfileWindows(int bType)
@@ -333,6 +385,7 @@ int CreateDatfileWindows(int bType)
 	if (bType == DAT_SPECTRUM_ONLY) _sntprintf(szConsoleString, 64, _T(", ZX Spectrum Games only"));
 	if (bType == DAT_NES_ONLY) _sntprintf(szConsoleString, 64, _T(", NES Games only"));
 	if (bType == DAT_FDS_ONLY) _sntprintf(szConsoleString, 64, _T(", FDS Games only"));
+	if (bType == DAT_SNES_ONLY) _sntprintf(szConsoleString, 64, _T(", SNES Games only"));
 	if (bType == DAT_NGP_ONLY) _sntprintf(szConsoleString, 64, _T(", NeoGeo Pocket Games only"));
 	if (bType == DAT_CHANNELF_ONLY) _sntprintf(szConsoleString, 64, _T(", Fairchild Channel F Games only"));
 
@@ -450,6 +503,9 @@ int CreateAllDatfilesWindows()
 	_sntprintf(szFilename, MAX_PATH, _T("%s") _T(APP_TITLE) _T(" v%.20s (%s%s).dat"), buffer, szAppBurnVer, szProgramString, _T(", FDS Games only"));
 	create_datfile(szFilename, DAT_FDS_ONLY);
 
+	_sntprintf(szFilename, MAX_PATH, _T("%s") _T(APP_TITLE) _T(" v%.20s (%s%s).dat"), buffer, szAppBurnVer, szProgramString, _T(", SNES Games only"));
+	create_datfile(szFilename, DAT_SNES_ONLY);
+
 	_sntprintf(szFilename, MAX_PATH, _T("%s") _T(APP_TITLE) _T(" v%.20s (%s%s).dat"), buffer, szAppBurnVer, szProgramString, _T(", Neo Geo Pocket Games only"));
 	create_datfile(szFilename, DAT_NGP_ONLY);
 
@@ -466,10 +522,12 @@ static bool VidInitNeeded()
 	if (nVidSelect == 1 && (nVidBlitterOpt[nVidSelect] & 0x00030000) == 0x00030000) {
 		return true;
 	}
+#if 0
+	// why?? (seems to cause trouble) -dink june 2024
 	if (nVidSelect == 3) {
 		return true;
 	}
-
+#endif
 	return false;
 }
 
@@ -596,8 +654,22 @@ static int OnRButtonUp(HWND hwnd, int, int, UINT)
 }
 /*************************************************************************/
 
+static int mousex, mousey;
+
+int ScrnGetMouseX()
+{
+	return mousex;
+}
+
+int ScrnGetMouseY()
+{
+	return mousey;
+}
+
 static int OnMouseMove(HWND hwnd, int x, int y, UINT keyIndicators)
 {
+	mousex = x;
+	mousey = y;
 	if (bDrag && hwnd == hScrnWnd && keyIndicators == MK_LBUTTON && !nVidFullscreen && !bMenuEnabled) {
 		RECT clientRect;
 
@@ -724,6 +796,149 @@ void PausedRedraw(void)
     }
 }
 
+static INT32 ScrnHasBezel()
+{
+	if (!nVidFullscreen && hBezelBitmap != NULL) {
+		return 1;
+	}
+
+	return 0;
+}
+
+struct t_hw_Struct {
+	char system[80];
+	UINT32 hw[8];
+};
+
+static t_hw_Struct scrn_gamehw_cfg[] = {
+	{ "megadrive",	{ HARDWARE_SEGA_MEGADRIVE, 0 } },
+	{ "pce",		{ HARDWARE_PCENGINE_PCENGINE, 0 } },
+	{ "tg16",		{ HARDWARE_PCENGINE_TG16, 0 } },
+	{ "sgx",		{ HARDWARE_PCENGINE_SGX, 0 } },
+	{ "sg1000",		{ HARDWARE_SEGA_SG1000, 0 } },
+	{ "coleco",		{ HARDWARE_COLECO, 0 } },
+	{ "sms",		{ HARDWARE_SEGA_MASTER_SYSTEM, 0 } },
+	{ "gamegear",	{ HARDWARE_SEGA_GAME_GEAR, 0 } },
+	{ "msx",		{ HARDWARE_MSX, 0 } },
+	{ "spectrum",	{ HARDWARE_SPECTRUM, 0 } },
+	{ "nes",		{ HARDWARE_NES, 0 } },
+	{ "fds",		{ HARDWARE_FDS, 0 } },
+	{ "snes",		{ HARDWARE_SNES, 0 } },
+	{ "ngp",		{ HARDWARE_SNK_NGP, 0 } },
+	{ "ngpc",		{ HARDWARE_SNK_NGP | 0x10000, 0 } },
+	{ "channelf",	{ HARDWARE_CHANNELF, 0 } },
+	{ "cps1",		{ HARDWARE_CAPCOM_CPS1, HARDWARE_CAPCOM_CPS1_QSOUND, HARDWARE_CAPCOM_CPS1_GENERIC, HARDWARE_CAPCOM_CPSCHANGER, 0 } },
+	{ "cps2",		{ HARDWARE_CAPCOM_CPS2, 0 } },
+	{ "cps3",		{ HARDWARE_CAPCOM_CPS3, 0 } },
+	{ "pgm",		{ HARDWARE_IGS_PGM, 0 } },
+	{ "neogeo",		{ HARDWARE_SNK_NEOGEO, HARDWARE_SNK_MVS, HARDWARE_SNK_DEDICATED_PCB, 0 } },
+	{ "neogeocd",	{ HARDWARE_SNK_NEOCD, 0 } },
+	{ "arcade",		{ ~0, 0 } }, // default, if not found above
+	{ "\0", { 0 } } // end
+};
+
+static char *ScrnGetHWString(UINT32 nHWCode)
+{
+	UINT32 nHWOrig = nHWCode;
+	nHWCode &= HARDWARE_PUBLIC_MASK;
+
+	if (nHWOrig == HARDWARE_SNK_NGPC) {
+		// _NGPC is not part of the public mask, (its the same as _NGP at this point)
+		nHWCode = HARDWARE_SNK_NGP | 0x10000;
+	}
+
+	// See if nHWCode belongs to any systems in scrn_gamehw_cfg
+	for (INT32 i = 0; scrn_gamehw_cfg[i].system[0] != '\0'; i++) {
+		for (INT32 hw = 0; scrn_gamehw_cfg[i].hw[hw] != 0; hw++) {
+			if (scrn_gamehw_cfg[i].hw[hw] == nHWCode || scrn_gamehw_cfg[i].hw[hw] == ~0)
+			{
+				return scrn_gamehw_cfg[i].system;
+			}
+		}
+	}
+	return NULL;
+}
+
+static void HandleBezelLoading(HWND hWnd, int cx, int cy)
+{
+	// handle bezel loading
+	if (!bDrvOkay) {
+		// clear cache
+		hBezelBitmap = NULL;
+		nBezelCacheX = 0;
+		nBezelCacheY = 0;
+		return;
+	}
+	// check cache
+	if (hBezelBitmap && (nBezelCacheX == cx && nBezelCacheY == cy - nMenuHeight)) {
+		// cached, nothing to do here
+		return;
+	}
+
+	if (bDrvOkay && !(hScrnWnd == NULL || nVidFullscreen)) {
+		char* pszName = BurnDrvGetTextA(DRV_NAME);
+		char szName[MAX_PATH];
+
+		sprintf(szName, "support/bezel/%s.png", pszName);
+
+		FILE *fp = fopen(szName, "rb");
+
+		if (!fp && BurnDrvGetTextA(DRV_PARENT)) {
+			// File doesn't exist, so try parent name
+			pszName = BurnDrvGetTextA(DRV_PARENT);
+			sprintf(szName, "support/bezel/%s.png", pszName);
+			fp = fopen(szName, "rb");
+		}
+
+		if (!fp) {
+			// File doesn't exist, try to use system bezel
+			szName[0] = 0;
+
+			pszName = ScrnGetHWString(BurnDrvGetHardwareCode());
+
+			if (pszName != NULL) {
+				if (BurnDrvGetFlags() & BDF_ORIENTATION_VERTICAL) {
+					sprintf(szName, "support/bezel/%s_v.png", pszName);
+				} else {
+					sprintf(szName, "support/bezel/%s.png", pszName);
+				}
+			}
+
+			if (szName[0] != '\0') {
+				fp = fopen(szName, "rb");
+			}
+		}
+
+		if (fp) {
+			bprintf(0, _T("Loading bezel \"%S\"\n"), szName);
+			hBezelBitmap = PNGLoadBitmap(hWnd, fp, cx, cy - nMenuHeight, 0);
+			nBezelCacheX = cx;
+			nBezelCacheY = cy - nMenuHeight;
+			fclose(fp);
+		}
+	}
+}
+static void HandleBezelDraw(HWND hWnd)
+{
+	if (hBezelBitmap != NULL) {
+		PAINTSTRUCT		ps;
+		BITMAP			bitmap;
+
+		HDC hdc = BeginPaint(hWnd, &ps);
+		HDC hdcMem = CreateCompatibleDC(hdc);
+		HGDIOBJ oldBitmap = SelectObject(hdcMem, hBezelBitmap);
+
+		GetObject(hBezelBitmap, sizeof(bitmap), &bitmap);
+		BitBlt(hdc, 0, nMenuHeight, bitmap.bmWidth, bitmap.bmHeight, hdcMem, 0, 0, SRCCOPY);
+
+		SelectObject(hdcMem, oldBitmap);
+		DeleteDC(hdcMem);
+
+		EndPaint(hWnd, &ps);
+		//bprintf(0, _T("we repaint the bitmap here\n"));
+	}
+}
+
 static void OnPaint(HWND hWnd)
 {
 	if (hWnd == hScrnWnd)
@@ -735,9 +950,10 @@ static void OnPaint(HWND hWnd)
 			bBackFromHibernation = 0;
 		}
 
-		// draw menu
+		// draw menu, bezel
 		if (!nVidFullscreen) {
 			RedrawWindow(hRebar, NULL, NULL, RDW_FRAME /*| RDW_UPDATENOW*/ | RDW_ALLCHILDREN);
+			HandleBezelDraw(hWnd);
 		}
 	}
 }
@@ -756,9 +972,6 @@ static void OnDestroy(HWND)
     hScrnWnd = NULL;					// Make sure handle is not used again
 }
 
-OPENFILENAME	bgFn;
-TCHAR			szFile[MAX_PATH];
-
 static void UpdatePreviousGameList()
 {
 	int nRecentIdenticalTo = -1;
@@ -771,7 +984,7 @@ static void UpdatePreviousGameList()
 	}
 
 	// Declare temporary array
-	TCHAR szTmp[SHOW_PREV_GAMES][32];
+	TCHAR szTmp[SHOW_PREV_GAMES][64];
 
 	// Backup info for later use
 	for(int x = 0; x < SHOW_PREV_GAMES; x++) {
@@ -1149,6 +1362,10 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 		}
 
 		case MENU_STARTNET:
+			if (bKailleraServerDialogActive) {
+				// Kaillera server dialog already open!
+				break;
+			}
 			if (Init_Network()) {
 				MessageBox(hScrnWnd, FBALoadStringEx(hAppInst, IDS_ERR_NO_NETPLAYDLL, true), FBALoadStringEx(hAppInst, IDS_ERR_ERROR, true), MB_OK);
 				break;
@@ -1239,7 +1456,6 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 					kNetGame = 0;
 					Kaillera_End_Game();
 					DeActivateChat();
-					PostQuitMessage(0);
 				}
 				bCheatsAllowed = true;						// reenable cheats netplay has ended
 
@@ -1441,6 +1657,11 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 
 		case MENU_TRIPLE:
 			bVidTripleBuffer = !bVidTripleBuffer;
+			POST_INITIALISE_MESSAGE;
+			break;
+
+		case MENU_WINFS:
+			bVidDX9WinFullscreen = !bVidDX9WinFullscreen;
 			POST_INITIALISE_MESSAGE;
 			break;
 
@@ -1759,6 +1980,16 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 				}
 			}
 			break;
+
+		case MENU_DX9_ALT_HARD_FX_SETTINGS: {
+			if (UseDialogs()) {
+				InputSetCooperativeLevel(false, bAlwaysProcessKeyboardInput);
+				AudBlankSound();
+				HardFXShaderSettingsDialog();
+				GameInpCheckMouse(); //? dink?
+			}
+			break;
+		}
 
 		case MENU_GAMMA_OTHER: {
 			if (UseDialogs()) {
@@ -2446,6 +2677,12 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 		case MENU_CLRMAME_PRO_XML_FDS_ONLY:
 			if (UseDialogs()) {
 				CreateDatfileWindows(DAT_FDS_ONLY);
+			}
+			break;
+
+		case MENU_CLRMAME_PRO_XML_SNES_ONLY:
+			if (UseDialogs()) {
+				CreateDatfileWindows(DAT_SNES_ONLY);
 			}
 			break;
 
@@ -3223,6 +3460,7 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 				case MENU_DX9_ALT_HARD_FX_CRT_EASY_MODE:
 				case MENU_DX9_ALT_HARD_FX_CRT_STANDARD:
 				case MENU_DX9_ALT_HARD_FX_CRT_BICUBIC:
+				case MENU_DX9_ALT_HARD_FX_CRT_RETROSL:
 				case MENU_DX9_ALT_HARD_FX_CRT_CGA:
 					nVidDX9HardFX = id - MENU_DX9_ALT_HARD_FX_NONE;
 					break;
@@ -3279,7 +3517,7 @@ static int OnSysCommand(HWND, UINT sysCommand, int, int)
 	return 0;
 }
 
-static void OnSize(HWND, UINT state, int cx, int cy)
+static void OnSize(HWND hWnd, UINT state, int cx, int cy)
 {
 	if (state == SIZE_MINIMIZED) {
 		bMaximized = false;
@@ -3299,11 +3537,13 @@ static void OnSize(HWND, UINT state, int cx, int cy)
 			bMaximized = true;
 		}
 		if (state == SIZE_RESTORED) {
-			if (bMaximized) {
+			if (VidInitNeeded() || bMaximized) { // experimental blitter must have re-init when going from maximized to restored.
 				bSizeChanged = true;
 			}
 			bMaximized = false;
 		}
+
+		HandleBezelLoading(hWnd, cx, cy);
 
 		if (bSizeChanged) {
 			RefreshWindow(true);
@@ -3446,10 +3686,10 @@ int ScrnSize()
 	} else {
 		if (nWindowSize) {
 			nMaxSize = nWindowSize;
-			if (bDrvOkay && nWindowSize == 2 && nBmapWidth >= 400 && nBmapHeight >= 400) {
+			if (bDrvOkay && nWindowSize > 1 && nBmapWidth >= 400 && nBmapHeight >= 400) {
 				// For Popeye, Hole Land and Syvalion, MCR..etc. when running Windowed: Double Size
 				bprintf(PRINT_NORMAL, _T("  * Game is double-sized to begin with.\n"));
-				nMaxSize = 1;
+				nMaxSize--;
 			}
 		} else {
 			if (nBmapWidth < nBmapHeight) {
@@ -3491,17 +3731,6 @@ int ScrnSize()
 	// Find out how much space is taken up by the borders
 	ew = GetSystemMetrics(SM_CXSIZEFRAME) << 1;
 	eh = GetSystemMetrics(SM_CYSIZEFRAME) << 1;
-
-	// Visual Studio 2012 (seems to have an issue with these, other reports on the web about it too
-#if defined _MSC_VER
-	#if _MSC_VER >= 1700
-		// using the old XP supporting SDK we don't need to alter anything
-		#if !defined BUILD_VS_XP_TARGET
-			ew <<= 1;
-			eh <<= 1;
-		#endif
-	#endif
-#endif
 
 	if (bMenuEnabled) {
 		eh += GetSystemMetrics(SM_CYCAPTION);
@@ -3583,7 +3812,29 @@ int ScrnSize()
 		// -but- since the game window was maximized, it should stay that way.
 		PostMessage(hScrnWnd, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
 	}
+	if (hBezelBitmap && bDrvOkay) {
+		//bprintf(0, _T("We have bezel bitmap in ScrnSize()!  x/y/w/h %d,%d  %d,%d\n"),x,y,w,h);
 
+#if 0
+		// get dx video window positi
+		RECT derp = { 0, 0, 0, 0 };
+		GetClientScreenRect(hVidWnd, &derp);
+		derp.top += nMenuHeight;
+		VidImageSize(&derp, nVidImageWidth, nVidImageHeight);
+		POINT c = { 0, 0 };
+		ClientToScreen(hVidWnd, &c);
+		RECT dst = { derp.left - c.x, derp.top - c.y, derp.right - c.x, derp.bottom - c.y };
+		bprintf(0, _T("ScrnSize dst.left / right:  %d  %d    w h  %d  %d\n"), dst.left, dst.right, w, h);
+#endif
+
+		if (BurnDrvGetFlags() & BDF_ORIENTATION_VERTICAL) {
+			// vertical game
+			w = w + (w * 1.069);
+		} else {
+			// horiz game
+			w = w + (w / 3);
+		}
+	}
 	MoveWindow(hScrnWnd, x, y, w, h, true);
 
 //	SetWindowPos(hScrnWnd, NULL, x, y, w, h, SWP_NOREDRAW | SWP_NOACTIVATE | SWP_NOSENDCHANGING | SWP_NOZORDER);

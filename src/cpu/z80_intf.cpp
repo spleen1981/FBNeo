@@ -6,10 +6,10 @@
 #define MAX_Z80		8
 static struct ZetExt * ZetCPUContext[MAX_Z80] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
  
-typedef UINT8 (*pZetInHandler)(UINT16 a);
-typedef void (*pZetOutHandler)(UINT16 a, UINT8 d);
-typedef UINT8 (*pZetReadHandler)(UINT16 a);
-typedef void (*pZetWriteHandler)(UINT16 a, UINT8 d);
+typedef UINT8 (__fastcall *pZetInHandler)(UINT16 a);
+typedef void (__fastcall *pZetOutHandler)(UINT16 a, UINT8 d);
+typedef UINT8 (__fastcall *pZetReadHandler)(UINT16 a);
+typedef void (__fastcall *pZetWriteHandler)(UINT16 a, UINT8 d);
  
 struct ZetExt {
 	Z80_Regs reg;
@@ -54,22 +54,24 @@ cpu_core_config ZetConfig =
 	0
 };
 
-UINT8 ZetDummyReadHandler(UINT16) { return 0; }
-void ZetDummyWriteHandler(UINT16, UINT8) { }
-UINT8 ZetDummyInHandler(UINT16) { return 0; }
-void ZetDummyOutHandler(UINT16, UINT8) { }
+UINT8 __fastcall ZetDummyReadHandler(UINT16) { return 0; }
+void __fastcall ZetDummyWriteHandler(UINT16, UINT8) { }
+UINT8 __fastcall ZetDummyInHandler(UINT16) { return 0; }
+void __fastcall ZetDummyOutHandler(UINT16, UINT8) { }
 
-UINT8 ZetReadIO(UINT32 a)
+INT32 ZetInFetch = 0; // 1 = fetch op, 2 = arg
+
+UINT8 __fastcall ZetReadIO(UINT32 a)
 {
 	return ZetCPUContext[nOpenedCPU]->ZetIn(a);
 }
 
-void ZetWriteIO(UINT32 a, UINT8 d)
+void __fastcall ZetWriteIO(UINT32 a, UINT8 d)
 {
 	ZetCPUContext[nOpenedCPU]->ZetOut(a, d);
 }
 
-UINT8 ZetReadProg(UINT32 a)
+UINT8 __fastcall ZetReadProg(UINT32 a)
 {
 	// check mem map
 	UINT8 * pr = ZetCPUContext[nOpenedCPU]->pZetMemMap[0x000 | (a >> 8)];
@@ -85,7 +87,7 @@ UINT8 ZetReadProg(UINT32 a)
 	return 0;
 }
 
-void ZetWriteProg(UINT32 a, UINT8 d)
+void __fastcall ZetWriteProg(UINT32 a, UINT8 d)
 {
 	// check mem map
 	UINT8 * pr = ZetCPUContext[nOpenedCPU]->pZetMemMap[0x100 | (a >> 8)];
@@ -101,7 +103,7 @@ void ZetWriteProg(UINT32 a, UINT8 d)
 	}
 }
 
-UINT8 ZetReadOp(UINT32 a)
+UINT8 __fastcall ZetReadOp(UINT32 a)
 {
 	// check mem map
 	UINT8 * pr = ZetCPUContext[nOpenedCPU]->pZetMemMap[0x200 | (a >> 8)];
@@ -111,13 +113,16 @@ UINT8 ZetReadOp(UINT32 a)
 	
 	// check read handler
 	if (ZetCPUContext[nOpenedCPU]->ZetRead != NULL) {
-		return ZetCPUContext[nOpenedCPU]->ZetRead(a);
+		ZetInFetch = 1;
+		const UINT8 r = ZetCPUContext[nOpenedCPU]->ZetRead(a);
+		ZetInFetch = 0;
+		return r;
 	}
 	
 	return 0;
 }
 
-UINT8 ZetReadOpArg(UINT32 a)
+UINT8 __fastcall ZetReadOpArg(UINT32 a)
 {
 	// check mem map
 	UINT8 * pr = ZetCPUContext[nOpenedCPU]->pZetMemMap[0x300 | (a >> 8)];
@@ -127,13 +132,16 @@ UINT8 ZetReadOpArg(UINT32 a)
 	
 	// check read handler
 	if (ZetCPUContext[nOpenedCPU]->ZetRead != NULL) {
-		return ZetCPUContext[nOpenedCPU]->ZetRead(a);
+		ZetInFetch = 2;
+		const UINT8 r = ZetCPUContext[nOpenedCPU]->ZetRead(a);
+		ZetInFetch = 0;
+		return r;
 	}
 	
 	return 0;
 }
 
-void ZetSetReadHandler(UINT8 (*pHandler)(UINT16))
+void ZetSetReadHandler(UINT8 (__fastcall *pHandler)(UINT16))
 {
 #if defined FBNEO_DEBUG
 	if (!DebugCPU_ZetInitted) bprintf(PRINT_ERROR, _T("ZetSetReadHandler called without init\n"));
@@ -143,7 +151,7 @@ void ZetSetReadHandler(UINT8 (*pHandler)(UINT16))
 	ZetCPUContext[nOpenedCPU]->ZetRead = pHandler;
 }
 
-void ZetSetWriteHandler(void (*pHandler)(UINT16, UINT8))
+void ZetSetWriteHandler(void (__fastcall *pHandler)(UINT16, UINT8))
 {
 #if defined FBNEO_DEBUG
 	if (!DebugCPU_ZetInitted) bprintf(PRINT_ERROR, _T("ZetSetWriteHandler called without init\n"));
@@ -153,7 +161,7 @@ void ZetSetWriteHandler(void (*pHandler)(UINT16, UINT8))
 	ZetCPUContext[nOpenedCPU]->ZetWrite = pHandler;
 }
 
-void ZetSetInHandler(UINT8 (*pHandler)(UINT16))
+void ZetSetInHandler(UINT8 (__fastcall *pHandler)(UINT16))
 {
 #if defined FBNEO_DEBUG
 	if (!DebugCPU_ZetInitted) bprintf(PRINT_ERROR, _T("ZetSetInHandler called without init\n"));
@@ -163,7 +171,7 @@ void ZetSetInHandler(UINT8 (*pHandler)(UINT16))
 	ZetCPUContext[nOpenedCPU]->ZetIn = pHandler;
 }
 
-void ZetSetOutHandler(void (*pHandler)(UINT16, UINT8))
+void ZetSetOutHandler(void (__fastcall *pHandler)(UINT16, UINT8))
 {
 #if defined FBNEO_DEBUG
 	if (!DebugCPU_ZetInitted) bprintf(PRINT_ERROR, _T("ZetSetOutHandler called without init\n"));

@@ -329,7 +329,7 @@ static void DblaxleMakeInputs() // and racingb
 	UINT8 *DrvJoy[3] = { TC0510NIOInputPort0, TC0510NIOInputPort1, TC0510NIOInputPort2 };
 	CompileInput(DrvJoy, (void*)TC0510NIOInput, 3, 8, DrvJoyInit);
 
-	TC0510NIOInput[0] = (TC0510NIOInput[0] & ~0x02) | (BurnShiftInputCheckToggle(TC0220IOCInputPort0[1]) ? 0x00 : 0x02);
+	TC0510NIOInput[0] = (TC0510NIOInput[0] & ~0x02) | (BurnShiftInputCheckToggle(TC0510NIOInputPort0[1]) ? 0x02 : 0x00);
 }
 
 static void EnforceMakeInputs()
@@ -2953,8 +2953,8 @@ static struct BurnRomInfo SciRomDesc[] = {
 	{ "c09-05.16",     0x80000, 0x890b38f0, BRF_GRA | TAITO_CHARS },
 	
 	{ "c09-04.52",     0x80000, 0x2cbb3c9b, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
-	{ "c09-02.53",     0x80000, 0xa83a0389, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
-	{ "c09-03.54",     0x80000, 0xa31d0e80, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
+	{ "c09-02.54",     0x80000, 0xa83a0389, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
+	{ "c09-03.53",     0x80000, 0xa31d0e80, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
 	{ "c09-01.55",     0x80000, 0x64bfea10, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
 	
 	{ "c09-07.15",     0x80000, 0x963bc82b, BRF_GRA | TAITO_ROAD },
@@ -2998,8 +2998,8 @@ static struct BurnRomInfo SciaRomDesc[] = {
 	{ "c09-05.16",     0x80000, 0x890b38f0, BRF_GRA | TAITO_CHARS },
 	
 	{ "c09-04.52",     0x80000, 0x2cbb3c9b, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
-	{ "c09-02.53",     0x80000, 0xa83a0389, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
-	{ "c09-03.54",     0x80000, 0xa31d0e80, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
+	{ "c09-02.54",     0x80000, 0xa83a0389, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
+	{ "c09-03.53",     0x80000, 0xa31d0e80, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
 	{ "c09-01.55",     0x80000, 0x64bfea10, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
 	
 	{ "c09-07.15",     0x80000, 0x963bc82b, BRF_GRA | TAITO_ROAD },
@@ -3043,8 +3043,8 @@ static struct BurnRomInfo ScijRomDesc[] = {
 	{ "c09-05.16",     0x80000, 0x890b38f0, BRF_GRA | TAITO_CHARS },
 	
 	{ "c09-04.52",     0x80000, 0x2cbb3c9b, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
-	{ "c09-02.53",     0x80000, 0xa83a0389, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
-	{ "c09-03.54",     0x80000, 0xa31d0e80, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
+	{ "c09-02.54",     0x80000, 0xa83a0389, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
+	{ "c09-03.53",     0x80000, 0xa31d0e80, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
 	{ "c09-01.55",     0x80000, 0x64bfea10, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
 	
 	{ "c09-07.15",     0x80000, 0x963bc82b, BRF_GRA | TAITO_ROAD },
@@ -3088,8 +3088,8 @@ static struct BurnRomInfo SciuRomDesc[] = {
 	{ "c09-05.16",     0x80000, 0x890b38f0, BRF_GRA | TAITO_CHARS },
 	
 	{ "c09-04.52",     0x80000, 0x2cbb3c9b, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
-	{ "c09-02.53",     0x80000, 0xa83a0389, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
-	{ "c09-03.54",     0x80000, 0xa31d0e80, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
+	{ "c09-02.54",     0x80000, 0xa83a0389, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
+	{ "c09-03.53",     0x80000, 0xa31d0e80, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
 	{ "c09-01.55",     0x80000, 0x64bfea10, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
 	
 	{ "c09-07.15",     0x80000, 0x963bc82b, BRF_GRA | TAITO_ROAD },
@@ -3133,8 +3133,8 @@ static struct BurnRomInfo ScinRomDesc[] = {
 	{ "c09-05.16",     0x80000, 0x890b38f0, BRF_GRA | TAITO_CHARS },
 	
 	{ "c09-04.52",     0x80000, 0x2cbb3c9b, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
-	{ "c09-02.53",     0x80000, 0xa83a0389, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
-	{ "c09-03.54",     0x80000, 0xa31d0e80, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
+	{ "c09-02.54",     0x80000, 0xa83a0389, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
+	{ "c09-03.53",     0x80000, 0xa31d0e80, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
 	{ "c09-01.55",     0x80000, 0x64bfea10, BRF_GRA | TAITO_SPRITESA_BYTESWAP32 },
 	
 	{ "c09-07.15",     0x80000, 0x963bc82b, BRF_GRA | TAITO_ROAD },
@@ -7097,7 +7097,7 @@ struct BurnDriver BurnDrvNightstrj = {
 	"nightstrj", "nightstr", NULL, NULL, "1989",
 	"Night Striker (Japan)\0", NULL, "Taito Corporation", "Taito Z",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_TAITOZ, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_TAITOZ, GBF_SHOOT, 0,
 	NULL, NightstrjRomInfo, NightstrjRomName, NULL, NULL, NULL, NULL, NightstrInputInfo, NightstrjDIPInfo,
 	NightstrInit, TaitoZExit, TaitoZFrame, ChasehqDraw, TaitoZScan,
 	NULL, 0x1000, 320, 240, 4, 3
@@ -7107,7 +7107,7 @@ struct BurnDriver BurnDrvNightstru = {
 	"nightstru", "nightstr", NULL, NULL, "1989",
 	"Night Striker (US)\0", NULL, "Taito America Corporation", "Taito Z",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_TAITOZ, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_TAITOZ, GBF_SHOOT, 0,
 	NULL, NightstruRomInfo, NightstruRomName, NULL, NULL, NULL, NULL, NightstrInputInfo, NightstruDIPInfo,
 	NightstrInit, TaitoZExit, TaitoZFrame, ChasehqDraw, TaitoZScan,
 	NULL, 0x1000, 320, 240, 4, 3

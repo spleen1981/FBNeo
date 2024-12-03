@@ -115,13 +115,14 @@ extern bool bAlwaysCreateSupportFolders;
 extern bool bAutoLoadGameList;
 
 extern bool bQuietLoading;
+extern bool bNoPopups;
+extern bool bShonkyProfileMode;
 
 extern bool bNoChangeNumLock;
 extern bool bMonitorAutoCheck;
 
 // Used for the load/save dialog in commdlg.h
 extern TCHAR szChoice[MAX_PATH];					// File chosen by the user
-extern TCHAR szRomdataName[MAX_PATH];
 extern OPENFILENAME ofn;
 
 // Used to convert strings when possibly needed
@@ -133,6 +134,7 @@ char *utf8_from_astring(const CHAR *s);
 
 WCHAR *wstring_from_utf8(const char *s);
 char *utf8_from_wstring(const WCHAR *s);
+void tcharstrreplace(TCHAR *pszSRBuffer, const TCHAR *pszFind, const TCHAR *pszReplace);
 
 #ifdef _UNICODE
 #define tstring_from_utf8 wstring_from_utf8
@@ -172,6 +174,8 @@ void BurnerDoGameListLocalisation();
 void BurnerExitGameListLocalisation();
 int FBALocaliseGamelistLoadTemplate();
 int FBALocaliseGamelistCreateTemplate();
+
+INT32 BurnDrvSetFullNameW(TCHAR* szName, INT32 i = nBurnDrvActive);
 
 // popup_win32.cpp
 enum FBAPopupType { MT_NONE = 0, MT_ERROR, MT_WARNING, MT_INFO };
@@ -242,6 +246,11 @@ extern int bAlwaysDrawFrames;
 extern int nSlowMo;
 //extern INT32 bRunAhead;  // in burn.h! (partially platform agnostic feature)
 extern int kNetGame;
+extern int k_player_id;
+extern int k_numplayers;
+extern int k_bLoadNetgame;
+extern char k_game_str[255];
+
 int RunIdle();
 int RunFrame(int bDraw, int bPause);
 int RunMessageLoop();
@@ -273,6 +282,7 @@ void PausedRedraw(void);
 INT32 is_netgame_or_recording();
 void ScrnInitLua();
 void ScrnExitLua();
+char* DecorateKailleraGameName(UINT32 nBurnDrv);
 
 // menu.cpp
 #define UM_DISPLAYPOPUP (WM_USER + 0x0100)
@@ -294,7 +304,7 @@ extern int nScreenSizeVer;	// For vertical orientation
 extern int nWindowSize;
 
 #define SHOW_PREV_GAMES		10
-extern TCHAR szPrevGames[SHOW_PREV_GAMES][32];
+extern TCHAR szPrevGames[SHOW_PREV_GAMES][64];
 
 extern bool bModelessMenu;
 
@@ -413,6 +423,7 @@ int StatedSave(int nSlot);
 // numdial.cpp
 int NumDialCreate(int bDial);
 void GammaDialog();
+void HardFXShaderSettingsDialog();
 void ScanlineDialog();
 void PhosphorDialog();
 void ScreenAngleDialog();
@@ -451,6 +462,7 @@ int ReplayInput();
 int StartRecord();
 int StartReplay(const TCHAR* szFileName = NULL);
 void StopReplay();
+INT32 FreezeInputSize();
 int FreezeInput(unsigned char** buf, int* size);
 int UnfreezeInput(const unsigned char* buf, int size);
 void DisplayReplayProperties(HWND hDlg, bool bClear);
@@ -497,7 +509,6 @@ INT32 GetIpsNumPatches();
 void LoadIpsActivePatches();
 INT32 GetIpsNumActivePatches();
 INT32 IpsManagerCreate(HWND hParentWND);
-void IpsPatchExit();
 
 // localise_download.cpp
 int LocaliseDownloadCreate(HWND hParentWND);

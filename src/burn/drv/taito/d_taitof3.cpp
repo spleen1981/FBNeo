@@ -1516,10 +1516,11 @@ static INT32 DrvFrame()
 	}
 
 	{
-		 // arkretn / puchicar analog dial
+		// arkretn / puchicar analog dial
 		if (f3_game == ARKRETRN || f3_game == PUCHICAR) {
+			float speed = 0.5;
 			BurnTrackballConfig(0, AXIS_NORMAL, AXIS_NORMAL);
-			BurnTrackballFrame(0, DrvAxis[0], DrvAxis[1], 0x1, 0x3);
+			BurnTrackballFrame(0, DrvAxis[0]*speed, DrvAxis[1]*speed, 0x1, 0x3);
 			BurnTrackballUpdate(0);
 		}
 
@@ -1535,7 +1536,7 @@ static INT32 DrvFrame()
 
 		// Clear Opposites
 		DrvClearOpposites(&DrvInputs[1]);
-		DrvClearOpposites(&DrvInputs[3]);
+		if (f3_game != KAISERKN) DrvClearOpposites(&DrvInputs[3]);
 
 		DrvInputs[1] &= ~0xff00;
 		DrvInputs[4] = (DrvInputs[4] & ~2) | ((DrvSrv[0]) ? 0x00 : 0x02);
@@ -4214,7 +4215,7 @@ struct BurnDriver BurnDrvSpcinvdj = {
 	"spcinvdj", "spacedx", NULL, NULL, "1994",
 	"Space Invaders DX (Ver 2.6J 1994/09/14) (F3 Version)\0", "Graphics issues in Cellophane mode - use parent!", "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SHOOT, 0,
 	NULL, spcinvdjRomInfo, spcinvdjRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	spcinvdjInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 232, 4, 3
@@ -4479,7 +4480,7 @@ struct BurnDriver BurnDrvSpcinv95 = {
 	"spcinv95", NULL, NULL, NULL, "1995",
 	"Space Invaders '95: The Attack Of Lunar Loonies (Ver 2.5O 1995/06/14)\0", NULL, "Taito Corporation Japan", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SHOOT, 0,
 	NULL, spcinv95RomInfo, spcinv95RomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	spcinv95Init, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	224, 320, 3, 4
@@ -4522,7 +4523,7 @@ struct BurnDriver BurnDrvSpcinv95u = {
 	"spcinv95u", "spcinv95", NULL, NULL, "1995",
 	"Space Invaders '95: The Attack Of Lunar Loonies (Ver 2.5A 1995/06/14)\0", NULL, "Taito America Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SHOOT, 0,
 	NULL, spcinv95uRomInfo, spcinv95uRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	spcinv95Init, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	224, 320, 3, 4
@@ -4559,7 +4560,7 @@ struct BurnDriver BurnDrvAkkanvdr = {
 	"akkanvdr", "spcinv95", NULL, NULL, "1995",
 	"Akkanbeder (Ver 2.5J 1995/06/14)\0", NULL, "Taito Corporation", "Taito F3 System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SHOOT, 0,
 	NULL, akkanvdrRomInfo, akkanvdrRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	spcinv95Init, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	224, 320, 3, 4
@@ -5385,6 +5386,43 @@ struct BurnDriver BurnDrvBubblemj = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, bubblemjRomInfo, bubblemjRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
+	bubblemInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
+	320, 224, 4, 3
+};
+
+
+// Bubble Memories: Black Edition (hack, rtw, MetalliC)
+static struct BurnRomInfo bubblembeRomDesc[] = {
+	{ "e21-21.20",		0x080000, 0xc4a1e3c2, TAITO_68KROM1_BYTESWAP32 }, //  0 68ec20 Code
+	{ "e21-20.19",		0x080000, 0xbd9c3812, TAITO_68KROM1_BYTESWAP32 }, //  1
+	{ "e21-19.18",		0x080000, 0xc5a6ec87, TAITO_68KROM1_BYTESWAP32 }, //  2
+	{ "e21-18.17",		0x080000, 0xa15e492d, TAITO_68KROM1_BYTESWAP32 }, //  3
+
+	{ "e21-02.rom",		0x200000, 0xb7cb9232, TAITO_SPRITESA_BYTESWAP },  //  4 Sprites
+	{ "e21-01.rom",		0x200000, 0xa11f2f99, TAITO_SPRITESA_BYTESWAP },  //  5
+
+	{ "e21-07.rom",		0x100000, 0x7789bf7c, TAITO_CHARS_BYTESWAP },     //  6 Layer Tiles
+	{ "e21-06.rom",		0x100000, 0x997fc0d7, TAITO_CHARS_BYTESWAP },     //  7
+	{ "e21-05.rom",		0x100000, 0x07eab58f, TAITO_CHARS },              //  8
+
+	{ "e21-12.32",		0x040000, 0x34093de1, TAITO_68KROM2_BYTESWAP },   //  9 68k Code
+	{ "e21-13.33",		0x040000, 0x9e9ec437, TAITO_68KROM2_BYTESWAP },   // 10
+
+	{ "e21-03.rom",		0x200000, 0x54c5f83d, TAITO_ES5505_BYTESWAP },    // 11 Ensoniq Samples
+	{ "e21-04.rom",		0x200000, 0xe5af2a2d, TAITO_ES5505_BYTESWAP },    // 12
+
+	{ "bubblem.nv",		0x000080, 0x9a59326e, TAITO_DEFAULT_EEPROM },     // 13 eeprom
+};
+
+STD_ROM_PICK(bubblembe)
+STD_ROM_FN(bubblembe)
+
+struct BurnDriver BurnDrvBubblembe = {
+	"bubblembe", "bubblem", NULL, NULL, "2020",
+	"Bubble Memories: Black Edition (Hack)\0", NULL, "rtw, MetalliC", "Taito F3 System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	NULL, bubblembeRomInfo, bubblembeRomName, NULL, NULL, NULL, NULL, F3InputInfo, F3DIPInfo,
 	bubblemInit, DrvExit, DrvFrame, DrvDraw224A, DrvScan, &TaitoF3PalRecalc, 0x2000,
 	320, 224, 4, 3
 };
