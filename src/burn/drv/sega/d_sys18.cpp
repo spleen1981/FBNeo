@@ -2607,8 +2607,8 @@ STD_ROM_PICK(Wwallyja3p)
 STD_ROM_FN(Wwallyja3p)
 
 static struct BurnRomInfo AquarioRomDesc[] = {
-	{ "a4.bin",         0x080000, 0xd2ac7be4, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
-	{ "a6.bin",         0x080000, 0x058332a9, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "a4.bin",         0x080000, 0xc58ff95f, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "a6.bin",         0x080000, 0xb4a94cd9, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
 	{ "a5.bin",         0x080000, 0x1cef8145, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
 	{ "a7.bin",         0x080000, 0x504e4665, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
 
@@ -2624,6 +2624,12 @@ static struct BurnRomInfo AquarioRomDesc[] = {
 	{ "a12.bin",        0x080000, 0x0219923f, SYS16_ROM_SPRITES | BRF_GRA },
 	{ "c13.bin",        0x080000, 0x0beef46e, SYS16_ROM_SPRITES | BRF_GRA },
 	{ "a13.bin",        0x080000, 0x9ea5c73d, SYS16_ROM_SPRITES | BRF_GRA },
+
+	{ "c7.bin",   		0x040000, 0xf1183938, SYS16_ROM_Z80PROG | BRF_ESS | BRF_PRG },
+
+	{ "c6.bin",   		0x080000, 0x39f11291, SYS16_ROM_RF5C68DATA | BRF_SND },
+	{ "c5.bin",   		0x080000, 0x6a380dca, SYS16_ROM_RF5C68DATA | BRF_SND },
+	{ "c4.bin",   		0x080000, 0x1bd081f8, SYS16_ROM_RF5C68DATA | BRF_SND },
 };
 
 
@@ -3610,7 +3616,7 @@ struct BurnDriver BurnDrvAstorm = {
 	"astorm", NULL, NULL, NULL, "1990",
 	"Alien Storm (World, 2 Players) (FD1094 317-0154)\0", NULL, "Sega", "System 18",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_171_5874, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_171_5874, GBF_RUNGUN, 0,
 	NULL, AstormRomInfo, AstormRomName, NULL, NULL, NULL, NULL, System18InputInfo, Astorm2pDIPInfo,
 	System16Init, System18Exit, System18Frame, System18Render, System18Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -3620,7 +3626,7 @@ struct BurnDriver BurnDrvAstorm3 = {
 	"astorm3", "astorm", NULL, NULL, "1990",
 	"Alien Storm (World, 3 Players) (FD1094 317-0148)\0", NULL, "Sega", "System 18",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 3, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_171_5874, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE, 3, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_171_5874, GBF_RUNGUN, 0,
 	NULL, Astorm3RomInfo, Astorm3RomName, NULL, NULL, NULL, NULL, AstormInputInfo, AstormDIPInfo,
 	System16Init, System18Exit, System18Frame, System18Render, System18Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -3630,7 +3636,7 @@ struct BurnDriver BurnDrvAstorm3d = {
 	"astorm3d", "astorm", NULL, NULL, "1990",
 	"Alien Storm (World, 3 Players) (bootleg of FD1094 317-0148 set)\0", NULL, "bootleg", "System 18",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 3, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_171_5874, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 3, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_171_5874, GBF_RUNGUN, 0,
 	NULL, Astorm3dRomInfo, Astorm3dRomName, NULL, NULL, NULL, NULL, AstormInputInfo, AstormDIPInfo,
 	System16Init, System18Exit, System18Frame, System18Render, System18Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -3640,7 +3646,7 @@ struct BurnDriver BurnDrvAstormj = {
 	"astormj", "astorm", NULL, NULL, "1990",
 	"Alien Storm (Japan, 2 Players) (FD1094 317-0146)\0", NULL, "Sega", "System 18",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_171_5874, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_171_5874, GBF_RUNGUN, 0,
 	NULL, AstormjRomInfo, AstormjRomName, NULL, NULL, NULL, NULL, System18InputInfo, Astorm2pDIPInfo,
 	System16Init, System18Exit, System18Frame, System18Render, System18Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -3650,7 +3656,7 @@ struct BurnDriver BurnDrvAstormjd = {
 	"astormjd", "astorm", NULL, NULL, "1990",
 	"Alien Storm (Japan, 2 Players) (bootleg of FD1094 317-0146 set)\0", NULL, "bootleg", "System 18",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_171_5874, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_171_5874, GBF_RUNGUN, 0,
 	NULL, AstormjdRomInfo, AstormjdRomName, NULL, NULL, NULL, NULL, System18InputInfo, Astorm2pDIPInfo,
 	System16Init, System18Exit, System18Frame, System18Render, System18Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -3660,7 +3666,7 @@ struct BurnDriver BurnDrvAstormu = {
 	"astormu", "astorm", NULL, NULL, "1990",
 	"Alien Storm (US, 3 Players) (FD1094 317-0147)\0", NULL, "Sega", "System 18",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 3, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_171_5874, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE, 3, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_FD1094_ENC | HARDWARE_SEGA_171_5874, GBF_RUNGUN, 0,
 	NULL, AstormuRomInfo, AstormuRomName, NULL, NULL, NULL, NULL, AstormInputInfo, AstormDIPInfo,
 	System16Init, System18Exit, System18Frame, System18Render, System18Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -3670,7 +3676,7 @@ struct BurnDriver BurnDrvAstormud = {
 	"astormud", "astorm", NULL, NULL, "1990",
 	"Alien Storm (US, 3 Players) (bootleg of FD1094 317-0147 set)\0", NULL, "bootleg", "System 18",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 3, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_171_5874, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 3, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_171_5874, GBF_RUNGUN, 0,
 	NULL, AstormudRomInfo, AstormudRomName, NULL, NULL, NULL, NULL, AstormInputInfo, AstormDIPInfo,
 	System16Init, System18Exit, System18Frame, System18Render, System18Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -4054,7 +4060,7 @@ struct BurnDriver BurnDrvShdancer = {
 	"shdancer", NULL, NULL, NULL, "1989",
 	"Shadow Dancer (World)\0", NULL, "Sega", "System 18",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_171_SHADOW, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_171_SHADOW, GBF_PLATFORM | GBF_SCRFIGHT, 0,
 	NULL, ShdancerRomInfo, ShdancerRomName, NULL, NULL, NULL, NULL, System18InputInfo, ShdancerDIPInfo,
 	System16Init, System18Exit, System18Frame, System18Render, System18Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -4064,7 +4070,7 @@ struct BurnDriver BurnDrvShdancer1 = {
 	"shdancer1", "shdancer", NULL, NULL, "1989",
 	"Shadow Dancer (US)\0", NULL, "Sega", "System 18",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_171_SHADOW, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_171_SHADOW, GBF_PLATFORM | GBF_SCRFIGHT, 0,
 	NULL, Shdancer1RomInfo, Shdancer1RomName, NULL, NULL, NULL, NULL, System18InputInfo, ShdancerDIPInfo,
 	System16Init, System18Exit, System18Frame, System18Render, System18Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -4074,7 +4080,7 @@ struct BurnDriver BurnDrvShdancerj = {
 	"shdancerj", "shdancer", NULL, NULL, "1989",
 	"Shadow Dancer (Japan)\0", NULL, "Sega", "System 18",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_171_SHADOW, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_171_SHADOW, GBF_PLATFORM | GBF_SCRFIGHT, 0,
 	NULL, ShdancerjRomInfo, ShdancerjRomName, NULL, NULL, NULL, NULL, System18InputInfo, ShdancerDIPInfo,
 	System16Init, System18Exit, System18Frame, System18Render, System18Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -4084,7 +4090,7 @@ struct BurnDriverD BurnDrvShdancbl = {
 	"shdancbl", "shdancer", NULL, NULL, "1989",
 	"Shadow Dancer (bootleg, set 1)\0", NULL, "bootleg", "System 18",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_INVERT_TILES, GBF_PLATFORM, 0,
+	BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_INVERT_TILES, GBF_PLATFORM | GBF_SCRFIGHT, 0,
 	NULL, ShdancblRomInfo, ShdancblRomName, NULL, NULL, NULL, NULL, System18InputInfo, ShdancerDIPInfo,
 	ShdancblInit, System18Exit, System18Frame, System18Render, System18Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -4142,7 +4148,7 @@ struct BurnDriver BurnDrvWwallyja3p = {
 
 struct BurnDriver BurnDrvAquario = {
 	"aquario", NULL, NULL, NULL, "2021",
-	"Clockwork Aquario (prototype)\0", "No sound", "Sega / Westone", "System 18",
+	"Clockwork Aquario (prototype)\0", NULL, "Sega / Westone", "System 18",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_PROTOTYPE, 2, HARDWARE_SEGA_SYSTEM18 | HARDWARE_SEGA_171_5987, GBF_PLATFORM, 0,
 	NULL, AquarioRomInfo, AquarioRomName, NULL, NULL, NULL, NULL, System18InputInfo, AquarioDIPInfo,

@@ -1,8 +1,6 @@
 // FB Neo Caveman Ninja driver module
 // Based on MAME driver by Bryan McPhail
 
-// TOFIX: cninjabl backgrounds won't display
-
 #include "tiles_generic.h"
 #include "m68000_intf.h"
 #include "z80_intf.h"
@@ -1486,9 +1484,10 @@ static INT32 CninjablInit()
 	ZetSetReadHandler(stoneage_sound_read);
 	ZetClose();
 
-	BurnYM2151Init(3580000);
-	BurnYM2151SetIrqHandler(&DrvYM2151IrqHandler);
+	BurnYM2151InitBuffered(3580000, 1, NULL, 0);
 	BurnYM2151SetAllRoutes(0.45, BURN_SND_ROUTE_BOTH);
+	BurnYM2151SetIrqHandler(&DrvYM2151IrqHandler);
+	BurnTimerAttachZet(3579545);
 
 	MSM6295Init(0, 1006875 / 132, 1);
 	MSM6295Init(1, 2013750 / 132, 1);
@@ -1603,14 +1602,15 @@ static INT32 StoneageInit()
 	ZetSetReadHandler(stoneage_sound_read);
 	ZetClose();
 
+	BurnYM2151InitBuffered(3580000, 1, NULL, 0);
+	BurnYM2151SetAllRoutes(0.45, BURN_SND_ROUTE_BOTH);
+	BurnYM2151SetIrqHandler(&DrvYM2151IrqHandler);
+	BurnTimerAttachZet(3579545);
+
 	MSM6295Init(0, 1006875 / 132, 1);
 	MSM6295Init(1, 2013750 / 132, 1);
 	MSM6295SetRoute(0, 0.75, BURN_SND_ROUTE_BOTH);
 	MSM6295SetRoute(1, 0.60, BURN_SND_ROUTE_BOTH);
-
-	BurnYM2151Init(3580000);
-	BurnYM2151SetAllRoutes(0.45, BURN_SND_ROUTE_BOTH);
-	BurnYM2151SetIrqHandler(&DrvYM2151IrqHandler);
 
 	GenericTilesInit();
 
@@ -2465,6 +2465,8 @@ static INT32 StoneageFrame()
 		DrvDoReset();
 	}
 
+	ZetNewFrame();
+
 	{
 		memset (DrvInputs, 0xff, 2 * sizeof(INT16));
 		for (INT32 i = 0; i < 16; i++) {
@@ -2475,7 +2477,6 @@ static INT32 StoneageFrame()
 	}
 
 	INT32 nInterleave = 256;
-	INT32 nSoundBufferPos = 0;
 	INT32 nCyclesTotal[2] = { (INT32)((double)12000000 * 100 / nBurnFPS), (INT32)((double)3579545 * 100 / nBurnFPS) };
 	INT32 nCyclesDone[2] = { nExtraCycles[0], nExtraCycles[1] };
 
@@ -2487,21 +2488,13 @@ static INT32 StoneageFrame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		CPU_RUN(0, Sek);
-		CPU_RUN(1, Zet);
+		CPU_RUN_TIMER(1);
 
 		if (irq_timer == i) {
 			SekSetIRQLine((irq_mask & 0x10) ? 3 : 4, CPU_IRQSTATUS_ACK);
 			irq_timer = -1;
 		}
 		if (i == 248) deco16_vblank = 0x08;
-		
-		if (pBurnSoundOut && i%4 == 3) {
-			INT32 nSegmentLength = nBurnSoundLen / (nInterleave / 4);
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			MSM6295Render(pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
 	}
 
 	SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
@@ -2510,12 +2503,8 @@ static INT32 StoneageFrame()
 	nExtraCycles[1] = nCyclesDone[1] - nCyclesTotal[1];
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		if (nSegmentLength) {
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			MSM6295Render(pSoundBuf, nSegmentLength);
-		}
+		BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
+		MSM6295Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	ZetClose();
@@ -2650,7 +2639,7 @@ struct BurnDriver BurnDrvCninja = {
 	"cninja", NULL, NULL, NULL, "1991",
 	"Caveman Ninja (World ver 4)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_RUNGUN, 0,
 	NULL, cninjaRomInfo, cninjaRomName, NULL, NULL, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
 	CninjaInit, DrvExit, CninjaFrame, CninjaDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
@@ -2703,7 +2692,7 @@ struct BurnDriver BurnDrvCninja1 = {
 	"cninja1", "cninja", NULL, NULL, "1991",
 	"Caveman Ninja (World ver 1)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_RUNGUN, 0,
 	NULL, cninja1RomInfo, cninja1RomName, NULL, NULL, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
 	CninjaInit, DrvExit, CninjaFrame, CninjaDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
@@ -2756,7 +2745,7 @@ struct BurnDriver BurnDrvCninjau = {
 	"cninjau", "cninja", NULL, NULL, "1991",
 	"Caveman Ninja (US ver 4)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_RUNGUN, 0,
 	NULL, cninjauRomInfo, cninjauRomName, NULL, NULL, NULL, NULL, DrvInputInfo, CninjauDIPInfo,
 	CninjaInit, DrvExit, CninjaFrame, CninjaDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
@@ -2809,7 +2798,7 @@ struct BurnDriver BurnDrvJoemac = {
 	"joemac", "cninja", NULL, NULL, "1991",
 	"Tatakae Genshizin Joe & Mac (Japan ver 1)\0", NULL, "Data East Corporation", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_RUNGUN, 0,
 	NULL, joemacRomInfo, joemacRomName, NULL, NULL, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
 	CninjaInit, DrvExit, CninjaFrame, CninjaDraw, DrvScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
@@ -2851,7 +2840,7 @@ struct BurnDriver BurnDrvStoneage = {
 	"stoneage", "cninja", NULL, NULL, "1991",
 	"Stoneage (bootleg of Caveman Ninja)\0", NULL, "bootleg", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_RUNGUN, 0,
 	NULL, stoneageRomInfo, stoneageRomName, NULL, NULL, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
 	StoneageInit, DrvExit, StoneageFrame, CninjaDraw, StoneageScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3
@@ -2879,7 +2868,7 @@ struct BurnDriver BurnDrvCninjabl = {
 	"cninjabl", "cninja", NULL, NULL, "1991",
 	"Caveman Ninja (bootleg)\0", NULL, "bootleg", "DECO IC16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_RUNGUN, 0,
 	NULL, cninjablRomInfo, cninjablRomName, NULL, NULL, NULL, NULL, DrvInputInfo, CninjaDIPInfo,
 	CninjablInit, DrvExit, StoneageFrame, CninjablDraw, StoneageScan, &DrvRecalc, 0x800,
 	256, 240, 4, 3

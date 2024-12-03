@@ -2064,6 +2064,12 @@ static struct BurnRomInfo narcRomDesc[] = {
 	{ "rev2_narc_image_rom_u28.u28",					0x10000, 0xd6cdac24, 4 | BRF_GRA },           // 67
 	{ "rev2_narc_image_rom_u27.u27",					0x10000, 0x4d33bbec, 4 | BRF_GRA },           // 68
 	{ "rev2_narc_image_rom_u26.u26",					0x10000, 0xcb19f784, 4 | BRF_GRA },           // 69
+
+	{ "a-5346-3036-1_narc_pls153.u28",					0x000eb, 0x4db36615, 0 | BRF_OPT },           // 70 PLDs
+	{ "a-5346-3036-2_narc_pls153.u78",					0x000eb, 0x4b151863, 0 | BRF_OPT },           // 71
+	{ "a-5346-3036-3_narc_pls153.u79",					0x000eb, 0x35bd6ed8, 0 | BRF_OPT },           // 72
+	{ "a-5346-3036-4_narc_pls153.u80",					0x000eb, 0x9c10e4cf, 0 | BRF_OPT },           // 73
+	{ "a-5346-3036-5_narc_pls153.u83",					0x000eb, 0x3a2f21b2, 0 | BRF_OPT },           // 74
 };
 
 STD_ROM_PICK(narc)
@@ -2167,6 +2173,12 @@ static struct BurnRomInfo narc6RomDesc[] = {
 	{ "rev2_narc_image_rom_u28.u28",					0x10000, 0xd6cdac24, 4 | BRF_GRA },           // 71
 	{ "rev2_narc_image_rom_u27.u27",					0x10000, 0x4d33bbec, 4 | BRF_GRA },           // 72
 	{ "rev2_narc_image_rom_u26.u26",					0x10000, 0xcb19f784, 4 | BRF_GRA },           // 73
+
+	{ "a-5346-3036-1_narc_pls153.u28",					0x000eb, 0x4db36615, 0 | BRF_OPT },           // 74 PLDs
+	{ "a-5346-3036-2_narc_pls153.u78",					0x000eb, 0x4b151863, 0 | BRF_OPT },           // 75
+	{ "a-5346-3036-3_narc_pls153.u79",					0x000eb, 0x35bd6ed8, 0 | BRF_OPT },           // 76
+	{ "a-5346-3036-4_narc_pls153.u80",					0x000eb, 0x9c10e4cf, 0 | BRF_OPT },           // 77
+	{ "a-5346-3036-5_narc_pls153.u83",					0x000eb, 0x3a2f21b2, 0 | BRF_OPT },           // 78
 };
 
 STD_ROM_PICK(narc6)
@@ -2263,6 +2275,12 @@ static struct BurnRomInfo narc4RomDesc[] = {
 	{ "rev2_narc_image_rom_u28.u28",					0x10000, 0xd6cdac24, 4 | BRF_GRA },           // 71
 	{ "rev2_narc_image_rom_u27.u27",					0x10000, 0x4d33bbec, 4 | BRF_GRA },           // 72
 	{ "rev2_narc_image_rom_u26.u26",					0x10000, 0xcb19f784, 4 | BRF_GRA },           // 73
+
+	{ "a-5346-3036-1_narc_pls153.u28",					0x000eb, 0x4db36615, 0 | BRF_OPT },           // 74 PLDs
+	{ "a-5346-3036-2_narc_pls153.u78",					0x000eb, 0x4b151863, 0 | BRF_OPT },           // 75
+	{ "a-5346-3036-3_narc_pls153.u79",					0x000eb, 0x35bd6ed8, 0 | BRF_OPT },           // 76
+	{ "a-5346-3036-4_narc_pls153.u80",					0x000eb, 0x9c10e4cf, 0 | BRF_OPT },           // 77
+	{ "a-5346-3036-5_narc_pls153.u83",					0x000eb, 0x3a2f21b2, 0 | BRF_OPT },           // 78
 };
 
 STD_ROM_PICK(narc4)
@@ -2359,6 +2377,12 @@ static struct BurnRomInfo narc3RomDesc[] = {
 	{ "rev2_narc_image_rom_u28.u28",					0x10000, 0xd6cdac24, 4 | BRF_GRA },           // 71
 	{ "rev2_narc_image_rom_u27.u27",					0x10000, 0x4d33bbec, 4 | BRF_GRA },           // 72
 	{ "rev2_narc_image_rom_u26.u26",					0x10000, 0xcb19f784, 4 | BRF_GRA },           // 73
+
+	{ "a-5346-3036-1_narc_pls153.u28",					0x000eb, 0x4db36615, 0 | BRF_OPT },           // 74 PLDs
+	{ "a-5346-3036-2_narc_pls153.u78",					0x000eb, 0x4b151863, 0 | BRF_OPT },           // 75
+	{ "a-5346-3036-3_narc_pls153.u79",					0x000eb, 0x35bd6ed8, 0 | BRF_OPT },           // 76
+	{ "a-5346-3036-4_narc_pls153.u80",					0x000eb, 0x9c10e4cf, 0 | BRF_OPT },           // 77
+	{ "a-5346-3036-5_narc_pls153.u83",					0x000eb, 0x3a2f21b2, 0 | BRF_OPT },           // 78
 };
 
 STD_ROM_PICK(narc3)
@@ -2455,6 +2479,12 @@ static struct BurnRomInfo narc2RomDesc[] = {
 	{ "rev2_narc_image_rom_u28.u28",					0x10000, 0xd6cdac24, 4 | BRF_GRA },           // 71
 	{ "rev2_narc_image_rom_u27.u27",					0x10000, 0x4d33bbec, 4 | BRF_GRA },           // 72
 	{ "rev2_narc_image_rom_u26.u26",					0x10000, 0xcb19f784, 4 | BRF_GRA },           // 73
+
+	{ "a-5346-3036-1_narc_pls153.u28",					0x000eb, 0x4db36615, 0 | BRF_OPT },           // 74 PLDs
+	{ "a-5346-3036-2_narc_pls153.u78",					0x000eb, 0x4b151863, 0 | BRF_OPT },           // 75
+	{ "a-5346-3036-3_narc_pls153.u79",					0x000eb, 0x35bd6ed8, 0 | BRF_OPT },           // 76
+	{ "a-5346-3036-4_narc_pls153.u80",					0x000eb, 0x9c10e4cf, 0 | BRF_OPT },           // 77
+	{ "a-5346-3036-5_narc_pls153.u83",					0x000eb, 0x3a2f21b2, 0 | BRF_OPT },           // 78
 };
 
 STD_ROM_PICK(narc2)
@@ -2543,6 +2573,12 @@ static struct BurnRomInfo narc1RomDesc[] = {
 	{ "rev1_narc_image_rom_u29.u29",					0x10000, 0xfdaedb84, 4 | BRF_GRA },           // 63
 	{ "rev1_narc_image_rom_u28.u28",					0x10000, 0x3012cd6e, 4 | BRF_GRA },           // 64
 	{ "rev1_narc_image_rom_u27.u27",					0x10000, 0xe631fe7d, 4 | BRF_GRA },           // 65
+
+	{ "a-5346-3036-1_narc_pls153.u28",					0x000eb, 0x4db36615, 0 | BRF_OPT },           // 66 PLDs
+	{ "a-5346-3036-2_narc_pls153.u78",					0x000eb, 0x4b151863, 0 | BRF_OPT },           // 67
+	{ "a-5346-3036-3_narc_pls153.u79",					0x000eb, 0x35bd6ed8, 0 | BRF_OPT },           // 68
+	{ "a-5346-3036-4_narc_pls153.u80",					0x000eb, 0x9c10e4cf, 0 | BRF_OPT },           // 69
+	{ "a-5346-3036-5_narc_pls153.u83",					0x000eb, 0x3a2f21b2, 0 | BRF_OPT },           // 70
 };
 
 STD_ROM_PICK(narc1)
@@ -3612,6 +3648,62 @@ struct BurnDriver BurnDrvTrogpa4 = {
 };
 
 
+// Maze (Trog rev LA4 3/11/91 bootleg)
+
+static struct BurnRomInfo mazeblRomDesc[] = {
+	{ "1",						0x40000, 0xcf3a206e, 1 | BRF_PRG | BRF_ESS }, //  0 M6809 Code (Sound)
+
+	{ "2",						0x20000, 0xe6095189, 3 | BRF_PRG | BRF_ESS }, //  1 TMS34010 Code
+	{ "3",						0x20000, 0xfdd7cc65, 3 | BRF_PRG | BRF_ESS }, //  2
+
+	{ "4",						0x80000, 0xdd7cd402, 4 | BRF_GRA },           //  3 Graphics (Blitter data)
+	{ "6",						0x40000, 0x9c001d17, 4 | BRF_GRA },           //  4
+	{ "5",						0x80000, 0xe036e21a, 4 | BRF_GRA },           //  5
+	{ "7",						0x40000, 0xc5ce99fa, 4 | BRF_GRA },           //  6
+};
+
+STD_ROM_PICK(mazebl)
+STD_ROM_FN(mazebl)
+
+static void mazeblLoadCallback()
+{
+	UINT8 *pTemp = (UINT8*)BurnMalloc(0x040000);
+	memcpy (pTemp, DrvSndROM[0] + 0x10000, 0x40000);
+	memmove (DrvSndROM[0] + 0x10000, pTemp + 0x000000, 0x10000);
+	memmove (DrvSndROM[0] + 0x30000, pTemp + 0x010000, 0x10000);
+	memmove (DrvSndROM[0] + 0x50000, pTemp + 0x020000, 0x10000);
+	memmove (DrvSndROM[0] + 0x70000, pTemp + 0x030000, 0x10000);
+	memcpy (DrvSndROM[0] + 0x20000, DrvSndROM[0] + 0x10000, 0x10000);
+	memcpy (DrvSndROM[0] + 0x40000, DrvSndROM[0] + 0x30000, 0x10000);
+	memcpy (DrvSndROM[0] + 0x60000, DrvSndROM[0] + 0x50000, 0x10000);
+	memcpy (DrvSndROM[0] + 0x80000, DrvSndROM[0] + 0x70000, 0x10000);
+	BurnFree(pTemp);
+}
+
+static INT32 mazeblInit()
+{
+	static const struct protection_data mazebl_protection_data =
+	{
+		{ 0x0f00, 0x0f00, 0x0f00 },
+		{ 0x3000, 0x1000, 0x2000, 0x0000, 0x2000, 0x3000, 0x3000, 0x1000, 0x0000, 0x0000, 0x2000, 0x3000, 0x1000, 0x1000, 0x2000 }
+	};
+
+	prot_data = &mazebl_protection_data;
+
+	return CommonInit(mazeblLoadCallback, 1 | 0x80, 40000000, 4, 0x9eaf, 0x9ed9);
+}
+
+struct BurnDriver BurnDrvMazebl = {
+	"mazebl", "trog", NULL, NULL, "1990",
+	"Maze (Trog rev LA4 3/11/91 bootleg)\0", NULL, "bootleg", "Y Unit",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 4, HARDWARE_PREFIX_MIDWAY, GBF_MAZE, 0,
+	NULL, mazeblRomInfo, mazeblRomName, NULL, NULL, NULL, NULL, TrogInputInfo, TrogDIPInfo,
+	mazeblInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &BurnRecalc, 256,
+	396, 256, 4, 3
+};
+
+
 // Smash T.V. (rev 8.00)
 
 static struct BurnRomInfo smashtvRomDesc[] = {
@@ -4624,7 +4716,7 @@ struct BurnDriver BurnDrvTerm2pa2 = {
 	"term2pa2", "term2", NULL, NULL, "1991",
 	"Terminator 2 - Judgment Day (prototype, rev PA2 10/18/91)\0", NULL, "Midway", "Y Unit",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_MIDWAY, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE, 2, HARDWARE_PREFIX_MIDWAY, GBF_SHOOT, 0,
 	NULL, term2pa2RomInfo, term2pa2RomName, NULL, NULL, NULL, NULL, Term2InputInfo, Term2DIPInfo,
 	Term2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &BurnRecalc, 256,
 	400, 256, 4, 3

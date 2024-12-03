@@ -66,8 +66,8 @@ static struct BurnInputInfo RygarInputList[] = {
 
 	{"P2 Coin"       , BIT_DIGITAL , DrvJoy5 + 2,	"p2 coin"  },
 	{"P2 Start"  ,    BIT_DIGITAL  , DrvJoy5 + 0,	"p2 start" },
-	{"P2 Left"      , BIT_DIGITAL  , DrvJoy3 + 0, 	"p2 left"  },
-	{"P2 Right"     , BIT_DIGITAL  , DrvJoy3 + 1, 	"p2 right" },
+	{"P2 Left"      , BIT_DIGITAL  , DrvJoy3 + 1, 	"p2 left"  },
+	{"P2 Right"     , BIT_DIGITAL  , DrvJoy3 + 0, 	"p2 right" },
 	{"P2 Down",	  BIT_DIGITAL,   DrvJoy3 + 2,   "p2 down", },
 	{"P2 Up",	  BIT_DIGITAL,   DrvJoy3 + 3,   "p2 up",   },
 	{"P2 Button 1"  , BIT_DIGITAL  , DrvJoy4 + 0,	"p2 fire 1"},
@@ -1060,8 +1060,7 @@ static INT32 draw_layer(UINT8 *vidram, UINT8 *gfx_base, INT32 paloffs, UINT16 *s
 		color >>= 4;
 
 		Render16x16Tile_Mask_Clip(pTransDraw, code, sx, sy, color, 4, 0, paloffs, gfx_base);
-		if (DrvHasADPCM == 0) // backfirt
-			Render16x16Tile_Mask_Clip(pTransDraw, code, sx-0x200, sy, color, 4, 0, paloffs, gfx_base);
+		Render16x16Tile_Mask_Clip(pTransDraw, code, sx-0x200, sy, color, 4, 0, paloffs, gfx_base); // that's a wrap
 	}
 
 	return 0;
@@ -1111,7 +1110,7 @@ static INT32 DrvDraw()
 
 	if (nSpriteEnable & 8) draw_sprites(0);
 
-	if (flipscreen && DrvHasADPCM) { // backfirt is the only one w/o ADPCM & buggy flipping
+	if (flipscreen && DrvHasADPCM && tecmo_video_type != 0 /* rygar */) { // backfirt is the only one w/o ADPCM & buggy flipping
 		INT32 nSize = (nScreenWidth * nScreenHeight) - 1;
 		for (INT32 i = 0; i < nSize >> 1; i++) {
 			INT32 n = pTransDraw[i];
@@ -1264,7 +1263,7 @@ struct BurnDriver BurnDrvRygar = {
 	"rygar", NULL, NULL, NULL, "1986",
 	"Rygar (US set 1)\0", NULL, "Tecmo", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_RUNGUN, 0,
 	NULL, rygarRomInfo, rygarRomName, NULL, NULL, NULL, NULL, RygarInputInfo, RygarDIPInfo,
 	RygarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	256, 224, 4, 3
@@ -1307,7 +1306,7 @@ struct BurnDriver BurnDrvRygar2 = {
 	"rygar2", "rygar", NULL, NULL, "1986",
 	"Rygar (US set 2)\0", NULL, "Tecmo", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_RUNGUN, 0,
 	NULL, rygar2RomInfo, rygar2RomName, NULL, NULL, NULL, NULL, RygarInputInfo, RygarDIPInfo,
 	RygarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	256, 224, 4, 3
@@ -1350,7 +1349,7 @@ struct BurnDriver BurnDrvRygar3 = {
 	"rygar3", "rygar", NULL, NULL, "1986",
 	"Rygar (US set 3 Old Version)\0", NULL, "Tecmo", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_RUNGUN, 0,
 	NULL, rygar3RomInfo, rygar3RomName, NULL, NULL, NULL, NULL, RygarInputInfo, RygarDIPInfo,
 	RygarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	256, 224, 4, 3
@@ -1393,7 +1392,7 @@ struct BurnDriver BurnDrvRygarj = {
 	"rygarj", "rygar", NULL, NULL, "1986",
 	"Argus no Senshi (Japan set 1)\0", NULL, "Tecmo", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_RUNGUN, 0,
 	NULL, rygarjRomInfo, rygarjRomName, NULL, NULL, NULL, NULL, RygarInputInfo, RygarDIPInfo,
 	RygarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	256, 224, 4, 3
@@ -1436,7 +1435,7 @@ struct BurnDriver BurnDrvRygarj2 = {
 	"rygarj2", "rygar", NULL, NULL, "1986",
 	"Argus no Senshi (Japan set 2)\0", NULL, "Tecmo", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_RUNGUN, 0,
 	NULL, rygarj2RomInfo, rygarj2RomName, NULL, NULL, NULL, NULL, RygarInputInfo, RygarDIPInfo,
 	RygarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	256, 224, 4, 3
@@ -1479,7 +1478,7 @@ struct BurnDriver BurnDrvRygarb = {
 	"rygarb", "rygar", NULL, NULL, "1986",
 	"Rygar (US, bootleg)\0", NULL, "Tecmo", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_RUNGUN, 0,
 	NULL, rygarbRomInfo, rygarbRomName, NULL, NULL, NULL, NULL, RygarInputInfo, RygarDIPInfo,
 	RygarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	256, 224, 4, 3

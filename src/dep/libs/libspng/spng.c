@@ -11,6 +11,17 @@
 
 #define ZLIB_CONST
 
+// opt causes too many problems right now
+#define SPNG_DISABLE_OPT
+
+/*
+#ifdef __GNUC__
+  #if __GNUC__ < 6
+    #define SPNG_DISABLE_OPT
+  #endif
+#endif
+*/
+
 #ifdef __FRAMAC__
     #define SPNG_DISABLE_OPT
     #include "tests/framac_stubs.h"
@@ -18,7 +29,7 @@
     #ifdef SPNG_USE_MINIZ
         #include <miniz.h>
     #else
-        #include <zlib.h>
+        #include "zlib.h"
     #endif
 #endif
 

@@ -22,6 +22,8 @@ INT32 Cps1VBlankIRQLine = 2;
 
 INT32 Cps1DrawAtVblank = 0;
 
+static UINT8 AspectDIPLast = 0;
+
 CpsRunInitCallback CpsRunInitCallbackFunction = NULL;
 CpsRunInitCallback CpsRunExitCallbackFunction = NULL;
 CpsRunResetCallback CpsRunResetCallbackFunction = NULL;
@@ -40,6 +42,23 @@ static void CpsQSoundCheatSearchCallback()
 	if (Cps1Qs == 1) {	
 		CheatSearchExcludeAddressRange(0xF18000, 0xF19FFF);
 		CheatSearchExcludeAddressRange(0xF1E000, 0xF1FFFF);
+	}
+}
+
+static void check_aspect()
+{
+	if (Cps2Turbo && (AspectDIP & 0x03) != AspectDIPLast) {
+		INT32 aspects[3][2] = { { 16, 9 }, { 4, 3 }, { 112, 81 } };
+		AspectDIPLast = AspectDIP & 0x03;
+
+		INT32 nAspectX, nAspectY;
+		BurnDrvGetAspect(&nAspectX, &nAspectY);
+
+		if (nAspectX != aspects[AspectDIPLast][0] || nAspectY != aspects[AspectDIPLast][1]) {
+			bprintf(0, _T("*  CPS-2: Changing to %d:%d aspect\n"), aspects[AspectDIPLast][0], aspects[AspectDIPLast][1]);
+			BurnDrvSetAspect(aspects[AspectDIPLast][0], aspects[AspectDIPLast][1]);
+			Reinitialise();
+		}
 	}
 }
 
@@ -70,8 +89,9 @@ static INT32 DrvReset()
 		SekClose();
 	}
 
-
 	nCpsCyclesExtra = 0;
+
+	clear_opposite.reset();
 
 	if (((Cps == 2) && !Cps2DisableQSnd) || Cps1Qs == 1) {			// Sound init (QSound)
 		QsndReset();
@@ -80,7 +100,12 @@ static INT32 DrvReset()
 	if (CpsRunResetCallbackFunction) {
 		CpsRunResetCallbackFunction();
 	}
-	
+
+	if (Cps2Turbo) {
+		AspectDIPLast = 0xff;
+		check_aspect();
+	}
+
 	HiscoreReset();
 
 	return 0;
@@ -147,8 +172,8 @@ INT32 CpsRunInit()
 		if (QsndInit()) {
 			return 1;
 		}
-		QsndSetRoute(BURN_SND_QSND_OUTPUT_1, 1.00, BURN_SND_ROUTE_LEFT);
-		QsndSetRoute(BURN_SND_QSND_OUTPUT_2, 1.00, BURN_SND_ROUTE_RIGHT);
+		QsndSetRoute(BURN_SND_QSND_OUTPUT_1, 2.00, BURN_SND_ROUTE_LEFT);
+		QsndSetRoute(BURN_SND_QSND_OUTPUT_2, 2.00, BURN_SND_ROUTE_RIGHT);
 	}
 
 	if (Cps == 2 || PangEEP || Cps1Qs == 1 || CpsBootlegEEPROM) EEPROMReset();
@@ -310,13 +335,13 @@ INT32 Cps1Frame()
 		}
 	}
 	
-	if (CpsRunFrameStartCallbackFunction) {
-		CpsRunFrameStartCallbackFunction();
-	}
-
 	nCpsCycles = (INT32)((INT64)nCPS68KClockspeed * nBurnCPUSpeedAdjust >> 8);
 
 	CpsRwGetInp();												// Update the input port values
+
+	if (CpsRunFrameStartCallbackFunction) {
+		CpsRunFrameStartCallbackFunction();
+	}
 
 	nDisplayEnd = (nCpsCycles * (nFirstLine + 224)) / nCpsNumScanlines;	// Account for VBlank
 
@@ -387,6 +412,10 @@ INT32 Cps2Frame()
 		DrvReset();
 	}
 
+	if (Cps2Turbo) {
+		check_aspect();
+	}
+
 //	extern INT32 prevline;
 //	prevline = -1;
 
@@ -407,8 +436,8 @@ INT32 Cps2Frame()
 		if (Cps2Volume > 39) Cps2Volume = 39;
 		if (Cps2Volume < 0) Cps2Volume = 0;
 		
-		QscSetRoute(BURN_SND_QSND_OUTPUT_1, Cps2Volume / 39.0, BURN_SND_ROUTE_LEFT);
-		QscSetRoute(BURN_SND_QSND_OUTPUT_2, Cps2Volume / 39.0, BURN_SND_ROUTE_RIGHT);
+		QscSetRoute(BURN_SND_QSND_OUTPUT_1, (Cps2Volume / 39.0)*2, BURN_SND_ROUTE_LEFT);
+		QscSetRoute(BURN_SND_QSND_OUTPUT_2, (Cps2Volume / 39.0)*2, BURN_SND_ROUTE_RIGHT);
 	}
 	
 	nDisplayEnd = nCpsCycles * (nFirstLine + 224) / nCpsNumScanlines;	// Account for VBlank

@@ -39,9 +39,9 @@ extern TCHAR szAppEEPROMPath[MAX_PATH];
 // Give access to the CPUID function for various compilers
 #if defined (__GNUC__)
  #define CPUID(f,ra,rb,rc,rd) __asm__ __volatile__ ("cpuid"											\
- 													: "=a" (ra), "=b" (rb), "=c" (rc), "=d" (rd)	\
- 													: "a"  (f)										\
- 												   );
+													: "=a" (ra), "=b" (rb), "=c" (rc), "=d" (rd)	\
+													: "a"  (f)										\
+												   );
 #elif defined (_MSC_VER)
  #define CPUID(f,ra,rb,rc,rd) __asm { __asm mov		eax, f		\
 									  __asm cpuid				\
@@ -138,19 +138,19 @@ inline static void SetCurrentFrame(const UINT32 n) {
 #define BRF_NODUMP			(1 << 28)
 
 struct BurnRomInfo {
-	char szName[100];
+	char *szName;
 	UINT32 nLen;
 	UINT32 nCrc;
 	UINT32 nType;
 };
 
 struct BurnSampleInfo {
-	char szName[100];
+	char *szName;
 	UINT32 nFlags;
 };
 
 struct BurnHDDInfo {
-	char szName[100];
+	char *szName;
 	UINT32 nLen;
 	UINT32 nCrc;
 };
@@ -278,7 +278,7 @@ extern bool bBurnUseASMCPUEmulation;
 
 extern UINT32 nFramesEmulated;
 extern UINT32 nFramesRendered;
-extern clock_t starttime;					// system time when emulation started and after roms loaded
+extern clock_t starttime;			// system time when emulation started and after roms loaded
 
 extern bool bForce60Hz;
 extern bool bSpeedLimit60hz;
@@ -289,33 +289,39 @@ extern bool bBurnUseBlend;
 extern INT32 nBurnFPS;
 extern INT32 nBurnCPUSpeedAdjust;
 
-extern UINT32 nBurnDrvCount;			// Count of game drivers
-extern UINT32 nBurnDrvActive;			// Which game driver is selected
-extern INT32 nBurnDrvSubActive;			// Which sub-game driver is selected
-extern UINT32 nBurnDrvSelect[8];		// Which games are selected (i.e. loaded but not necessarily active)
+extern UINT32 nBurnDrvCount;		// Count of game drivers
+extern UINT32 nBurnDrvActive;		// Which game driver is selected
+extern INT32 nBurnDrvSubActive;		// Which sub-game driver is selected
+extern UINT32 nBurnDrvSelect[8];	// Which games are selected (i.e. loaded but not necessarily active)
 
 extern char* pszCustomNameA;
+extern char szBackupNameA[MAX_PATH];
+extern TCHAR szBackupNameW[MAX_PATH];
+
+extern char** szShortNamesExArray;
+extern TCHAR** szLongNamesExArray;
+extern UINT32 nNamesExArray;
 
 extern INT32 nMaxPlayers;
 
 extern UINT8 *pBurnDraw;			// Pointer to correctly sized bitmap
-extern INT32 nBurnPitch;						// Pitch between each line
-extern INT32 nBurnBpp;						// Bytes per pixel (2, 3, or 4)
+extern INT32 nBurnPitch;			// Pitch between each line
+extern INT32 nBurnBpp;				// Bytes per pixel (2, 3, or 4)
 
 extern UINT8 nBurnLayer;			// Can be used externally to select which layers to show
 extern UINT8 nSpriteEnable;			// Can be used externally to select which Sprites to show
 
-extern INT32 bRunAhead;             // "Run Ahead" lag-reduction technique UI option (on/off)
+extern INT32 bRunAhead;				// "Run Ahead" lag-reduction technique UI option (on/off)
 
-extern INT32 bBurnRunAheadFrame;    // for drivers, hiscore, etc, to recognize that this is the "runahead frame"
-                                    // for instance, you wouldn't want to apply hi-score data on a "runahead frame"
+extern INT32 bBurnRunAheadFrame;	// for drivers, hiscore, etc, to recognize that this is the "runahead frame"
+									// for instance, you wouldn't want to apply hi-score data on a "runahead frame"
 
-extern INT32 nBurnSoundRate;					// Samplerate of sound
-extern INT32 nBurnSoundLen;					// Length in samples per frame
-extern INT16* pBurnSoundOut;				// Pointer to output buffer
+extern INT32 nBurnSoundRate;		// Samplerate of sound
+extern INT32 nBurnSoundLen;			// Length in samples per frame
+extern INT16* pBurnSoundOut;		// Pointer to output buffer
 
-extern INT32 nInterpolation;					// Desired interpolation level for ADPCM/PCM sound
-extern INT32 nFMInterpolation;				// Desired interpolation level for FM sound
+extern INT32 nInterpolation;		// Desired interpolation level for ADPCM/PCM sound
+extern INT32 nFMInterpolation;		// Desired interpolation level for FM sound
 
 extern UINT32 *pBurnDrvPalette;
 
@@ -355,9 +361,6 @@ INT32 BurnSetProgressRange(double dProgressRange);
 INT32 BurnUpdateProgress(double dProgressStep, const TCHAR* pszText, bool bAbs);
 
 void BurnLocalisationSetName(char *szName, TCHAR *szLongName);
-void BurnLocalisationSetNameEx(char* szName, TCHAR * szLongName, INT32 nNumGames);
-
-void BurnerDoGameListExLocalisation();
 
 void BurnGetLocalTime(tm *nTime);                   // Retrieve local-time of machine w/tweaks for netgame and input recordings
 UINT16 BurnRandom();                                // State-able Random Number Generator (0-32767)
@@ -373,17 +376,17 @@ double BurnGetTime();
 #if defined (FBNEO_DEBUG)
 void BurnDump_(char *filename, UINT8 *buffer, INT32 bufsize, INT32 append);
 #define BurnDump(fn, b, bs) do { \
-    bprintf(0, _T("Dumping %S (0x%x bytes) to %S\n"), #b, bs, #fn); \
-    BurnDump_(fn, b, bs, 0); } while (0)
+	bprintf(0, _T("Dumping %S (0x%x bytes) to %S\n"), #b, bs, #fn); \
+	BurnDump_(fn, b, bs, 0); } while (0)
 
 #define BurnDumpAppend(fn, b, bs) do { \
-    bprintf(0, _T("Dumping %S (0x%x bytes) to %S (append)\n"), #b, bs, #fn); \
-    BurnDump_(fn, b, bs, 1); } while (0)
+	bprintf(0, _T("Dumping %S (0x%x bytes) to %S (append)\n"), #b, bs, #fn); \
+	BurnDump_(fn, b, bs, 1); } while (0)
 
 void BurnDumpLoad_(char *filename, UINT8 *buffer, INT32 bufsize);
 #define BurnDumpLoad(fn, b, bs) do { \
-    bprintf(0, _T("Loading Dump %S (0x%x bytes) to %S\n"), #fn, bs, #b); \
-    BurnDumpLoad_(fn, b, bs); } while (0)
+	bprintf(0, _T("Loading Dump %S (0x%x bytes) to %S\n"), #fn, bs, #b); \
+	BurnDumpLoad_(fn, b, bs); } while (0)
 
 #endif
 
@@ -410,7 +413,6 @@ char* BurnDrvGetTextA(UINT32 i);
 wchar_t* BurnDrvGetFullNameW(UINT32 i);
 
 INT32 BurnDrvGetIndex(char* szName);
-INT32 BurnDrvSetFullNameW(wchar_t* szName, INT32 i);
 INT32 BurnDrvGetZipName(char** pszName, UINT32 i);
 INT32 BurnDrvSetZipName(char* szName, INT32 i);
 INT32 BurnDrvGetRomInfo(struct BurnRomInfo *pri, UINT32 i);
@@ -461,7 +463,11 @@ extern UINT32 nIpsDrvDefine, nIpsMemExpLen[SND2_ROM + 1];
 extern bool bDoIpsPatch;
 
 void IpsApplyPatches(UINT8* base, char* rom_name, UINT32 rom_crc, bool readonly = false);
-void GetIpsDrvDefine();
+
+// ---------------------------------------------------------------------------
+// MISC Helper / utility functions, etc
+int BurnComputeSHA1(const UINT8 *buffer, int buffer_size, char *hash_str);
+//int BurnComputeSHA1(const char *filename, char *hash_str);
 
 // ---------------------------------------------------------------------------
 // Flags used with the Burndriver structure
@@ -489,7 +495,7 @@ void GetIpsDrvDefine();
 
 #define HARDWARE_PUBLIC_MASK							(0x7FFF0000)
 
-#define HARDWARE_PREFIX_CARTRIDGE						((INT32)0x80000000)
+#define HARDWARE_PREFIX_CARTRIDGE				 ((INT32)0x80000000)
 
 #define HARDWARE_PREFIX_MISC_PRE90S						(0x00000000)
 #define HARDWARE_PREFIX_CAPCOM							(0x01000000)
@@ -525,9 +531,10 @@ void GetIpsDrvDefine();
 #define HARDWARE_PREFIX_FDS                             (0x1F000000)
 #define HARDWARE_PREFIX_NGP                             (0x20000000)
 #define HARDWARE_PREFIX_CHANNELF                        (0x21000000)
+#define HARDWARE_PREFIX_SNES                            (0x22000000)
 
 #define HARDWARE_SNK_NGP								(HARDWARE_PREFIX_NGP | 0x00000000)
-#define HARDWARE_SNK_NGPC								(HARDWARE_PREFIX_NGP | 0x00000001)
+#define HARDWARE_SNK_NGPC								(HARDWARE_PREFIX_NGP | 0x00000001) // must not be 0x10000
 
 #define HARDWARE_MISC_PRE90S							(HARDWARE_PREFIX_MISC_PRE90S)
 #define HARDWARE_NVS									(HARDWARE_PREFIX_MISC_PRE90S | 0x00010000)
@@ -764,6 +771,8 @@ void GetIpsDrvDefine();
 
 #define HARDWARE_NES									(HARDWARE_PREFIX_NES)
 #define HARDWARE_FDS									(HARDWARE_PREFIX_FDS)
+#define HARDWARE_SNES                                   (HARDWARE_PREFIX_SNES)
+#define HARDWARE_SNES_ZAPPER                            (HARDWARE_PREFIX_SNES | 0x0000001)
 
 #define HARDWARE_CHANNELF                               (HARDWARE_PREFIX_CHANNELF)
 
@@ -795,6 +804,8 @@ void GetIpsDrvDefine();
 #define GBF_RPG                                         (1 << 24)
 #define GBF_SIM                                         (1 << 25)
 #define GBF_ADV                                         (1 << 26)
+#define GBF_CARD                                        (1 << 27)
+#define GBF_BOARD                                       (1 << 28)
 
 // flags for the family member
 #define FBF_MSLUG										(1 << 0)

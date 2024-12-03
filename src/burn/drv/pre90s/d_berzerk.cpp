@@ -870,9 +870,8 @@ static void berzerk_sound_write(UINT8 offset, UINT8 data)
 				case 1:
 					if (ZetGetActive() != -1)
 						s14001a_force_update();
-
 					/* volume */
-					s14001a_set_volume(((data >> 3 & 0xf) + 1) / 16.0);
+					s14001a_set_volume((data >> 3 & 7) / 7.0);
 
 					/* clock control - the first LS161 divides the clock by 9 to 16, the 2nd by 8,
 					 giving a final clock from 19.5kHz to 34.7kHz */
@@ -959,7 +958,7 @@ static UINT8 __fastcall berzerk_read_port(UINT16 address)
 	switch (address & 0xff)
 	{
 		case 0x44:
-			return (s14001a_busy_read()) ? 0xc0 : 0x40;
+			return (s14001a_busy_read()) ? 0x00 : 0x40;
 
 		case 0x48: // p1
 			return DrvInputs[0];
@@ -1004,7 +1003,7 @@ static UINT8 __fastcall berzerk_read_port(UINT16 address)
 			// led off, led on [67]
 			return 0;
 	}
-
+	bprintf(0, _T("rp  %x\n"), address);
 	return 0;
 }
 
@@ -1249,7 +1248,7 @@ static INT32 DrvFrame()
 			vblank = 1;
 		}
 
-		if (((i + 1) % 32) == 0 && nmi_enable) {
+		if ((i & 0x1f) == 0x10 && nmi_enable) {
 			ZetNmi();
 		}
 		if (i == 128 || i == 256) {
@@ -1347,7 +1346,7 @@ struct BurnDriver BurnDrvBerzerk = {
 	"berzerk", NULL, NULL, NULL, "1980",
 	"Berzerk (revision RC31A)\0", NULL, "Stern Electronics", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_MAZE, 0,
 	NULL, berzerkRomInfo, berzerkRomName, NULL, NULL, NULL, NULL, BerzerkInputInfo, BerzerkDIPInfo,
 	BerzerkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	256, 224, 4, 3
@@ -1375,7 +1374,7 @@ struct BurnDriver BurnDrvBerzerka = {
 	"berzerka", "berzerk", NULL, NULL, "1980",
 	"Berzerk (revision RC31)\0", NULL, "Stern Electronics", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_MAZE, 0,
 	NULL, berzerkaRomInfo, berzerkaRomName, NULL, NULL, NULL, NULL, BerzerkInputInfo, BerzerkDIPInfo,
 	BerzerkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	256, 224, 4, 3
@@ -1403,7 +1402,7 @@ struct BurnDriver BurnDrvBerzerkb = {
 	"berzerkb", "berzerk", NULL, NULL, "1980",
 	"Berzerk (revision RC28)\0", NULL, "Stern Electronics", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_MAZE, 0,
 	NULL, berzerkbRomInfo, berzerkbRomName, NULL, NULL, NULL, NULL, BerzerkInputInfo, BerzerkDIPInfo,
 	BerzerkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	256, 224, 4, 3
@@ -1431,7 +1430,7 @@ struct BurnDriver BurnDrvBerzerkf = {
 	"berzerkf", "berzerk", NULL, NULL, "1980",
 	"Berzerk (French Speech, revision RC31)\0", NULL, "Stern Electronics", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_MAZE, 0,
 	NULL, berzerkfRomInfo, berzerkfRomName, NULL, NULL, NULL, NULL, BerzerkInputInfo, BerzerkfDIPInfo,
 	BerzerkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	256, 224, 4, 3
@@ -1459,7 +1458,7 @@ struct BurnDriver BurnDrvBerzerkg = {
 	"berzerkg", "berzerk", NULL, NULL, "1980",
 	"Berzerk (German Speech, revision RC32)\0", NULL, "Stern Electronics", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_MAZE, 0,
 	NULL, berzerkgRomInfo, berzerkgRomName, NULL, NULL, NULL, NULL, BerzerkInputInfo, BerzerkgDIPInfo,
 	BerzerkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	256, 224, 4, 3
@@ -1486,7 +1485,7 @@ struct BurnDriver BurnDrvBerzerks = {
 	"berzerks", "berzerk", NULL, NULL, "1980",
 	"Berzerk (Spanish Speech, revision RC32)\0", NULL, "Stern Electronics (Sonic License)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_MAZE, 0,
 	NULL, berzerksRomInfo, berzerksRomName, NULL, NULL, NULL, NULL, BerzerkInputInfo, BerzerksDIPInfo,
 	BerzerkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	256, 224, 4, 3
@@ -1520,7 +1519,7 @@ struct BurnDriver BurnDrvFrenzy = {
 	"frenzy", NULL, NULL, NULL, "1982",
 	"Frenzy (revision RA1)\0", NULL, "Stern Electronics", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_MAZE, 0,
 	NULL, frenzyRomInfo, frenzyRomName, NULL, NULL, NULL, NULL, BerzerkInputInfo, FrenzyDIPInfo,
 	FrenzyInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	256, 224, 4, 3
@@ -1555,7 +1554,7 @@ struct BurnDriver BurnDrvMoonwarp = {
 	"moonwarp", NULL, NULL, NULL, "1981",
 	"Moon War (prototype on Frenzy hardware)\0", NULL, "Stern Electronics", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_PROTOTYPE, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_PROTOTYPE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, moonwarpRomInfo, moonwarpRomName, NULL, NULL, NULL, NULL, MoonwarpInputInfo, MoonwarpDIPInfo,
 	MoonwarpInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10,
 	256, 224, 4, 3

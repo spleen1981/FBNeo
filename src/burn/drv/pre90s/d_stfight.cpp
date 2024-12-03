@@ -913,7 +913,7 @@ struct BurnDriver BurnDrvEmpcity = {
 	"empcity", NULL, NULL, NULL, "1986",
 	"Empire City: 1931 (bootleg?)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, empcityRomInfo, empcityRomName, NULL, NULL, NULL, NULL, StfightInputInfo, StfightDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 224, 4, 3
@@ -1177,7 +1177,7 @@ static struct BurnRomInfo stfightRomDesc[] = {
 
 	{ "sf03.bin",		    0x8000, 0x6a8cb7a6, 2 | BRF_PRG | BRF_ESS }, //  2 audiocpu
 
-	{ "stfight_68705.3j",	0x0800, 0xf4cc50d6, 3 | BRF_PRG | BRF_ESS }, //  3 mcu
+	{ "_68705.3j",	        0x0800, 0xf4cc50d6, 3 | BRF_PRG | BRF_ESS }, //  3 mcu
 
 	{ "17.2n",		        0x2000, 0x1b3706b5, 4 | BRF_GRA },           //  4 stfight_vid:tx_gfx
 
@@ -1239,7 +1239,7 @@ static struct BurnRomInfo stfightaRomDesc[] = {
 
 	{ "sf03.bin",		    0x8000, 0x6a8cb7a6, 2 | BRF_PRG | BRF_ESS }, //  2 audiocpu
 
-	{ "stfight_68705.3j",	0x0800, 0xf4cc50d6, 3 | BRF_PRG | BRF_ESS }, //  3 mcu
+	{ "_68705.3j",	        0x0800, 0xf4cc50d6, 3 | BRF_PRG | BRF_ESS }, //  3 mcu
 
 	{ "17.2n",		        0x2000, 0x1b3706b5, 4 | BRF_GRA },           //  4 stfight_vid:tx_gfx
 
@@ -1287,7 +1287,7 @@ struct BurnDriver BurnDrvStfighta = {
 	"stfighta", "empcity", NULL, NULL, "1986",
 	"Street Fight (bootleg?)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, stfightaRomInfo, stfightaRomName, NULL, NULL, NULL, NULL, StfightInputInfo, StfightDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 224, 4, 3

@@ -13,6 +13,8 @@ static UINT8 DrvInput[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static UINT8 DrvReset = 0;
 
+static HoldCoin<2> hold_coin;
+
 static UINT8 nIRQPending;
 
 static INT32 nSoundCommand;
@@ -566,6 +568,8 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(nSoundCommand);
 		SCAN_VAR(nIRQPending);
 
+		hold_coin.scan();
+
 		if (nAction & ACB_WRITE) {
 			INT32 nBank = nCurrentBank;
 			nCurrentBank = -1;
@@ -841,6 +845,8 @@ static INT32 DrvDoReset()
 	BurnYM2151Reset();
 	NMK112Reset();
 
+	hold_coin.reset();
+
 	HiscoreReset();
 
 	return 0;
@@ -1014,6 +1020,9 @@ static INT32 DrvFrame()
 	ToaClearOpposites(&DrvInput[0]);
 	ToaClearOpposites(&DrvInput[1]);
 
+	hold_coin.check(0, DrvInput[2], 1 << 3, 1);
+	hold_coin.check(1, DrvInput[2], 1 << 4, 1);
+
 	SekNewFrame();
 
 	nCyclesTotal[0] = (INT32)((INT64)16000000 * nBurnCPUSpeedAdjust / (0x0100 * 60));
@@ -1109,7 +1118,7 @@ struct BurnDriver BurnDrvBgareggat = {
 	"bgareggat", "bgaregga", NULL, NULL, "1996",
 	"Battle Garegga (location test) (Wed Jan 17 1996)\0", NULL, "Raizing / Eighting", "Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_PROTOTYPE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_RAIZING, GBF_VERSHOOT, 0,
 	NULL, bgareggatRomInfo, bgareggatRomName, NULL, NULL, NULL, NULL, battlegInputInfo, bgareggaDIPInfo,
 	BgareggatInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4

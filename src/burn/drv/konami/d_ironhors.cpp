@@ -109,7 +109,7 @@ static struct BurnDIPInfo IronhorsDIPList[]=
 	{0x01, 0xff, 0xff, 0x5a, NULL					},
 	{0x02, 0xff, 0xff, 0xfe, NULL					},
 
-	{0   , 0xfe, 0   ,   16, "Free Play"			},
+	{0   , 0xfe, 0   ,   16, "Coin A"				},
 	{0x00, 0x01, 0x0f, 0x02, "4 Coins 1 Credits"	},
 	{0x00, 0x01, 0x0f, 0x05, "3 Coins 1 Credits"	},
 	{0x00, 0x01, 0x0f, 0x08, "2 Coins 1 Credits"	},
@@ -125,7 +125,7 @@ static struct BurnDIPInfo IronhorsDIPList[]=
 	{0x00, 0x01, 0x0f, 0x0b, "1 Coin  5 Credits"	},
 	{0x00, 0x01, 0x0f, 0x0a, "1 Coin  6 Credits"	},
 	{0x00, 0x01, 0x0f, 0x09, "1 Coin  7 Credits"	},
-	{0x00, 0x01, 0x0f, 0x00, ":1,2,3,4"				},
+	{0x00, 0x01, 0x0f, 0x00, "Free Play"			},
 
 	{0   , 0xfe, 0   ,   16, "Coin B"				},
 	{0x00, 0x01, 0xf0, 0x20, "4 Coins 1 Credits"	},
@@ -623,7 +623,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 }
 
 
-// Iron Horse
+// Iron Horse (version K)
 
 static struct BurnRomInfo ironhorsRomDesc[] = {
 	{ "560_k03.13c",	0x8000, 0x395351b4, 1 | BRF_PRG | BRF_ESS }, //  0 M6809 Code
@@ -648,7 +648,7 @@ STD_ROM_FN(ironhors)
 
 struct BurnDriver BurnDrvIronhors = {
 	"ironhors", NULL, NULL, NULL, "1986",
-	"Iron Horse\0", NULL, "Konami", "GX560",
+	"Iron Horse (version K)\0", NULL, "Konami", "GX560",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
 	NULL, ironhorsRomInfo, ironhorsRomName, NULL, NULL, NULL, NULL, IronhorsInputInfo, IronhorsDIPInfo,
@@ -657,7 +657,41 @@ struct BurnDriver BurnDrvIronhors = {
 };
 
 
-// Dai Ressya Goutou (Japan)
+// Iron Horse (version H)
+
+static struct BurnRomInfo ironhorshRomDesc[] = {
+	{ "13c_h03.bin",	0x8000, 0x24539af1, 1 | BRF_PRG | BRF_ESS }, //  0 M6809 Code
+	{ "12c_h02.bin",	0x4000, 0xfab07f86, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "10c_h01.bin",	0x4000, 0x2b17930f, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 Code
+
+	{ "08f_h06.bin",	0x8000, 0xf21d8c93, 3 | BRF_GRA },           //  3 Graphics Tiles
+	{ "07f_h05.bin",	0x8000, 0x60107859, 3 | BRF_GRA },           //  4
+	{ "09f_h07.bin",	0x8000, 0xc761ec73, 3 | BRF_GRA },           //  5
+	{ "06f_h04.bin",	0x8000, 0xc1486f61, 3 | BRF_GRA },           //  6
+
+	{ "03f_h08.bin",	0x0100, 0x9f6ddf83, 4 | BRF_GRA },           //  7 Color PROMs
+	{ "04f_h09.bin",	0x0100, 0xe6773825, 4 | BRF_GRA },           //  8
+	{ "05f_h10.bin",	0x0100, 0x30a57860, 4 | BRF_GRA },           //  9
+	{ "10f_h12.bin",	0x0100, 0x5eb33e73, 4 | BRF_GRA },           // 10
+	{ "10f_h11.bin",	0x0100, 0xa63e37d8, 4 | BRF_GRA },           // 11
+};
+
+STD_ROM_PICK(ironhorsh)
+STD_ROM_FN(ironhorsh)
+
+struct BurnDriver BurnDrvIronhorsh = {
+	"ironhorsh", "ironhors", NULL, NULL, "1986",
+	"Iron Horse (version H)\0", NULL, "Konami", "GX560",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	NULL, ironhorshRomInfo, ironhorshRomName, NULL, NULL, NULL, NULL, IronhorsInputInfo, IronhorsDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
+	240, 224, 4, 3
+};
+
+
+// Dai Ressya Goutou (Japan, version K)
 
 static struct BurnRomInfo dairesyaRomDesc[] = {
 	{ "560-k03.13c",	0x8000, 0x2ac6103b, 1 | BRF_PRG | BRF_ESS }, //  0 M6809 Code
@@ -682,7 +716,7 @@ STD_ROM_FN(dairesya)
 
 struct BurnDriver BurnDrvDairesya = {
 	"dairesya", "ironhors", NULL, NULL, "1986",
-	"Dai Ressya Goutou (Japan)\0", NULL, "Konami (Kawakusu license)", "GX560",
+	"Dai Ressya Goutou (Japan, version K)\0", NULL, "Konami (Kawakusu license)", "GX560",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
 	NULL, dairesyaRomInfo, dairesyaRomName, NULL, NULL, NULL, NULL, DairesyaInputInfo, IronhorsDIPInfo,

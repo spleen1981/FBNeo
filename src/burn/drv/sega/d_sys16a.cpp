@@ -678,6 +678,45 @@ static struct BurnDIPInfo FantzoneDIPList[]=
 
 STDDIPINFO(Fantzone)
 
+static struct BurnDIPInfo FantzonenXDIPList[]=
+{
+	// Default Values
+	{0x13, 0xff, 0xff, 0xff, NULL                                 },
+	{0x14, 0xff, 0xff, 0xfc, NULL                                 },
+
+	// Dip 1
+	SYSTEM16A_COINAGE(0x13)
+
+	// Dip 2
+	{0   , 0xfe, 0   , 2   , "Cabinet"                            },
+	{0x14, 0x01, 0x01, 0x00, "Upright"                            },
+	{0x14, 0x01, 0x01, 0x01, "Cocktail"                           },
+
+	{0   , 0xfe, 0   , 2   , "Allow Continue"                     },
+	{0x14, 0x01, 0x02, 0x02, "Off"                                },
+	{0x14, 0x01, 0x02, 0x00, "On"                                 },
+
+	{0   , 0xfe, 0   , 4   , "Lives"                              },
+	{0x14, 0x01, 0x0c, 0x08, "2"                                  },
+	{0x14, 0x01, 0x0c, 0x0c, "3"                                  },
+	{0x14, 0x01, 0x0c, 0x04, "4"                                  },
+	{0x14, 0x01, 0x0c, 0x00, "240"                                },
+
+	{0   , 0xfe, 0   , 4   , "Extra Ship Cost"                    },
+	{0x14, 0x01, 0x30, 0x30, "5000"                               },
+	{0x14, 0x01, 0x30, 0x20, "10000"                              },
+	{0x14, 0x01, 0x30, 0x10, "15000"                              },
+	{0x14, 0x01, 0x30, 0x00, "20000"                              },
+
+	{0   , 0xfe, 0   , 4   , "Difficulty"                         },
+	{0x14, 0x01, 0xc0, 0x80, "Easy"                               },
+	{0x14, 0x01, 0xc0, 0xc0, "Normal"                             },
+	{0x14, 0x01, 0xc0, 0x40, "Hard"                               },
+	{0x14, 0x01, 0xc0, 0x00, "Hardest"                            },
+};
+
+STDDIPINFO(FantzonenX)
+
 static struct BurnDIPInfo MjleagueDIPList[]=
 {
 	// Default Values
@@ -1497,6 +1536,48 @@ static struct BurnRomInfo FantzoneRomDesc[] = {
 STD_ROM_PICK(Fantzone)
 STD_ROM_FN(Fantzone)
 
+static struct BurnRomInfo FantzonenoRomDesc[] = {
+	{ "fz1_07536a.p00",0x30000, 0xc72830b5, SYS16_ROM_PROG_FLAT | BRF_ESS | BRF_PRG },
+
+	{ "epr-7388.95",   0x08000, 0x8eb02f6b, SYS16_ROM_TILES | BRF_GRA },
+	{ "epr-7389.94",   0x08000, 0x2f4f71b8, SYS16_ROM_TILES | BRF_GRA },
+	{ "epr-7390.93",   0x08000, 0xd90609c6, SYS16_ROM_TILES | BRF_GRA },
+
+	{ "epr-7392.10",   0x08000, 0x5bb7c8b6, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-7396.11",   0x08000, 0x74ae4b57, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-7393.17",   0x08000, 0x14fc7e82, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-7397.18",   0x08000, 0xe05a1e25, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-7394.23",   0x08000, 0x531ca13f, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-7398.24",   0x08000, 0x68807b49, SYS16_ROM_SPRITES | BRF_GRA },
+
+	{ "epr-7535a.12",  0x08000, 0xbc1374fa, SYS16_ROM_Z80PROG | BRF_ESS | BRF_PRG },
+};
+
+
+STD_ROM_PICK(Fantzoneno)
+STD_ROM_FN(Fantzoneno)
+
+static struct BurnRomInfo FantzonenuRomDesc[] = {
+	{ "fz1_7536a.p00", 0x30000, 0x169491d4, SYS16_ROM_PROG_FLAT | BRF_ESS | BRF_PRG },
+
+	{ "epr-7388.95",   0x08000, 0x8eb02f6b, SYS16_ROM_TILES | BRF_GRA },
+	{ "epr-7389.94",   0x08000, 0x2f4f71b8, SYS16_ROM_TILES | BRF_GRA },
+	{ "epr-7390.93",   0x08000, 0xd90609c6, SYS16_ROM_TILES | BRF_GRA },
+
+	{ "epr-7392.10",   0x08000, 0x5bb7c8b6, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-7396.11",   0x08000, 0x74ae4b57, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-7393.17",   0x08000, 0x14fc7e82, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-7397.18",   0x08000, 0xe05a1e25, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-7394.23",   0x08000, 0x531ca13f, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-7398.24",   0x08000, 0x68807b49, SYS16_ROM_SPRITES | BRF_GRA },
+
+	{ "epr-7535a.12",  0x08000, 0xbc1374fa, SYS16_ROM_Z80PROG | BRF_ESS | BRF_PRG },
+};
+
+
+STD_ROM_PICK(Fantzonenu)
+STD_ROM_FN(Fantzonenu)
+
 static struct BurnRomInfo Fantzone1RomDesc[] = {
 	{ "epr-7385.43",   0x08000, 0x5cb64450, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
 	{ "epr-7382.26",   0x08000, 0x3fda7416, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
@@ -2183,25 +2264,25 @@ STD_ROM_PICK(Timescan1)
 STD_ROM_FN(Timescan1)
 
 static struct BurnRomInfo Wb31RomDesc[] = {
-	{ "epr-12084.bin", 0x10000, 0xb6deb654, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
-	{ "epr-12082.bin", 0x10000, 0x38dc5b15, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
-	{ "epr-12085.bin", 0x10000, 0x0962098b, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
-	{ "epr-12083.bin", 0x10000, 0x3d631a8e, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "epr-12084.43", 0x10000, 0xb6deb654, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "epr-12082.26", 0x10000, 0x38dc5b15, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "epr-12085.42", 0x10000, 0x0962098b, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "epr-12083.25", 0x10000, 0x3d631a8e, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
 
-	{ "epr-12086.bin", 0x10000, 0x45b949df, SYS16_ROM_TILES | BRF_GRA },
-	{ "epr-12087.bin", 0x10000, 0x6f0396b7, SYS16_ROM_TILES | BRF_GRA },
-	{ "epr-12088.bin", 0x10000, 0xba8c0749, SYS16_ROM_TILES | BRF_GRA },
+	{ "epr-12086.95", 0x10000, 0x45b949df, SYS16_ROM_TILES | BRF_GRA },
+	{ "epr-12087.94", 0x10000, 0x6f0396b7, SYS16_ROM_TILES | BRF_GRA },
+	{ "epr-12088.83", 0x10000, 0xba8c0749, SYS16_ROM_TILES | BRF_GRA },
 
-	{ "epr-12090.b1",  0x10000, 0xaeeecfca, SYS16_ROM_SPRITES | BRF_GRA },
-	{ "epr-12094.b5",  0x10000, 0x615e4927, SYS16_ROM_SPRITES | BRF_GRA },
-	{ "epr-12091.b2",  0x10000, 0x8409a243, SYS16_ROM_SPRITES | BRF_GRA },
-	{ "epr-12095.b6",  0x10000, 0xe774ec2c, SYS16_ROM_SPRITES | BRF_GRA },
-	{ "epr-12092.b3",  0x10000, 0x5c2f0d90, SYS16_ROM_SPRITES | BRF_GRA },
-	{ "epr-12096.b7",  0x10000, 0x0cd59d6e, SYS16_ROM_SPRITES | BRF_GRA },
-	{ "epr-12093.b4",  0x10000, 0x4891e7bb, SYS16_ROM_SPRITES | BRF_GRA },
-	{ "epr-12097.b8",  0x10000, 0xe645902c, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-12090.10",  0x10000, 0xaeeecfca, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-12094.11",  0x10000, 0x615e4927, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-12091.17",  0x10000, 0x8409a243, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-12095.18",  0x10000, 0xe774ec2c, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-12092.23",  0x10000, 0x5c2f0d90, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-12096.24",  0x10000, 0x0cd59d6e, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-12093.29",  0x10000, 0x4891e7bb, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "epr-12097.30",  0x10000, 0xe645902c, SYS16_ROM_SPRITES | BRF_GRA },
 
-	{ "epr-12089.bin", 0x08000, 0x8321eb0b, SYS16_ROM_Z80PROG | BRF_ESS | BRF_PRG },
+	{ "epr-12089.12", 0x08000, 0x8321eb0b, SYS16_ROM_Z80PROG | BRF_ESS | BRF_PRG },
 
 	{ "317-0084.key",  0x02000, 0x2c58dafa, SYS16_ROM_KEY | BRF_ESS | BRF_PRG },
 };
@@ -3676,7 +3757,7 @@ struct BurnDriver BurnDrvAFighter = {
 	"afighter", NULL, NULL, NULL, "1986",
 	"Action Fighter (FD1089A 317-0018)\0", NULL, "Sega", "System 16A",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A | HARDWARE_SEGA_FD1089A_ENC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A | HARDWARE_SEGA_FD1089A_ENC, GBF_VERSHOOT, 0,
 	NULL, AfighterRomInfo, AfighterRomName, NULL, NULL, NULL, NULL, System16aInputInfo, AfighterDIPInfo,
 	System16Init, System16Exit, System16AFrame, System16ARender, System16Scan,
 	NULL, 0x1800, 224, 320, 3, 4
@@ -3686,7 +3767,7 @@ struct BurnDriver BurnDrvAFightera = {
 	"afightera", "afighter", NULL, NULL, "1986",
 	"Action Fighter (unprotected)\0", NULL, "Sega", "System 16A",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A, GBF_VERSHOOT, 0,
 	NULL, AfighteraRomInfo, AfighteraRomName, NULL, NULL, NULL, NULL, System16aInputInfo, AfighterDIPInfo,
 	System16Init, System16Exit, System16AFrame, System16ARender, System16Scan,
 	NULL, 0x1800, 224, 320, 3, 4
@@ -3696,7 +3777,7 @@ struct BurnDriver BurnDrvAFighterb = {
 	"afighterb", "afighter", NULL, NULL, "1986",
 	"Action Fighter (unprotected, analog controls)\0", NULL, "Sega", "System 16A",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A, GBF_VERSHOOT, 0,
 	NULL, AfighterbRomInfo, AfighterbRomName, NULL, NULL, NULL, NULL, Afighter_analogInputInfo, Afighter_analogDIPInfo,
 	AfighterbInit, System16Exit, System16AFrame, System16ARender, System16Scan,
 	NULL, 0x1800, 224, 320, 3, 4
@@ -3706,7 +3787,7 @@ struct BurnDriver BurnDrvAFighterc = {
 	"afighterc", "afighter", NULL, NULL, "1986",
 	"Action Fighter (FD1089B 317-unknown)\0", NULL, "Sega", "System 16A",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A | HARDWARE_SEGA_FD1089B_ENC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A | HARDWARE_SEGA_FD1089B_ENC, GBF_VERSHOOT, 0,
 	NULL, AfightercRomInfo, AfightercRomName, NULL, NULL, NULL, NULL, System16aInputInfo, AfighterDIPInfo,
 	System16Init, System16Exit, System16AFrame, System16ARender, System16Scan,
 	NULL, 0x1800, 224, 320, 3, 4
@@ -3716,7 +3797,7 @@ struct BurnDriver BurnDrvAFighterd = {
 	"afighterd", "afighter", NULL, NULL, "1986",
 	"Action Fighter (FD1089B 317-unknown, analog controls)\0", NULL, "Sega", "System 16A",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A | HARDWARE_SEGA_FD1089B_ENC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A | HARDWARE_SEGA_FD1089B_ENC, GBF_VERSHOOT, 0,
 	NULL, AfighterdRomInfo, AfighterdRomName, NULL, NULL, NULL, NULL, Afighter_analogInputInfo, Afighter_analogDIPInfo,
 	AfighterbInit, System16Exit, System16AFrame, System16ARender, System16Scan,
 	NULL, 0x1800, 224, 320, 3, 4
@@ -3746,7 +3827,7 @@ struct BurnDriver BurnDrvAliensynjo = {
 	"aliensynjo", "aliensyn", NULL, NULL, "1987",
 	"Alien Syndrome (set 1, Japan, old, System 16A, FD1089A 317-0033)\0", NULL, "Sega", "System 16A",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A | HARDWARE_SEGA_FD1089A_ENC, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A | HARDWARE_SEGA_FD1089A_ENC, GBF_MAZE | GBF_RUNGUN, 0,
 	NULL, AliensynjoRomInfo, AliensynjoRomName, NULL, NULL, NULL, NULL, System16afire1InputInfo, AliensynDIPInfo,
 	AliensynjoInit, System16Exit, System16AFrame, System16ARender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -3756,7 +3837,7 @@ struct BurnDriver BurnDrvAliensyn2 = {
 	"aliensyn2", "aliensyn", NULL, NULL, "1987",
 	"Alien Syndrome (set 2, System 16A, FD1089A 317-0033)\0", NULL, "Sega", "System 16A",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A | HARDWARE_SEGA_FD1089A_ENC, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A | HARDWARE_SEGA_FD1089A_ENC, GBF_MAZE | GBF_RUNGUN, 0,
 	NULL, Aliensyn2RomInfo, Aliensyn2RomName, NULL, NULL, NULL, NULL, System16afire1InputInfo, AliensynDIPInfo,
 	AliensynjoInit, System16Exit, System16AFrame, System16ARender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -3766,7 +3847,7 @@ struct BurnDriver BurnDrvAliensyn5 = {
 	"aliensyn5", "aliensyn", NULL, NULL, "1987",
 	"Alien Syndrome (set 5, System 16A, FD1089B 317-0037)\0", NULL, "Sega", "System 16A",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A | HARDWARE_SEGA_FD1089B_ENC, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A | HARDWARE_SEGA_FD1089B_ENC, GBF_MAZE | GBF_RUNGUN, 0,
 	NULL, Aliensyn5RomInfo, Aliensyn5RomName, NULL, NULL, NULL, NULL, System16afire1InputInfo, AliensynDIPInfo,
 	Aliensyn5Init, System16Exit, System16AFrame, System16ARender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -3815,6 +3896,26 @@ struct BurnDriver BurnDrvFantzone1 = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A, GBF_HORSHOOT, 0,
 	NULL, Fantzone1RomInfo, Fantzone1RomName, NULL, NULL, NULL, NULL, System16aInputInfo, FantzoneDIPInfo,
+	FantzoneInit, System16Exit, System16AFrame, System16ARender, System16Scan,
+	NULL, 0x1800, 320, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvFantzoneno = {
+	"fantzoneno", "fantzone", NULL, NULL, "1986",
+	"Fantasy Zone (New, Oversea, PS2)\0", NULL, "Sega", "System 16A",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A, GBF_HORSHOOT, 0,
+	NULL, FantzonenoRomInfo, FantzonenoRomName, NULL, NULL, NULL, NULL, System16aInputInfo, FantzonenXDIPInfo,
+	FantzoneInit, System16Exit, System16AFrame, System16ARender, System16Scan,
+	NULL, 0x1800, 320, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvFantzonenu = {
+	"fantzonenu", "fantzone", NULL, NULL, "1986",
+	"Fantasy Zone (New, US Rev.A, PS2)\0", NULL, "Sega", "System 16A",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A, GBF_HORSHOOT, 0,
+	NULL, FantzonenuRomInfo, FantzonenuRomName, NULL, NULL, NULL, NULL, System16aInputInfo, FantzonenXDIPInfo,
 	FantzoneInit, System16Exit, System16AFrame, System16ARender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
 };
@@ -3933,7 +4034,7 @@ struct BurnDriver BurnDrvShinobi = {
 	"shinobi", NULL, NULL, NULL, "1987",
 	"Shinobi (set 6, System 16A) (unprotected)\0", NULL, "Sega", "System 16A",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A, GBF_PLATFORM | GBF_SCRFIGHT, 0,
 	NULL, ShinobiRomInfo, ShinobiRomName, NULL, NULL, NULL, NULL, System16afire3InputInfo, ShinobiDIPInfo,
 	ShinobiInit, System16Exit, System16AFrame, System16ARender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -3943,7 +4044,7 @@ struct BurnDriver BurnDrvShinobi1 = {
 	"shinobi1", "shinobi", NULL, NULL, "1987",
 	"Shinobi (set 1, System 16A) (FD1094 317-0050)\0", NULL, "Sega", "System 16A",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A | HARDWARE_SEGA_FD1094_ENC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A | HARDWARE_SEGA_FD1094_ENC, GBF_PLATFORM | GBF_SCRFIGHT, 0,
 	NULL, Shinobi1RomInfo, Shinobi1RomName, NULL, NULL, NULL, NULL, System16afire3InputInfo, ShinobiDIPInfo,
 	ShinobiInit, System16Exit, System16AFrame, System16ARender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -3953,7 +4054,7 @@ struct BurnDriver BurnDrvShinobi1d = {
 	"shinobi1d", "shinobi", NULL, NULL, "1987",
 	"Shinobi (set 1, System 16A) (bootleg of FD1094 317-0050 set)\0", NULL, "bootleg", "System 16A",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A, GBF_PLATFORM | GBF_SCRFIGHT, 0,
 	NULL, Shinobi1dRomInfo, Shinobi1dRomName, NULL, NULL, NULL, NULL, System16afire3InputInfo, ShinobiDIPInfo,
 	ShinobiInit, System16Exit, System16AFrame, System16ARender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -3963,7 +4064,7 @@ struct BurnDriver BurnDrvShinobls = {
 	"shinobls", "shinobi", NULL, NULL, "1987",
 	"Shinobi (Star bootleg, System 16A)\0", NULL, "bootleg (Star)", "System 16A",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM16A, GBF_PLATFORM | GBF_SCRFIGHT, 0,
 	NULL, ShinoblsRomInfo, ShinoblsRomName, NULL, NULL, NULL, NULL, System16afire3InputInfo, ShinobiDIPInfo,
 	ShinobiInit, System16Exit, System16AFrame, System16ARender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -3973,7 +4074,7 @@ struct BurnDriver BurnDrvShinoblb = {
 	"shinoblb", "shinobi", NULL, NULL, "1987",
 	"Shinobi (Beta bootleg)\0", NULL, "bootleg (Beta)", "System 16A",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM16A, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM16A, GBF_PLATFORM | GBF_SCRFIGHT, 0,
 	NULL, ShinoblbRomInfo, ShinoblbRomName, NULL, NULL, NULL, NULL, System16afire3InputInfo, ShinobiDIPInfo,
 	ShinobiInit, System16Exit, System16AFrame, System16ARender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
