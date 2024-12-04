@@ -84,9 +84,6 @@
     <Filter Include="Source Files\src\dep\libs">
       <UniqueIdentifier>{9c5e69d0-0672-4595-be65-aa7412bdad94}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\src\dep\libs\libpng">
-      <UniqueIdentifier>{4504e726-d041-4091-b770-03ed6efbe5cc}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\src\dep\libs\zlib">
       <UniqueIdentifier>{46d7a174-4928-48bd-93d8-f799e1a08900}</UniqueIdentifier>
     </Filter>
@@ -262,18 +259,6 @@
     </ClCompile>
     <ClCompile Include="src\cpu\konami\konami.cpp">
       <Filter>Source Files\src\cpu\konami</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cpu\m68k\m68kcpu.c">
-      <Filter>Source Files\src\cpu\m68k</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cpu\m68k\m68kopac.c">
-      <Filter>Source Files\src\cpu\m68k</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cpu\m68k\m68kopdm.c">
-      <Filter>Source Files\src\cpu\m68k</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cpu\m68k\m68kopnz.c">
-      <Filter>Source Files\src\cpu\m68k</Filter>
     </ClCompile>
     <ClCompile Include="src\cpu\m6502\m6502.cpp">
       <Filter>Source Files\src\cpu\m6502</Filter>
@@ -538,51 +523,6 @@
     </ClCompile>
     <ClCompile Include="src\burn\snd\ymz280b.cpp">
       <Filter>Source Files\src\burn\snd</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\png.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngerror.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngget.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngmem.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngpread.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngread.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngrio.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngrtran.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngrutil.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngset.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngtrans.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngwio.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngwrite.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngwtran.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngwutil.c">
-      <Filter>Source Files\src\dep\libs\libpng</Filter>
     </ClCompile>
     <ClCompile Include="src\dep\libs\zlib\adler32.c">
       <Filter>Source Files\src\dep\libs\zlib</Filter>
@@ -1754,51 +1694,6 @@
     <ClCompile Include="src\burner\un7z.cpp">
       <Filter>Source Files\src\burner</Filter>
     </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\7zAlloc.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\7zBuf.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\7zBuf2.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\7zCrc.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\7zCrcOpt.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\7zDec.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\Bcj2.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\Bra.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\7zStream.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\CpuArch.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\Lzma2Dec.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\LzmaDec.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\Ppmd7.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\Ppmd7Dec.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\Bra86.c">
-      <Filter>Source Files\src\dep\libs\lib7z</Filter>
-    </ClCompile>
     <ClCompile Include="src\burn\drv\pst90s\d_playmark.cpp">
       <Filter>Source Files\src\burn\drv\pst90s</Filter>
     </ClCompile>
@@ -1949,9 +1844,6 @@
     <ClCompile Include="src\burner\conc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\7zFile.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\burn\drv\konami\k053250.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -1971,9 +1863,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\burn\drv\pst90s\d_gaelco2.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\7zIn.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\burn\snd\gaelco.cpp">
@@ -3200,16 +3089,10 @@
     <ClCompile Include="src\cpu\z180_intf.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\burner\xbox\compat_funct.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\burn\snd\ay8910.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\cpu\z80\z80ctc.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cpu\m68k\m68kops.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\burner\xbox\replay.cpp">
@@ -3455,7 +3338,169 @@
     <ClCompile Include="src\burner\xbox\ips_manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\cpu\m68k\m68kfpu.c">
+    <ClCompile Include="src\burn\drv\pre90s\d_vampire.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pst90s\d_expro02.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pst90s\d_itech8.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\pst90s\d_splash.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\snd\votrax.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cpu\mb88xx\mb88xx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\libspng\spng.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\7zArcIn.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\7zBuf.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\7zBuf2.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\7zCrc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\7zCrcOpt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\7zDec.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\7zFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\7zStream.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Alloc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Bcj2.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Bra.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Bra86.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\BraIA64.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\CpuArch.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Delta.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\LzFindOpt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Lzma2Dec.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\LzmaDec.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Ppmd7.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Ppmd7Dec.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Ppmd7aDec.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Sha256.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Sha1Opt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Sha256Opt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Threads.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\Xxh64.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\ZstdDec.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burner\xbox\compat_cpp_funct.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cpu\m68k\m68kcpu.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cpu\m68k\m68kops.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\d_snes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\apu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\cart.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\cpu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\cx4.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\dma.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\dsp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\input.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\ppu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\snes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\snes_other.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\spc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\sdd1.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\cpu_sa1.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\statehandler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\drv\snes\sa1.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\devices\pit8253.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\burn\devices\kaneko_hit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
