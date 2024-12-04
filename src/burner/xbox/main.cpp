@@ -833,8 +833,6 @@ int SplashCreate(void)
 	}
 	FadeBlack(hFadeRect, true, 2);
 
-	XuiElementSetShow(hFadeRect, false);
-
 	if (IsDATGenerationRequested) {
 			XuiElementSetShow(hGenerating, true);
 			// Render game graphics.
