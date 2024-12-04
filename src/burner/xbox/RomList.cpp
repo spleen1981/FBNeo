@@ -98,7 +98,7 @@ enum {
 	NEOGEO_CD,
 	SEGAMD,
 	PCE,
-	//SNES,
+	SNES,
 	SETA,
 	SMS,
 	SNK,
@@ -113,7 +113,7 @@ enum {
 	NES,
 	FDS,
 	NGP,
-	//CHANNELF,
+	CHANNELF,
 	PLATFORM_FILTER_MAX
 };
 
@@ -163,8 +163,8 @@ static int MegadriveValue		= HARDWARE_PREFIX_SEGA_MEGADRIVE >> 24;
 static int MASKMEGADRIVE		= 1 << MegadriveValue;
 static int PCEngineValue		= HARDWARE_PREFIX_PCENGINE >> 24;
 static int MASKPCENGINE			= 1 << PCEngineValue;
-//static int SnesValue			= HARDWARE_PREFIX_NINTENDO_SNES >> 24;
-//static int MASKSNES				= 1 << SnesValue;
+static int SnesValue			= HARDWARE_PREFIX_SNES >> 24;
+static int MASKSNES				= 1 << SnesValue;
 static int SmsValue				= HARDWARE_PREFIX_SEGA_MASTER_SYSTEM >> 24;
 static int MASKSMS				= 1 << SmsValue;
 
@@ -180,7 +180,7 @@ static int SPECTRUMValue		= HARDWARE_PREFIX_SPECTRUM >> 24;
 static int NESValue		= HARDWARE_PREFIX_NES >> 24;
 static int FDSValue		= HARDWARE_PREFIX_FDS >> 24;
 static int NGPValue		= HARDWARE_PREFIX_NGP >> 24;
-//static int CHANNELFValue		= HARDWARE_PREFIX_CHANNELF >> 24;
+static int CHANNELFValue		= HARDWARE_PREFIX_CHANNELF >> 24;
 
 static int MASKSNK				= 1 << SNKValue;
 static int MASKCAPCOM_MISC				= 1 << CAPCOM_MISCValue;
@@ -194,10 +194,10 @@ static int MASKSPECTRUM				= 1 << SPECTRUMValue;
 static int MASKNES				= 1 << NESValue;
 static int MASKFDS				= 1 << FDSValue;
 static int MASKNGP				= 1 << NGPValue;
-//static int MASKCHANNELF				= 1 << CHANNELFValue;
+static int MASKCHANNELF				= 1 << CHANNELFValue;
 
 
-static int MASKALL				= MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 | MASKCPS3 | MASKDATAEAST | MASKGALAXIAN | MASKIREM | MASKKANEKO | MASKKONAMI | MASKNEOGEO | MASKPACMAN | MASKPGM | MASKPSIKYO | MASKSEGA | MASKSETA | MASKTAITO | MASKTECHNOS | MASKTOAPLAN | MASKMISCPRE90S | MASKMISCPOST90S | MASKMEGADRIVE | MASKPCENGINE /*| MASKSNES */| MASKSMS | SNK | CAPCOM_MISC | SEGA_MASTER_SYSTEM | SEGA_SG1000 | COLECO | MIDWAY | SEGA_GAME_GEAR | MSX | SPECTRUM | NES | FDS | NGP /*| CHANNELF*/;
+static int MASKALL				= MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 | MASKCPS3 | MASKDATAEAST | MASKGALAXIAN | MASKIREM | MASKKANEKO | MASKKONAMI | MASKNEOGEO | MASKPACMAN | MASKPGM | MASKPSIKYO | MASKSEGA | MASKSETA | MASKTAITO | MASKTECHNOS | MASKTOAPLAN | MASKMISCPRE90S | MASKMISCPOST90S | MASKMEGADRIVE | MASKPCENGINE | MASKSNES | MASKSMS | SNK | CAPCOM_MISC | SEGA_MASTER_SYSTEM | SEGA_SG1000 | COLECO | MIDWAY | SEGA_GAME_GEAR | MSX | SPECTRUM | NES | FDS | NGP | CHANNELF;
 
 
 #define AVAILONLY				(1 << 28)
@@ -926,7 +926,7 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		m_HardwareFilterMap[MISCPRE90] = MASKMISCPRE90S;
 		m_HardwareFilterMap[MISCPOST90] = MASKMISCPOST90S;
 		m_HardwareFilterMap[PCE] = MASKPCENGINE;
-//		m_HardwareFilterMap[SNES] = MASKSNES;
+		m_HardwareFilterMap[SNES] = MASKSNES;
 		m_HardwareFilterMap[SMS] = MASKSMS;
 		m_HardwareFilterMap[SETA] = MASKSETA;
 		m_HardwareFilterMap[SNK] = MASKSNK;
@@ -941,7 +941,7 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		m_HardwareFilterMap[NES] = MASKNES;
 		m_HardwareFilterMap[FDS] = MASKFDS;
 		m_HardwareFilterMap[NGP] = MASKNGP;
-		//m_HardwareFilterMap[CHANNELF] = MASKCHANNELF;
+		m_HardwareFilterMap[CHANNELF] = MASKCHANNELF;
 
 
 		m_HardwareFilterDesc[ALL] = "All Hardware";
@@ -967,7 +967,7 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		m_HardwareFilterDesc[MISCPRE90] = "Pre 90's";
 		m_HardwareFilterDesc[MISCPOST90] = "Post 90's";
 		m_HardwareFilterDesc[PCE] = "PC Engine";
-		//m_HardwareFilterDesc[SNES] = "SNES";
+		m_HardwareFilterDesc[SNES] = "SNES";
 		m_HardwareFilterDesc[SMS] = "SMS";
 		m_HardwareFilterDesc[SETA] = "Seta";
 		m_HardwareFilterDesc[SNK] = "SNK";
@@ -982,7 +982,7 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		m_HardwareFilterDesc[NES] = "NES";
 		m_HardwareFilterDesc[FDS] = "FDS";
 		m_HardwareFilterDesc[NGP] = "NGP";
-		//m_HardwareFilterDesc[CHANNELF] = "Channelf";
+		m_HardwareFilterDesc[CHANNELF] = "Channelf";
  
 
 		swprintf(VersionText,L"%S",szAppBurnVer);
