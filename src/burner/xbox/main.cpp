@@ -25,7 +25,6 @@ BOOL IsCurrentlyInGame = false;
 BOOL IsDATGenerationRequested = false;
 HXUIOBJ hMainScene;
 HXUIOBJ hMVSplashScene;
-HXUIOBJ hSplashVideo;
 HINSTANCE hAppInst = NULL;		// Application Instance
 HANDLE hMainThread;
 int nAppThreadPriority = THREAD_PRIORITY_NORMAL;
@@ -791,7 +790,6 @@ void FadeBlack(HXUIOBJ pBlackOverlay, bool to_black, float sec_duration) {
 int SplashCreate(void)
 {
 	HXUIOBJ hFadeRect;
-	HXUIOBJ hButtonGroup;
 	HXUIOBJ hGenerating;
 
 	// Load the skin file used for the scene.
@@ -805,14 +803,9 @@ int SplashCreate(void)
 	XuiSetTimer(hMainScene, 1, 4000);
 
 	XuiSceneNavigateFirst( app.GetRootObj(), hMainScene, XUSER_INDEX_FOCUS );
-	XuiElementGetChildById( hMainScene, L"XuiVideoSplash", &hSplashVideo );
-	XuiElementGetChildById( hMainScene, L"XuiButtonGroup", &hButtonGroup );
 	XuiElementGetChildById( hMainScene, L"XuiFadeRect", &hFadeRect );
 	XuiElementGetChildById( hMainScene, L"XuiGenerating", &hGenerating );
 
-
-	XuiElementSetShow(hSplashVideo, true);
-	XuiElementSetShow(hButtonGroup, true);
 	XuiElementSetShow(hFadeRect, true);
 	XuiElementSetShow(hGenerating, false);
 
@@ -823,10 +816,8 @@ int SplashCreate(void)
 	while(!IsCurrentlyInGame)
 	{
 		if (IsDATGenerationRequested)
-		{
 			IsCurrentlyInGame = true;
-			XuiElementSetShow(hGenerating, true);
-		}
+
 		// Render game graphics.
 		RenderGame( pDevice );
 		// Update XUI
@@ -840,17 +831,32 @@ int SplashCreate(void)
 	}
 	FadeBlack(hFadeRect, true, 2);
 
-	XuiElementSetShow(hSplashVideo, false);
-	XuiElementSetShow(hButtonGroup, false);
 	XuiElementSetShow(hFadeRect, false);
 
 	if (IsDATGenerationRequested) {
+			XuiElementSetShow(hGenerating, true);
+			// Render game graphics.
+			RenderGame( pDevice );
+			// Update XUI
+			app.RunFrame();
+			// Render XUI
+			app.Render();
+			// Update XUI Timers
+			XuiTimersRun();
+			// Present the frame.
+			pDevice->Present( NULL, NULL, NULL, NULL );
 			IsDATGenerationRequested = false;
 			create_datfile(_T("GAME:\\FBNeo.dat"), 0);
 	}
 
-	XuiElementSetShow(hGenerating, false);
-	XuiSceneNavigateBack(hMainScene,NULL,XUSER_INDEX_FOCUS);
+	//XuiElementSetShow(hGenerating, false);
+	//XuiSceneNavigateBack(hMainScene,NULL,XUSER_INDEX_FOCUS);
+
+	if (hMainScene!=NULL){
+		XuiElementUnlink(hMainScene);
+		XuiDestroyObject(hMainScene);
+		hMainScene=NULL;
+	}
 
 	return 0;
 
