@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include "snes.h"
 
+extern double spccycles;
+extern double spctotal2;
+extern double spctotal3;
+
 static INT32 frames;
 INT32 intthisline;
 INT32 framenum;
