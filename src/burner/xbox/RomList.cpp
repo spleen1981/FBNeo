@@ -98,7 +98,7 @@ enum {
 	NEOGEO_CD,
 	SEGAMD,
 	PCE,
-	//SNES,
+	SNES,
 	SETA,
 	SMS,
 	SNK,
@@ -163,8 +163,8 @@ static int MegadriveValue		= HARDWARE_PREFIX_SEGA_MEGADRIVE >> 24;
 static int MASKMEGADRIVE		= 1 << MegadriveValue;
 static int PCEngineValue		= HARDWARE_PREFIX_PCENGINE >> 24;
 static int MASKPCENGINE			= 1 << PCEngineValue;
-//static int SnesValue			= HARDWARE_PREFIX_NINTENDO_SNES >> 24;
-//static int MASKSNES				= 1 << SnesValue;
+static int SnesValue			= HARDWARE_PREFIX_SNES >> 24;
+static int MASKSNES				= 1 << SnesValue;
 static int SmsValue				= HARDWARE_PREFIX_SEGA_MASTER_SYSTEM >> 24;
 static int MASKSMS				= 1 << SmsValue;
 
@@ -197,7 +197,7 @@ static int MASKNGP				= 1 << NGPValue;
 static int MASKCHANNELF				= 1 << CHANNELFValue;
 
 
-static int MASKALL				= MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 | MASKCPS3 | MASKDATAEAST | MASKGALAXIAN | MASKIREM | MASKKANEKO | MASKKONAMI | MASKNEOGEO | MASKPACMAN | MASKPGM | MASKPSIKYO | MASKSEGA | MASKSETA | MASKTAITO | MASKTECHNOS | MASKTOAPLAN | MASKMISCPRE90S | MASKMISCPOST90S | MASKMEGADRIVE | MASKPCENGINE /*| MASKSNES */| MASKSMS | SNK | CAPCOM_MISC | SEGA_MASTER_SYSTEM | SEGA_SG1000 | COLECO | MIDWAY | SEGA_GAME_GEAR | MSX | SPECTRUM | NES | FDS | NGP | CHANNELF;
+static int MASKALL				= MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 | MASKCPS3 | MASKDATAEAST | MASKGALAXIAN | MASKIREM | MASKKANEKO | MASKKONAMI | MASKNEOGEO | MASKPACMAN | MASKPGM | MASKPSIKYO | MASKSEGA | MASKSETA | MASKTAITO | MASKTECHNOS | MASKTOAPLAN | MASKMISCPRE90S | MASKMISCPOST90S | MASKMEGADRIVE | MASKPCENGINE | MASKSNES | MASKSMS | SNK | CAPCOM_MISC | SEGA_MASTER_SYSTEM | SEGA_SG1000 | COLECO | MIDWAY | SEGA_GAME_GEAR | MSX | SPECTRUM | NES | FDS | NGP | CHANNELF;
 
 
 #define AVAILONLY				(1 << 28)
@@ -926,7 +926,7 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		m_HardwareFilterMap[MISCPRE90] = MASKMISCPRE90S;
 		m_HardwareFilterMap[MISCPOST90] = MASKMISCPOST90S;
 		m_HardwareFilterMap[PCE] = MASKPCENGINE;
-//		m_HardwareFilterMap[SNES] = MASKSNES;
+		m_HardwareFilterMap[SNES] = MASKSNES;
 		m_HardwareFilterMap[SMS] = MASKSMS;
 		m_HardwareFilterMap[SETA] = MASKSETA;
 		m_HardwareFilterMap[SNK] = MASKSNK;
@@ -967,7 +967,7 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		m_HardwareFilterDesc[MISCPRE90] = "Pre 90's";
 		m_HardwareFilterDesc[MISCPOST90] = "Post 90's";
 		m_HardwareFilterDesc[PCE] = "PC Engine";
-		//m_HardwareFilterDesc[SNES] = "SNES";
+		m_HardwareFilterDesc[SNES] = "SNES";
 		m_HardwareFilterDesc[SMS] = "SMS";
 		m_HardwareFilterDesc[SETA] = "Seta";
 		m_HardwareFilterDesc[SNK] = "SNK";
