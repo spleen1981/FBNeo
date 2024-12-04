@@ -9,6 +9,7 @@
 #include "RomList.h"
 #include "InGameOptions.h"
 #include "version.h"
+#include "xbox_version.h"
 
 #include <xfilecache.h>
 
@@ -30,7 +31,7 @@ HANDLE hMainThread;
 int nAppThreadPriority = THREAD_PRIORITY_NORMAL;
 int nAppShowCmd;
 
-TCHAR szAppBurnVer[16] = _T("");
+TCHAR szAppBurnVer[32] = _T("");
 
 bool bCmdOptUsed = 0;
 bool bAlwaysProcessKey = false;
@@ -428,14 +429,14 @@ int WINAPI main()
 	SetUnhandledExceptionFilter(ExceptionFilter);
  
 	// Make version string
-	if (nBurnVer & 0xFF) {
+	/*if (nBurnVer & 0xFF) {
 		// private version (alpha)
 		_stprintf(szAppBurnVer, _T("%x.%x.%x.%02x"), nBurnVer >> 20, (nBurnVer >> 16) & 0x0F, (nBurnVer >> 8) & 0xFF, nBurnVer & 0xFF);
 	} else {
 		// public version
 		_stprintf(szAppBurnVer, _T("%x.%x.%x"), nBurnVer >> 20, (nBurnVer >> 16) & 0x0F, (nBurnVer >> 8) & 0xFF);
-	}
- 	 
+	}*/
+	 _stprintf(szAppBurnVer, _T("%s-%s-%s"), VERSION_GIT, VERSION_DATE, VERSION_BUILDER);
 
     // Initialize D3D
     hr = InitD3D( &pDevice, &d3dpp );

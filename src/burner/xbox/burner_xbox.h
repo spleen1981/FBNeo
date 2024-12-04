@@ -86,7 +86,7 @@ extern int nAppVirtualFps;							// virtual fps
 
 #define EXE_NAME_SIZE (32)
 extern TCHAR szAppExeName[EXE_NAME_SIZE + 1];
-extern TCHAR szAppBurnVer[16];
+extern TCHAR szAppBurnVer[32];
 extern char selectedShader[32];
 
 extern bool bCmdOptUsed;
