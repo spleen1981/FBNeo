@@ -228,7 +228,14 @@ int CreateROMInfo(HXUIOBJ hParentWND)
 
 			XuiElementGetChildById( hBuildRomsScene, L"XuiRomCount", &hRomProgress ); 
 			AnalyzingRoms(NULL);
-			XuiSceneNavigateBack(hBuildRomsScene,hParentWND,XUSER_INDEX_FOCUS);
+
+			//XuiSceneNavigateBack(hBuildRomsScene,hParentWND,XUSER_INDEX_FOCUS);
+
+			if (hBuildRomsScene!=NULL){
+				XuiElementUnlink(hBuildRomsScene);
+				XuiDestroyObject(hBuildRomsScene);
+				hBuildRomsScene=NULL;
+			}
 		}
 	}
 	
