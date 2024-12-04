@@ -52,7 +52,7 @@
 <Id>XuiText2</Id>
 <Width>357.784058</Width>
 <Height>74.911987</Height>
-<Position>649.903992,354.272034,0.000000</Position>
+<Position>602.903992,354.272034,0.000000</Position>
 <Text>This will only happen once the first time you run FBNeo. You can also rescan roms inside the rom browser with the BACK button.</Text>
 <TextColor>0xffffffff</TextColor>
 <DropShadowColor>0xff7f8aff</DropShadowColor>
