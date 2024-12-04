@@ -168,7 +168,7 @@ INT32 ZipGetList(struct ZipEntry** pList, INT32* pnListCount)
 			UINT64 size = SzArEx_GetFileSize(&_7ZipFile->db, i);
 			UINT32 crc = _7ZipFile->db.CRCs.Vals[i];
 
-			SzArEx_GetFileNameUtf16(&_7ZipFile->db, i, temp);
+			SzArEx_GetFileNameUtf16((const CSzArEx *)&_7ZipFile->db, i, temp);
 
 			// convert filename to char
 			char *szFileName = NULL;

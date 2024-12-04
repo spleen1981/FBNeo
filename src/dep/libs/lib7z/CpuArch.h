@@ -271,7 +271,8 @@ MY_CPU_64BIT means that processor can work with 64-bit registers.
     || defined(__s390__) \
     || defined(__s390x__) \
     || defined(__zarch__) \
-    || (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__))
+    || (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)) \
+	|| defined(_XBOX)
   #define MY_CPU_BE
 #endif
 
