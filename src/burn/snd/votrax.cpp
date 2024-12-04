@@ -22,6 +22,8 @@ i2.o = white noise
 tp1 = phi clock (tied to f2q rom access)
 */
 
+#define _USE_MATH_DEFINES   // Make math.h define M_PI
+
 #include "burnint.h"
 #include "bitswap.h"
 #include "stream.h"

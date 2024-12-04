@@ -1,5 +1,5 @@
 #include "sys16.h"
-#include "compat_funct.h"
+#include "compat_cpp_funct.h"
 
 /*====================================================
 Input defs

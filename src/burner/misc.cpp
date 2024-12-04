@@ -1,6 +1,7 @@
 // Misc functions module
 #include <math.h>
 #include "burner.h"
+#include "compat_cpp_funct.h"
 
 // ---------------------------------------------------------------------------
 // Software gamma
