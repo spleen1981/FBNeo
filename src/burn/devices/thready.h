@@ -22,6 +22,11 @@
 #include "windows.h"
 #endif
 
+#if defined(_XBOX)
+#include "state.h"
+#include "compat_xdk_funct.h"
+#endif
+
 #if !defined(WIN32) && ( defined(__linux__) || defined(__ANDROID__) || defined(__APPLE__) )
   #if defined(__APPLE__)
   #define THREADY THREADY_PTHREADAPL
@@ -33,7 +38,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #endif
-#undef THREADY
+
 #ifndef THREADY
 // system not windows and without pthreads
 #define THREADY THREADY_0THREAD
