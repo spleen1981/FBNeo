@@ -205,7 +205,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>NDEBUG;_XBOX;USE_SPEEDHACKS;INLINE=static __inline;MAME_INLINE=static __inline;NO_ASMCORE;NO_COMBO;NO_CHEATSEARCH;WORDS_BIGENDIAN;INCLUDE_LIB_PNGH;INCLUDE_7Z_SUPPORT</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src\burn;src\burn\snd;src\burn\devices;src\burn\drv\pre90s;src\burn\drv\pst90s;src\burn\drv\taito;src\burn\drv\dataeast;src\burn\drv\sega;src\burn\drv\konami;src\burn\drv\coleco;src\burn\drv\atari;src\burn\drv\irem;src\burn\drv\sc1000;src\burn\drv\pce;src\burner;src\burner\xbox;src\cpu;src\dep\generated;src\cpu\m6809;src\cpu\m6805;src\cpu\m6800;src\cpu\nec;src\cpu\hd6309;src\cpu\arm7;src\cpu\i8039;src\cpu\m68k;src\cpu\konami;src\cpu\c68k;src\cpu\m6502;src\cpu\z180;src\cpu\z80;src\cpu\sh2;src\cpu\pic16c5x;src\cpu\s2650;src\cpu\h6280;src\cpu\tms34010;src\cpu\mips3;src\cpu\i8051;src\cpu\e132xs;src\cpu\i8x41;src\cpu\tlcs900;src\cpu\tms32010;src\cpu\upd7725;src\cpu\upd7810;src\cpu\v60;src\cpu\f8;src\cpu\m377;src\cpu\sh4;src\dep\libs\zlib;src\dep\libs\libpng;src\dep\libs\lib7z;src\intf;src\intf\input;src\intf\cd;src\intf\audio;src\intf\video;src\intf\perfcount;src\intf\video\scalers;src\intf\video\xbox;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src\burn;src\burn\snd;src\burn\devices;src\burn\drv\pre90s;src\burn\drv\pst90s;src\burn\drv\taito;src\burn\drv\dataeast;src\burn\drv\sega;src\burn\drv\konami;src\burn\drv\coleco;src\burn\drv\atari;src\burn\drv\irem;src\burn\drv\sc1000;src\burn\drv\pce;src\burn\drv\snes;src\burner;src\burner\xbox;src\cpu;src\dep\generated;src\cpu\m6809;src\cpu\m6805;src\cpu\m6800;src\cpu\nec;src\cpu\hd6309;src\cpu\arm7;src\cpu\i8039;src\cpu\m68k;src\cpu\konami;src\cpu\c68k;src\cpu\m6502;src\cpu\z180;src\cpu\z80;src\cpu\sh2;src\cpu\pic16c5x;src\cpu\s2650;src\cpu\h6280;src\cpu\tms34010;src\cpu\mips3;src\cpu\i8051;src\cpu\e132xs;src\cpu\i8x41;src\cpu\tlcs900;src\cpu\tms32010;src\cpu\upd7725;src\cpu\upd7810;src\cpu\v60;src\cpu\f8;src\cpu\m377;src\cpu\sh4;src\dep\libs\zlib;src\dep\libs\libspng;src\dep\libs\lib7z;src\intf;src\intf\input;src\intf\cd;src\intf\audio;src\intf\video;src\intf\perfcount;src\intf\video\scalers;src\intf\video\xbox;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <TrapIntegerDividesOptimization>true</TrapIntegerDividesOptimization>
@@ -224,7 +224,7 @@
     </Link>
     <Deploy>
       <DeploymentType>CopyToHardDrive</DeploymentType>
-      <DeploymentFiles>$(RemoteRoot)=$(ImagePath);$(RemoteRoot)\media=$(OutDir)media;%(DeploymentFiles)</DeploymentFiles>
+      <DeploymentFiles>$(RemoteRoot)=$(ImagePath);$(RemoteRoot)\media=$(ProjectDir)media;%(DeploymentFiles)</DeploymentFiles>
       <ForceCopy>true</ForceCopy>
     </Deploy>
     <ImageXex>
@@ -283,7 +283,7 @@
     </ClCompile>
     <ClCompile Include="src\burner\unzip.c" />
     <ClCompile Include="src\burner\xbox\bzip.cpp" />
-    <ClCompile Include="src\burner\xbox\compat_funct.cpp" />
+    <ClCompile Include="src\burner\xbox\compat_cpp_funct.cpp" />
     <ClCompile Include="src\burner\xbox\cona.cpp" />
     <ClCompile Include="src\burner\xbox\cthread.cpp" />
     <ClCompile Include="src\burner\xbox\drv.cpp" />
@@ -345,6 +345,7 @@
     <ClCompile Include="src\burn\devices\intelfsh.cpp" />
     <ClCompile Include="src\burn\devices\joyprocess.cpp" />
     <ClCompile Include="src\burn\devices\k1ge.cpp" />
+    <ClCompile Include="src\burn\devices\kaneko_hit.cpp" />
     <ClCompile Include="src\burn\devices\kaneko_tmap.cpp" />
     <ClCompile Include="src\burn\devices\mathbox.cpp" />
     <ClCompile Include="src\burn\devices\mb87078.cpp" />
@@ -363,6 +364,7 @@
     <ClCompile Include="src\burn\devices\nmk112.cpp" />
     <ClCompile Include="src\burn\devices\pandora.cpp" />
     <ClCompile Include="src\burn\devices\pic8259.cpp" />
+    <ClCompile Include="src\burn\devices\pit8253.cpp" />
     <ClCompile Include="src\burn\devices\poly.cpp" />
     <ClCompile Include="src\burn\devices\qs1000.cpp" />
     <ClCompile Include="src\burn\devices\resnet.cpp" />
@@ -857,6 +859,7 @@
     <ClCompile Include="src\burn\drv\pre90s\d_tsamurai.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_tubep.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_usgames.cpp" />
+    <ClCompile Include="src\burn\drv\pre90s\d_vampire.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_vastar.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_vball.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_vicdual.cpp" />
@@ -914,6 +917,7 @@
     <ClCompile Include="src\burn\drv\pst90s\d_eolith.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_eolith16.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_esd16.cpp" />
+    <ClCompile Include="src\burn\drv\pst90s\d_expro02.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_f-32.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_f1gp.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_funybubl.cpp" />
@@ -935,6 +939,7 @@
     <ClCompile Include="src\burn\drv\pst90s\d_hyprduel.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_inufuku.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_itech32.cpp" />
+    <ClCompile Include="src\burn\drv\pst90s\d_itech8.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_jchan.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_kaneko16.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_kickgoal.cpp" />
@@ -986,6 +991,7 @@
     <ClCompile Include="src\burn\drv\pst90s\d_silkroad.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_silvmil.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_speedspn.cpp" />
+    <ClCompile Include="src\burn\drv\pst90s\d_splash.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_ssv.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_suna16.cpp" />
     <ClCompile Include="src\burn\drv\pst90s\d_supduck.cpp" />
@@ -1049,6 +1055,22 @@
     <ClCompile Include="src\burn\drv\sms\smssystem.cpp" />
     <ClCompile Include="src\burn\drv\sms\smstms.cpp" />
     <ClCompile Include="src\burn\drv\sms\smsvdp.cpp" />
+    <ClCompile Include="src\burn\drv\snes\apu.cpp" />
+    <ClCompile Include="src\burn\drv\snes\cart.cpp" />
+    <ClCompile Include="src\burn\drv\snes\cpu.cpp" />
+    <ClCompile Include="src\burn\drv\snes\cpu_sa1.cpp" />
+    <ClCompile Include="src\burn\drv\snes\cx4.cpp" />
+    <ClCompile Include="src\burn\drv\snes\dma.cpp" />
+    <ClCompile Include="src\burn\drv\snes\dsp.cpp" />
+    <ClCompile Include="src\burn\drv\snes\d_snes.cpp" />
+    <ClCompile Include="src\burn\drv\snes\input.cpp" />
+    <ClCompile Include="src\burn\drv\snes\ppu.cpp" />
+    <ClCompile Include="src\burn\drv\snes\sa1.cpp" />
+    <ClCompile Include="src\burn\drv\snes\sdd1.cpp" />
+    <ClCompile Include="src\burn\drv\snes\snes.cpp" />
+    <ClCompile Include="src\burn\drv\snes\snes_other.cpp" />
+    <ClCompile Include="src\burn\drv\snes\spc.cpp" />
+    <ClCompile Include="src\burn\drv\snes\statehandler.cpp" />
     <ClCompile Include="src\burn\drv\spectrum\d_spectrum.cpp" />
     <ClCompile Include="src\burn\drv\taito\cchip.cpp" />
     <ClCompile Include="src\burn\drv\taito\d_arkanoid.cpp" />
@@ -1220,6 +1242,7 @@
     <ClCompile Include="src\burn\snd\tms5220.cpp" />
     <ClCompile Include="src\burn\snd\upd7759.cpp" />
     <ClCompile Include="src\burn\snd\vlm5030.cpp" />
+    <ClCompile Include="src\burn\snd\votrax.cpp" />
     <ClCompile Include="src\burn\snd\wiping.cpp" />
     <ClCompile Include="src\burn\snd\x1010.cpp" />
     <ClCompile Include="src\burn\snd\ym2151.c">
@@ -1281,24 +1304,9 @@
     <ClCompile Include="src\cpu\m6805_intf.cpp" />
     <ClCompile Include="src\cpu\m6809\m6809.cpp" />
     <ClCompile Include="src\cpu\m6809_intf.cpp" />
-    <ClCompile Include="src\cpu\m68k\m68kcpu.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\cpu\m68k\m68kfpu.c" />
-    <ClCompile Include="src\cpu\m68k\m68kopac.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\cpu\m68k\m68kopdm.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\cpu\m68k\m68kopnz.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
+    <ClCompile Include="src\cpu\m68k\m68kcpu.c" />
     <ClCompile Include="src\cpu\m68k\m68kops.c" />
+    <ClCompile Include="src\cpu\mb88xx\mb88xx.cpp" />
     <ClCompile Include="src\cpu\mips3\cop0.cpp" />
     <ClCompile Include="src\cpu\mips3\cop1.cpp" />
     <ClCompile Include="src\cpu\mips3\mips3.cpp" />
@@ -1328,136 +1336,34 @@
     <ClCompile Include="src\cpu\z80\z80daisy.cpp" />
     <ClCompile Include="src\cpu\z80\z80pio.cpp" />
     <ClCompile Include="src\cpu\z80_intf.cpp" />
-    <ClCompile Include="src\dep\libs\lib7z\7zAlloc.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\7zBuf.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\7zBuf2.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\7zCrc.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\7zCrcOpt.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\7zDec.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\7zArcIn.c" />
+    <ClCompile Include="src\dep\libs\lib7z\7zBuf.c" />
+    <ClCompile Include="src\dep\libs\lib7z\7zBuf2.c" />
+    <ClCompile Include="src\dep\libs\lib7z\7zCrc.c" />
+    <ClCompile Include="src\dep\libs\lib7z\7zCrcOpt.c" />
+    <ClCompile Include="src\dep\libs\lib7z\7zDec.c" />
     <ClCompile Include="src\dep\libs\lib7z\7zFile.c" />
-    <ClCompile Include="src\dep\libs\lib7z\7zIn.c" />
-    <ClCompile Include="src\dep\libs\lib7z\7zStream.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\Bcj2.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\Bra.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\Bra86.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\CpuArch.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\Lzma2Dec.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\LzmaDec.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\Ppmd7.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\lib7z\Ppmd7Dec.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\png.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngerror.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngget.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngmem.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngpread.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngread.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngrio.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngrtran.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngrutil.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngset.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngtrans.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngwio.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngwrite.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngwtran.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\dep\libs\libpng\pngwutil.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
+    <ClCompile Include="src\dep\libs\lib7z\7zStream.c" />
+    <ClCompile Include="src\dep\libs\lib7z\Alloc.c" />
+    <ClCompile Include="src\dep\libs\lib7z\Bcj2.c" />
+    <ClCompile Include="src\dep\libs\lib7z\Bra.c" />
+    <ClCompile Include="src\dep\libs\lib7z\Bra86.c" />
+    <ClCompile Include="src\dep\libs\lib7z\BraIA64.c" />
+    <ClCompile Include="src\dep\libs\lib7z\CpuArch.c" />
+    <ClCompile Include="src\dep\libs\lib7z\Delta.c" />
+    <ClCompile Include="src\dep\libs\lib7z\LzFindOpt.c" />
+    <ClCompile Include="src\dep\libs\lib7z\Lzma2Dec.c" />
+    <ClCompile Include="src\dep\libs\lib7z\LzmaDec.c" />
+    <ClCompile Include="src\dep\libs\lib7z\Ppmd7.c" />
+    <ClCompile Include="src\dep\libs\lib7z\Ppmd7aDec.c" />
+    <ClCompile Include="src\dep\libs\lib7z\Ppmd7Dec.c" />
+    <ClCompile Include="src\dep\libs\lib7z\Sha1Opt.c" />
+    <ClCompile Include="src\dep\libs\lib7z\Sha256.c" />
+    <ClCompile Include="src\dep\libs\lib7z\Sha256Opt.c" />
+    <ClCompile Include="src\dep\libs\lib7z\Threads.c" />
+    <ClCompile Include="src\dep\libs\lib7z\Xxh64.c" />
+    <ClCompile Include="src\dep\libs\lib7z\ZstdDec.c" />
+    <ClCompile Include="src\dep\libs\libspng\spng.c" />
     <ClCompile Include="src\dep\libs\zlib\adler32.c">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
