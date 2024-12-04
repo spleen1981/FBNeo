@@ -675,7 +675,7 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 
 				if (CurrentFilter < 0)
 				{
-					CurrentFilter = PLATFORM_FILTER_MAX;
+					CurrentFilter = PLATFORM_FILTER_MAX-1;
 				}
 			
 				nLoadMenuShowX = m_HardwareFilterMap[CurrentFilter];
@@ -724,7 +724,7 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 			{
 				CurrentFilter++;
 
-				if (CurrentFilter > PLATFORM_FILTER_MAX)
+				if (CurrentFilter > PLATFORM_FILTER_MAX-1)
 				{
 					CurrentFilter = 0;
 				}
