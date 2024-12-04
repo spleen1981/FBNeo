@@ -35,8 +35,8 @@ static const char copyright_notice[] =
 #include <stdint.h>
 #include <stddef.h>
 
-extern void m68040_fpu_op0(void);
-extern void m68040_fpu_op1(void);
+//extern void m68040_fpu_op0(void);
+//extern void m68040_fpu_op1(void);
 
 #include "m68kops.h"
 #include "m68kcpu.h"
