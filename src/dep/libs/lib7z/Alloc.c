@@ -4,7 +4,12 @@
 #include "Precomp.h"
 
 #ifdef _WIN32
+#ifdef _XBOX
+#undef Z7_LARGE_PAGES
+#include "compat_xdk_funct.h"
+#else
 #include "7zWindows.h"
+#endif
 #endif
 #include <stdlib.h>
 

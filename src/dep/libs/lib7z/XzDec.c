@@ -279,7 +279,7 @@ SRes Xz_StateCoder_Bc_SetFromMethod_Func(IStateCoder *p, UInt64 id,
     decoder = (CXzBcFilterState *)ISzAlloc_Alloc(alloc, sizeof(CXzBcFilterState));
     if (!decoder)
       return SZ_ERROR_MEM;
-    decoder->buf = ISzAlloc_Alloc(alloc, BRA_BUF_SIZE);
+    decoder->buf = (Byte *)ISzAlloc_Alloc(alloc, BRA_BUF_SIZE);
     if (!decoder->buf)
     {
       ISzAlloc_Free(alloc, decoder);

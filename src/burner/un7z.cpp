@@ -231,16 +231,16 @@ int _7z_search_crc_match(_7z_file *new_7z, UINT32 search_crc, const char* search
 	{
 		size_t len;
 
-		len = SzArEx_GetFileNameUtf16(&new_7z->db, i, NULL);
+		len = SzArEx_GetFileNameUtf16((const CSzArEx *)&new_7z->db, i, NULL);
 
 		// if it's a directory entry we don't care about it..
 		if (SzArEx_IsDir(&new_7z->db, i)) continue;
 
 		if (len > tempSize)
 		{
-			SZipFree(NULL, temp);
+			SZipFree((ISzAllocPtr)NULL, temp);
 			tempSize = len;
-			temp = (UInt16 *)SZipAlloc(NULL, tempSize * sizeof(temp[0]));
+			temp = (UInt16 *)SZipAlloc((ISzAllocPtr)NULL, tempSize * sizeof(temp[0]));
 			if (temp == 0)
 			{
 				return -1; // memory error
@@ -254,7 +254,7 @@ int _7z_search_crc_match(_7z_file *new_7z, UINT32 search_crc, const char* search
 		UINT32 crc = new_7z->db.CRCs.Vals[i];
 
 		/* Check for a name match */
-		SzArEx_GetFileNameUtf16(&new_7z->db, i, temp);
+		SzArEx_GetFileNameUtf16((const CSzArEx *)&new_7z->db, i, temp);
 
 		if (len == (unsigned int)search_filename_length+1)
 		{
@@ -301,12 +301,12 @@ int _7z_search_crc_match(_7z_file *new_7z, UINT32 search_crc, const char* search
 			new_7z->uncompressed_length = size;
 			new_7z->crc = crc;
 
-			SZipFree(NULL, temp);
+			SZipFree((ISzAllocPtr)NULL, temp);
 			return i;
 		}
 	}
 
-	SZipFree(NULL, temp);
+	SZipFree((ISzAllocPtr)NULL, temp);
 	return -1;
 }
 

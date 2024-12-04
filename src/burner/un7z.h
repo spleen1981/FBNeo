@@ -60,8 +60,8 @@
 #include "7zVersion.h"
 
 
-void *SZipAlloc(void *p, size_t size);
-void SZipFree(void *p, void *address);
+void *SZipAlloc(ISzAllocPtr p, size_t size);
+void SZipFree(ISzAllocPtr p, void *address);
 void *SZipAllocTemp(void *p, size_t size);
 void SZipFreeTemp(void *p, void *address);
 
@@ -73,29 +73,29 @@ typedef struct
 
 } CSzFile;
 
-
 typedef struct
 {
-	ISeqInStream s;
-	CSzFile file;
+  ISeqInStream vt;
+  CSzFile file;
+  WRes wres;
 } CFileSeqInStream;
 
 void FileSeqInStream_CreateVTable(CFileSeqInStream *p);
 
-
 typedef struct
 {
-	ISeekInStream s;
-	CSzFile file;
+  ISeekInStream vt;
+  CSzFile file;
+  WRes wres;
 } CFileInStream;
 
 void FileInStream_CreateVTable(CFileInStream *p);
 
-
 typedef struct
 {
-	ISeqOutStream s;
-	CSzFile file;
+  ISeqOutStream vt;
+  CSzFile file;
+  WRes wres;
 } CFileOutStream;
 
 void FileOutStream_CreateVTable(CFileOutStream *p);
@@ -139,7 +139,7 @@ struct __7z_file
 	UINT64 crc;								/* current file crc */
 
 	CFileInStream archiveStream;
-	CLookToRead lookStream;
+	CLookToRead2 lookStream;
 	CSzArEx db;
 	SRes res;
 	ISzAlloc allocImp;

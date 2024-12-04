@@ -5,8 +5,11 @@
 #define ZIP7_INC_THREADS_H
 
 #ifdef _WIN32
+#ifdef _XBOX
+#include "compat_xdk_funct.h"
+#else
 #include "7zWindows.h"
-
+#endif
 #else
 
 #include "Compiler.h"
