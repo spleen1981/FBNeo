@@ -7,6 +7,8 @@
 #include "WorkerThread.h"
 
 HXUIOBJ hPreviewVideo;
+HXUIOBJ hPreviewImage;
+HXUIOBJ hTitleImage;
 
 extern BOOL IsCurrentlyInGame;
 
@@ -694,10 +696,16 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 				swprintf_s(DeviceText, L"%S", m_HardwareFilterDesc[CurrentFilter].c_str());
 				m_Hardware.SetText(DeviceText);
 				
-				m_RomList.SetCurSelVisible(0);				
-				m_RomList.SetFocus();	
-				m_RomList.SetCurSel(1);	
-				m_RomList.SetCurSel(0);	
+				if (m_RomList.GetItemCount()==0){
+					XuiElementSetShow(hPreviewVideo, false);
+					XuiImageElementSetImagePath(hTitleImage, L"no_title2.png");
+					XuiImageElementSetImagePath(hPreviewImage, L"no_title2.png");
+				} else {
+					m_RomList.SetCurSelVisible(0);
+					m_RomList.SetFocus();
+					m_RomList.SetCurSel(1);
+					m_RomList.SetCurSel(0);
+				}
 			}
 			else
 			{
@@ -711,7 +719,6 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 				swprintf_s(DeviceText, L"Current Slot : %d", CurrentSlot+1);
 
 				m_Hardware.SetText(DeviceText);
-
 			}
 
 
@@ -748,11 +755,16 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 				swprintf_s(DeviceText, L"%S", m_HardwareFilterDesc[CurrentFilter].c_str());
 				m_Hardware.SetText(DeviceText);
 
-				m_RomList.SetCurSelVisible(0);				 
-				m_RomList.SetFocus();
-
-				m_RomList.SetCurSel(1);	
-				m_RomList.SetCurSel(0);	
+				if (m_RomList.GetItemCount()==0){
+					XuiElementSetShow(hPreviewVideo, false);
+					XuiImageElementSetImagePath(hTitleImage, L"no_title2.png");
+					XuiImageElementSetImagePath(hPreviewImage, L"no_title2.png");
+				} else {
+					m_RomList.SetCurSelVisible(0);
+					m_RomList.SetFocus();
+					m_RomList.SetCurSel(1);
+					m_RomList.SetCurSel(0);
+				}
 			}
 			else
 			{
@@ -1422,10 +1434,6 @@ TCHAR* GetGenreInfo()
 
 unsigned int __stdcall worker_thread_func(void *ArgList)
 {
-
-	HXUIOBJ hPreviewImage;
-	HXUIOBJ hTitleImage;
-
 	char PreviewFName[MAX_PATH+1];
 	char TitleFName[MAX_PATH+1];
 	char szPreviewFName[MAX_PATH+1];
