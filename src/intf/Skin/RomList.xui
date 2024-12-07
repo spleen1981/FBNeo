@@ -318,6 +318,18 @@
 <InterItemSpacing>0.000000,10.000000,0.000000</InterItemSpacing>
 </Properties>
 </XuiListItem>
+<XuiListItem>
+<Properties>
+<Id>control_ListItem</Id>
+<Width>226.000000</Width>
+<Height>45.000000</Height>
+<Position>7.000000,22.000000,0.000000</Position>
+<Anchor>5</Anchor>
+<Show>false</Show>
+<Visual>XuiButton</Visual>
+<InterItemSpacing>0.000000,10.000000,0.000000</InterItemSpacing>
+</Properties>
+</XuiListItem>
 </XuiList>
 <XuiText>
 <Properties>
@@ -891,9 +903,9 @@
 <XuiText>
 <Properties>
 <Id>XuiRomName3</Id>
-<Width>130.399963</Width>
+<Width>117.004105</Width>
 <Height>21.000000</Height>
-<Position>1138.108032,449.737457,0.000000</Position>
+<Position>1143.108032,458.965912,0.000000</Position>
 <Scale>0.900000,1.000000,1.000000</Scale>
 <Text>InGame Menu</Text>
 <TextColor>0xffffffff</TextColor>
@@ -907,7 +919,7 @@
 <Id>XuiRomName4</Id>
 <Width>29.066616</Width>
 <Height>21.000000</Height>
-<Position>1084.769165,449.737457,0.000000</Position>
+<Position>1093.769165,458.965912,0.000000</Position>
 <Scale>0.900000,1.000000,1.000000</Scale>
 <Text>+</Text>
 <TextColor>0xffffffff</TextColor>
@@ -919,9 +931,9 @@
 <XuiImage>
 <Properties>
 <Id>XuiImage2</Id>
-<Width>35.670288</Width>
-<Height>50.491180</Height>
-<Position>1055.167969,434.991821,0.000000</Position>
+<Width>28.000000</Width>
+<Height>36.000000</Height>
+<Position>1070.116333,451.465942,0.000000</Position>
 <SizeMode>16</SizeMode>
 <ImagePath>LS.png</ImagePath>
 </Properties>
@@ -929,9 +941,9 @@
 <XuiImage>
 <Properties>
 <Id>XuiImage3</Id>
-<Width>35.670288</Width>
-<Height>50.491180</Height>
-<Position>1105.029053,434.991821,0.000000</Position>
+<Width>28.000000</Width>
+<Height>36.000000</Height>
+<Position>1114.029053,451.465942,0.000000</Position>
 <SizeMode>16</SizeMode>
 <ImagePath>RS.png</ImagePath>
 </Properties>
