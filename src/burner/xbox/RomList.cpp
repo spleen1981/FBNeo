@@ -698,6 +698,7 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 				
 				if (m_RomList.GetItemCount()==0){
 					XuiElementSetShow(hPreviewVideo, false);
+					XuiVideoPause(hPreviewVideo, true);
 					XuiImageElementSetImagePath(hTitleImage, L"no_title2.png");
 					XuiImageElementSetImagePath(hPreviewImage, L"no_title2.png");
 				} else {
@@ -757,6 +758,7 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 
 				if (m_RomList.GetItemCount()==0){
 					XuiElementSetShow(hPreviewVideo, false);
+					XuiVideoPause(hPreviewVideo, true);
 					XuiImageElementSetImagePath(hTitleImage, L"no_title2.png");
 					XuiImageElementSetImagePath(hPreviewImage, L"no_title2.png");
 				} else {
