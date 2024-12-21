@@ -22,6 +22,7 @@ bool bRunFrame = false;
 bool bAlwaysProcessKeyboardInput = false;
 int nAppVirtualFps = 6000;
 BOOL IsCurrentlyInGame = false;
+BOOL SkipSplash =false;
 BOOL IsDATGenerationRequested = false;
 HXUIOBJ hMainScene;
 HXUIOBJ hMVSplashScene;
@@ -786,6 +787,7 @@ void FadeBlack(HXUIOBJ pBlackOverlay, bool to_black, float sec_duration) {
 				XuiTimersRun();
 				// Present the frame.
 		pDevice->Present( NULL, NULL, NULL, NULL );
+		if (SkipSplash) break;
 	}
 }
 
@@ -831,22 +833,24 @@ int SplashCreate(void)
 		// Present the frame.
 		pDevice->Present( NULL, NULL, NULL, NULL );
 	}
-	FadeBlack(hFadeRect, true, 2);
+	if (!SkipSplash) {
+		FadeBlack(hFadeRect, true, 2);
 
-	if (IsDATGenerationRequested) {
-			XuiElementSetShow(hGenerating, true);
-			// Render game graphics.
-			RenderGame( pDevice );
-			// Update XUI
-			app.RunFrame();
-			// Render XUI
-			app.Render();
-			// Update XUI Timers
-			XuiTimersRun();
-			// Present the frame.
-			pDevice->Present( NULL, NULL, NULL, NULL );
-			IsDATGenerationRequested = false;
-			create_datfile(_T("GAME:\\FBNeo.dat"), 0);
+		if (IsDATGenerationRequested) {
+				XuiElementSetShow(hGenerating, true);
+				// Render game graphics.
+				RenderGame( pDevice );
+				// Update XUI
+				app.RunFrame();
+				// Render XUI
+				app.Render();
+				// Update XUI Timers
+				XuiTimersRun();
+				// Present the frame.
+				pDevice->Present( NULL, NULL, NULL, NULL );
+				IsDATGenerationRequested = false;
+				create_datfile(_T("GAME:\\FBNeo.dat"), 0);
+		}
 	}
 
 	//XuiElementSetShow(hGenerating, false);

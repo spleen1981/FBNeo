@@ -5,6 +5,7 @@
 
 
 extern BOOL IsCurrentlyInGame;
+extern BOOL SkipSplash;
 extern BOOL IsDATGenerationRequested;
 
 HRESULT CSplashScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
@@ -23,6 +24,7 @@ HRESULT CSplashScene::OnNotifyPress( HXUIOBJ hObjPressed, BOOL& bHandled )
         {
 			 
 			IsCurrentlyInGame = true;
+			SkipSplash = true;
 			bHandled = TRUE;
 			return S_OK;
 			
