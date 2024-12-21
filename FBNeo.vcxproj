@@ -1472,6 +1472,34 @@
     <ClCompile Include="src\intf\video\xbox\vid_d3d9.cpp" />
     <ClCompile Include="src\intf\video\xbox\vid_directx_support.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\burner\xbox\compat_xdk_funct.h" />
+    <ClInclude Include="src\burner\xbox\xbox_version.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\intf\Skin\skin.xui">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">xuipkg /nologo /d /o "$(OutDir)media\FBANext.xzp" src\intf\Skin\* src\intf\Skin\Graphics\*</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)media\FBANext.xzp;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\intf\dist\media\FBA.ttf">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy %(FullPath) $(OutDir)media\FBA.ttf</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)media\FBA.ttf;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="src\intf\dist\media\LogoFont.ttf">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy %(FullPath) $(OutDir)media\LogoFont.ttf</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)media\LogoFont.ttf;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="src\intf\dist\shaders\Default.fx">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy $(InputDir)*.fx $(OutDir)shaders\</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)shaders\*.fx;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -3234,4 +3234,10 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\intf\Skin\skin.xui" />
+    <CustomBuild Include="src\intf\dist\media\FBA.ttf" />
+    <CustomBuild Include="src\intf\dist\media\LogoFont.ttf" />
+    <CustomBuild Include="src\intf\dist\shaders\Default.fx" />
+  </ItemGroup>
 </Project>
