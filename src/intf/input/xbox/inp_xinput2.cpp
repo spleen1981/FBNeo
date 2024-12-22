@@ -120,8 +120,8 @@ int XInput2State(int nCode)
 		/*if( ( stateJoy1.Gamepad.bLeftTrigger > 128 ) &&
 			( stateJoy1.Gamepad.bRightTrigger > 128 ) &&
 			( stateJoy1.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER ) ) // Reboot the dev kit*/
-		if ((stateJoy1.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB) &&
-			(stateJoy1.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB))
+		if ((stateJoy1.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER) &&
+			(stateJoy1.Gamepad.wButtons & XINPUT_GAMEPAD_START))
 		{
 			AudBlankSound();		
 			SetPauseMode(1);			
