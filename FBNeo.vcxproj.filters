@@ -1073,9 +1073,6 @@
     <ClCompile Include="src\burn\drv\pre90s\d_galaga.cpp">
       <Filter>Source Files\src\burn\drv\pre90s</Filter>
     </ClCompile>
-    <ClCompile Include="src\burn\drv\pre90s\d_gauntlet.cpp">
-      <Filter>Source Files\src\burn\drv\pre90s</Filter>
-    </ClCompile>
     <ClCompile Include="src\burn\drv\pre90s\d_ginganin.cpp">
       <Filter>Source Files\src\burn\drv\pre90s</Filter>
     </ClCompile>
@@ -3237,7 +3234,23 @@
   <ItemGroup>
     <CustomBuild Include="src\intf\Skin\skin.xui" />
     <CustomBuild Include="src\intf\dist\media\FBA.ttf" />
-    <CustomBuild Include="src\intf\dist\media\LogoFont.ttf" />
     <CustomBuild Include="src\intf\dist\shaders\Default.fx" />
+    <CustomBuild Include="src\intf\dist\shaders\scanline.fx" />
+    <CustomBuild Include="src\intf\dist\shaders\Scale2xPlus.fx" />
+    <CustomBuild Include="src\intf\dist\shaders\Scale2xPlus-HD.fx" />
+    <CustomBuild Include="src\intf\dist\shaders\noise.fx" />
+    <CustomBuild Include="src\intf\dist\shaders\water.fx" />
+    <CustomBuild Include="src\intf\dist\shaders\HQ4x.fx" />
+    <CustomBuild Include="src\intf\dist\media\LogoFont.ttf" />
+    <CustomBuild Include="src\intf\dist\shaders\5xBR_3.7_HLSL.fx" />
+    <CustomBuild Include="src\intf\dist\shaders\5xBR.fx" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\burner\xbox\compat_xdk_funct.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\burner\xbox\xbox_version.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

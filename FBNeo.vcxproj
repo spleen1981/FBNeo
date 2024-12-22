@@ -687,7 +687,6 @@
     <ClCompile Include="src\burn\drv\pre90s\d_galaga.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_galivan.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_gaplus.cpp" />
-    <ClCompile Include="src\burn\drv\pre90s\d_gauntlet.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_ginganin.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_gng.cpp" />
     <ClCompile Include="src\burn\drv\pre90s\d_goindol.cpp" />
@@ -1479,8 +1478,8 @@
   <ItemGroup>
     <CustomBuild Include="src\intf\Skin\skin.xui">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">xuipkg /nologo /d /o "$(OutDir)media\FBANext.xzp" src\intf\Skin\* src\intf\Skin\Graphics\*</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)media\FBANext.xzp;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">xuipkg /nologo /d /o "$(OutDir)media\FBNeo.xzp" src\intf\Skin\* src\intf\Skin\Graphics\*</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)media\FBNeo.xzp;%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -1489,15 +1488,59 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy %(FullPath) $(OutDir)media\FBA.ttf</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)media\FBA.ttf;%(Outputs)</Outputs>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\intf\dist\shaders\Default.fx">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy %(FullPath) $(OutDir)shaders\Default.fx</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)shaders\Default.fx;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
     <CustomBuild Include="src\intf\dist\media\LogoFont.ttf">
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy %(FullPath) $(OutDir)media\LogoFont.ttf</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)media\LogoFont.ttf;%(Outputs)</Outputs>
     </CustomBuild>
-    <CustomBuild Include="src\intf\dist\shaders\Default.fx">
+    <CustomBuild Include="src\intf\dist\shaders\5xBR.fx">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy $(InputDir)*.fx $(OutDir)shaders\</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)shaders\*.fx;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy %(FullPath) $(OutDir)shaders\5xBR.fx</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)shaders\5xBR.fx;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="src\intf\dist\shaders\5xBR_3.7_HLSL.fx">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy %(FullPath) $(OutDir)shaders\5xBR_3.7_HLSL.fx</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)shaders\5xBR_3.7_HLSL.fx;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="src\intf\dist\shaders\HQ4x.fx">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy %(FullPath) $(OutDir)shaders\HQ4x.fx</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)shaders\HQ4x.fx;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="src\intf\dist\shaders\noise.fx">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy %(FullPath) $(OutDir)shaders\noise.fx</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)shaders\noise.fx;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="src\intf\dist\shaders\Scale2xPlus-HD.fx">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy %(FullPath) $(OutDir)shaders\Scale2xPlus-HD.fx</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)shaders\Scale2xPlus-HD.fx;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="src\intf\dist\shaders\Scale2xPlus.fx">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy %(FullPath) $(OutDir)shaders\Scale2xPlus.fx</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)shaders\Scale2xPlus.fx;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="src\intf\dist\shaders\scanline.fx">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy %(FullPath) $(OutDir)shaders\scanline.fx</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)shaders\scanline.fx;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="src\intf\dist\shaders\water.fx">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy %(FullPath) $(OutDir)shaders\water.fx</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)shaders\water.fx;%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
