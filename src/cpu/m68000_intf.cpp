@@ -636,7 +636,7 @@ struct A68KInter {
 };
 
 extern "C" {
-
+	INT32 m68k_ICount = 0;
 #ifdef EMU_A68K
  UINT8* OP_ROM = NULL;
  UINT8* OP_RAM = NULL;
