@@ -231,7 +231,7 @@
       <ConfigurationFile>xex.xml</ConfigurationFile>
     </ImageXex>
     <PreBuildEvent>
-      <Command>cd "$(ProjectDir)src\burner\xbox" &amp;&amp; call "generate_commit_hash.bat"</Command>
+      <Command>cd "$(ProjectDir)src\burner\xbox" &amp;&amp; call "generate_commit_hash.bat" &amp;&amp; cd "$(ProjectDir)src\dep\vs2010" &amp;&amp;  call "pre.bat" </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">
@@ -1575,6 +1575,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="src\burner\xbox\generate_commit_hash.bat" />
+    <None Include="src\dep\vs2010\pre.bat" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -35,7 +35,7 @@ cd ../../../
 echo building 68k generator
 cd cpu/m68k
 "%VCINSTALLDIR%\bin\amd64\cl" /DINLINE="__inline static" m68kmake.c
-m68kmake . m68k_in.c
+m68kmake m68k_in.c
 del m68kmake.exe
 del m68kmake.obj
 cd ../../

@@ -3338,5 +3338,8 @@
     <None Include="src\burner\xbox\generate_commit_hash.bat">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="src\dep\vs2010\pre.bat">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
