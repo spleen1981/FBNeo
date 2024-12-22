@@ -1,3 +1,4 @@
+src/dep/generated
 /Release
 /src/gamelist.txt
 *.sdf
