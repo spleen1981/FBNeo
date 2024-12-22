@@ -8,6 +8,11 @@
 
 #include "z80daisy.h"
 
+#ifndef FASTCALL
+ #undef __fastcall
+ #define __fastcall
+#endif
+
 typedef union
 {
 #ifdef LSB_FIRST

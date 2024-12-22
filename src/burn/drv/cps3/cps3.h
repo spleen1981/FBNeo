@@ -1,5 +1,10 @@
 #include "burnint.h"
 
+#ifndef FASTCALL
+ #undef __fastcall
+ #define __fastcall
+#endif
+
 #ifndef HARDWARE_CAPCOM_CPS3
 	#define HARDWARE_CAPCOM_CPS3		HARDWARE_MISC_MISC
 #endif

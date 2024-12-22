@@ -2,6 +2,11 @@
 #ifndef _SMS_H_
 #define _SMS_H_
 
+#ifndef FASTCALL
+ #undef __fastcall
+ #define __fastcall
+#endif
+
 enum {
 	SLOT_BIOS   = 0,
 	SLOT_CARD   = 1,
