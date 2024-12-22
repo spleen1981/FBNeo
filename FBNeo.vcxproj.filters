@@ -3249,8 +3249,10 @@
     <ClInclude Include="src\burner\xbox\compat_xdk_funct.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\burner\xbox\xbox_version.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\burner\xbox\generate_commit_hash.bat">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

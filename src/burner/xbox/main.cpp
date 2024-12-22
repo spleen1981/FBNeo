@@ -9,7 +9,7 @@
 #include "RomList.h"
 #include "InGameOptions.h"
 #include "version.h"
-#include "xbox_version.h"
+#include "commit_hash.h"
 
 #include <xfilecache.h>
 
@@ -31,7 +31,7 @@ HANDLE hMainThread;
 int nAppThreadPriority = THREAD_PRIORITY_NORMAL;
 int nAppShowCmd;
 
-TCHAR szAppBurnVer[64] = _T("");
+TCHAR szAppBurnVer[32] = _T("");
 
 bool bCmdOptUsed = 0;
 bool bAlwaysProcessKey = false;
@@ -429,15 +429,15 @@ int WINAPI main()
 	SetUnhandledExceptionFilter(ExceptionFilter);
 	
 	TCHAR XboxVer[32] = _T("");
-	_stprintf(XboxVer, _T("%s-%s-%s"), VERSION_GIT, VERSION_DATE, VERSION_BUILDER);
+	_stprintf(XboxVer, _T("%s"), GIT_COMMIT_HASH); //generated at build time
 
 	// Make version string
 	if (nBurnVer & 0xFF) {
 		// private version (alpha)
-		_stprintf(szAppBurnVer, _T("%x.%x.%x.%02x-%s"), nBurnVer >> 20, (nBurnVer >> 16) & 0x0F, (nBurnVer >> 8) & 0xFF, nBurnVer & 0xFF, XboxVer);
+		_stprintf(szAppBurnVer, _T("%x.%x.%x.%02x (%s)"), nBurnVer >> 20, (nBurnVer >> 16) & 0x0F, (nBurnVer >> 8) & 0xFF, nBurnVer & 0xFF, XboxVer);
 	} else {
 		// public version
-		_stprintf(szAppBurnVer, _T("%x.%x.%x-%s"), nBurnVer >> 20, (nBurnVer >> 16) & 0x0F, (nBurnVer >> 8) & 0xFF,XboxVer);
+		_stprintf(szAppBurnVer, _T("%x.%x.%x (%s)"), nBurnVer >> 20, (nBurnVer >> 16) & 0x0F, (nBurnVer >> 8) & 0xFF,XboxVer);
 	}
 		
     // Initialize D3D

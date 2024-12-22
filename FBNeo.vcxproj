@@ -230,6 +230,9 @@
     <ImageXex>
       <ConfigurationFile>xex.xml</ConfigurationFile>
     </ImageXex>
+    <PreBuildEvent>
+      <Command>cd "$(ProjectDir)src\burner\xbox" &amp;&amp; call "generate_commit_hash.bat"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">
     <ClCompile>
@@ -1473,7 +1476,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\burner\xbox\compat_xdk_funct.h" />
-    <ClInclude Include="src\burner\xbox\xbox_version.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\intf\Skin\skin.xui">
@@ -1542,6 +1544,9 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">copy %(FullPath) $(OutDir)shaders\water.fx</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)shaders\water.fx;%(Outputs)</Outputs>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\burner\xbox\generate_commit_hash.bat" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
