@@ -20,9 +20,9 @@
 #include "state.h"
 #include <stddef.h>
 
-#define AY8910_CORE
+//#define AY8910_CORE
 #include "ay8910.h"
-#undef AY8910_CORE
+//#undef AY8910_CORE
 
 #if defined FBNEO_DEBUG
 #ifdef __GNUC__
@@ -72,6 +72,8 @@ static INT32 nPosition[MAX_8910];
 static INT16 *soundbuf[MAX_8910];
 
 // for as long as ay8910.c is .c:
+extern "C" INT32 FM_IS_POSTLOADING;
+extern "C" INT16* pBurnSoundOut;
 extern "C" INT32 nBurnSoundLen;
 extern "C" INT32 nBurnSoundRate;
 extern "C" INT32 nBurnFPS;
