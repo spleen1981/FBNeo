@@ -3527,5 +3527,8 @@
     <None Include="src\dep\vs2010\pre.bat">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="src\dep\visualstudio\pre2010xbox360.bat">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
