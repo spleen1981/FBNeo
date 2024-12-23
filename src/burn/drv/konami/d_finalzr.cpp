@@ -48,6 +48,11 @@ static INT32 vblank;
 
 static INT32 bootleg = 0;
 
+#ifndef FASTCALL
+ #undef __fastcall
+ #define __fastcall
+#endif
+
 static struct BurnInputInfo FinalizrInputList[] = {
 	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 start"	},

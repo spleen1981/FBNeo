@@ -1,5 +1,10 @@
 #include "z180.h"
 
+#ifndef FASTCALL
+ #undef __fastcall
+ #define __fastcall
+#endif
+
 void Z180SetWriteHandler(void (__fastcall *write)(UINT32, UINT8));
 void Z180SetReadHandler(UINT8 (__fastcall *read)(UINT32));
 void Z180SetFetchOpHandler(UINT8 (__fastcall *fetch)(UINT32));
