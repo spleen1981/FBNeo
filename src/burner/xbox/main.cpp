@@ -430,7 +430,7 @@ int WINAPI main()
 	SetUnhandledExceptionFilter(ExceptionFilter);
 	
 	TCHAR XboxVer[32] = _T("");
-	_stprintf(XboxVer, _T("-%s(%s)"), GIT_COMMIT_HASH, "BUILD_DATE"); //generated at build time
+	_stprintf(XboxVer, _T("-%s (%s)"), GIT_COMMIT_HASH, BUILD_DATE); //generated at build time
 
 	// Make version string
 	if (nBurnVer & 0xFF) {
