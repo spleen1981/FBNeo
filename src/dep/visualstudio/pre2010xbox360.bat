@@ -16,7 +16,7 @@ perl psikyo_tile_func.pl -o ../generated/psikyo_tile_func.h
 perl toa_gp9001_func.pl -o ../generated/toa_gp9001_func.h
 SET DRVS=
 @for /d %%i in (../../burn/drv/*) do (@SET DRVS=!DRVS! ../../burn/drv/%%~nxi)
-perl gamelist.pl -o ../generated/driverlist.h -l ../../gamelist.txt %DRVS%
+perl gamelist.pl -o ../generated/driverlist.h -l ../../gamelist.txt %DRVS% ../../burn/drv
 echo building buildinfo
 "%VCINSTALLDIR%\bin\amd64\cl" build_details.cpp
 build_details > ../generated/build_details.h
