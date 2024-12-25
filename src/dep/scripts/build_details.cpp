@@ -2,8 +2,8 @@
 
 int main(int /*argc*/, char** /*argv*/)
 {
-	printf("#define BUILD_TIME %s\n", __TIME__);
-	printf("#define BUILD_DATE %s\n", __DATE__);
+	printf("#define BUILD_TIME \"%s\"\n", __TIME__);
+	printf("#define BUILD_DATE \"%s\"\n", __DATE__);
 
 #ifdef _UNICODE
 	printf("#define BUILD_CHAR Unicode\n");

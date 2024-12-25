@@ -9,6 +9,7 @@
 #include "RomList.h"
 #include "InGameOptions.h"
 #include "version.h"
+#include "build_details.h"
 #include "commit_hash.h"
 
 #include <xfilecache.h>
@@ -429,15 +430,15 @@ int WINAPI main()
 	SetUnhandledExceptionFilter(ExceptionFilter);
 	
 	TCHAR XboxVer[32] = _T("");
-	_stprintf(XboxVer, _T("%s"), GIT_COMMIT_HASH); //generated at build time
+	_stprintf(XboxVer, _T("-%s (%s)"), GIT_COMMIT_HASH, BUILD_DATE); //generated at build time
 
 	// Make version string
 	if (nBurnVer & 0xFF) {
 		// private version (alpha)
-		_stprintf(szAppBurnVer, _T("%x.%x.%x.%02x (%s)"), nBurnVer >> 20, (nBurnVer >> 16) & 0x0F, (nBurnVer >> 8) & 0xFF, nBurnVer & 0xFF, XboxVer);
+		_stprintf(szAppBurnVer, _T("%x.%x.%x.%02x%s"), nBurnVer >> 20, (nBurnVer >> 16) & 0x0F, (nBurnVer >> 8) & 0xFF, nBurnVer & 0xFF, XboxVer);
 	} else {
 		// public version
-		_stprintf(szAppBurnVer, _T("%x.%x.%x (%s)"), nBurnVer >> 20, (nBurnVer >> 16) & 0x0F, (nBurnVer >> 8) & 0xFF,XboxVer);
+		_stprintf(szAppBurnVer, _T("%x.%x.%x%s"), nBurnVer >> 20, (nBurnVer >> 16) & 0x0F, (nBurnVer >> 8) & 0xFF,XboxVer);
 	}
 		
     // Initialize D3D
