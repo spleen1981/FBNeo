@@ -850,7 +850,7 @@ int SplashCreate(void)
 				// Present the frame.
 				pDevice->Present( NULL, NULL, NULL, NULL );
 				IsDATGenerationRequested = false;
-				create_datfile(_T("GAME:\\FBNeo.dat"), 0);
+				create_datfile(_T("GAME:\\FBNeo2021.dat"), 0);
 		}
 	}
 

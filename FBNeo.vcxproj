@@ -29,6 +29,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{3203E8A7-66CC-4163-84A7-8B3804ACEB7D}</ProjectGuid>
     <Keyword>Xbox360Proj</Keyword>
+    <ProjectName>FBNeo2021</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CodeAnalysis|Xbox 360'" Label="Configuration">
