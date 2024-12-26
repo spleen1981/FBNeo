@@ -32,7 +32,7 @@
 <Visual>XuiBackButton</Visual>
 <UnfocusedInput>true</UnfocusedInput>
 <Text>Back To Game</Text>
-<PressKey>22593</PressKey>
+<PressKey>22549</PressKey>
 </Properties>
 </XuiButton>
 <XuiList>
