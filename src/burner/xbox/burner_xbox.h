@@ -62,7 +62,6 @@ extern int nAppShowCmd;
 extern int nDisableSplash;
 extern int nLastFilter;
 extern int nLastRom;
-extern int nLastFilter;
 extern int HideChildren;
 extern int ThreeOrFourPlayerOnly;
 extern int ArcadeJoystick;
@@ -271,10 +270,10 @@ extern TCHAR szNeoCDGamesDir[MAX_PATH];
 extern TCHAR szVideoPreviewPath[MAX_PATH];
 
 // sel.cpp
-extern int nLoadMenuShowX;
-extern int nLoadMenuBoardTypeFilter;
-extern int nLoadMenuGenreFilter;
-extern int nLoadMenuFamilyFilter;
+extern unsigned long long nLoadMenuShowX;
+extern unsigned long long nLoadMenuBoardTypeFilter;
+extern unsigned long long nLoadMenuGenreFilter;
+extern unsigned long long nLoadMenuFamilyFilter;
 int SelDialog(HWND hParentWND);
 extern UINT_PTR nTimer;
 extern HBITMAP hPrevBmp;

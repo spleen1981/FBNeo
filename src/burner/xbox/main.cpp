@@ -814,7 +814,7 @@ int SplashCreate(void)
 	XuiElementSetShow(hFadeRect, true);
 	XuiElementSetShow(hGenerating, false);
 
-	char VideoFName[MAX_PATH+1];
+//	char VideoFName[MAX_PATH+1];
 
 	FadeBlack(hFadeRect, false, 2);
 

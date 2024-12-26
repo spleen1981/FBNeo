@@ -53,7 +53,7 @@ std::vector<int> m_InputSettingsOffsets;
 
 std::vector<std::string> m_ShaderListData;
  
-static int CurrentFilter = 0;
+//static int CurrentFilter = 0;
 
 HXUIOBJ hShaderListScene;
  
@@ -731,7 +731,7 @@ HRESULT CDipOptions::OnInit(XUIMessageInit *pInitData, BOOL& bHandled)
 {
     // Retrieve controls for later use.
 
-	HRESULT hr;
+//	HRESULT hr;
 
     GetChildById( L"XuiButtonBackToMain", &m_BackToMain );
     GetChildById( L"XuiButtonBackToGame", &m_BackToGame );

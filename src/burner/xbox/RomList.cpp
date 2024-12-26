@@ -29,8 +29,8 @@ wchar_t DeviceText[60];
 extern bool exitGame;
  
 
-map<int, int> m_HardwareFilterMap;
-map<int, std::string> m_HardwareFilterDesc;
+map<int, unsigned long long> m_HardwareFilterMap;
+map<unsigned long long, std::string> m_HardwareFilterDesc;
 
 bool bNeoCDListScanSub			= false;
 bool bNeoCDListScanOnlyISO		= false;
@@ -38,11 +38,11 @@ TCHAR szNeoCDCoverDir[MAX_PATH] = _T("GAME:\\previews\\neocdz\\");
 TCHAR szNeoCDGamesDir[MAX_PATH] = _T("GAME:\\ROMs\\neocdz\\");
 TCHAR szVideoPreviewPath[MAX_PATH] = _T("GAME:\\videos\\");
 
-int nLoadMenuPrevShowX			= 0;
-int nLoadMenuShowX				= 0;
-int nLoadMenuBoardTypeFilter	= 0;
-int nLoadMenuGenreFilter		= 0;
-int nLoadMenuFamilyFilter		= 0;
+unsigned long long nLoadMenuPrevShowX			= 0;
+unsigned long long  nLoadMenuShowX				= 0;
+unsigned long long  nLoadMenuBoardTypeFilter	= 0;
+unsigned long long  nLoadMenuGenreFilter		= 0;
+unsigned long long  nLoadMenuFamilyFilter		= 0;
 
 struct GAMELIST {
 	unsigned int nID;
@@ -117,93 +117,89 @@ enum {
 	PLATFORM_FILTER_MAX
 };
 
-static int CapcomMiscValue		= HARDWARE_PREFIX_CAPCOM_MISC >> 24;
-static int MASKCAPMISC			= 1 << CapcomMiscValue;
-static int CaveValue			= HARDWARE_PREFIX_CAVE >> 24;
-static int MASKCAVE				= 1 << CaveValue;
-static int CpsValue				= HARDWARE_PREFIX_CAPCOM >> 24;
-static int MASKCPS				= 1 << CpsValue;
-static int Cps2Value			= HARDWARE_PREFIX_CPS2 >> 24;
-static int MASKCPS2				= 1 << Cps2Value;
-static int Cps3Value			= HARDWARE_PREFIX_CPS3 >> 24;
-static int MASKCPS3				= 1 << Cps3Value;
-static int DataeastValue		= HARDWARE_PREFIX_DATAEAST >> 24;
-static int MASKDATAEAST			= 1 << DataeastValue;
-static int GalaxianValue		= HARDWARE_PREFIX_GALAXIAN >> 24;
-static int MASKGALAXIAN			= 1 << GalaxianValue;
-static int IremValue			= HARDWARE_PREFIX_IREM >> 24;
-static int MASKIREM				= 1 << IremValue;
-static int KanekoValue			= HARDWARE_PREFIX_KANEKO >> 24;
-static int MASKKANEKO			= 1 << KanekoValue;
-static int KonamiValue			= HARDWARE_PREFIX_KONAMI >> 24;
-static int MASKKONAMI			= 1 << KonamiValue;
-static int NeogeoValue			= HARDWARE_PREFIX_SNK >> 24;
-static int MASKNEOGEO			= 1 << NeogeoValue;
-static int PacmanValue			= HARDWARE_PREFIX_PACMAN >> 24;
-static int MASKPACMAN			= 1 << PacmanValue;
-static int PgmValue				= HARDWARE_PREFIX_IGS_PGM >> 24;
-static int MASKPGM				= 1 << PgmValue;
-static int PsikyoValue			= HARDWARE_PREFIX_PSIKYO >> 24;
-static int MASKPSIKYO			= 1 << PsikyoValue;
-static int SegaValue			= HARDWARE_PREFIX_SEGA >> 24;
-static int MASKSEGA				= 1 << SegaValue;
-static int SetaValue			= HARDWARE_PREFIX_SETA >> 24;
-static int MASKSETA				= 1 << SetaValue;
-static int TaitoValue			= HARDWARE_PREFIX_TAITO >> 24;
-static int MASKTAITO			= 1 << TaitoValue;
-static int TechnosValue			= HARDWARE_PREFIX_TECHNOS >> 24;
-static int MASKTECHNOS			= 1 << TechnosValue;
-static int ToaplanValue			= HARDWARE_PREFIX_TOAPLAN >> 24;
-static int MASKTOAPLAN			= 1 << ToaplanValue;
-static int MiscPre90sValue		= HARDWARE_PREFIX_MISC_PRE90S >> 24;
-static int MASKMISCPRE90S		= 1 << MiscPre90sValue;
-static int MiscPost90sValue		= HARDWARE_PREFIX_MISC_POST90S >> 24;
-static int MASKMISCPOST90S		= 1 << MiscPost90sValue;
-static int MegadriveValue		= HARDWARE_PREFIX_SEGA_MEGADRIVE >> 24;
-static int MASKMEGADRIVE		= 1 << MegadriveValue;
-static int PCEngineValue		= HARDWARE_PREFIX_PCENGINE >> 24;
-static int MASKPCENGINE			= 1 << PCEngineValue;
-//static int SnesValue			= HARDWARE_PREFIX_NINTENDO_SNES >> 24;
-//static int MASKSNES				= 1 << SnesValue;
-static int SmsValue				= HARDWARE_PREFIX_SEGA_MASTER_SYSTEM >> 24;
-static int MASKSMS				= 1 << SmsValue;
+#define MASKCAPMISC	(1ULL << (HARDWARE_PREFIX_CAPCOM_MISC >> 24))
+#define MASKCAVE	(1ULL << (HARDWARE_PREFIX_CAVE >> 24))
+#define MASKCPS	(1ULL << (HARDWARE_PREFIX_CAPCOM >> 24))
+#define MASKCPS2	(1ULL << (HARDWARE_PREFIX_CPS2 >> 24))
+#define MASKCPS3	(1ULL << (HARDWARE_PREFIX_CPS3 >> 24))
+#define MASKDATAEAST	(1ULL << (HARDWARE_PREFIX_DATAEAST >> 24))
+#define MASKGALAXIAN	(1ULL << (HARDWARE_PREFIX_GALAXIAN >> 24))
+#define MASKIREM	(1ULL << (HARDWARE_PREFIX_IREM >> 24))
+#define MASKKANEKO	(1ULL << (HARDWARE_PREFIX_KANEKO >> 24))
+#define MASKKONAMI	(1ULL << (HARDWARE_PREFIX_KONAMI >> 24))
+#define MASKNEOGEO	(1ULL << (HARDWARE_PREFIX_SNK >> 24))
+#define MASKPACMAN	(1ULL << (HARDWARE_PREFIX_PACMAN >> 24))
+#define MASKPGM	(1ULL << (HARDWARE_PREFIX_IGS_PGM >> 24))
+#define MASKPSIKYO	(1ULL << (HARDWARE_PREFIX_PSIKYO >> 24))
+#define MASKSEGA	(1ULL << (HARDWARE_PREFIX_SEGA >> 24))
+#define MASKSETA	(1ULL << (HARDWARE_PREFIX_SETA >> 24))
+#define MASKTAITO	(1ULL << (HARDWARE_PREFIX_TAITO >> 24))
+#define MASKTECHNOS	(1ULL << (HARDWARE_PREFIX_TECHNOS >> 24))
+#define MASKTOAPLAN	(1ULL << (HARDWARE_PREFIX_TOAPLAN >> 24))
+#define MASKMISCPRE90S	(1ULL << (HARDWARE_PREFIX_MISC_PRE90S >> 24))
+#define MASKMISCPOST90S	(1ULL << (HARDWARE_PREFIX_MISC_POST90S >> 24))
+#define MASKMEGADRIVE	(1ULL << (HARDWARE_PREFIX_SEGA_MEGADRIVE >> 24))
+#define MASKPCENGINE	(1ULL << (HARDWARE_PREFIX_PCENGINE >> 24))
+//#define MASKSNES	(1ULL << (HARDWARE_PREFIX_NINTENDO_SNES >> 24))
+#define MASKSMS	(1ULL << (HARDWARE_PREFIX_SEGA_MASTER_SYSTEM >> 24))
+//#define MASKCHANNELF	(1ULL << (HARDWARE_PREFIX_CHANNELF >> 24))
+#define MASKSNK	(1ULL << (HARDWARE_PREFIX_SNK >> 24))
+#define MASKCAPCOM_MISC	(1ULL << (HARDWARE_PREFIX_CAPCOM_MISC >> 24))
+#define MASKSEGA_MASTER_SYSTEM	(1ULL << (HARDWARE_PREFIX_SEGA_MASTER_SYSTEM >> 24))
+#define MASKSEGA_SG1000	(1ULL << (HARDWARE_PREFIX_SEGA_SG1000 >> 24))
+#define MASKCOLECO	(1ULL << (HARDWARE_PREFIX_COLECO >> 24))
+#define MASKMIDWAY	(1ULL << (HARDWARE_PREFIX_MIDWAY >> 24))
+#define MASKSEGA_GAME_GEAR	(1ULL << (HARDWARE_PREFIX_SEGA_GAME_GEAR >> 24))
+#define MASKMSX	(1ULL << (HARDWARE_PREFIX_MSX >> 24))
+#define MASKSPECTRUM	(1ULL << (HARDWARE_PREFIX_SPECTRUM >> 24))
+#define MASKNES	(1ULL << (HARDWARE_PREFIX_NES >> 24))
+#define MASKFDS	(1ULL << (HARDWARE_PREFIX_FDS >> 24))
+#define MASKNGP	(1ULL << (HARDWARE_PREFIX_NGP >> 24))
+#define MASKALL (\
+MASKCAPMISC \
+| MASKCAVE \
+| MASKCPS \
+| MASKCPS2 \
+| MASKCPS3 \
+| MASKDATAEAST \
+| MASKGALAXIAN \
+| MASKIREM \
+| MASKKANEKO \
+| MASKKONAMI \
+| MASKNEOGEO \
+| MASKPACMAN \
+| MASKPGM \
+| MASKPSIKYO \
+| MASKSEGA \
+| MASKSETA \
+| MASKTAITO \
+| MASKTECHNOS \
+| MASKTOAPLAN \
+| MASKMISCPRE90S \
+| MASKMISCPOST90S \
+| MASKMEGADRIVE \
+| MASKPCENGINE \
+/*| MASKSNES */ \
+| MASKSMS \
+| MASKSNK \
+| MASKCAPCOM_MISC \
+| MASKSEGA_MASTER_SYSTEM \
+| MASKSEGA_SG1000 \
+| MASKCOLECO \
+| MASKMIDWAY \
+| MASKSEGA_GAME_GEAR \
+| MASKMSX \
+| MASKSPECTRUM \
+| MASKNES \
+| MASKFDS \
+| MASKNGP \
+/*| MASKCHANNELF */ \
+);
 
-static int SNKValue		= HARDWARE_PREFIX_SNK >> 24;
-static int CAPCOM_MISCValue		= HARDWARE_PREFIX_CAPCOM_MISC >> 24;
-static int SEGA_MASTER_SYSTEMValue		= HARDWARE_PREFIX_SEGA_MASTER_SYSTEM >> 24;
-static int SEGA_SG1000Value		= HARDWARE_PREFIX_SEGA_SG1000 >> 24;
-static int COLECOValue		= HARDWARE_PREFIX_COLECO >> 24;
-static int MIDWAYValue		= HARDWARE_PREFIX_MIDWAY >> 24;
-static int SEGA_GAME_GEARValue		= HARDWARE_PREFIX_SEGA_GAME_GEAR >> 24;
-static int MSXValue		= HARDWARE_PREFIX_MSX >> 24;
-static int SPECTRUMValue		= HARDWARE_PREFIX_SPECTRUM >> 24;
-static int NESValue		= HARDWARE_PREFIX_NES >> 24;
-static int FDSValue		= HARDWARE_PREFIX_FDS >> 24;
-static int NGPValue		= HARDWARE_PREFIX_NGP >> 24;
-//static int CHANNELFValue		= HARDWARE_PREFIX_CHANNELF >> 24;
-
-static int MASKSNK				= 1 << SNKValue;
-static int MASKCAPCOM_MISC				= 1 << CAPCOM_MISCValue;
-static int MASKSEGA_MASTER_SYSTEM				= 1 << SEGA_MASTER_SYSTEMValue;
-static int MASKSEGA_SG1000				= 1 << SEGA_SG1000Value;
-static int MASKCOLECO				= 1 << COLECOValue;
-static int MASKMIDWAY				= 1 << MIDWAYValue;
-static int MASKSEGA_GAME_GEAR				= 1 << SEGA_GAME_GEARValue;
-static int MASKMSX				= 1 << MSXValue;
-static int MASKSPECTRUM				= 1 << SPECTRUMValue;
-static int MASKNES				= 1 << NESValue;
-static int MASKFDS				= 1 << FDSValue;
-static int MASKNGP				= 1 << NGPValue;
-//static int MASKCHANNELF				= 1 << CHANNELFValue;
-
-
-static int MASKALL				= MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 | MASKCPS3 | MASKDATAEAST | MASKGALAXIAN | MASKIREM | MASKKANEKO | MASKKONAMI | MASKNEOGEO | MASKPACMAN | MASKPGM | MASKPSIKYO | MASKSEGA | MASKSETA | MASKTAITO | MASKTECHNOS | MASKTOAPLAN | MASKMISCPRE90S | MASKMISCPOST90S | MASKMEGADRIVE | MASKPCENGINE /*| MASKSNES */| MASKSMS | SNK | CAPCOM_MISC | SEGA_MASTER_SYSTEM | SEGA_SG1000 | COLECO | MIDWAY | SEGA_GAME_GEAR | MSX | SPECTRUM | NES | FDS | NGP /*| CHANNELF*/;
-
-
-#define AVAILONLY				(1 << 28)
-#define AUTOEXPAND				(1 << 29)
-#define SHOWSHORT				(1 << 30)
-#define ASCIIONLY				(1 << 31)
+#define SHOWUNAVAIL				(1ULL << PLATFORM_FILTER_MAX)
+#define HIDECLONES				(1ULL << (PLATFORM_FILTER_MAX + 1))
+#define SHOWSHORT				(1ULL << (PLATFORM_FILTER_MAX + 2))
+#define ASCIIONLY				(1ULL << (PLATFORM_FILTER_MAX + 3))
 
 #define MASKBOARDTYPEGENUINE	(1)
 #define MASKFAMILYOTHER			0x10000000
@@ -212,7 +208,7 @@ static int MASKALL				= MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 | MASKCPS3 |
 #define MASKALLFAMILY			(MASKFAMILYOTHER | FBF_MSLUG | FBF_SF | FBF_KOF | FBF_DSTLK | FBF_FATFURY | FBF_SAMSHO | FBF_19XX | FBF_SONICWI | FBF_PWRINST)
 #define MASKALLBOARD			(MASKBOARDTYPEGENUINE | BDF_BOOTLEG | BDF_DEMO | BDF_HACK | BDF_HOMEBREW | BDF_PROTOTYPE)
 
-static int CurrentFilter = 0;
+int CurrentFilter = 0;
 static int CurrentSlot = 0;
 
 wchar_t ucString[256];
@@ -834,7 +830,7 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		HXUIOBJ hSlot6;
 		 
 		wchar_t VersionText[60];
-		wchar_t HardwareBGImage[60];
+		//wchar_t HardwareBGImage[60];
 		wchar_t szItemText[80];
  
         // Retrieve controls for later use.
@@ -1186,8 +1182,8 @@ static int DoExtraFilters()
 // Make a tree-view control with all drivers
 static int SelListMake()
 {
-	HXUIOBJ hRomCountText;
-	unsigned int i, j;
+//	HXUIOBJ hRomCountText;
+	unsigned int i; //,j
 	unsigned int nMissingDrvCount = 0;
 	
 	if (nBurnDrv) {
@@ -1216,7 +1212,7 @@ static int SelListMake()
 		if ((BurnDrvGetFlags() & BDF_CLONE) && (nLoadMenuShowX & AUTOEXPAND))
 			continue;
  
-		int nHardware = 1 << (BurnDrvGetHardwareCode() >> 24);
+		unsigned long long nHardware = 1UL << (BurnDrvGetHardwareCode() >> 24);
 		if ((nHardware & nLoadMenuShowX) == 0) {
 			continue;
 		}
@@ -1438,11 +1434,11 @@ unsigned int __stdcall worker_thread_func(void *ArgList)
 {
 	char PreviewFName[MAX_PATH+1];
 	char TitleFName[MAX_PATH+1];
-	char szPreviewFName[MAX_PATH+1];
-	char szTitleFName[MAX_PATH+1];
+//	char szPreviewFName[MAX_PATH+1];
+//	char szTitleFName[MAX_PATH+1];
 
-	wchar_t videoPath[MAX_PATH+1];
-	wchar_t previewPath[MAX_PATH+1];
+//	wchar_t videoPath[MAX_PATH+1];
+//	wchar_t previewPath[MAX_PATH+1];
 	wchar_t titlePath[MAX_PATH+1];
 
 	XSetThreadProcessor( GetCurrentThread(),2);
@@ -1517,9 +1513,9 @@ HRESULT CRomList::OnNotify( XUINotify *hObj, BOOL& bHandled )
 	bool bUseInfo = false;
 	bool bBracket = false;
 	
-	wchar_t videoPath[MAX_PATH+1];
-	wchar_t previewPath[MAX_PATH+1];
-	wchar_t titlePath[MAX_PATH+1];
+//	wchar_t videoPath[MAX_PATH+1];
+//	wchar_t previewPath[MAX_PATH+1];
+//	wchar_t titlePath[MAX_PATH+1];
 	wchar_t InfoText[255] = L"";
 
 	TCHAR szItemText[256] = _T("");
