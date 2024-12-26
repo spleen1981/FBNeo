@@ -554,7 +554,7 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 				nSlotLoadMode = 1;
 				nLoadMenuPrevShowX = nLoadMenuShowX;
 				nLoadMenuShowX = MASKNEOGEO;
-				nLoadMenuShowX |= AVAILONLY;
+				//nLoadMenuShowX |= SHOWUNAVAIL;
 				
 				
 				XUIMessage xuiMsg;
@@ -650,7 +650,15 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 		else if (hObjPressed == m_HideChildren)
 		{
  
-			nLoadMenuShowX ^= AUTOEXPAND;
+			if (m_HideChildren.IsChecked())
+			{
+				nLoadMenuShowX |= HIDECLONES;
+			}
+			else
+			{
+				nLoadMenuShowX &= ~HIDECLONES;
+			}
+			
 			XuiImageElementSetImagePath(m_PreviewImage.m_hObj, L"");
 
 			XUIMessage xuiMsg;
@@ -658,9 +666,50 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 			InRescanRomsFirstFunc( &xuiMsg, &msgData, NULL);
 			XuiSendMessage( m_RomList.m_hObj, &xuiMsg );
 
-			m_RomList.SetCurSelVisible(0);
-			m_RomList.SetCurSel(0);	
-			m_RomList.SetFocus();	
+			if (m_RomList.GetItemCount()==0){
+				XuiElementSetShow(hPreviewVideo, false);
+				XuiVideoPause(hPreviewVideo, true);
+				XuiImageElementSetImagePath(hTitleImage, L"no_title2.png");
+				XuiImageElementSetImagePath(hPreviewImage, L"no_title2.png");
+			} else {
+				m_RomList.SetCurSelVisible(0);
+				m_RomList.SetFocus();
+				m_RomList.SetCurSel(1);
+				m_RomList.SetCurSel(0);
+			}
+
+			bHandled = TRUE;
+			return S_OK;
+		}
+		else if (hObjPressed == m_ShowUnavailable)
+		{
+			if (m_ShowUnavailable.IsChecked())
+			{
+				nLoadMenuShowX |= SHOWUNAVAIL;
+			}
+			else
+			{
+				nLoadMenuShowX &= ~SHOWUNAVAIL;
+			}
+
+			XuiImageElementSetImagePath(m_PreviewImage.m_hObj, L"");
+
+			XUIMessage xuiMsg;
+			InRescanRomsStruct msgData;
+			InRescanRomsFirstFunc( &xuiMsg, &msgData, NULL);
+			XuiSendMessage( m_RomList.m_hObj, &xuiMsg );
+
+			if (m_RomList.GetItemCount()==0){
+				XuiElementSetShow(hPreviewVideo, false);
+				XuiVideoPause(hPreviewVideo, true);
+				XuiImageElementSetImagePath(hTitleImage, L"no_title2.png");
+				XuiImageElementSetImagePath(hPreviewImage, L"no_title2.png");
+			} else {
+				m_RomList.SetCurSelVisible(0);
+				m_RomList.SetFocus();
+				m_RomList.SetCurSel(1);
+				m_RomList.SetCurSel(0);
+			}
 
 			bHandled = TRUE;
 			return S_OK;
@@ -677,11 +726,23 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 				}
 			
 				nLoadMenuShowX = m_HardwareFilterMap[CurrentFilter];
-				nLoadMenuShowX |= AVAILONLY;
+
+				if (m_ShowUnavailable.IsChecked())
+				{
+					nLoadMenuShowX |= SHOWUNAVAIL;
+				}
+				else
+				{
+					nLoadMenuShowX &= ~SHOWUNAVAIL;
+				}
 
 				if (m_HideChildren.IsChecked())
 				{
-					nLoadMenuShowX |= AUTOEXPAND;
+					nLoadMenuShowX |= HIDECLONES;
+				}
+				else
+				{
+					nLoadMenuShowX &= ~HIDECLONES;
 				}
 
 				XUIMessage xuiMsg;
@@ -737,11 +798,22 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 				//XuiImageElementSetImagePath(m_PreviewImage.m_hObj, L"");
  
 				nLoadMenuShowX = m_HardwareFilterMap[CurrentFilter];
-				nLoadMenuShowX |= AVAILONLY;
 
+				if (m_ShowUnavailable.IsChecked())
+				{
+					nLoadMenuShowX |= SHOWUNAVAIL;
+				}
+				else
+				{	
+					nLoadMenuShowX &= ~SHOWUNAVAIL;
+				}
 				if (m_HideChildren.IsChecked())
 				{
-					nLoadMenuShowX |= AUTOEXPAND;
+					nLoadMenuShowX |= HIDECLONES;
+				}
+				else
+				{
+					nLoadMenuShowX &= ~HIDECLONES;
 				}
 
 				XUIMessage xuiMsg;
@@ -863,6 +935,7 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		GetChildById( L"XuiHardware", &m_Hardware);
 		GetChildById( L"XuiNumberOfRoms", &m_NumberOfGames);
 		GetChildById( L"XuiCheckboxHideChildren", &m_HideChildren);
+		GetChildById( L"XuiCheckboxShowUnavailable", &m_ShowUnavailable);
 		GetChildById( L"XuiCheckboxShow34PlayerOnly", &m_34PlayerOnly);
 		GetChildById( L"XuiArcadeStick", &m_UseArcadeStickSettings);
 
@@ -985,15 +1058,21 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		m_Version.SetText(VersionText);
  
 		nLoadMenuShowX |= MASKALL;
-		nLoadMenuShowX |= AVAILONLY;
+		//nLoadMenuShowX |= SHOWUNAVAIL;
+		nLoadMenuShowX &= ~HIDECLONES;
 
-		if (nLoadMenuShowX & AUTOEXPAND)
+		if (nLoadMenuShowX & HIDECLONES)
 		{
 			m_HideChildren.SetCheck(true);
 		}
 
+		if (nLoadMenuShowX & SHOWUNAVAIL)
+		{
+			m_ShowUnavailable.SetCheck(true);
+		}
+
 		CurrentFilter = nLastFilter;
-		XuiImageElementSetImagePath(m_PreviewImage.m_hObj, L"");
+		//XuiImageElementSetImagePath(m_PreviewImage.m_hObj, L"");
 
  		XUIMessage xuiMsg;
 		InRescanRomsStruct msgData;
@@ -1209,7 +1288,7 @@ static int SelListMake()
 		if (BurnDrvGetMaxPlayers() < 3 && ThreeOrFourPlayerOnly == 1)
 			continue;
 
-		if ((BurnDrvGetFlags() & BDF_CLONE) && (nLoadMenuShowX & AUTOEXPAND))
+		if ((BurnDrvGetFlags() & BDF_CLONE) && (nLoadMenuShowX & HIDECLONES))
 			continue;
  
 		unsigned long long nHardware = 1UL << (BurnDrvGetHardwareCode() >> 24);
@@ -1221,7 +1300,7 @@ static int SelListMake()
 		
 		if(!gameAv[i]) nMissingDrvCount++;
 
-		if (avOk && (nLoadMenuShowX & AVAILONLY) && !gameAv[i])	{						// Skip non-available games if needed
+		if (avOk && !(nLoadMenuShowX & SHOWUNAVAIL) && !gameAv[i])	{						// Skip non-available games if needed
 			continue;
 		}
  
@@ -1470,6 +1549,7 @@ unsigned int __stdcall worker_thread_func(void *ArgList)
 	else
 	{		
 		XuiImageElementSetImagePath(hTitleImage, L"no_title2.png");
+		XuiImageElementSetImagePath(hPreviewImage, L"no_title2.png");
 	}
 
 	if (GetFileAttributes(PreviewFName) != -1)
@@ -1487,6 +1567,7 @@ unsigned int __stdcall worker_thread_func(void *ArgList)
 	}
 	else
 	{		
+		XuiImageElementSetImagePath(hPreviewImage, L"no_title2.png");
 		XuiImageElementSetImagePath(hPreviewImage, L"no_title2.png");
 	}
  

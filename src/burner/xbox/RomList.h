@@ -116,6 +116,7 @@ protected:
 	CXuiTextElement m_NumberOfGames;
 
 	CXuiCheckbox m_HideChildren;
+	CXuiCheckbox m_ShowUnavailable;
 	CXuiCheckbox m_34PlayerOnly;
 	CXuiCheckbox m_UseArcadeStickSettings;
 	CXuiCheckbox m_HighScore;
