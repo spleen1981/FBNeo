@@ -231,7 +231,11 @@
       <ConfigurationFile>xex.xml</ConfigurationFile>
     </ImageXex>
     <PreBuildEvent>
-      <Command>cd "$(ProjectDir)src\burner\xbox" &amp;&amp; call "generate_commit_hash.bat" &amp;&amp; cd "$(ProjectDir)src\dep\visualstudio" &amp;&amp;  call "pre2010xbox360.bat" </Command>
+      <Command>cd "$(ProjectDir)src\burner\xbox"
+call "generate_commit_hash.bat"
+cd "$(ProjectDir)src\dep\visualstudio"
+call "pre2010xbox360.bat"
+del "$(OutDir)media\*.xzp"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">
