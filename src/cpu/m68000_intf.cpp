@@ -424,7 +424,7 @@ inline static UINT32 ReadLong(UINT32 a)
 			r += ReadByte((a + 2)) * 0x100;
 			r += ReadByte((a + 3));
 
-			return r;
+			return BURN_ENDIAN_SWAP_INT32(r);
 		}
 		else
 		{

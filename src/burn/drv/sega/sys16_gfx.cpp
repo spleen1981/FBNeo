@@ -787,14 +787,14 @@ static void System16BCreateTileMaps()
 	if (System16RecalcFgAltTileMap) {
 		System16RecalcFgAltTileMap = 0;
 		for (i = 0xf80/2 + 0 * 0x40/2; i < 0xf80/2 + 0 * 0x40/2 + 224/8; i++) {
-			if (TextRam[i] & 0x8000) System16RecalcFgAltTileMap = 1;
+			if (BURN_ENDIAN_SWAP_INT16(TextRam[i]) & 0x8000) System16RecalcFgAltTileMap = 1;
 		}
 	}
 	
 	if (System16RecalcBgAltTileMap) {
 		System16RecalcBgAltTileMap = 0;
 		for (i = 0xf80/2 + 1 * 0x40/2; i < 0xf80/2 + 1 * 0x40/2 + 224/8; i++) {
-			if (TextRam[i] & 0x8000) System16RecalcBgAltTileMap = 1;
+			if (BURN_ENDIAN_SWAP_INT16(TextRam[i]) & 0x8000) System16RecalcBgAltTileMap = 1;
 		}
 	}
 
@@ -828,14 +828,14 @@ static void System16BAltCreateTileMaps()
 	if (System16RecalcFgAltTileMap) {
 		System16RecalcFgAltTileMap = 0;
 		for (i = 0xf80/2 + 0 * 0x40/2; i < 0xf80/2 + 0 * 0x40/2 + 224/8; i++) {
-			if (TextRam[i] & 0x8000) System16RecalcFgAltTileMap = 1;
+			if (BURN_ENDIAN_SWAP_INT16(TextRam[i]) & 0x8000) System16RecalcFgAltTileMap = 1;
 		}
 	}
 	
 	if (System16RecalcBgAltTileMap) {
 		System16RecalcBgAltTileMap = 0;
 		for (i = 0xf80/2 + 1 * 0x40/2; i < 0xf80/2 + 1 * 0x40/2 + 224/8; i++) {
-			if (TextRam[i] & 0x8000) System16RecalcBgAltTileMap = 1;
+			if (BURN_ENDIAN_SWAP_INT16(TextRam[i]) & 0x8000) System16RecalcBgAltTileMap = 1;
 		}
 	}
 
@@ -1755,7 +1755,7 @@ static void System16BRenderSpriteLayer(INT32 Priority)
 		spritedata = spritebase + 0x10000 * bank;
 
 		/* reset the yzoom counter */
-		data[5] &= 0x03ff;
+		data[5] &= BURN_ENDIAN_SWAP_INT16(0x03ff);
 		
 		if (System16ScreenFlip) {
 			INT32 temp = top;
@@ -1771,10 +1771,10 @@ static void System16BRenderSpriteLayer(INT32 Priority)
 			addr += pitch;
 
 			/* accumulate zoom factors; if we carry into the high bit, skip an extra row */
-			data[5] += vzoom << 10;
-			if (data[5] & 0x8000) {
+			data[5] += BURN_ENDIAN_SWAP_INT16(vzoom << 10);
+			if (data[5] & BURN_ENDIAN_SWAP_INT16(0x8000)) {
 				addr += pitch;
-				data[5] &= ~0x8000;
+				data[5] &= BURN_ENDIAN_SWAP_INT16(~0x8000);
 			}
 			
 			/* skip drawing if not within the cliprect */
@@ -2361,7 +2361,7 @@ static void YBoardSystem16BRenderSpriteLayer()
 
 	for (data = (UINT16*)System16SpriteRam; data < (UINT16*)System16SpriteRam + System16SpriteRamSize / 2; data += 8) {
 		if (BURN_ENDIAN_SWAP_INT16(data[2]) & 0x8000) break;
-		INT32 sprpri  = (data[1] >> 8) & 0x1e;
+		INT32 sprpri  = (BURN_ENDIAN_SWAP_INT16(data[1]) >> 8) & 0x1e;
 				
 		INT32 bottom  = BURN_ENDIAN_SWAP_INT16(data[0]) >> 8;
 		INT32 top     = BURN_ENDIAN_SWAP_INT16(data[0]) & 0xff;
@@ -2390,7 +2390,7 @@ static void YBoardSystem16BRenderSpriteLayer()
 		spritedata = spritebase + 0x10000 * bank;
 
 		/* reset the yzoom counter */
-		data[5] &= 0x03ff;
+		data[5] &= BURN_ENDIAN_SWAP_INT16(0x03ff);
 
 		/* loop from top to bottom */
 		for (y = top; y < bottom; y++) {
@@ -2398,10 +2398,10 @@ static void YBoardSystem16BRenderSpriteLayer()
 			addr += pitch;
 
 			/* accumulate zoom factors; if we carry into the high bit, skip an extra row */
-			data[5] += vzoom << 10;
-			if (data[5] & 0x8000) {
+			data[5] += BURN_ENDIAN_SWAP_INT16(vzoom << 10);
+			if (data[5] & BURN_ENDIAN_SWAP_INT16(0x8000)) {
 				addr += pitch;
-				data[5] &= ~0x8000;
+				data[5] &= BURN_ENDIAN_SWAP_INT16(~0x8000);
 			}
 
 			/* skip drawing if not within the cliprect */
@@ -3468,7 +3468,7 @@ static void System18RenderSpriteLayer()
 		spritedata = spritebase + 0x10000 * bank;
 
 		/* reset the yzoom counter */
-		data[5] &= 0x03ff;
+		data[5] &= BURN_ENDIAN_SWAP_INT16(0x03ff);
 
 		if (System16ScreenFlip) {
 			INT32 temp = top;
@@ -3484,10 +3484,10 @@ static void System18RenderSpriteLayer()
 			addr += pitch;
 
 			/* accumulate zoom factors; if we carry into the high bit, skip an extra row */
-			data[5] += vzoom << 10;
-			if (data[5] & 0x8000) {
+			data[5] += BURN_ENDIAN_SWAP_INT16(vzoom << 10);
+			if (data[5] & BURN_ENDIAN_SWAP_INT16(0x8000)) {
 				addr += pitch;
-				data[5] &= ~0x8000;
+				data[5] &= BURN_ENDIAN_SWAP_INT16(~0x8000);
 			}
 
 			/* skip drawing if not within the cliprect */

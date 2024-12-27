@@ -283,10 +283,10 @@ static void __fastcall rabbit_videoram_write_byte(UINT32 address, UINT8 data)
 	INT32 offset = (address & 0x3fff) ^ 1;
 	INT32 select = (address / 0x4000) & 3;
 	UINT8 *ram = (UINT8*)(DrvVidRAM[select]);
-	if (ram[offset] != data) {
+	if (BURN_ENDIAN_SWAP_INT32(ram[offset]) != data) {
 		GenericTilemapSetTileDirty(select, offset/4);
 		update_tilemap[select] = 1;
-		ram[offset] = data;
+		ram[offset] = BURN_ENDIAN_SWAP_INT32(data);
 	}
 }
 

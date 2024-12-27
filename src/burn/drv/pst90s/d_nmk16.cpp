@@ -3682,7 +3682,7 @@ static UINT16 __fastcall hachamf_main_read_word(UINT32 address)
 static void __fastcall hachamf_main_write_word(UINT32 address, UINT16 data)
 {
 	if ((address & 0xffff0000) == 0xf0000) {
-		*((UINT16*)(Drv68KRAM + (address & 0xfffe))) = data;
+		*((UINT16*)(Drv68KRAM + (address & 0xfffe))) = BURN_ENDIAN_SWAP_INT16(data);
 		HachaRAMProt((address & 0xffff) >> 1);
 		return;
 	}
@@ -9973,8 +9973,8 @@ static INT32 HachamfLoadCallback()
 	}
 
 	{
-		*((UINT16*)(Drv68KROM + 0x048a)) = 0x4e71;
-		*((UINT16*)(Drv68KROM + 0x04aa)) = 0x4e71;
+		*((UINT16*)(Drv68KROM + 0x048a)) = BURN_ENDIAN_SWAP_INT16(0x4e71);
+		*((UINT16*)(Drv68KROM + 0x04aa)) = BURN_ENDIAN_SWAP_INT16(0x4e71);
 	}
 
 	SekInit(0, 0x68000);

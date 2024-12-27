@@ -1141,9 +1141,9 @@ static void IGS022_do_dma(UINT16 src, UINT16 dst, UINT16 size, UINT16 mode)
 		UINT16 *PROTROM = (UINT16*)(PGMUSER0 + 0x10000);
 		for (x = 0; x < size; x++)
 		{
-			UINT16 dat = PROTROM[src + x];
+			UINT16 dat = BURN_ENDIAN_SWAP_INT16(PROTROM[src + x]);
 
-			sharedprotram[dst + x] = dat;
+			sharedprotram[dst + x] = BURN_ENDIAN_SWAP_INT16(dat);
 		}
 	}
 	else if (mode == 6)
@@ -3130,7 +3130,7 @@ static void IGS028_do_dma(UINT16 src, UINT16 dst, UINT16 size, UINT16 mode)
 
 			for (INT32 x = 0; x < size; x++)
 			{
-				UINT16 dat2 = PROTROM[src + x];
+			UINT16 dat2 = BURN_ENDIAN_SWAP_INT16(PROTROM[src + x]);
 
 				int taboff = ((x*2)+extraoffset) & 0xff; // must allow for overflow in instances of odd offsets
 				unsigned short extraxor = ((dectable[taboff + 0]) << 0) | (dectable[taboff + 1] << 8);

@@ -143,7 +143,7 @@ static void __fastcall slapstic_write_byte(UINT32 address, UINT8 )
 
 static UINT16 __fastcall slapstic_read_word(UINT32 address)
 {
-	UINT16 ret = *((UINT16*)(atari_slapstic_rom + (address & 0x1ffe) + ((SlapsticBank() & 3) * 0x2000)));
+	UINT16 ret = BURN_ENDIAN_SWAP_INT16(*((UINT16*)(atari_slapstic_rom + (address & 0x1ffe) + ((SlapsticBank() & 3) * 0x2000))));
 
 	SlapsticTweak((address & 0x7ffe)/2);
 
@@ -209,10 +209,10 @@ void AtariPaletteUpdateIRGB(UINT8 *ram, UINT32 *palette, INT32 ramsize)
 
 	for (INT32 i = 0; i < ramsize/2; i++)
 	{
-		INT32 n = p[i] >> 15;
-		UINT8 r = ((p[i] >> 9) & 0x3e) | n;
-		UINT8 g = ((p[i] >> 4) & 0x3e) | n;
-		UINT8 b = ((p[i] << 1) & 0x3e) | n;
+		INT32 n = BURN_ENDIAN_SWAP_INT16(p[i]) >> 15;
+		UINT8 r = ((BURN_ENDIAN_SWAP_INT16(p[i]) >> 9) & 0x3e) | n;
+		UINT8 g = ((BURN_ENDIAN_SWAP_INT16(p[i]) >> 4) & 0x3e) | n;
+		UINT8 b = ((BURN_ENDIAN_SWAP_INT16(p[i]) << 1) & 0x3e) | n;
 
 		r = (r << 2) | (r >> 4);
 		g = (g << 2) | (g >> 4);
@@ -224,7 +224,7 @@ void AtariPaletteUpdateIRGB(UINT8 *ram, UINT32 *palette, INT32 ramsize)
 
 void AtariPaletteWriteIRGB(INT32 offset, UINT8 *ram, UINT32 *palette)
 {
-	UINT16 data = *((UINT16*)(ram + (offset * 2)));
+	UINT16 data = BURN_ENDIAN_SWAP_INT16(*((UINT16*)(ram + (offset * 2))));
 	UINT8 i = data >> 15;
 	UINT8 r = ((data >>  9) & 0x3e) | i;
 	UINT8 g = ((data >>  4) & 0x3e) | i;
@@ -247,10 +247,10 @@ void AtariPaletteUpdate4IRGB(UINT8 *ram, UINT32 *palette, INT32 ramsize)
 
 	for (INT32 i = 0; i < ramsize/2; i++)
 	{
-		INT32 n = ztable[p[i] >> 12];
-		UINT8 r = ((p[i] >> 8) & 0xf) * n;
-		UINT8 g = ((p[i] >> 4) & 0xf) * n;
-		UINT8 b = ((p[i] << 0) & 0xf) * n;
+		INT32 n = ztable[BURN_ENDIAN_SWAP_INT16(p[i]) >> 12];
+		UINT8 r = ((BURN_ENDIAN_SWAP_INT16(p[i]) >> 8) & 0xf) * n;
+		UINT8 g = ((BURN_ENDIAN_SWAP_INT16(p[i]) >> 4) & 0xf) * n;
+		UINT8 b = ((BURN_ENDIAN_SWAP_INT16(p[i]) << 0) & 0xf) * n;
 
 		palette[i] = BurnHighCol(r,g,b,0);
 	}

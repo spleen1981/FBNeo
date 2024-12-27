@@ -228,8 +228,8 @@ static void __fastcall macrossp_vidram_write_long(UINT32 address, UINT32 data)
 
 	data = BURN_ENDIAN_SWAP_INT32((data << 16) | (data >> 16));
 
-	if (ram[address] != data) {
-		ram[address] = data;
+	if (ram[address] != BURN_ENDIAN_SWAP_INT16(data)) {
+		ram[address] = BURN_ENDIAN_SWAP_INT16(data);
 		dirty_tiles[select][address/1] = 1;
 		dirty_layer[select] = 1;
 	}

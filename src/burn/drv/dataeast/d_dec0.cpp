@@ -3216,7 +3216,7 @@ static void __fastcall Slyspy68KWriteWord(UINT32 a, UINT16 d)
 		case 0x300004:
 		case 0x300006: {		
 			UINT16 *Control0 = (UINT16*)DrvVideo2Ctrl0Ram;
-			Control0[(a - 0x300000) >> 1] = d;
+			Control0[(a - 0x300000) >> 1] = BURN_ENDIAN_SWAP_INT16(d);
 			if (a == 0x300004) {
 				DrvTileRamBank[2] = d & 0x01;
 				if (DrvTileRamBank[2]) bprintf(PRINT_IMPORTANT, _T("68K Set Tile RAM Bank 2\n"));
@@ -3229,7 +3229,7 @@ static void __fastcall Slyspy68KWriteWord(UINT32 a, UINT16 d)
 		case 0x300014:
 		case 0x300016: {		
 			UINT16 *Control1 = (UINT16*)DrvVideo2Ctrl1Ram;
-			Control1[(a - 0x300010) >> 1] = d;
+			Control1[(a - 0x300010) >> 1] = BURN_ENDIAN_SWAP_INT16(d);
 			return;
 		}
 		
@@ -3323,7 +3323,7 @@ static void __fastcall SlyspyProt68KWriteWord(UINT32 a, UINT16 d)
 		case 0x240004:
 		case 0x240006: {		
 			UINT16 *Control0 = (UINT16*)DrvVideo1Ctrl0Ram;
-			Control0[(a - 0x240000) >> 1] = d;
+			Control0[(a - 0x240000) >> 1] = BURN_ENDIAN_SWAP_INT16(d);
 			if (a == 0x240004) {
 				DrvTileRamBank[1] = d & 0x01;
 				if (DrvTileRamBank[1]) bprintf(PRINT_IMPORTANT, _T("68K Set Tile RAM Bank 1\n"));
@@ -3336,7 +3336,7 @@ static void __fastcall SlyspyProt68KWriteWord(UINT32 a, UINT16 d)
 		case 0x240014:
 		case 0x240016: {		
 			UINT16 *Control1 = (UINT16*)DrvVideo1Ctrl1Ram;
-			Control1[(a - 0x240010) >> 1] = d;
+			Control1[(a - 0x240010) >> 1] = BURN_ENDIAN_SWAP_INT16(d);
 			return;
 		}
 		
@@ -5313,7 +5313,7 @@ static void DrvRenderSprites(INT32 PriorityMask, INT32 PriorityVal)
 static INT32 BaddudesDraw()
 {
 	UINT16 *Control0 = (UINT16*)DrvCharCtrl0Ram;
-	DrvFlipScreen = Control0[0] & 0x80;
+	DrvFlipScreen = BURN_ENDIAN_SWAP_INT16(Control0[0]) & 0x80;
 	
 	BurnTransferClear();
 	DrvCalcPalette();
@@ -5341,7 +5341,7 @@ static INT32 BaddudesDraw()
 static INT32 BirdtryDraw()
 {
 	UINT16 *Control0 = (UINT16*)DrvCharCtrl0Ram;
-	DrvFlipScreen = Control0[0] & 0x80;
+	DrvFlipScreen = BURN_ENDIAN_SWAP_INT16(Control0[0]) & 0x80;
 	
 	BurnTransferClear();
 	DrvCalcPalette();
@@ -5360,7 +5360,7 @@ static INT32 BirdtryDraw()
 static INT32 HbarrelDraw()
 {
 	UINT16 *Control0 = (UINT16*)DrvCharCtrl0Ram;
-	DrvFlipScreen = Control0[0] & 0x80;
+	DrvFlipScreen = BURN_ENDIAN_SWAP_INT16(Control0[0]) & 0x80;
 	
 	BurnTransferClear();
 	DrvCalcPalette();
@@ -5379,7 +5379,7 @@ static INT32 HbarrelDraw()
 static INT32 HippodrmDraw()
 {
 	UINT16 *Control0 = (UINT16*)DrvCharCtrl0Ram;
-	DrvFlipScreen = Control0[0] & 0x80;
+	DrvFlipScreen = BURN_ENDIAN_SWAP_INT16(Control0[0]) & 0x80;
 	
 	BurnTransferClear();
 	DrvCalcPalette();
@@ -5403,7 +5403,7 @@ static INT32 MidresDraw()
 {
 	INT32 Trans;
 	UINT16 *Control0 = (UINT16*)DrvCharCtrl0Ram;
-	DrvFlipScreen = Control0[0] & 0x80;
+	DrvFlipScreen = BURN_ENDIAN_SWAP_INT16(Control0[0]) & 0x80;
 	
 	if (DrvPriority & 0x04) {
 		Trans = 0x00;
@@ -5440,7 +5440,7 @@ static INT32 RobocopDraw()
 {
 	INT32 Trans;
 	UINT16 *Control0 = (UINT16*)DrvCharCtrl0Ram;
-	DrvFlipScreen = Control0[0] & 0x80;
+	DrvFlipScreen = BURN_ENDIAN_SWAP_INT16(Control0[0]) & 0x80;
 	
 	if (DrvPriority & 0x04) {
 		Trans = 0x08;
@@ -5476,7 +5476,7 @@ static INT32 RobocopDraw()
 static INT32 SlyspyDraw()
 {
 	UINT16 *Control0 = (UINT16*)DrvCharCtrl0Ram;
-	DrvFlipScreen = Control0[0] & 0x80;
+	DrvFlipScreen = BURN_ENDIAN_SWAP_INT16(Control0[0]) & 0x80;
 	
 	BurnTransferClear();
 	Dec1CalcPalette();

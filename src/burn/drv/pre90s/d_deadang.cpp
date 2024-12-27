@@ -547,10 +547,10 @@ static void draw_sprites(INT32 /*flipscreen*/)
 
 	for (INT32 offs = 0; offs < 0x800/2; offs+=4)
 	{
-		if ((ram[offs+3] & 0xff00) != 0xf00) continue;
+		if ((BURN_ENDIAN_SWAP_INT16(ram[offs+3]) & 0xff00) != 0xf00) continue;
 
 		INT32 pri = 0;
-		switch (ram[offs+2] & 0xc000)
+		switch (BURN_ENDIAN_SWAP_INT16(ram[offs+2]) & 0xc000)
 		{
 			case 0xc000: pri = 0; break;	// Unknown
 			case 0x8000: pri = 0; break;	// Over all playfields
@@ -558,14 +558,14 @@ static void draw_sprites(INT32 /*flipscreen*/)
 			case 0x0000: pri = 0xfc; break;	// Under middle playfield
 		}
 
-		INT32 flipx = ram[offs+0] & 0x2000;
-		INT32 flipy =~ram[offs+0] & 0x4000;
-		INT32 sy    = ram[offs+0] & 0x00ff;
-		INT32 sx    = ram[offs+2] & 0x00ff;
-		if (ram[offs + 2] & 0x100) sx = 0 - (0xff - sx);
+		INT32 flipx = BURN_ENDIAN_SWAP_INT16(ram[offs+0]) & 0x2000;
+		INT32 flipy =~BURN_ENDIAN_SWAP_INT16(ram[offs+0]) & 0x4000;
+		INT32 sy    = BURN_ENDIAN_SWAP_INT16(ram[offs+0]) & 0x00ff;
+		INT32 sx    = BURN_ENDIAN_SWAP_INT16(ram[offs+2]) & 0x00ff;
+		if (BURN_ENDIAN_SWAP_INT16(ram[offs + 2]) & 0x100) sx = 0 - (0xff - sx);
 
-		INT32 color = ram[offs+1] >> 12;
-		INT32 code  = ram[offs+1] & 0xfff;
+		INT32 color = BURN_ENDIAN_SWAP_INT16(ram[offs+1]) >> 12;
+		INT32 code  = BURN_ENDIAN_SWAP_INT16(ram[offs+1]) & 0xfff;
 
 		if (0) { //flipscreen) {
 			sx = 240 - sx;
@@ -587,7 +587,7 @@ static INT32 DrvDraw()
 
 	UINT16 *scroll_ram = (UINT16*)DrvScrollRAM;
 
-	INT32 layer_enable = scroll_ram[0x34] ^ 0xff;
+	INT32 layer_enable = BURN_ENDIAN_SWAP_INT16(scroll_ram[0x34]) ^ 0xff;
 	INT32 flipscreen = (layer_enable & 0x40) ? 0 : TMAP_FLIPXY;
 
 	GenericTilemapSetScrollY(3, ((scroll_ram[0x01]&0xf0)<<4)+((scroll_ram[0x02]&0x7f)<<1)+((scroll_ram[0x02]&0x80)>>7) );

@@ -86,7 +86,7 @@ static void __fastcall c45_road_write_byte(UINT32 address, UINT8 data)
 
 	if (offset < 0x1fa00)	// tiles
 	{
-		if (data != ram[offset]) {
+		if (data != BURN_ENDIAN_SWAP_INT16(ram[offset])) {
 			c45RoadRAM[offset] = data;
 			update_tile_pixel(offset/2);
 		}

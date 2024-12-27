@@ -18265,37 +18265,37 @@ void __fastcall Sf2ceeablScrollWrite(UINT32 a, UINT16 d)
 	switch (a) {
 		case 0x980000: {
 			// scroll1 y
-			*((UINT16*)(CpsReg + 0x0e)) = d;
+			*((UINT16*)(CpsReg + 0x0e)) = BURN_ENDIAN_SWAP_INT16(d);
 			return;
 		}
 		
 		case 0x980002: {
 			// scroll1 x
-			*((UINT16*)(CpsReg + 0x0c)) = d - 0x40;
+			*((UINT16*)(CpsReg + 0x0c)) = BURN_ENDIAN_SWAP_INT16(d - 0x40);
 			return;
 		}
 		
 		case 0x980004: {
 			// scroll2 y
-			*((UINT16*)(CpsReg + 0x12)) = d;
+			*((UINT16*)(CpsReg + 0x12)) = BURN_ENDIAN_SWAP_INT16(d);
 			return;
 		}
 		
 		case 0x980006: {
 			// scroll2 x
-			*((UINT16*)(CpsReg + 0x10)) = d - 0x3c;
+			*((UINT16*)(CpsReg + 0x10)) = BURN_ENDIAN_SWAP_INT16(d - 0x3c);
 			return;
 		}
 		
 		case 0x980008: {
 			// scroll3 y
-			*((UINT16*)(CpsReg + 0x16)) = d;
+			*((UINT16*)(CpsReg + 0x16)) = BURN_ENDIAN_SWAP_INT16(d);
 			return;
 		}
 		
 		case 0x98000a: {
 			// scroll3 x
-			*((UINT16*)(CpsReg + 0x14)) = d - 0x40;
+			*((UINT16*)(CpsReg + 0x14)) = BURN_ENDIAN_SWAP_INT16(d - 0x40);
 			return;
 		}
 		
@@ -18363,7 +18363,7 @@ void __fastcall Sf2ceeablScrollWrite(UINT32 a, UINT16 d)
 		
 		case 0x980016: {
 			// scroll3 ram offset
-			*((UINT16*)(CpsReg + 0x06)) = d;
+			*((UINT16*)(CpsReg + 0x06)) = BURN_ENDIAN_SWAP_INT16(d);
 			return;
 		}
 		
@@ -19124,7 +19124,7 @@ void __fastcall VarthbRegWriteWord(UINT32 a, UINT16 d)
 	if (a == 0x800188) {
 		if (d > 0x9000) {
 			// scroll 3 ram offset
-			*((UINT16*)(CpsReg + 0x06)) = d;
+			*((UINT16*)(CpsReg + 0x06)) = BURN_ENDIAN_SWAP_INT16(d);
 			return;
 		} // sound fade command written through CpsWritePort
 	}
